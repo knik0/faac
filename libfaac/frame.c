@@ -16,7 +16,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: frame.c,v 1.60 2004/04/13 13:47:33 danchr Exp $
+ * $Id: frame.c,v 1.61 2004/05/03 11:37:16 danchr Exp $
  */
 
 /*
@@ -51,7 +51,7 @@
 #if FAAC_RELEASE
 static char *libfaacName = FAAC_VERSION;
 #else
-static char *libfaacName = FAAC_VERSION " (" __DATE__ ") UNSTABLE";
+static char *libfaacName = FAAC_VERSION "+ (" __DATE__ ") UNSTABLE";
 #endif
 static char *libCopyright =
   "FAAC - Freeware Advanced Audio Coder (http://www.audiocoding.com/)\n"
@@ -948,6 +948,9 @@ static SR_INFO srInfo[12+1] =
 
 /*
 $Log: frame.c,v $
+Revision 1.61  2004/05/03 11:37:16  danchr
+bump version to unstable 1.24+
+
 Revision 1.60  2004/04/13 13:47:33  danchr
 clarify release <> unstable status
 
