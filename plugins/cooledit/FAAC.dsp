@@ -1,24 +1,24 @@
-# Microsoft Developer Studio Project File - Name="Out_FAAC" - Package Owner=<4>
+# Microsoft Developer Studio Project File - Name="FAAC" - Package Owner=<4>
 # Microsoft Developer Studio Generated Build File, Format Version 6.00
 # ** DO NOT EDIT **
 
 # TARGTYPE "Win32 (x86) Dynamic-Link Library" 0x0102
 
-CFG=Out_FAAC - Win32 Debug
+CFG=FAAC - Win32 Debug
 !MESSAGE This is not a valid makefile. To build this project using NMAKE,
 !MESSAGE use the Export Makefile command and run
 !MESSAGE 
-!MESSAGE NMAKE /f "Out_FAAC.mak".
+!MESSAGE NMAKE /f "FAAC.mak".
 !MESSAGE 
 !MESSAGE You can specify a configuration when running NMAKE
 !MESSAGE by defining the macro CFG on the command line. For example:
 !MESSAGE 
-!MESSAGE NMAKE /f "Out_FAAC.mak" CFG="Out_FAAC - Win32 Debug"
+!MESSAGE NMAKE /f "FAAC.mak" CFG="FAAC - Win32 Debug"
 !MESSAGE 
 !MESSAGE Possible choices for configuration are:
 !MESSAGE 
-!MESSAGE "Out_FAAC - Win32 Release" (based on "Win32 (x86) Dynamic-Link Library")
-!MESSAGE "Out_FAAC - Win32 Debug" (based on "Win32 (x86) Dynamic-Link Library")
+!MESSAGE "FAAC - Win32 Release" (based on "Win32 (x86) Dynamic-Link Library")
+!MESSAGE "FAAC - Win32 Debug" (based on "Win32 (x86) Dynamic-Link Library")
 !MESSAGE 
 
 # Begin Project
@@ -29,7 +29,7 @@ CPP=cl.exe
 MTL=midl.exe
 RSC=rc.exe
 
-!IF  "$(CFG)" == "Out_FAAC - Win32 Release"
+!IF  "$(CFG)" == "FAAC - Win32 Release"
 
 # PROP BASE Use_MFC 0
 # PROP BASE Use_Debug_Libraries 0
@@ -42,8 +42,8 @@ RSC=rc.exe
 # PROP Intermediate_Dir "Release"
 # PROP Ignore_Export_Lib 0
 # PROP Target_Dir ""
-# ADD BASE CPP /nologo /MT /W3 /GX /O2 /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /D "_MBCS" /D "_USRDLL" /D "OUT_FAAC_EXPORTS" /YX /FD /c
-# ADD CPP /nologo /W3 /GX /O2 /I "..\..\include" /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /D "_MBCS" /D "_USRDLL" /D "OUT_FAAC_EXPORTS" /YX /FD /c
+# ADD BASE CPP /nologo /MT /W3 /GX /O2 /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /D "_MBCS" /D "_USRDLL" /D "FAAC_EXPORTS" /YX /FD /c
+# ADD CPP /nologo /W3 /GX /O2 /I "../../../faad2/common/faad" /I "../../include" /I "../../../faad2/include" /I "../../../faad2/common/mp4v2" /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /D "_MBCS" /D "_USRDLL" /D "FAAC_EXPORTS" /YX /FD /c
 # ADD BASE MTL /nologo /D "NDEBUG" /mktyplib203 /win32
 # ADD MTL /nologo /D "NDEBUG" /mktyplib203 /win32
 # ADD BASE RSC /l 0x410 /d "NDEBUG"
@@ -53,9 +53,9 @@ BSC32=bscmake.exe
 # ADD BSC32 /nologo
 LINK32=link.exe
 # ADD BASE LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /nologo /dll /machine:I386
-# ADD LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /nologo /dll /machine:I386 /out:"Release/Out_AAC.dll"
+# ADD LINK32 ws2_32.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /nologo /dll /incremental:yes /machine:I386 /out:"Release/FAAC.flt"
 
-!ELSEIF  "$(CFG)" == "Out_FAAC - Win32 Debug"
+!ELSEIF  "$(CFG)" == "FAAC - Win32 Debug"
 
 # PROP BASE Use_MFC 0
 # PROP BASE Use_Debug_Libraries 1
@@ -68,8 +68,8 @@ LINK32=link.exe
 # PROP Intermediate_Dir "Debug"
 # PROP Ignore_Export_Lib 0
 # PROP Target_Dir ""
-# ADD BASE CPP /nologo /MTd /W3 /Gm /GX /ZI /Od /D "WIN32" /D "_DEBUG" /D "_WINDOWS" /D "_MBCS" /D "_USRDLL" /D "OUT_FAAC_EXPORTS" /YX /FD /GZ /c
-# ADD CPP /nologo /W3 /Gm /GX /ZI /Od /I "..\..\include" /D "WIN32" /D "_DEBUG" /D "_WINDOWS" /D "_MBCS" /D "_USRDLL" /D "OUT_FAAC_EXPORTS" /YX /FD /GZ /c
+# ADD BASE CPP /nologo /MTd /W3 /Gm /GX /ZI /Od /D "WIN32" /D "_DEBUG" /D "_WINDOWS" /D "_MBCS" /D "_USRDLL" /D "FAAC_EXPORTS" /YX /FD /GZ /c
+# ADD CPP /nologo /W3 /Gm /GX /ZI /Od /I "../../../faad2/common/faad" /I "../../include" /I "../../../faad2/include" /I "../../../faad2/common/mp4v2" /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /D "_MBCS" /D "_USRDLL" /D "FAAC_EXPORTS" /YX /FD /GZ /c
 # ADD BASE MTL /nologo /D "_DEBUG" /mktyplib203 /win32
 # ADD MTL /nologo /D "_DEBUG" /mktyplib203 /win32
 # ADD BASE RSC /l 0x410 /d "_DEBUG"
@@ -79,14 +79,15 @@ BSC32=bscmake.exe
 # ADD BSC32 /nologo
 LINK32=link.exe
 # ADD BASE LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /nologo /dll /debug /machine:I386 /pdbtype:sept
-# ADD LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /nologo /dll /debug /machine:I386 /out:"Debug/Out_AAC.dll" /pdbtype:sept
+# ADD LINK32 ws2_32.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /nologo /dll /debug /machine:I386 /out:"Debug/FAAC.flt" /pdbtype:sept
+# SUBTRACT LINK32 /nodefaultlib
 
 !ENDIF 
 
 # Begin Target
 
-# Name "Out_FAAC - Win32 Release"
-# Name "Out_FAAC - Win32 Debug"
+# Name "FAAC - Win32 Release"
+# Name "FAAC - Win32 Debug"
 # Begin Group "Source Files"
 
 # PROP Default_Filter "cpp;c;cxx;rc;def;r;odl;idl;hpj;bat"
@@ -96,15 +97,23 @@ SOURCE=.\CRegistry.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\Faac.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\FAAC.def
+# End Source File
+# Begin Source File
+
 SOURCE=.\FAAC.rc
 # End Source File
 # Begin Source File
 
-SOURCE=.\Out_faac.cpp
+SOURCE=.\Faad.cpp
 # End Source File
 # Begin Source File
 
-SOURCE=.\Out_FAAC.def
+SOURCE=.\Main.cpp
 # End Source File
 # End Group
 # Begin Group "Header Files"
@@ -120,11 +129,15 @@ SOURCE=.\defines.h
 # End Source File
 # Begin Source File
 
-SOURCE=.\FILTERS.H
+SOURCE=..\..\include\faac.h
 # End Source File
 # Begin Source File
 
-SOURCE=.\OUT.H
+SOURCE=..\..\..\faad2\include\faad.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\FILTERS.H
 # End Source File
 # Begin Source File
 
@@ -134,10 +147,6 @@ SOURCE=.\resource.h
 # Begin Group "Resource Files"
 
 # PROP Default_Filter "ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe"
-# Begin Source File
-
-SOURCE=.\Open.bmp
-# End Source File
 # End Group
 # End Target
 # End Project

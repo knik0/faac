@@ -1,2 +1,4 @@
+LIBRARY
+
 EXPORTS
 	winampGetOutModule

@@ -20,14 +20,16 @@ kreel@interfree.it
 */
 
 #include <windows.h>
-#include <stdio.h>  // FILE *
-#include "filters.h" //CoolEdit
+#include <stdio.h>		// FILE *
+#include "filters.h"	// CoolEdit
 #include "resource.h"
 #include "faac.h"
+#include "faad.h"		// FAAD2 version
+#include <win32_ver.h>	// mpeg4ip version
 #include "CRegistry.h"
 #include "defines.h"
 
-
+// *********************************************************************************************
 
 typedef struct output_tag  // any special vars associated with output file
 {
@@ -45,7 +47,7 @@ long			samplesInput;
 BYTE			bStopEnc;
 } MYOUTPUT;
 
-
+// -----------------------------------------------------------------------------------------------
 
 typedef struct mc
 {
@@ -53,11 +55,9 @@ bool					AutoCfg;
 faacEncConfiguration	EncCfg;
 } MYCFG;
 
-
-
 // *********************************************************************************************
-
-
+// *********************************************************************************************
+// *********************************************************************************************
 
 void RD_Cfg(MYCFG *cfg) 
 { 
@@ -131,11 +131,8 @@ CRegistry reg;
 			DISABLE_LTP \
 }
 
-__declspec(dllexport) BOOL FAR PASCAL DIALOGMsgProc(HWND hWndDlg, UINT Message, WPARAM wParam, LPARAM lParam)
+BOOL DIALOGMsgProc(HWND hWndDlg, UINT Message, WPARAM wParam, LPARAM lParam)
 {
-//DWORD dwOptions=(DWORD)lParam;
-
-
 	switch(Message)
 	{
 	case WM_INITDIALOG:
@@ -175,11 +172,11 @@ __declspec(dllexport) BOOL FAR PASCAL DIALOGMsgProc(HWND hWndDlg, UINT Message, 
 			switch(cfg.EncCfg.outputFormat)
 			{
 			case 0:
-              CheckDlgButton(hWndDlg,IDC_RADIO_RAW,TRUE);
-		      break;
+				CheckDlgButton(hWndDlg,IDC_RADIO_RAW,TRUE);
+				break;
 			case 1:
-              CheckDlgButton(hWndDlg,IDC_RADIO_ADTS,TRUE);
-		      break;
+				CheckDlgButton(hWndDlg,IDC_RADIO_ADTS,TRUE);
+				break;
 			}
 
 			CheckDlgButton(hWndDlg, IDC_ALLOWMIDSIDE, cfg.EncCfg.allowMidside);
@@ -216,7 +213,7 @@ __declspec(dllexport) BOOL FAR PASCAL DIALOGMsgProc(HWND hWndDlg, UINT Message, 
 		break; // End of WM_INITDIALOG                                 
 
 	case WM_CLOSE:
-       // Closing the Dialog behaves the same as Cancel               
+		// Closing the Dialog behaves the same as Cancel               
 		PostMessage(hWndDlg, WM_COMMAND, IDCANCEL, 0L);
 		break; // End of WM_CLOSE                                      
 
@@ -253,19 +250,19 @@ __declspec(dllexport) BOOL FAR PASCAL DIALOGMsgProc(HWND hWndDlg, UINT Message, 
 				GetDlgItemText(hWndDlg, IDC_CB_BITRATE, buf, 50);
 				switch(*buf)
 				{
-				case 'A': 
-						cfg.EncCfg.bitRate=0;
-						break;
+				case 'A': // Auto
+					cfg.EncCfg.bitRate=0;
+					break;
 				default:
-						cfg.EncCfg.bitRate=1000*GetDlgItemInt(hWndDlg, IDC_CB_BITRATE, 0, FALSE);
+					cfg.EncCfg.bitRate=1000*GetDlgItemInt(hWndDlg, IDC_CB_BITRATE, 0, FALSE);
 				}
 				GetDlgItemText(hWndDlg, IDC_CB_BANDWIDTH, buf, 50);
 				switch(*buf)
 				{
-				case 'A': 
+				case 'A': // Auto
 					cfg.EncCfg.bandWidth=0;
 					break;
-				case 'F':
+				case 'F': // Full
 					cfg.EncCfg.bandWidth=0xffffffff;
 					break;
 				default:
@@ -279,33 +276,35 @@ __declspec(dllexport) BOOL FAR PASCAL DIALOGMsgProc(HWND hWndDlg, UINT Message, 
 			break;
 
         case IDCANCEL:
-             // Ignore data values entered into the controls        
-             // and dismiss the dialog window returning FALSE
-             EndDialog(hWndDlg, FALSE);
-             break;
+			// Ignore data values entered into the controls        
+			// and dismiss the dialog window returning FALSE
+			EndDialog(hWndDlg, FALSE);
+			break;
 
 		case IDC_BTN_ABOUT:
-           	 {
-		     char buf[256];
- 			  sprintf(buf,	APP_NAME " plugin %s by 4N\n"
-							"This plugin uses FAAC encoder engine v%g and FAAD2 decoder engine\n\n"
-							"Compiled on %s\n",
-							APP_VER,
-							FAACENC_VERSION,
-							__DATE__
-						  );
-		      MessageBox(hWndDlg, buf, "About", MB_OK);
-             }
-             break;
-
+			{
+			char buf[512];
+				sprintf(buf,
+						APP_NAME " plugin " APP_VER " by Antonio Foranna\n\n"
+						"This plugin uses:\n"
+						"\tFAAC v%g and FAAD2 v" FAAD2_VERSION " (.aac files),\n"
+						"\t" PACKAGE " v" VERSION " (.mp4 files).\n\n"
+						"Compiled on %s\n",
+						FAACENC_VERSION,
+						__DATE__
+						);
+				MessageBox(hWndDlg, buf, "About", MB_OK);
+			}
+			break;
+			
 		case IDC_RADIO_MPEG4:
-	         EnableWindow(GetDlgItem(hWndDlg, IDC_RADIO_LTP), !IsDlgButtonChecked(hWndDlg,IDC_CHK_AUTOCFG));
-			 break;
-
+			EnableWindow(GetDlgItem(hWndDlg, IDC_RADIO_LTP), !IsDlgButtonChecked(hWndDlg,IDC_CHK_AUTOCFG));
+			break;
+			
 		case IDC_RADIO_MPEG2:
-	         EnableWindow(GetDlgItem(hWndDlg, IDC_RADIO_LTP), FALSE);
-			 DISABLE_LTP
-			 break;
+			EnableWindow(GetDlgItem(hWndDlg, IDC_RADIO_LTP), FALSE);
+			DISABLE_LTP
+				break;
 		}
 		break; // End of WM_COMMAND
 	default: 
@@ -316,19 +315,16 @@ __declspec(dllexport) BOOL FAR PASCAL DIALOGMsgProc(HWND hWndDlg, UINT Message, 
 } // End of DIALOGSMsgProc                                      
 // *********************************************************************************************
 
-__declspec(dllexport) DWORD FAR PASCAL FilterGetOptions(HWND hWnd, HINSTANCE hInst, long lSamprate, WORD wChannels, WORD wBitsPerSample, DWORD dwOptions) // return 0 if no options box
+DWORD FAR PASCAL FilterGetOptions(HWND hWnd, HINSTANCE hInst, long lSamprate, WORD wChannels, WORD wBitsPerSample, DWORD dwOptions) // return 0 if no options box
 {
 long nDialogReturn=0;
-FARPROC lpfnDIALOGMsgProc;
-	
-	lpfnDIALOGMsgProc=GetProcAddress(hInst,(LPCSTR)MAKELONG(20,0));			
-	nDialogReturn=(long)DialogBoxParam((HINSTANCE)hInst,(LPCSTR)MAKEINTRESOURCE(IDD_COMPRESSION), (HWND)hWnd, (DLGPROC)lpfnDIALOGMsgProc, dwOptions);
+	nDialogReturn=(long)DialogBoxParam((HINSTANCE)hInst,(LPCSTR)MAKEINTRESOURCE(IDD_COMPRESSION), (HWND)hWnd, (DLGPROC)DIALOGMsgProc, dwOptions);
 
 	return nDialogReturn;
 }
 // *********************************************************************************************
 
-__declspec(dllexport) void FAR PASCAL GetSuggestedSampleType(LONG *lplSamprate, WORD *lpwBitsPerSample, WORD *wChannels)
+void FAR PASCAL GetSuggestedSampleType(LONG *lplSamprate, WORD *lpwBitsPerSample, WORD *wChannels)
 {
 	*lplSamprate=0; // don't care
 	*lpwBitsPerSample= *lpwBitsPerSample<=24 ? 0: 24;
@@ -336,30 +332,7 @@ __declspec(dllexport) void FAR PASCAL GetSuggestedSampleType(LONG *lplSamprate, 
 }
 // *********************************************************************************************
 
-__declspec(dllexport) DWORD FAR PASCAL FilterWriteFirstSpecialData(HANDLE hInput, 
-	SPECIALDATA * psp)
-{
-	return 0;
-}
-// *********************************************************************************************
-
-__declspec(dllexport) DWORD FAR PASCAL FilterWriteNextSpecialData(HANDLE hInput, SPECIALDATA * psp)
-{	
-	return 0;
-// only has 1 special data!  Otherwise we would use psp->hSpecialData
-// as either a counter to know which item to retrieve next, or as a
-// structure with other state information in it.
-}
-// *********************************************************************************************
-
-__declspec(dllexport) DWORD FAR PASCAL FilterWriteSpecialData(HANDLE hOutput,
-	LPCSTR szListType, LPCSTR szType, char * pData,DWORD dwSize)
-{
-	return 0;
-}
-// *********************************************************************************************
-
-__declspec(dllexport) void FAR PASCAL CloseFilterOutput(HANDLE hOutput)
+void FAR PASCAL CloseFilterOutput(HANDLE hOutput)
 {
 	if(!hOutput)
 		return;
@@ -392,7 +365,7 @@ MYOUTPUT *mo;
 #define ERROR_OFO(msg) \
 { \
 	if(msg) \
-		MessageBox(0, msg, APP_NAME " plugin", MB_OK); \
+		MessageBox(0, msg, APP_NAME " plugin", MB_OK|MB_ICONSTOP); \
 	if(hOutput) \
 	{ \
 		GlobalUnlock(hOutput); \
@@ -401,7 +374,7 @@ MYOUTPUT *mo;
 	return 0; \
 }
 
-__declspec(dllexport) HANDLE FAR PASCAL OpenFilterOutput(LPSTR lpstrFilename,long lSamprate,WORD wBitsPerSample,WORD wChannels,long lSize, long far *lpChunkSize, DWORD dwOptions)
+HANDLE FAR PASCAL OpenFilterOutput(LPSTR lpstrFilename,long lSamprate,WORD wBitsPerSample,WORD wChannels,long lSize, long far *lpChunkSize, DWORD dwOptions)
 {
 HANDLE			hOutput;
 MYOUTPUT		*mo;
@@ -417,11 +390,14 @@ int				tmp;
 	mo=(MYOUTPUT *)GlobalLock(hOutput);
 	memset(mo,0,sizeof(MYOUTPUT));
 
-// open the aac output file 
+	// open the aac output file 
 	if(!(mo->fFile=fopen(lpstrFilename, "wb")))
 		ERROR_OFO("Can't create file");
 
-// open the encoder library
+	// use bufferized stream
+	setvbuf(mo->fFile,NULL,_IOFBF,32767);
+
+	// open the encoder library
 	if(!(mo->hEncoder=faacEncOpen(lSamprate, wChannels, &samplesInput, &maxBytesOutput)))
 		ERROR_OFO("Can't init library");
 
@@ -453,22 +429,19 @@ int				tmp;
 
 		if(!faacEncSetConfiguration(mo->hEncoder, myFormat))
 			ERROR_OFO("Unsupported parameters");
-	 }
+	}
 
-	mo->fFile=mo->fFile;
 	mo->lSize=lSize;
 	mo->lSamprate=lSamprate;
 	mo->wBitsPerSample=wBitsPerSample;
 	mo->wChannels=wChannels;
 	strcpy(mo->szNAME,lpstrFilename);
 
-	mo->hEncoder=mo->hEncoder;
-    mo->bitbuf=mo->bitbuf;
 	mo->maxBytesOutput=maxBytesOutput;
 	mo->samplesInput=samplesInput;
 	mo->bStopEnc=0;
 
-// init flushing process
+	// init flushing process
     bytesEncoded=faacEncEncode(mo->hEncoder, 0, 0, mo->bitbuf, maxBytesOutput); // initializes the flushing process
     if(bytesEncoded>0)
 	{
@@ -486,7 +459,7 @@ int				tmp;
 #define ERROR_WFO(msg) \
 { \
 	if(msg) \
-		MessageBox(0, msg, APP_NAME " plugin", MB_OK); \
+		MessageBox(0, msg, APP_NAME " plugin", MB_OK|MB_ICONSTOP); \
 	if(hOutput) \
 	{ \
 		mo->bStopEnc=1; \
@@ -495,7 +468,7 @@ int				tmp;
 	return 0; \
 }
 
-__declspec(dllexport) DWORD FAR PASCAL WriteFilterOutput(HANDLE hOutput, unsigned char far *buf, long lBytes)
+DWORD FAR PASCAL WriteFilterOutput(HANDLE hOutput, unsigned char far *buf, long lBytes)
 {
 	if(!hOutput)
 		return 0;

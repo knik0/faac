@@ -3,7 +3,7 @@ Microsoft Developer Studio Workspace File, Format Version 6.00
 
 ###############################################################################
 
-Project: "FAAD"=.\FAAD.DSP - Package Owner=<4>
+Project: "FAAC"=.\FAAC.dsp - Package Owner=<4>
 
 Package=<5>
 {{{
@@ -12,22 +12,22 @@ Package=<5>
 Package=<4>
 {{{
     Begin Project Dependency
-    Project_Dep_Name id3lib
+    Project_Dep_Name libfaac
     End Project Dependency
     Begin Project Dependency
     Project_Dep_Name libfaad
     End Project Dependency
     Begin Project Dependency
-    Project_Dep_Name libfaac
+    Project_Dep_Name libmp4v2_st
     End Project Dependency
     Begin Project Dependency
-    Project_Dep_Name libmp4v2_st
+    Project_Dep_Name aacInfoLib
     End Project Dependency
 }}}
 
 ###############################################################################
 
-Project: "id3lib"=..\..\..\faad2\common\id3lib\libprj\id3lib.dsp - Package Owner=<4>
+Project: "aacInfoLib"=.\aacInfoLib.dsp - Package Owner=<4>
 
 Package=<5>
 {{{
