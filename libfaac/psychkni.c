@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: psychkni.c,v 1.7 2003/03/27 17:09:29 knik Exp $
+ * $Id: psychkni.c,v 1.8 2003/04/13 08:38:15 knik Exp $
  */
 #include <stdio.h>
 #include <stdlib.h>
@@ -78,8 +78,8 @@ static void PsyThreshold(GlobalPsyInfo * gpsyInfo, PsyInfo * psyInfo, int *cb_wi
   double totchg;
   int lastband;
   psydata_t *psydata = psyInfo->data;
-  static const double longthr = 0.37;
-  const double shortthr = longthr * 0.3;
+  static const double longthr = 1.0;
+  const double shortthr = longthr * 0.7;
   static const int firstband = 1;
 
 
@@ -105,7 +105,7 @@ static void PsyThreshold(GlobalPsyInfo * gpsyInfo, PsyInfo * psyInfo, int *cb_wi
   for (j = 0; j < 8; j++)
   {
     int l = 0;
-    for (b = firstband; b < num_cb_short; b++)
+    for (b = 0; b < num_cb_short; b++)
     {
       int last = l + cb_width_short[b];
       double e = 0;
