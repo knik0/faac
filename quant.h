@@ -21,8 +21,8 @@
 /**************************************************************************
   Version Control Information			Method: CVS
   Identifiers:
-  $Revision: 1.8 $
-  $Date: 2000/11/07 20:03:18 $ (check in)
+  $Revision: 1.9 $
+  $Date: 2000/11/10 13:27:06 $ (check in)
   $Author: menno $
   *************************************************************************/
 
@@ -127,24 +127,23 @@ int sort_for_grouping(AACQuantInfo* quantInfo,        /* ptr to quantization inf
 /*********************************************************/
 /* tf_init_encode_spectrum_aac                           */
 /*********************************************************/
-void tf_init_encode_spectrum_aac( int quality );
+void aacQuantizeInit(int quality);
 
 
 /*********************************************************/
 /* tf_encode_spectrum_aac                                */
 /*********************************************************/
-int tf_encode_spectrum_aac(
-			   double      *p_spectrum[MAX_TIME_CHANNELS],
-			   double      *SigMaksRatio[MAX_TIME_CHANNELS],
-			   double      allowed_dist[MAX_TIME_CHANNELS][MAX_SCFAC_BANDS],
-			   double      energy[MAX_TIME_CHANNELS][MAX_SCFAC_BANDS],
-			   enum WINDOW_TYPE block_type[MAX_TIME_CHANNELS],
-			   int         sfb_width_table[MAX_TIME_CHANNELS][MAX_SCFAC_BANDS],
-			   int         average_block_bits,
-			   BsBitStream *fixed_stream,
-			   double      *p_reconstructed_spectrum[MAX_TIME_CHANNELS],
-			   AACQuantInfo* quantInfo      /* AAC quantization information */
-			   );
+int aacQuantize(AACQuantInfo* quantInfo,      /* AAC quantization information */
+				double      *p_spectrum[MAX_TIME_CHANNELS],
+				double      *SigMaksRatio[MAX_TIME_CHANNELS],
+				double      allowed_dist[MAX_TIME_CHANNELS][MAX_SCFAC_BANDS],
+				double      energy[MAX_TIME_CHANNELS][MAX_SCFAC_BANDS],
+				enum WINDOW_TYPE block_type[MAX_TIME_CHANNELS],
+				int         sfb_width_table[MAX_TIME_CHANNELS][MAX_SCFAC_BANDS],
+				int         average_block_bits,
+				BsBitStream *fixed_stream,
+				double      *p_reconstructed_spectrum[MAX_TIME_CHANNELS]			   
+				);
 
 
 

@@ -21,8 +21,8 @@
 /**************************************************************************
   Version Control Information			Method: CVS
   Identifiers:
-  $Revision: 1.13 $
-  $Date: 2000/11/07 20:03:18 $ (check in)
+  $Revision: 1.14 $
+  $Date: 2000/11/10 13:27:06 $ (check in)
   $Author: menno $
   *************************************************************************/
 
@@ -95,7 +95,7 @@ void compute_ath(AACQuantInfo *quantInfo, double ATH[MAX_SCFAC_BANDS])
 }
 
 
-void tf_init_encode_spectrum_aac( int quality )
+void aacQuantizeInit(int quality)
 {
 	int i;
 
@@ -522,7 +522,6 @@ int count_bits_long(AACQuantInfo* quantInfo,
 
 	/* calculate the amount of bits needed for encoding the huffman codebook numbers */
 	bits += sort_book_numbers(quantInfo,             /* Quantization information */
-//		output_book_vector,    /* Output codebook vector, formatted for bitstream */
 		NULL,          /* Bitstream */
 		0);                    /* Write flag: 0 count, 1 write */
 
@@ -568,18 +567,17 @@ int count_bits(AACQuantInfo* quantInfo,
 	return bits;
 }
 
-int tf_encode_spectrum_aac(
-			   double      *p_spectrum[MAX_TIME_CHANNELS],
-			   double      *PsySigMaskRatio[MAX_TIME_CHANNELS],
-			   double      allowed_dist[MAX_TIME_CHANNELS][MAX_SCFAC_BANDS],
-			   double      energy[MAX_TIME_CHANNELS][MAX_SCFAC_BANDS],
-			   enum WINDOW_TYPE block_type[MAX_TIME_CHANNELS],
-			   int         sfb_width_table[MAX_TIME_CHANNELS][MAX_SCFAC_BANDS],
-			   int         average_block_bits,
-			   BsBitStream *fixed_stream,
-			   double      *p_reconstructed_spectrum[MAX_TIME_CHANNELS],
-			   AACQuantInfo* quantInfo      /* AAC quantization information */ 
-			   )
+int aacQuantize(AACQuantInfo* quantInfo,      /* AAC quantization information */
+				double      *p_spectrum[MAX_TIME_CHANNELS],
+				double      *PsySigMaskRatio[MAX_TIME_CHANNELS],
+				double      allowed_dist[MAX_TIME_CHANNELS][MAX_SCFAC_BANDS],
+				double      energy[MAX_TIME_CHANNELS][MAX_SCFAC_BANDS],
+				enum WINDOW_TYPE block_type[MAX_TIME_CHANNELS],
+				int         sfb_width_table[MAX_TIME_CHANNELS][MAX_SCFAC_BANDS],
+				int         average_block_bits,
+				BsBitStream *fixed_stream,
+				double      *p_reconstructed_spectrum[MAX_TIME_CHANNELS]
+				)
 {
 	int quant[BLOCK_LEN_LONG];
 	int s_quant[BLOCK_LEN_LONG];

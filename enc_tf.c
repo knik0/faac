@@ -21,8 +21,8 @@
 /**************************************************************************
   Version Control Information			Method: CVS
   Identifiers:
-  $Revision: 1.68 $
-  $Date: 2000/11/07 20:03:18 $ (check in)
+  $Revision: 1.69 $
+  $Date: 2000/11/10 13:27:06 $ (check in)
   $Author: menno $
   *************************************************************************/
 
@@ -261,7 +261,7 @@ void EncTfInit (faacAACStream *as)
 
   /* initialize spectrum processing */
   /* initialize quantization and coding */
-  tf_init_encode_spectrum_aac(0);
+  aacQuantizeInit(0);
 
   /* Init TNS */
   for (chanNum=0;chanNum<MAX_TIME_CHANNELS;chanNum++) {
@@ -271,7 +271,7 @@ void EncTfInit (faacAACStream *as)
   /* Init LTP predictor */
   for (chanNum=0;chanNum<MAX_TIME_CHANNELS;chanNum++) {
     init_lt_pred (&quantInfo[chanNum].ltpInfo);
-    quantInfo[chanNum].prev_window_shape = WS_SIN;
+    quantInfo[chanNum].window_shape = WS_SIN;
   }
 
   for (chanNum=0;chanNum<MAX_TIME_CHANNELS;chanNum++) {
@@ -454,28 +454,33 @@ int EncTfFrame (faacAACStream *as, BsBitStream  *fixed_stream)
 //	block_type[1] = ONLY_SHORT_WINDOW;
 
   {
+	  int chanNum;
+
+	  for (chanNum = 0; chanNum < max_ch; chanNum++) {
+		  /* Set window shape paremeter in quantInfo */
+		  switch( block_type[chanNum] ) {
+		  case ONLY_SHORT_WINDOW:
+		  case LONG_SHORT_WINDOW:
+			  quantInfo[chanNum].prev_window_shape = quantInfo[chanNum].window_shape;
+			  quantInfo[chanNum].window_shape = WS_SIN;
+			  break;
+		  case ONLY_LONG_WINDOW:
+		  case SHORT_LONG_WINDOW:
+			  quantInfo[chanNum].prev_window_shape = quantInfo[chanNum].window_shape;
+			  quantInfo[chanNum].window_shape = WS_KBD;
+			  break;
+		  }
+	  }
+  }
+
+  {
     int chanNum;
 
     for (chanNum=0;chanNum<max_ch;chanNum++) {
-      /* Set window shape paremeter in quantInfo */
-      quantInfo[chanNum].prev_window_shape = quantInfo[chanNum].window_shape;
-      if (block_type[chanNum] == ONLY_SHORT_WINDOW)
-		  quantInfo[chanNum].window_shape = WS_KBD;
-	  else
-		  quantInfo[chanNum].window_shape = WS_SIN;
-
       switch( block_type[chanNum] ) {
-        case ONLY_SHORT_WINDOW  :
-//      no_sub_win   = short_win_in_long;
-//      sub_win_size = block_size_samples/short_win_in_long;
+        case ONLY_SHORT_WINDOW:
+
         quantInfo[chanNum].max_sfb = max_sfb_s[quantInfo[chanNum].srate_idx];
-#if 0
-        quantInfo[chanNum].num_window_groups = 4;
-        quantInfo[chanNum].window_group_length[0] = 1;
-        quantInfo[chanNum].window_group_length[1] = 2;
-        quantInfo[chanNum].window_group_length[2] = 3;
-        quantInfo[chanNum].window_group_length[3] = 2;
-#else
         quantInfo[chanNum].num_window_groups = 8;
         quantInfo[chanNum].window_group_length[0] = 1;
         quantInfo[chanNum].window_group_length[1] = 1;
@@ -485,12 +490,9 @@ int EncTfFrame (faacAACStream *as, BsBitStream  *fixed_stream)
         quantInfo[chanNum].window_group_length[5] = 1;
         quantInfo[chanNum].window_group_length[6] = 1;
         quantInfo[chanNum].window_group_length[7] = 1;
-#endif
         break;
 
         default:
-//      no_sub_win   = 1;
-//      sub_win_size = block_size_samples;
         quantInfo[chanNum].max_sfb = max_sfb_l[quantInfo[chanNum].srate_idx];
         quantInfo[chanNum].num_window_groups = 1;
         quantInfo[chanNum].window_group_length[0]=1;
@@ -736,7 +738,8 @@ int EncTfFrame (faacAACStream *as, BsBitStream  *fixed_stream)
 		  }
 	  }
 
-      error = tf_encode_spectrum_aac(&spectral_line_vector[chanNum],
+      error = aacQuantize(&quantInfo[chanNum],
+		  &spectral_line_vector[chanNum],
 		  &p_ratio[chanNum],
 		  &allowed_distortion[chanNum],
 		  &energy[chanNum],
@@ -744,8 +747,7 @@ int EncTfFrame (faacAACStream *as, BsBitStream  *fixed_stream)
 		  &sfb_width_table[chanNum],
 		  bitsToUse,
 		  fixed_stream,
-		  &reconstructed_spectrum[chanNum],		  
-		  &quantInfo[chanNum]
+		  &reconstructed_spectrum[chanNum]		  
 		  );
       if (error == FERROR)
         return error;

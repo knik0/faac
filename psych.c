@@ -21,8 +21,8 @@
 /**************************************************************************
   Version Control Information			Method: CVS
   Identifiers:
-  $Revision: 1.72 $
-  $Date: 2000/11/01 14:05:32 $ (check in)
+  $Revision: 1.73 $
+  $Date: 2000/11/10 13:27:06 $ (check in)
   $Author: menno $
   *************************************************************************/
 
@@ -355,7 +355,7 @@ void Psy_Calculate(
 		if (quantInfo[chanNum].channelInfo.present) {
 			p_sri = quantInfo[chanNum].sr_info;
 			
-			if ((quantInfo[chanNum].channelInfo.cpe) && (quantInfo[chanNum].channelInfo.ch_is_left)) { /* CPE */
+			if (quantInfo[chanNum].channelInfo.cpe && quantInfo[chanNum].channelInfo.ch_is_left) { /* CPE */
 				int leftChan = chanNum;
 				int rightChan = quantInfo[chanNum].channelInfo.paired_ch;
 				int midChan = chanNum + MAX_TIME_CHANNELS;
@@ -485,7 +485,7 @@ void Psy_Calculate(
 					memcpy(p_chpo_short[rightChan][i].use_ms, psy_stvar_short[rightChan].use_ms[i], NSFB_SHORT*sizeof(int));
 				}
 
-			} else if (quantInfo[chanNum].channelInfo.lfe) { /* LFE */
+			} else if (!quantInfo[chanNum].channelInfo.cpe && quantInfo[chanNum].channelInfo.lfe) { /* LFE */
 
 				// LFE psych ratios are set to -24 dB for low frequencies
 				for (i = 0; i < 10; i++) {
@@ -503,7 +503,7 @@ void Psy_Calculate(
 					p_chpo_short[chanNum][i].p_ratio  = psy_stvar_short[chanNum].ismr[i];
 				}
 
-			} else { /* SCE */
+			} else if (!quantInfo[chanNum].channelInfo.cpe) { /* SCE */
 
 				psy_step1(p_time_signal, sample, chanNum);
 				psy_step2(sample, &psy_stvar_long[chanNum], &psy_stvar_short[chanNum],
@@ -784,7 +784,7 @@ void psy_step4MS(PSY_VARIABLE_LONG *psy_var_long,
 			psy_var_short[midChan].c[i][b] = psy_var_short[sideChan].c[i][b] = min(psy_var_short[leftChan].c[i][b], psy_var_short[rightChan].c[i][b]);
 }
 
-/* caluculation of energy and unpredictability in each partition */
+/* calculation of energy and unpredictability in each partition */
 void psy_step5(PARTITION_TABLE_LONG *part_tbl_long,
 			   PARTITION_TABLE_SHORT *part_tbl_short,
 			   PSY_STATVARIABLE_LONG *psy_stvar_long,
@@ -879,7 +879,7 @@ void psy_step6(PARTITION_TABLE_LONG *part_tbl_long,
 	}
 }
 
-/* caluculation of tonality in each partition */
+/* calculation of tonality in each partition */
 void psy_step7(PARTITION_TABLE_LONG *part_tbl_long,
 	       PARTITION_TABLE_SHORT *part_tbl_short,
 	       PSY_VARIABLE_LONG *psy_var_long, 
