@@ -16,7 +16,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: frame.c,v 1.41 2003/08/08 10:02:09 menno Exp $
+ * $Id: frame.c,v 1.42 2003/08/09 11:39:30 knik Exp $
  */
 
 /*
@@ -274,7 +274,7 @@ faacEncHandle FAACAPI faacEncOpen(unsigned long sampleRate,
     hEncoder->config.mpegVersion = MPEG4;
     hEncoder->config.aacObjectType = LTP;
     hEncoder->config.allowMidside = 1;
-    hEncoder->config.useLfe = 0;
+    hEncoder->config.useLfe = 1;
     hEncoder->config.useTns = 0;
     hEncoder->config.bitRate = 0; /* default bitrate / channel */
     hEncoder->config.bandWidth = bwfac * hEncoder->sampleRate;
@@ -839,6 +839,9 @@ static SR_INFO srInfo[12+1] =
 
 /*
 $Log: frame.c,v $
+Revision 1.42  2003/08/09 11:39:30  knik
+LFE support enabled by default
+
 Revision 1.41  2003/08/08 10:02:09  menno
 Small fix
 
