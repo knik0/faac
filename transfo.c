@@ -282,8 +282,8 @@ void buffer2freq(double           p_in_data[],
 		break;
 
 	case LONG_SHORT_WINDOW :
-//                for ( i = 0 ; i < BLOCK_LEN_LONG ; i++)
-//                        p_out_mdct[i] = p_o_buf[i] * first_window[i];
+                for ( i = 0 ; i < BLOCK_LEN_LONG ; i++)
+                        p_out_mdct[i] = p_o_buf[i] * first_window[i];
                 memcpy(p_out_mdct+BLOCK_LEN_LONG,p_o_buf+BLOCK_LEN_LONG,NFLAT_LS*sizedouble);
 //                for ( ; i < NFLAT_LS + BLOCK_LEN_LONG; i++){
 //                        p_out_mdct[i] = 1.0;
