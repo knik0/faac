@@ -243,13 +243,14 @@ int EncTfFrame (faacAACStream *as, BsBitStream  *fixed_stream)
 		/* store input data in look ahead buffer which may be necessary for the window switching decision */
 		int i;
 		int chanNum;
-		
+
 		for (chanNum=0;chanNum<max_ch;chanNum++) {
-			for( i=0; i<block_size_samples; i++ ) {
+                        if(as->use_LTP)
+			   for( i=0; i<block_size_samples; i++ ) {
 				/* temporary fix: a linear buffer for LTP containing the whole time frame */
 				nok_tmp_DTimeSigBuf[chanNum][i] = DTimeSigBuf[chanNum][i];
 				nok_tmp_DTimeSigBuf[chanNum][block_size_samples + i] = DTimeSigLookAheadBuf[chanNum][i];
-			}
+			   }
 			for( i=0; i<block_size_samples; i++ ) {
 				/* last frame input data are encoded now */
 				DTimeSigBuf[chanNum][i] = DTimeSigLookAheadBuf[chanNum][i];
@@ -332,7 +333,7 @@ int EncTfFrame (faacAACStream *as, BsBitStream  *fixed_stream)
 
 	/******************************************************************************************************************************
 	*
-	* block_switch processing 
+	* block_switch processing
 	*
 	******************************************************************************************************************************/
 	{
@@ -708,16 +709,17 @@ int EncTfFrame (faacAACStream *as, BsBitStream  *fixed_stream)
 		/**********************************************************/
 		/* Update LTP history buffer                              */
 		/**********************************************************/
-		for (chanNum=0;chanNum<max_ch;chanNum++) {
-			nok_ltp_reconstruct(reconstructed_spectrum[chanNum], 
-				block_type[chanNum], 
+		if(as->use_LTP)
+                  for (chanNum=0;chanNum<max_ch;chanNum++) {
+			nok_ltp_reconstruct(reconstructed_spectrum[chanNum],
+				block_type[chanNum],
 				WS_FHG, block_size_samples,
 				block_size_samples/2,
-				block_size_samples/short_win_in_long, 
-				&sfb_offset_table[chanNum][0], 
+				block_size_samples/short_win_in_long,
+				&sfb_offset_table[chanNum][0],
 				nr_of_sfb[chanNum],
 				&nok_lt_status[chanNum]);
-		}
+   		  }
 
 		/**********************************/
 		/* Write out all encoded channels */
