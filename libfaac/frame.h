@@ -16,7 +16,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: frame.h,v 1.17 2002/08/09 16:27:20 knik Exp $
+ * $Id: frame.h,v 1.18 2003/03/27 17:09:03 knik Exp $
  */
 
 #ifndef FRAME_H
@@ -31,7 +31,7 @@ extern "C" {
 #include "psych.h"
 
 #ifdef WIN32
-  #pragma pack(push, 8)
+  #pragma pack(push, 1)
   #ifndef FAACAPI
     #define FAACAPI __stdcall
   #endif
@@ -41,6 +41,8 @@ extern "C" {
   #endif
 #endif
 
+#define FAAC_CFG_VERSION 100
+
 typedef struct {
   psymodel_t *model;
   char *name;
@@ -48,6 +50,12 @@ typedef struct {
 
 typedef struct faacEncConfiguration
 {
+    /* config version */
+    int version;
+
+    /* library version */
+    char *name;
+
     /* MPEG version, 2 or 4 */
     unsigned int mpegVersion;
 
@@ -68,6 +76,9 @@ typedef struct faacEncConfiguration
 
     /* AAC file frequency bandwidth */
     unsigned int bandWidth;
+
+    /* Quantizer quality */
+    unsigned long quantqual;
 
 	/*
 		Bitstream output format, meaning:
