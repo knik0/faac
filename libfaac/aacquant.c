@@ -17,7 +17,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: aacquant.c,v 1.18 2003/05/01 10:29:06 knik Exp $
+ * $Id: aacquant.c,v 1.19 2003/05/12 17:52:47 knik Exp $
  */
 
 #include <math.h>
@@ -362,30 +362,51 @@ static void CalcAllowedDist(PsyInfo *psyInfo, int *cb_offset, int num_cb,
                             double *xr, double *xmin, int quality)
 {
   int sfb, start, end, l;
-  const double globalthr = 37.0 / (double)quality;
-  int last = cb_offset[num_cb];
+  const double globalthr = 31.1 / (double)quality;
+  int last = 0, lastsb = 0;
   double totnrg = 0.0;
   static const double minfix = 1.5;
 
-  for (l = 0; l < last; l++)
+  end = cb_offset[num_cb];
+  for (l = 0; l < end; l++)
+  {
+    if (xr[l])
+    {
+      last = l;
     totnrg += xr[l] * xr[l];
+    }
+  }
+  last++;
 
   totnrg /= last;
 
     for (sfb = 0; sfb < num_cb; sfb++)
     {
+    if (last > cb_offset[sfb])
+      lastsb = sfb;
+  }
+
+
+  for (sfb = 0; sfb < num_cb; sfb++)
+  {
     double thr, tmp;
     double enrg = 0.0;
 
         start = cb_offset[sfb];
         end = cb_offset[sfb + 1];
 
+    if (sfb > lastsb)
+    {
+      xmin[sfb] = 0;
+      continue;
+    }
+
     for (l = start; l < end; l++)
       enrg += xr[l]*xr[l];
 
-    thr = pow((double)(end-start)*totnrg/enrg, 0.5*(num_cb-sfb)/num_cb + 0.0);
+    thr = pow((double)(end-start)*totnrg/enrg, 0.425*(lastsb-sfb)/lastsb + 0.075);
 
-    tmp = minfix * pow((double)(start + 400) / (double)last, 0.6);
+    tmp = minfix * (double)(start + 400) / (double)last;
     if (tmp < thr)
       thr = tmp;
 
@@ -415,33 +436,37 @@ static int FixNoise(CoderInfo *coderInfo,
       int sfac;
       double fac;
       int dist;
-
-      if (!xmin[sb])
-        continue;
+      double sfacfix0 = 1.0, dist0 = 1e50;
+      double maxx;
 
       start = coderInfo->sfb_offset[sb];
       end = coderInfo->sfb_offset[sb+1];
 
-      tmp = 0.0;
+      if (!xmin[sb])
+	goto nullsfb;
+
+      maxx = 0.0;
       for (i = start; i < end; i++)
       {
-	if (xr_pow[i] > tmp)
-	  tmp = xr_pow[i];
+	if (xr_pow[i] > maxx)
+	  maxx = xr_pow[i];
       }
 
-      //printf("band %d: tmp: %f\n", sb, tmp);
-      if (tmp < 10.0)
+      //printf("band %d: maxx: %f\n", sb, maxx);
+      if (maxx < 10.0)
       {
+      nullsfb:
 	for (i = start; i < end; i++)
 	  xi[i] = 0;
 	coderInfo->scale_factor[sb] = 10;
 	continue;
       }
 
-      sfacfix = 1.0 / tmp;
+      sfacfix = 1.0 / maxx;
       sfac = log(sfacfix) * log_ifqstep - 0.5;
       for (i = start; i < end; i++)
 	xr_pow[i] *= sfacfix;
+      maxx *= sfacfix;
       coderInfo->scale_factor[sb] = sfac;
       QuantizeBand(xr_pow, xi, IPOW20(coderInfo->global_gain), start, end);
       //printf("\tsfac: %d\n", sfac);
@@ -462,9 +487,43 @@ static int FixNoise(CoderInfo *coderInfo,
       quantvol = sqrt(quantvol/(double)(end-start)) * (double)(end-start);
       //printf("\tdiffvol: %f, qvol: %f\n", diffvol, quantvol);
 
-      dist = (diffvol / quantvol) > xmin[sb];
-      fac = 0.0;
+      tmp = diffvol / quantvol;
+
       if (fabs(fixstep) > maxstep)
+      {
+	double dd = 0.5*(tmp / xmin[sb] - 1.0);
+
+	if (fabs(dd) < fabs(fixstep))
+	{
+	  fixstep = dd;
+
+	  if (fabs(fixstep) < maxstep)
+	    fixstep = maxstep * ((fixstep > 0) ? 1 : -1);
+	}
+      }
+
+      if (fixstep > 0)
+      {
+	if (tmp < dist0)
+	{
+	  dist0 = tmp;
+	  sfacfix0 = sfacfix;
+	}
+	else
+	{
+	  if (fixstep > .1)
+	    fixstep = .1;
+	}
+      }
+      else
+      {
+	dist0 = tmp;
+	sfacfix0 = sfacfix;
+      }
+
+      dist = (tmp > xmin[sb]);
+      fac = 0.0;
+      if (fabs(fixstep) >= maxstep)
       {
 	if ((dist && (fixstep < 0))
 	    || (!dist && (fixstep > 0)))
@@ -481,10 +540,24 @@ static int FixNoise(CoderInfo *coderInfo,
 
       if (fac != 0.0)
       {
+	if (maxx * fac >= IXMAX_VAL)
+	{
+	  // restore best noise
+	  fac = sfacfix0 / sfacfix;
+	  for (i = start; i < end; i++)
+	    xr_pow[i] *= fac;
+	  maxx *= fac;
+	  sfacfix *= fac;
+	  coderInfo->scale_factor[sb] = log(sfacfix) * log_ifqstep - 0.5;
+	  QuantizeBand(xr_pow, xi, IPOW20(coderInfo->global_gain), start, end);
+	  continue;
+	}
+
 	if (coderInfo->scale_factor[sb] < -10)
 	{
 	  for (i = start; i < end; i++)
 	    xr_pow[i] *= fac;
+          maxx *= fac;
           sfacfix *= fac;
 	  coderInfo->scale_factor[sb] = log(sfacfix) * log_ifqstep - 0.5;
 	  QuantizeBand(xr_pow, xi, IPOW20(coderInfo->global_gain), start, end);
