@@ -13,6 +13,7 @@
 
 double pow_quant[9000];
 double adj_quant[9000];
+double adj_quant_asm[9000];
 int sign[1024];
 int g_Count;
 int old_startsf;
@@ -80,39 +81,214 @@ void tf_init_encode_spectrum_aac( int quality )
 	for (i=0;i<8999;i++){
 		adj_quant[i] = (i + 1) - pow(0.5 * (pow_quant[i] + pow_quant[i + 1]), 0.75);
 	}
+
+	adj_quant_asm[0] = 0.0;
+	for (i = 1; i < 9000; i++) {
+		adj_quant_asm[i] = i - 0.5 - pow(0.5 * (pow_quant[i - 1] + pow_quant[i]),0.75);
+	}
 }
 
+
+#if (defined(__GNUC__) && defined(__i386__))
+#define USE_GNUC_ASM
+#endif
+
+#ifdef USE_GNUC_ASM
+#  define QUANTFAC(rx)  adj_quant_asm[rx]
+#  define XRPOW_FTOI(src, dest) \
+     asm ("fistpl %0 " : "=m"(dest) : "t"(src) : "st")
+#elif defined (_MSC_VER)
+#  define QUANTFAC(rx)  adj_quant_asm[rx]
+#  define XRPOW_FTOI(src, dest) do { \
+     double src_ = (src); \
+     int dest_; \
+     { \
+       __asm fld src_ \
+       __asm fistp dest_ \
+     } \
+     (dest) = dest_; \
+   } while (0)
+#else
+#  define QUANTFAC(rx)  adj_quant[rx]
+#  define XRPOW_FTOI(src,dest) ((dest) = (int)(src))
+#endif
+
+/*********************************************************************
+ * nonlinear quantization of xr 
+ * More accurate formula than the ISO formula.  Takes into account
+ * the fact that we are quantizing xr -> ix, but we want ix^4/3 to be 
+ * as close as possible to x^4/3.  (taking the nearest int would mean
+ * ix is as close as possible to xr, which is different.)
+ * From Segher Boessenkool <segher@eastsite.nl>  11/1999
+ * ASM optimization from 
+ *    Mathew Hendry <scampi@dial.pipex.com> 11/1999
+ *    Acy Stapp <AStapp@austin.rr.com> 11/1999
+ *    Takehiro Tominaga <tominaga@isoternet.org> 11/1999
+ *********************************************************************/
 int quantize(AACQuantInfo *quantInfo,
 			 double *p_spectrum,
 			 double *pow_spectrum,
-			 int quant[NUM_COEFF]
-			 )
+			 int quant[NUM_COEFF])
 {
-	int i, sb;
-	double quantFac;
-	double x;
+	const double istep = pow(2.0, -0.1875*quantInfo->common_scalefac);
 
-	for (sb = 0; sb < quantInfo->nr_of_sfb; sb++) {
+#ifndef _MSC_VER
+	{
+		double x;
+		int j, rx;
+		for (j = 1024 / 4; j > 0; --j) {
+			x = *pow_spectrum++ * istep;
+			XRPOW_FTOI(x, rx);
+			XRPOW_FTOI(x + QUANTFAC(rx), *quant++);
 
-		quantFac = pow(2.0, 0.1875*(quantInfo->scale_factor[sb] -
-			quantInfo->common_scalefac ));
+			x = *pow_spectrum++ * istep;
+			XRPOW_FTOI(x, rx);
+			XRPOW_FTOI(x + QUANTFAC(rx), *quant++);
 
-		for (i = quantInfo->sfb_offset[sb]; i < quantInfo->sfb_offset[sb+1]; i++){
-			x = pow_spectrum[i] * quantFac;
-			if (x > MAX_QUANT) {
-				return 1;
-			}
-			quant[i] = (int)(x + adj_quant[(int)x]);
-			quant[i] = sgn(p_spectrum[i]) * quant[i];  /* restore the original sign */
+			x = *pow_spectrum++ * istep;
+			XRPOW_FTOI(x, rx);
+			XRPOW_FTOI(x + QUANTFAC(rx), *quant++);
+
+			x = *pow_spectrum++ * istep;
+			XRPOW_FTOI(x, rx);
+			XRPOW_FTOI(x + QUANTFAC(rx), *quant++);
 		}
 	}
+#else
+	/* def _MSC_VER */
+	{
+		/* asm from Acy Stapp <AStapp@austin.rr.com> */
+		int rx[4];
+		_asm {
+			fld qword ptr [istep]
+			mov esi, dword ptr [pow_spectrum]
+			lea edi, dword ptr [adj_quant_asm]
+			mov edx, dword ptr [quant]
+			mov ecx, 1024/4
+		}
+loop1:
+		_asm {
+			fld qword ptr [esi]         // 0
+			fld qword ptr [esi+8]       // 1 0
+			fld qword ptr [esi+16]      // 2 1 0
+			fld qword ptr [esi+24]      // 3 2 1 0
 
-	if (quantInfo->block_type==ONLY_SHORT_WINDOW)
-		quantInfo->pulseInfo.pulse_data_present = 0;
-	else
-		PulseCoder(quantInfo, quant);
 
-	return 0;
+			fxch st(3)                  // 0 2 1 3
+			fmul st(0), st(4)
+			fxch st(2)                  // 1 2 0 3
+			fmul st(0), st(4)
+			fxch st(1)                  // 2 1 0 3
+			fmul st(0), st(4)
+			fxch st(3)                  // 3 1 0 2
+			fmul st(0), st(4)
+			add esi, 32
+			add edx, 16
+
+			fxch st(2)                  // 0 1 3 2
+			fist dword ptr [rx]
+			fxch st(1)                  // 1 0 3 2
+			fist dword ptr [rx+4]
+			fxch st(3)                  // 2 0 3 1
+			fist dword ptr [rx+8]
+			fxch st(2)                  // 3 0 2 1
+			fist dword ptr [rx+12]
+
+			dec ecx
+
+			mov eax, dword ptr [rx]
+			mov ebx, dword ptr [rx+4]
+			fxch st(1)                  // 0 3 2 1
+			fadd qword ptr [edi+eax*8]
+			fxch st(3)                  // 1 3 2 0
+			fadd qword ptr [edi+ebx*8]
+
+			mov eax, dword ptr [rx+8]
+			mov ebx, dword ptr [rx+12]
+			fxch st(2)                  // 2 3 1 0
+			fadd qword ptr [edi+eax*8]
+			fxch st(1)                  // 3 2 1 0
+			fadd qword ptr [edi+ebx*8]
+
+			fxch st(3)                  // 0 2 1 3
+			fistp dword ptr [edx-16]    // 2 1 3
+			fxch st(1)                  // 1 2 3
+			fistp dword ptr [edx-12]    // 2 3
+			fistp dword ptr [edx-8]     // 3
+			fistp dword ptr [edx-4]
+
+			jnz loop1
+
+			mov dword ptr [pow_spectrum], esi
+			mov dword ptr [quant], edx
+			fstp st(0)
+		}
+	}
+#endif
+}
+
+int inner_loop(AACQuantInfo *quantInfo,
+			   double *p_spectrum,
+			   double *pow_spectrum,
+			   int quant[NUM_COEFF],
+			   int max_bits)
+{
+	int bits;
+
+	quantInfo->common_scalefac -= 1;
+	do
+	{
+		quantInfo->common_scalefac += 1;
+		quantize(quantInfo, p_spectrum, pow_spectrum, quant);
+		bits = count_bits(quantInfo, quant, quantInfo->book_vector); 
+	} while ( bits > max_bits );
+
+	return bits;
+}
+
+int search_common_scalefac(AACQuantInfo *quantInfo,
+						   double *p_spectrum,
+						   double *pow_spectrum,
+						   int quant[NUM_COEFF],
+						   int desired_rate)
+{
+	int flag_GoneOver = 0;
+	int CurrentStep = 4;
+	int nBits;
+	int StepSize = old_startsf;
+	int Direction = 0;
+	do
+	{
+		quantInfo->common_scalefac = StepSize;
+		quantize(quantInfo, p_spectrum, pow_spectrum, quant);
+		nBits = count_bits(quantInfo, quant, quantInfo->book_vector);  
+
+		if (CurrentStep == 1 ) {
+			break; /* nothing to adjust anymore */
+		}
+		if (flag_GoneOver) {
+			CurrentStep /= 2;
+		}
+		if (nBits > desired_rate) { /* increase Quantize_StepSize */
+			if (Direction == -1 && !flag_GoneOver) {
+				flag_GoneOver = 1;
+				CurrentStep /= 2; /* late adjust */
+			}
+			Direction = 1;
+			StepSize += CurrentStep;
+		} else if (nBits < desired_rate) {
+			if (Direction == 1 && !flag_GoneOver) {
+				flag_GoneOver = 1;
+				CurrentStep /= 2; /* late adjust */
+			}
+			Direction = -1;
+			StepSize -= CurrentStep;
+		} else break;
+    } while (1);
+
+    old_startsf = StepSize;
+
+    return nBits;
 }
 
 int calc_noise(AACQuantInfo *quantInfo,
@@ -144,7 +320,7 @@ int calc_noise(AACQuantInfo *quantInfo,
 
 		sbw = quantInfo->sfb_offset[sb+1] - quantInfo->sfb_offset[sb];
 
-		invQuantFac = pow(2.0,-0.25 * (quantInfo->scale_factor[sb] - quantInfo->common_scalefac ));
+		invQuantFac = pow(2.0, -0.25*quantInfo->scale_factor[sb] - quantInfo->common_scalefac);
 
 		error_energy[sb] = 0.0;
 
@@ -311,6 +487,7 @@ int tf_encode_spectrum_aac(
 			   int bitRate)
 {
 	int quant[NUM_COEFF];
+	int s_quant[NUM_COEFF];
 	int i=0;
 	int j=0;
 	int k;
@@ -324,7 +501,6 @@ int tf_encode_spectrum_aac(
 	int extra_bits;
 	int max_bits;
 	int output_book_vector[SFB_NUM_MAX*2];
-	int start_com_sf;
 	double SigMaskRatio[SFB_NUM_MAX];
 	IS_Info *is_info;
 	int *ptr_book_vector;
@@ -334,13 +510,12 @@ int tf_encode_spectrum_aac(
 	int* scale_factor = quantInfo -> scale_factor;
 	int* common_scalefac = &(quantInfo -> common_scalefac);
 
-	int outer_loop_count;
-	int quantizer_change;
+	int outer_loop_count, notdone;
 	int over = 0, best_over = 100, better;
-	int sfb_overflow, amp_over;
+	int sfb_overflow;
 	int best_common_scalefac;
-	int prev_scfac, prev_is_scfac;
 	double noise_thresh;
+	double sfQuantFac;
 	double over_noise, tot_noise, max_noise;
 	double noise[SFB_NUM_MAX];
 	double best_max_noise = 0;
@@ -357,6 +532,8 @@ int tf_encode_spectrum_aac(
 		compute_ath(quantInfo, ATH);
 	}
 #endif
+
+	sfQuantFac = pow(2.0, 0.1875);
 
 	/** create the sfb_offset tables **/
 	if (quantInfo -> block_type == ONLY_SHORT_WINDOW) {
@@ -485,21 +662,23 @@ int tf_encode_spectrum_aac(
 		}
 	}
 
-	if (old_startsf < 40) {
+	if (old_startsf == 0) {
 		if (max_dct_line!=0.0) {
-			start_com_sf = 30 + (int)(16/3 * (log(ABS(pow(max_dct_line,0.75)/MAX_QUANT)/log(2.0))));
+			old_startsf = 30 + (int)(16/3 * (log(ABS(pow(max_dct_line,0.75)/MAX_QUANT)/log(2.0))));
 		} else {
-			start_com_sf = 40;
+			old_startsf = 40;
 		}
-	} else {
-		start_com_sf = old_startsf;
+		if ((old_startsf > 200) || (old_startsf < 40))
+			old_startsf = 40;
 	}
-	if ((start_com_sf>200) || (start_com_sf<40) )
-		start_com_sf = 40;
 
 	outer_loop_count = 0;
 
-	do { // outer iteration loop
+	notdone = 1;
+	if (max_dct_line == 0) {
+		notdone = 0;
+	}
+	while (notdone) { // outer iteration loop
 
 		outer_loop_count++;
 		over = 0;
@@ -509,117 +688,98 @@ int tf_encode_spectrum_aac(
 			sfb_overflow = 1;
 
 		if (outer_loop_count == 1) {
-			quantizer_change = 8;
-			*common_scalefac = start_com_sf;
-		} else {
-			quantizer_change = 2;
+			max_bits = search_common_scalefac(quantInfo, p_spectrum[0], pow_spectrum,
+				quant, average_block_bits);
 		}
 
-		do { // inner iteration loop
+		max_bits = inner_loop(quantInfo, p_spectrum[0], pow_spectrum,
+			quant, average_block_bits) + extra_bits;
 
-			if(quantize(quantInfo,	p_spectrum[0], pow_spectrum, quant))
-				max_bits = 1000000;
-			else
-				max_bits = count_bits(quantInfo, quant, output_book_vector) + extra_bits;
+		store_common_scalefac = quantInfo->common_scalefac;
 
-			quantizer_change /= 2;
-			store_common_scalefac = *common_scalefac;
+		if (notdone) {
+			over = calc_noise(quantInfo, p_spectrum[0], quant, requant, noise, allowed_dist[0],
+				&over_noise, &tot_noise, &max_noise);
 
-			if (max_bits > average_block_bits)
-				*common_scalefac += quantizer_change;
-			else
-				*common_scalefac -= quantizer_change;
-			if (*common_scalefac > 200)
-				return FERROR;
-
-			if ((quantizer_change == 1)&&(max_bits > average_block_bits))
-				quantizer_change = 2;
-
-		} while (quantizer_change != 1);
-
-		over = calc_noise(quantInfo, p_spectrum[0], quant, requant, noise, allowed_dist[0],
-			&over_noise, &tot_noise, &max_noise);
-
-		better = quant_compare(best_over, best_tot_noise, best_over_noise,
-				  best_max_noise, over, tot_noise, over_noise, max_noise);
-
-		prev_is_scfac = 0;
-		prev_scfac = store_common_scalefac;
-		for (sb = 0; sb < quantInfo->nr_of_sfb; sb++) {
-			if (ch_info->is_info.is_used[sb]) {
-				if ((scale_factor[sb] - prev_is_scfac) <= -59)
-					sfb_overflow = 1;
-				if ((scale_factor[sb] - prev_is_scfac) >= 59)
-					sfb_overflow = 1;
-				prev_is_scfac = scale_factor[sb];
-			} else {
-				if ((scale_factor[sb] - prev_scfac) <= -59)
-					sfb_overflow = 1;
-				if ((scale_factor[sb] - prev_scfac) >= 59)
-					sfb_overflow = 1;
-				prev_scfac = scale_factor[sb];
-			}
-			if (sfb_overflow == 1)
-				better = 0;
-		}
-
-		if (outer_loop_count == 1)
-			better = 1;
-
-		if (better) {
-			best_over = over;
-			best_max_noise = max_noise;
-			best_over_noise = over_noise;
-			best_tot_noise = tot_noise;
-			best_common_scalefac = store_common_scalefac;
+			better = quant_compare(best_over, best_tot_noise, best_over_noise,
+				best_max_noise, over, tot_noise, over_noise, max_noise);
 
 			for (sb = 0; sb < quantInfo->nr_of_sfb; sb++) {
-				best_scale_factor[sb] = scale_factor[sb];
+				if (scale_factor[sb] > 59) {
+					sfb_overflow = 1;
+					better = 0;
+				}
+			}
+
+			if (outer_loop_count == 1)
+				better = 1;
+
+			if (better) {
+				best_over = over;
+				best_max_noise = max_noise;
+				best_over_noise = over_noise;
+				best_tot_noise = tot_noise;
+				best_common_scalefac = store_common_scalefac;
+
+				for (sb = 0; sb < quantInfo->nr_of_sfb; sb++) {
+					best_scale_factor[sb] = scale_factor[sb];
+				}
+				memcpy(s_quant, quant, sizeof(int)*NUM_COEFF);
 			}
 		}
 
-		amp_over = 0;
+		if (over == 0) notdone=0;
 
-#if 1
-		noise_thresh = 0.0;
-#else
-		noise_thresh = -900;
-		for ( sb = 0; sb < quantInfo->nr_of_sfb; sb++ )
-			noise_thresh = max(1.05*noise[sb], noise_thresh);
-		noise_thresh = min(noise_thresh, 0.0);
-#endif
+		if (notdone) {
+			notdone = 0;
+			noise_thresh = -900;
+			for ( sb = 0; sb < quantInfo->nr_of_sfb; sb++ )
+				noise_thresh = max(1.05*noise[sb], noise_thresh);
+			noise_thresh = min(noise_thresh, 0.0);
 
-		for (sb = 0; sb < quantInfo->nr_of_sfb; sb++) {
-			if ((noise[sb] > noise_thresh)&&(quantInfo->book_vector[sb]!=INTENSITY_HCB)&&(quantInfo->book_vector[sb]!=INTENSITY_HCB2)) {
-
-				amp_over++;
-
-				allowed_dist[0][sb] *= 2;
-				scale_factor[sb]++;
-			}
-		}
-
-		if (sfb_overflow == 0) {
-			sfb_overflow = 1;
 			for (sb = 0; sb < quantInfo->nr_of_sfb; sb++) {
+				if ((noise[sb] > noise_thresh)&&(quantInfo->book_vector[sb]!=INTENSITY_HCB)&&(quantInfo->book_vector[sb]!=INTENSITY_HCB2)) {
+
+					allowed_dist[0][sb] *= 2;
+					scale_factor[sb]++;
+					for (i = quantInfo->sfb_offset[sb]; i < quantInfo->sfb_offset[sb+1]; i++){
+						pow_spectrum[i] *= sfQuantFac;
+					}
+					notdone = 1;
+				}
+			}
+		}
+
+		if (notdone) {
+			for (sb = 0; sb < quantInfo->nr_of_sfb; sb++) {
+				if (scale_factor[sb] > 59)
+					notdone = 0;
+			}
+		}
+
+		if (notdone) {
+			notdone = 0;
+			for (sb = 0; sb < quantInfo->nr_of_sfb; sb++)
 				if (scale_factor[sb] == 0)
-					sfb_overflow = 0;
-			}
+					notdone = 1;
 		}
 
-		if ((amp_over == 0)||(over == 0)||(amp_over==quantInfo->nr_of_sfb)||(sfb_overflow))
-			break;
-
-	} while (1);
-
-	*common_scalefac = best_common_scalefac;
-	for (sb = 0; sb < quantInfo->nr_of_sfb; sb++) {
-		scale_factor[sb] = best_scale_factor[sb];
 	}
 
-	old_startsf = *common_scalefac;
+	if (max_dct_line > 0) {
+		*common_scalefac = best_common_scalefac;
+		for (sb = 0; sb < quantInfo->nr_of_sfb; sb++) {
+			scale_factor[sb] = best_scale_factor[sb];
+		}
+		for (i = 0; i < 1024; i++)
+			quant[i] = s_quant[i]*sign[i];
+	} else {
+		*common_scalefac = 0;
+		for (sb = 0; sb < quantInfo->nr_of_sfb; sb++) {
+			scale_factor[sb] = 0;
+		}
+	}
 
-	quantize(quantInfo,	p_spectrum[0], pow_spectrum, quant);
 	calc_noise(quantInfo, p_spectrum[0], quant, requant, noise, allowed_dist[0],
 			&over_noise, &tot_noise, &max_noise);
 	if (quantInfo->block_type==ONLY_SHORT_WINDOW)
