@@ -18,7 +18,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: main.c,v 1.57 2004/03/17 13:32:13 danchr Exp $
+ * $Id: main.c,v 1.58 2004/03/24 11:00:40 danchr Exp $
  */
 
 #ifdef _MSC_VER
@@ -182,7 +182,7 @@ int main(int argc, char *argv[])
 
     int shortctl = SHORTCTL_NORMAL;
 
-    FILE *outfile;
+    FILE *outfile = NULL;
 
 #ifdef HAVE_LIBMP4V2
     MP4FileHandle MP4hFile = MP4_INVALID_FILE_HANDLE;
@@ -575,8 +575,8 @@ int main(int argc, char *argv[])
 #ifdef HAVE_LIBMP4V2
     /* initialize MP4 creation */
     if (container == MP4_CONTAINER) {
-        u_int8_t *ASC = 0;
-        u_int32_t ASCLength = 0;
+        unsigned char *ASC = 0;
+        unsigned long ASCLength = 0;
 	char *version_string;
 
         MP4hFile = MP4Create(aacFileName, 0, 0, 0);
@@ -590,6 +590,7 @@ int main(int argc, char *argv[])
         MP4SetAudioProfileLevel(MP4hFile, 0x0F);
         faacEncGetDecoderSpecificInfo(hEncoder, &ASC, &ASCLength);
         MP4SetTrackESConfiguration(MP4hFile, MP4track, ASC, ASCLength);
+	free(ASC);
 
 	/* set metadata */
 	version_string = malloc(strlen(faac_id_string) + 6);
@@ -602,7 +603,7 @@ int main(int argc, char *argv[])
 	if (title) MP4SetMetadataName(MP4hFile, title);
 	if (album) MP4SetMetadataAlbum(MP4hFile, album);
 	if (trackno > 0) MP4SetMetadataTrack(MP4hFile, trackno, ntracks);
-	if (date > 0) MP4SetMetadataYear(MP4hFile, date);
+	if (date) MP4SetMetadataYear(MP4hFile, date);
 	if (genre) MP4SetMetadataGenre(MP4hFile, genre);
 	if (comment) MP4SetMetadataComment(MP4hFile, genre);
     }
@@ -828,6 +829,10 @@ int main(int argc, char *argv[])
 
 /*
 $Log: main.c,v $
+Revision 1.58  2004/03/24 11:00:40  danchr
+silence a few warnings and fix a few mem. leaks
+make it possible to disable stripping (needed for profiling and debugging)
+
 Revision 1.57  2004/03/17 13:32:13  danchr
 - New signal handler. Disabled on Windows, although it *should* work.
 - Separated handling of stream format and output format.
