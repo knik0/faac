@@ -16,7 +16,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: frame.h,v 1.21 2003/08/02 11:32:10 stux Exp $
+ * $Id: frame.h,v 1.22 2003/08/11 09:43:47 menno Exp $
  */
 
 #ifndef FRAME_H
@@ -179,6 +179,12 @@ typedef struct {
     faacEncConfiguration config;
 
     psymodel_t *psymodel;
+
+//AV{ allow multi instance
+	double *pow43;
+	double *adj43;
+	double *adj43asm;
+//}
 
 } faacEncStruct, *faacEncHandle;
 

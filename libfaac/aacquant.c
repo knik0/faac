@@ -17,12 +17,13 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: aacquant.c,v 1.20 2003/06/26 19:19:21 knik Exp $
+ * $Id: aacquant.c,v 1.21 2003/08/11 09:43:47 menno Exp $
  */
 
 #include <math.h>
 #include <stdlib.h>
 
+#include "frame.h"
 #include "aacquant.h"
 #include "coder.h"
 #include "huffman.h"
@@ -44,49 +45,56 @@ static void CalcAllowedDist(CoderInfo *coderInfo, PsyInfo *psyInfo,
 			    double *xr, double *xmin, int quality);
 
 
-double *pow43;
-double *adj43;
-double *adj43asm;
-
-
-void AACQuantizeInit(CoderInfo *coderInfo, unsigned int numChannels)
+void AACQuantizeInit(faacEncHandle hEncoder, CoderInfo *coderInfo, unsigned int numChannels)
 {
     unsigned int channel, i;
 
-    pow43 = (double*)AllocMemory(PRECALC_SIZE*sizeof(double));
-    adj43 = (double*)AllocMemory(PRECALC_SIZE*sizeof(double));
-    adj43asm = (double*)AllocMemory(PRECALC_SIZE*sizeof(double));
+    hEncoder->pow43 = (double*)AllocMemory(PRECALC_SIZE*sizeof(double));
+    hEncoder->adj43 = (double*)AllocMemory(PRECALC_SIZE*sizeof(double));
+    hEncoder->adj43asm = (double*)AllocMemory(PRECALC_SIZE*sizeof(double));
 
-    pow43[0] = 0.0;
+    hEncoder->pow43[0] = 0.0;
     for(i=1;i<PRECALC_SIZE;i++)
-        pow43[i] = pow((double)i, 4.0/3.0);
+        hEncoder->pow43[i] = pow((double)i, 4.0/3.0);
 
-    adj43asm[0] = 0.0;
+    hEncoder->adj43asm[0] = 0.0;
     for (i = 1; i < PRECALC_SIZE; i++)
-        adj43asm[i] = i - 0.5 - pow(0.5 * (pow43[i - 1] + pow43[i]),0.75);
+        hEncoder->adj43asm[i] = i - 0.5 - pow(0.5 * (hEncoder->pow43[i - 1] + hEncoder->pow43[i]),0.75);
     for (i = 0; i < PRECALC_SIZE-1; i++)
-        adj43[i] = (i + 1) - pow(0.5 * (pow43[i] + pow43[i + 1]), 0.75);
-    adj43[i] = 0.5;
+        hEncoder->adj43[i] = (i + 1) - pow(0.5 * (hEncoder->pow43[i] + hEncoder->pow43[i + 1]), 0.75);
+    hEncoder->adj43[i] = 0.5;
 
     for (channel = 0; channel < numChannels; channel++) {
         coderInfo[channel].requantFreq = (double*)AllocMemory(BLOCK_LEN_LONG*sizeof(double));
     }
 }
 
-void AACQuantizeEnd(CoderInfo *coderInfo, unsigned int numChannels)
+void AACQuantizeEnd(faacEncHandle hEncoder, CoderInfo *coderInfo, unsigned int numChannels)
 {
     unsigned int channel;
 
-    if (pow43) FreeMemory(pow43);
-    if (adj43) FreeMemory(adj43);
-    if (adj43asm) FreeMemory(adj43asm);
+    if( hEncoder->pow43 )
+	{
+		FreeMemory( hEncoder->pow43 ) ;
+		hEncoder->pow43 = NULL ;
+	}
+    if( hEncoder->adj43 )
+	{
+		FreeMemory( hEncoder->adj43 ) ;
+		hEncoder->adj43 = NULL ;
+	}
+    if( hEncoder->adj43asm )
+	{
+		FreeMemory( hEncoder->adj43asm ) ;
+		hEncoder->adj43asm = NULL ;
+	}
 
     for (channel = 0; channel < numChannels; channel++) {
         if (coderInfo[channel].requantFreq) FreeMemory(coderInfo[channel].requantFreq);
     }
 }
 
-static void BalanceEnergy(CoderInfo *coderInfo,
+static void BalanceEnergy(faacEncHandle hEncoder, CoderInfo *coderInfo,
 			  const double *xr, const int *xi)
 {
   const double ifqstep = pow(2.0, 0.25);
@@ -116,7 +124,7 @@ static void BalanceEnergy(CoderInfo *coderInfo,
       if (!sb && !xi[l])
 	continue;
 
-      xq = pow43[xi[l]];
+      xq = hEncoder->pow43[xi[l]];
 
       en0 += xr[l] * xr[l];
       enq += xq * xq;
@@ -127,7 +135,7 @@ static void BalanceEnergy(CoderInfo *coderInfo,
 
     enq *= qfac_1 * qfac_1;
 
-    shift = log(sqrt(enq / en0)) * logstep_1 + 1000.5;
+    shift = (int)(log(sqrt(enq / en0)) * logstep_1 + 1000.5);
     shift -= 1000;
 
     shift += coderInfo->scale_factor[sb];
@@ -135,7 +143,7 @@ static void BalanceEnergy(CoderInfo *coderInfo,
   }
 }
 
-static void UpdateRequant(CoderInfo *coderInfo, int *xi)
+static void UpdateRequant(faacEncHandle hEncoder, CoderInfo *coderInfo, int *xi)
 {
   double *requant_xr = coderInfo->requantFreq;
   int sb;
@@ -149,11 +157,12 @@ static void UpdateRequant(CoderInfo *coderInfo, int *xi)
     int end = coderInfo->sfb_offset[sb + 1];
 
     for (i = start; i < end; i++)
-      requant_xr[i] = pow43[xi[i]] * invQuantFac;
+      requant_xr[i] = hEncoder->pow43[xi[i]] * invQuantFac;
   }
 }
 
-int AACQuantize(CoderInfo *coderInfo,
+int AACQuantize(faacEncHandle hEncoder,
+				CoderInfo *coderInfo,
                 PsyInfo *psyInfo,
                 ChannelInfo *channelInfo,
                 int *cb_width,
@@ -186,8 +195,8 @@ int AACQuantize(CoderInfo *coderInfo,
         CalcAllowedDist(coderInfo, psyInfo, xr, xmin, quality);
 	coderInfo->global_gain = 0;
 	FixNoise(coderInfo, xr, xr_pow, xi, xmin);
-	BalanceEnergy(coderInfo, xr, xi);
-	UpdateRequant(coderInfo, xi);
+	BalanceEnergy(hEncoder, coderInfo, xr, xi);
+	UpdateRequant(hEncoder, coderInfo, xi);
 
         for ( i = 0; i < FRAME_LEN; i++ )  {
             sign = (xr[i] < 0) ? -1 : 1;
@@ -278,7 +287,7 @@ static void Quantize(const double *xp, int *pi, double istep)
     }
 }
 #endif
-static void QuantizeBand(const double *xp, int *pi, double istep,
+static void QuantizeBand(faacEncHandle hEncoder, const double *xp, int *pi, double istep,
 			   int offset, int end)
 {
   int j;
@@ -289,8 +298,8 @@ static void QuantizeBand(const double *xp, int *pi, double istep,
   {
     double x0 = istep * xp[j];
 
-    x0 += MAGIC_FLOAT; fi[j].f = x0;
-    fi[j].f = x0 + (adj43asm - MAGIC_INT)[fi[j].i];
+    x0 += MAGIC_FLOAT; fi[j].f = (float)x0;
+    fi[j].f = x0 + (hEncoder->adj43asm - MAGIC_INT)[fi[j].i];
     fi[j].i -= MAGIC_INT;
   }
 }
@@ -385,7 +394,8 @@ static void CalcAllowedDist(CoderInfo *coderInfo, PsyInfo *psyInfo,
     }
 }
 
-static int FixNoise(CoderInfo *coderInfo,
+static int FixNoise(faacEncHandle hEncoder,
+			CoderInfo *coderInfo,
 		    const double *xr,
 		    double *xr_pow,
 		    int *xi,
@@ -434,12 +444,12 @@ static int FixNoise(CoderInfo *coderInfo,
       }
 
       sfacfix = 1.0 / maxx;
-      sfac = log(sfacfix) * log_ifqstep - 0.5;
+      sfac = (int)(log(sfacfix) * log_ifqstep - 0.5);
       for (i = start; i < end; i++)
 	xr_pow[i] *= sfacfix;
       maxx *= sfacfix;
       coderInfo->scale_factor[sb] = sfac;
-      QuantizeBand(xr_pow, xi, IPOW20(coderInfo->global_gain), start, end);
+      QuantizeBand(hEncoder, xr_pow, xi, IPOW20(coderInfo->global_gain), start, end);
       //printf("\tsfac: %d\n", sfac);
 
     calcdist:
@@ -449,7 +459,7 @@ static int FixNoise(CoderInfo *coderInfo,
       diffvol = 0.0;
       for (i = start; i < end; i++)
       {
-	tmp = pow43[xi[i]];
+	tmp = hEncoder->pow43[xi[i]];
 	quantvol += tmp * tmp;
 
 	diffvol += fabs(fabs(xr[i]) * quantfac - tmp);
@@ -520,7 +530,7 @@ static int FixNoise(CoderInfo *coderInfo,
 	  maxx *= fac;
 	  sfacfix *= fac;
 	  coderInfo->scale_factor[sb] = log(sfacfix) * log_ifqstep - 0.5;
-	  QuantizeBand(xr_pow, xi, IPOW20(coderInfo->global_gain), start, end);
+	  QuantizeBand(hEncoder, xr_pow, xi, IPOW20(coderInfo->global_gain), start, end);
 	  continue;
 	}
 
@@ -531,7 +541,7 @@ static int FixNoise(CoderInfo *coderInfo,
           maxx *= fac;
           sfacfix *= fac;
 	  coderInfo->scale_factor[sb] = log(sfacfix) * log_ifqstep - 0.5;
-	  QuantizeBand(xr_pow, xi, IPOW20(coderInfo->global_gain), start, end);
+	  QuantizeBand(hEncoder, xr_pow, xi, IPOW20(coderInfo->global_gain), start, end);
 	  goto calcdist;
 	}
       }

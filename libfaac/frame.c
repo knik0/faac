@@ -16,7 +16,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: frame.c,v 1.42 2003/08/09 11:39:30 knik Exp $
+ * $Id: frame.c,v 1.43 2003/08/11 09:43:47 menno Exp $
  */
 
 /*
@@ -332,7 +332,7 @@ faacEncHandle FAACAPI faacEncOpen(unsigned long sampleRate,
 
     PredInit(hEncoder);
 
-    AACQuantizeInit(hEncoder->coderInfo, hEncoder->numChannels);
+    AACQuantizeInit(hEncoder, hEncoder->coderInfo, hEncoder->numChannels);
 
     HuffmanInit(hEncoder->coderInfo, hEncoder->numChannels);
 
@@ -351,7 +351,7 @@ int FAACAPI faacEncClose(faacEncHandle hEncoder)
 
     LtpEnd(hEncoder);
 
-    AACQuantizeEnd(hEncoder->coderInfo, hEncoder->numChannels);
+    AACQuantizeEnd(hEncoder, hEncoder->coderInfo, hEncoder->numChannels);
 
     HuffmanEnd(hEncoder->coderInfo, hEncoder->numChannels);
 
@@ -648,11 +648,11 @@ int FAACAPI faacEncEncode(faacEncHandle hEncoder,
     bitsToUse = (int)(bitRate*FRAME_LEN/sampleRate+0.5);
     for (channel = 0; channel < numChannels; channel++) {
         if (coderInfo[channel].block_type == ONLY_SHORT_WINDOW) {
-            AACQuantize(&coderInfo[channel], &hEncoder->psyInfo[channel],
+            AACQuantize(hEncoder, &coderInfo[channel], &hEncoder->psyInfo[channel],
                 &channelInfo[channel], hEncoder->srInfo->cb_width_short,
                 hEncoder->srInfo->num_cb_short, hEncoder->freqBuff[channel], bitsToUse);
         } else {
-            AACQuantize(&coderInfo[channel], &hEncoder->psyInfo[channel],
+            AACQuantize(hEncoder, &coderInfo[channel], &hEncoder->psyInfo[channel],
                 &channelInfo[channel], hEncoder->srInfo->cb_width_long,
                 hEncoder->srInfo->num_cb_long, hEncoder->freqBuff[channel], bitsToUse);
         }
@@ -839,6 +839,9 @@ static SR_INFO srInfo[12+1] =
 
 /*
 $Log: frame.c,v $
+Revision 1.43  2003/08/11 09:43:47  menno
+thread safety, some tables added to the encoder context
+
 Revision 1.42  2003/08/09 11:39:30  knik
 LFE support enabled by default
 

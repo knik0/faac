@@ -16,7 +16,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: aacquant.h,v 1.6 2003/06/26 19:19:31 knik Exp $
+ * $Id: aacquant.h,v 1.7 2003/08/11 09:43:47 menno Exp $
  */
 
 #ifndef AACQUANT_H
@@ -38,10 +38,11 @@ extern "C" {
 #define IPOW20(x)  pow(2.0,-((double)x)*.1875)
 
 
-void AACQuantizeInit(CoderInfo *coderInfo, unsigned int numChannels);
-void AACQuantizeEnd(CoderInfo *coderInfo, unsigned int numChannels);
+void AACQuantizeInit(faacEncHandle hEncoder, CoderInfo *coderInfo, unsigned int numChannels);
+void AACQuantizeEnd(faacEncHandle hEncoder, CoderInfo *coderInfo, unsigned int numChannels);
 
-int AACQuantize(CoderInfo *coderInfo,
+int AACQuantize(faacEncHandle hEncoder,
+				CoderInfo *coderInfo,
                 PsyInfo *psyInfo,
                 ChannelInfo *channelInfo,
                 int *cb_width,
