@@ -1,0 +1,329 @@
+<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML//EN//3.0">
+<HTML>
+
+<HEAD>
+	<TITLE>
+	The libsndfile API.
+	</TITLE>
+	<META NAME="Author"      CONTENT="Erik de Castro Lopo">
+	<META NAME="Version"     CONTENT="Version 0.0.18">
+	<META NAME="Description" CONTENT="The libsndfile API.">
+	<META NAME="Keywords"    CONTENT="WAV AIFF AU libsndfile sound audio dsp Linux">
+
+</HEAD>
+
+<BODY TEXT="#FFFFFF" BGCOLOR="#000000" LINK="#5050FF" VLINK="#5050FF" ALINK="#FF00FF">
+
+<FONT SIZE=3>
+
+<FONT SIZE=+20 COLOR="#5050FF"><BR><B>libsndfile</B></FONT>
+<BR><BR>
+	Libsndfile is a library designed to allow the reading and writing of many 
+	different sampled sound file formats (such as MS Windows WAV and the Apple/SGI 
+	AIFF format) through one standard library interface. 
+<BR><BR>
+
+<FONT SIZE=+5 COLOR="#5050FF"><BR><B>SYNOPSIS</B></FONT>
+<BR><BR>
+
+The functions of linbsndfile are defined as follows:
+
+<PRE>
+      #include &lt;stdio.h&gt;
+      #include &lt;sndfile.h&gt;
+        
+      SNDFILE*  <A HREF="#open">sf_open_read</A>     (const char *path, SF_INFO *sfinfo) ;
+      SNDFILE*  <A HREF="#open">sf_open_write</A>    (const char *path, const SF_INFO *sfinfo) ;
+        
+      off_t     <A HREF="#seek">sf_seek</A>          (SNDFILE *sndfile, off_t frames, int whence) ;
+
+      size_t    <A HREF="#raw">sf_read_raw</A>      (SNDFILE *sndfile, void *ptr, size_t bytes) ;
+      size_t    <A HREF="#raw">sf_write_raw</A>     (SNDFILE *sndfile, void *ptr, size_t bytes) ;
+
+      size_t    <A HREF="#read">sf_read_short</A>    (SNDFILE *sndfile, short *ptr, size_t items) ;
+      size_t    <A HREF="#read">sf_read_int</A>      (SNDFILE *sndfile, int *ptr, size_t items) ;
+      size_t    <A HREF="#read">sf_read_double</A>   (SNDFILE *sndfile, double *ptr, size_t items, int normalize) ;
+
+      size_t    <A HREF="#readf">sf_readf_short</A>   (SNDFILE *sndfile, short *ptr, size_t frames) ;
+      size_t    <A HREF="#readf">sf_readf_int</A>     (SNDFILE *sndfile, int *ptr, size_t frames) ;
+      size_t    <A HREF="#readf">sf_readf_double</A>  (SNDFILE *sndfile, double *ptr, size_t frames, int normalize) ;
+
+      size_t    <A HREF="#write">sf_write_short</A>   (SNDFILE *sndfile, short *ptr, size_t items) ;
+      size_t    <A HREF="#write">sf_write_int</A>     (SNDFILE *sndfile, int *ptr, size_t items) ;
+      size_t    <A HREF="#write">sf_write_double</A>  (SNDFILE *sndfile, double *ptr, size_t items, int normalize) ;
+
+      size_t    <A HREF="#writef">sf_writef_short</A>  (SNDFILE *sndfile, short *ptr, size_t frames) ;
+      size_t    <A HREF="#writef">sf_writef_int</A>    (SNDFILE *sndfile, int *ptr, size_t frames) ;
+      size_t    <A HREF="#writef">sf_writef_double</A> (SNDFILE *sndfile, double *ptr, size_t frames, int normalize) ;
+
+      int       <A HREF="#close">sf_close</A>         (SNDFILE *sndfile) ;
+</PRE>
+
+<BR>
+SNDFILE* is an anonymous pointer to data which is private to the library.
+<BR><BR>
+
+<A NAME="open">
+<FONT SIZE=+20 COLOR="#5050FF"><BR><B>File Open Functions</B></FONT>
+
+<PRE>
+      SNDFILE*  sf_open_read    (const char *path, SF_INFO *wfinfo) ;
+      SNDFILE*  sf_open_write   (const char *path, const SF_INFO *wfinfo) ;
+</PRE>
+
+The SF_INFO structure is for passing data between the calling function and the library
+when opening a file for read or writing. It is defined in sndfile.h as follows:
+
+<PRE>
+      typedef struct
+      {    int      samplerate ;
+           int      samples ;
+           int      channels ;
+           int      pcmbitwidth ;
+           int      format ;
+           int      sections ;
+           int      seekable ;
+       } SF_INFO ;
+</PRE>
+
+<BR>
+When opening a file for read (with the exception of RAW files where the caller has
+to fill in the channels, pcmbitwidth and format fields), all the structure members 
+are filled in by the library.
+
+<BR><BR>
+When opening a file for write, the caller must fill in structure members samplerate,
+channels, pcmbitwidth and format. For encoded formats (ie u-law, A-law and ADPCM), 
+pcmbitwidth is the bit width before encoding or after decoding.
+
+<BR><BR>
+The format field in the above structure is made up of the bit-wise OR of a major
+format type with a value of 0x10000 or greater and a minor format type with a value
+less than 0x10000. The currently understood formats are listed in sndfile.h as 
+follows and also includes two bitmasks for separating major and minor file types.
+Not all combinations of major and minor file types are valid. 
+
+<PRE>
+      enum
+      {   SF_FORMAT_WAV       = 0x10000,       /* Microsoft WAV format (big endian). */
+          SF_FORMAT_AIFF      = 0x20000,       /* Apple/SGI AIFF format (little endian). */
+          SF_FORMAT_AU        = 0x30000,       /* Sun/NeXT AU format (big endian). */
+          SF_FORMAT_AULE      = 0x40000,       /* DEC AU format (little endian). */
+          SF_FORMAT_RAW       = 0x50000,       /* RAW PCM data. */
+          SF_FORMAT_PAF       = 0x60000,       /* Ensoniq PARIS file format. */
+          SF_FORMAT_SVX       = 0x70000,       /* Amiga IFF / SVX8 / SV16 format. */
+          
+          SF_FORMAT_PCM       = 0x0001,        /* PCM data in 8, 16, 24 or 32 bits. */
+          SF_FORMAT_FLOAT     = 0x0002,        /* 32 bit floats. */
+          SF_FORMAT_ULAW      = 0x0003,        /* U-Law encoded. */
+          SF_FORMAT_ALAW      = 0x0004,        /* A-Law encoded. */
+          SF_FORMAT_IMA_ADPCM = 0x0005,        /* IMA ADPCM. */
+          SF_FORMAT_MS_ADPCM  = 0x0006,        /* Microsoft ADPCM. */
+      
+          SF_FORMAT_PCM_BE    = 0x0007,        /* Big endian PCM data. */
+          SF_FORMAT_PCM_LE    = 0x0008,        /* Little endian PCM data. */
+          SF_FORMAT_PCM_S8    = 0x0009,        /* Signed 8 bit PCM. */
+          SF_FORMAT_PCM_U8    = 0x000A,        /* Unsigned 8 bit PCM. */
+
+          SF_FORMAT_PCM_BE    = 0x0007,        /* RAW PCM (big endian). */
+          SF_FORMAT_PCM_LE    = 0x0008,        /* RAW PCM (little endian). */
+          SF_FORMAT_RAW_S8    = 0x0009,        /* Signed 8 bit RAW PCM. */
+          SF_FORMAT_RAW_U8    = 0x000A,        /* Unsigned 8 bit RAW PCM. */
+          
+          SF_FORMAT_SUBMASK   = 0xFFFF,        
+          SF_FORMAT_TYPEMASK  = 0x7FFF0000
+      } ;
+</PRE>
+
+<BR>
+On success, the sf_open functions return a non NULL pointer which should be passed as
+the first parameter to all subsequent libsndfile calls dealing with that audio file.
+On fail, the sf_open functions return a NULL pointer.
+<BR><BR>
+
+
+<A NAME="seek">
+<FONT SIZE=+20 COLOR="#5050FF"><BR><B>File Seek Functions</B></FONT>
+
+<PRE>
+      off_t     sf_seek         (SNDFILE *sndfile, off_t frames, int whence) ;
+</PRE>
+
+The file seek functions work much like lseek in stdio.h with the exception that
+the non-audio data is ignored and the seek only moves within the audio data section of 
+the file. In addition, seeks are defined in number of (multichannel) samples or frames.
+Therefor, for a seek in a stereo file from the current position forward with an offset 
+of 1 would skip forward by one sample of both channels.
+<BR><BR>
+Valid values for the whence parameter are defined to be the same as the lseek function
+and behave as follows:
+
+<PRE>
+      SEEK_SET  - The offset is set to the start of the audio data plus offset (multichannel) samples.
+      SEEK_CUR  - The offset is set to its current location plus offset (multichannel) samples.
+      SEEK_END  - The offset is set to the end of the data plus offset (multichannel) samples.
+</PRE>
+
+Note that frames offset can be negative and in fact should be when SEEK_END is used for the 
+whence parameter. 
+
+<BR><BR>
+sf_seek will return the offset in (multichannel) samples from the start of the audio data
+or -1 if an error occurs (ie an attempt is made to seek beyond the start or end of the file).
+
+<BR>
+<A NAME="read">
+<FONT SIZE=+20 COLOR="#5050FF"><BR><B>File Read Functions (Items)</B></FONT>
+
+<PRE>
+      size_t    sf_read_short   (SNDFILE *sndfile, short *ptr, size_t items) ;
+      size_t    sf_read_int     (SNDFILE *sndfile, int *ptr, size_t items) ;
+      size_t    sf_read_double  (SNDFILE *sndfile, double *ptr, size_t items, int normalize) ;
+</PRE>
+
+The file read items functions fill the array pointed to by ptr with the requested
+number of items. The items parameter must be an integer product of the number 
+of channels or an error will occur.
+
+<BR><BR>
+The sf_read_double function has an extra parameter. If normalize is 1, the 
+read operation will return data that is normalized so that the maximum possible 
+full scale sample value of the file on disk will result in a sample value of 1.0 
+in the array, with all other sample values scaled accordingly.
+
+<BR><BR>
+The sf_read_XXXX functions return the number of items read. Unless the end of the
+file was reached during the read, the return value should equal the of items 
+requested. Attempts to read beyond the end of the file will not result in an error 
+but will cause the sf_read_XXXX functions to return less than the number of items 
+requested or 0 if already at the end of the file. On error, a value of -1 is 
+returned.
+
+<BR><BR>
+	
+<A NAME="readf">
+<FONT SIZE=+20 COLOR="#5050FF"><BR><B>File Read Functions (Frames)</B></FONT>
+
+<PRE>
+      size_t    sf_readf_short   (SNDFILE *sndfile, short *ptr, size_t frames) ;
+      size_t    sf_readf_int     (SNDFILE *sndfile, int *ptr, size_t frames) ;
+      size_t    sf_readf_double  (SNDFILE *sndfile, double *ptr, size_t frames, int normalize) ;
+</PRE>
+
+The file read frames functions fill the array pointed to by ptr with the requested
+number of frames of data. The array must be large enough to hold the product of
+frames and the number of channels.
+
+<BR><BR>
+The sf_readf_double function has an extra parameter. If normalize is 1, the 
+read operation will return data that is normalized so that the maximum possible 
+full scale sample value of the file on disk will result in a sample value of 1.0 
+in the array, with all other sample values scaled accordingly.
+
+<BR><BR>
+The sf_readf_XXXX functions return the number of frames read. Unless the end of the
+file was reached during the read, the return value should equal the of frames 
+requested. Attempts to read beyond the end of the file will not result in an error 
+but will cause the sf_readf_XXXX functions to return less than the number of frames 
+requested or 0 if already at the end of the file. On error, a value of -1 is 
+returned.
+
+<BR><BR>
+	
+<A NAME="write">
+<FONT SIZE=+20 COLOR="#5050FF"><BR><B>File Write Functions (Items)</B></FONT>
+
+<PRE>
+      size_t    sf_write_short   (SNDFILE *sndfile, short *ptr, size_t items) ;
+      size_t    sf_write_int     (SNDFILE *sndfile, int *ptr, size_t items) ;
+      size_t    sf_write_double  (SNDFILE *sndfile, double *ptr, size_t items, int normalize) ;
+</PRE>
+
+
+The file write items functions write the data in the array pointed to by ptr to the file.
+The items parameter must be an integer product of the number of channels or an error 
+will occur.
+
+<BR><BR>
+The sf_write_double function has an extra parameter. If normalize is 1, the write 
+operation will assume that data in the array is normalize so that all values are
+between -1 and 1 and will scale the samples to fill the bitwidth of the disk file
+format. If normalize is zero, no scaling will take place and the samples will be
+truncated and written to disk as integers of 8, 16, 24 or 32 bits.
+
+<BR><BR>
+The sf_write_XXXX functions return the number of items written (which should be the
+same as the items parameter) or -1 if an error has occurred. 
+<BR><BR>
+	
+<A NAME="writef">
+<FONT SIZE=+20 COLOR="#5050FF"><BR><B>File Write Functions (Frames)</B></FONT>
+
+<PRE>
+      size_t    sf_writef_short  (SNDFILE *sndfile, short *ptr, size_t frames) ;
+      size_t    sf_writef_int    (SNDFILE *sndfile, int *ptr, size_t frames) ;
+      size_t    sf_writef_double (SNDFILE *sndfile, double *ptr, size_t frames, int normalize) ;
+</PRE>
+
+
+The file write frames functions write the data in the array pointed to by ptr to the file.
+The array must be large enough to hold the product of frames and the number of channels.
+
+<BR><BR>
+The sf_writef_double function has an extra parameter. If normalize is 1, the write 
+operation will assume that data in the array is normalize so that all values are
+between -1 and 1 and will scale the samples to fill the bitwidth of the disk file
+format. If normalize is zero, no scaling will take place and the samples will be
+truncated and written to disk as integers of 8, 16, 24 or 32 bits.
+
+<BR><BR>
+The sf_writef_XXXX functions return the number of frames written (which should be the
+same as the frames parameter) or -1 if an error has occurred. 
+<BR><BR>
+	
+<A NAME="raw">
+<FONT SIZE=+20 COLOR="#5050FF"><BR><B>Raw File Read and Write Functions</B></FONT>
+
+
+<PRE>
+      size_t    sf_read_raw     (SNDFILE *sndfile, void *ptr, size_t bytes) ;
+      size_t    sf_write_raw    (SNDFILE *sndfile, void *ptr, size_t bytes) ;
+</PRE>
+
+The raw write and write functions read raw audio data from the audio file (not to be
+confused with reading RAW header-less PCM files). The number of bytes read or written 
+must always be an integer multiple of the number of channels multiplied by the number 
+of bytes required to represent one sample from one channel.
+
+<BR><BR>
+The raw read and write functions return the number of bytes read or written (which 
+should be the same as the bytes parameter) or -1 if an error has occurred. 
+<BR><BR>
+
+<A NAME="close">
+<FONT SIZE=+20 COLOR="#5050FF"><BR><B>File Close Function</B></FONT>
+
+
+<PRE>
+      int       sf_close        (SNDFILE *sndfile) ;
+</PRE>
+
+The close function closes the file, deallocates it's internal buffers and returns
+0 on success or an error value.
+
+<BR><BR>
+<BR>
+
+<HR>
+
+<BR><BR>
+	The libsndfile home page is 
+		<A HREF="http://www.zip.com.au/~erikd/libsndfile/">here</A>.
+<P>
+Version : 0.0.18
+</P>
+
+
+</FONT>
+</BODY>
+</HTML>

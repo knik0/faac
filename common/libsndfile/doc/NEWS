@@ -1,0 +1,58 @@
+Version 0.0.21 (2000-08-16)
+  * Offical release.
+  * AU files without the normal AU file header are now recognised as headerless
+    8kHz 8 bit ulaw encoded files.
+  * Added handling for G721 4bit APDCM encoded AU files.
+  * Added handling for G723 3bit APDCM encoded AU files.
+  * Improved Win32 compiling and use instructions from Mike Ricos.
+
+Version 0.0.20 (2000-05-30)
+  * Offical release.
+  * Minor bug fix for LinuxPPC (endian issues).
+
+Version 0.0.19 (2000-05-20)
+  * Offical release.
+  * Minor bug fix for handling GSM 6.10 encoded WAV files on big endian machines.
+
+Version 0.0.18 (2000-04-25)
+  * Offical release.
+  * Added handling for GSM 6.10 encoded WAV files.
+  * Minor bug fixes.
+
+Version 0.0.17 (1999-11-16)
+  * Offical release.
+  * New file formats (SVX and PAF).
+  * Minor bug fixes.
+
+Version 0.0.16 (1999-07-31)
+  * Offical release.
+  * Fixed minor MacOS configuration issues.
+
+Version 0.0.15 (1999-07-30)
+  * Offical release.
+  * Added MS ADPCM WAV file write.
+  * Added WAV and AU file A-law and u-law encoding.
+  * Added RAW header-less PCM file handling.
+  * Added MacOS support (thanks to Ben "Jacobs").
+
+Version 0.0.12 (1999-06-19)
+  * Offical release.
+  * Code cleanup to remove compiler warning messages.
+
+Version 0.0.10 (1999-06-12)
+  * Unoffical release.
+  * Changes to low level code which improve error detection and handling.
+  * Added read-only handling of Microsoft ADPCM WAV files.
+  * Added Win32 support (almost exclusively due to Albert Faber, thanks).
+  * Fixed bug in IMA ADPCM file writing.
+
+Version 0.0.9 (1999-03-14)
+  * Add handling of IMA ADPCM WAV files.
+  * Add new function sf_get_header_info and add example program sfinfo.
+  * Implemented 8 bit PCM data formats for AIFF, AU and WAV.
+  
+Version 0.0.8 (1999-02-16)
+  * First offical release.
+
+Version 0.0.7 (1999-02-13)
+  * First unoffical release.

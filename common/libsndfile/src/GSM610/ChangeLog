@@ -1,0 +1,10 @@
+2000-02-29  Erik de Castro Lopo  <erikd@zip.com.au>
+
+    * private.h
+    Added #defines to emulate normal compile time options.
+
+2000-02-28  Erik de Castro Lopo  <erikd@zip.com.au>
+
+    * everthing
+    Created this directory and copied files from libgsm.
+    http://kbs.cs.tu-berlin.de/~jutta/toast.html

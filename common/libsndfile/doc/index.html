@@ -1,0 +1,229 @@
+<HTML>
+
+<HEAD>
+	<TITLE>
+	libsndfile
+	</TITLE>
+	<META NAME="Author"      CONTENT="Erik de Castro Lopo (erikd@zip.com.au)">
+    <META NAME="Version"     CONTENT="libsndfile-0.0.21">
+	<META NAME="Description" CONTENT="The `libsndfile' Home Page">
+	<META NAME="Keywords"    CONTENT="WAV AIFF AU libsndfile sound audio dsp Linux">
+	<META NAME="ROBOTS" 	 CONTENT="NOFOLLOW">
+
+</HEAD>
+
+<BODY TEXT="#FFFFFF" BGCOLOR="#000000" LINK="#9090FF" VLINK="#5050FF" ALINK="#FF00FF">
+
+<CENTER>
+	<IMG SRC="libsndfile.jpg" HEIGHT=98 WIDTH=367 ALT="libsndfile.jpg">
+</CENTER>
+	
+<CENTER>
+		<A HREF="#History">History</A> -+- 
+		<A HREF="#Capabilities">Capabilities</A> -+- 
+		<A HREF="#Similar">Similar or Related Projects</A> 
+		<BR> 
+		<A HREF="api.html">Programming Interface</A> -+- 
+		<A HREF="bugs.html">Bug Reporting</A> -+- 
+		<A HREF="#Download">Download</A>
+		<BR> 
+		<A HREF="NEWS">News</A> -+- 
+		<A HREF="ChangeLog">Change Log</A> -+- 
+		<A HREF="#Licensing">Licensing Information</A>
+</CENTER>
+
+<FONT SIZE=3>
+
+<BR><BR>
+	Libsndfile is a C library for reading and writing files containing sampled sound 
+	(such as MS Windows WAV and the Apple/SGI AIFF format) through one standard 
+	library interface. It is released in source code format under the 
+		<A HREF="http://www.gnu.org/copyleft/lesser.html">Gnu Lesser General Public License</A>.
+<BR><BR>
+	The library was written to compile and run on a Linux system but should compile
+	and run on just about any Unix. It can also be compiled and run on Win32 systems
+	using the Microsoft compiler and MacOS using the Metrowerks compiler (thanks to 
+	Ben "Jacobs"). There are directions for compiling libsndfile on these platforms
+	in the Win32 and MacOS directories of the source code distribution.
+<BR><BR>	
+	It was designed to handle both little-endian (such as WAV) and big-endian 
+	(such as AIFF) data, and to compile and run correctly on little-endian (such as Intel 
+	and DEC/Compaq Alpha) processor systems as well as big-endian processor systems such 
+	as Motorola 68k, Power PC, MIPS and Sparc. Hopefully the design of the library will 
+	also make it easy to extend for reading and writing new sound file formats.
+<BR><BR>
+    It has so far been compiled and tested on the following systems:
+	<UL>
+	<LI>i586-pc-linux-gnu (Redhat 5.2 glibc)
+ 	<LI>powerpc-unknown-linux-gnu (Linux PPC)
+ 	<LI>mips-sgi-irix5.3 (Native IRIX toolset)
+	<LI>sparc-sun-solaris2.7 (gcc)
+	<LI>sparc-sun-solaris2.5.1 (gcc)
+	<LI>mips-sgi-irix5.3 (gcc)
+	<LI>mips-sgi-irix6.3 (cc - native compiler)
+	<BR>
+	<LI>Win32 (Microsoft Visual C++)
+	<LI>MacOS 8.6 (Metrowerks Codewarrior Pro4)
+	</UL>
+<BR>
+
+<A NAME="Capabilities">
+<FONT SIZE=+20 COLOR="#5050FF"><BR><B>Capabilities</B></FONT>
+
+<BR><BR>
+	libsndfile is currently capable of reading and writing the following sound file
+	formats :
+	<UL>
+	<LI> Microsoft WAV 8, 16, 24 and 32 bit integer PCM.
+    <LI> Microsoft 32 bit floating point PCM. 
+    <LI> Microsoft IMA/DVI ADPCM WAV format (16 bits per sample compressed to 4 bits per sample). 
+    <LI> Microsoft ADPCM WAV format (16 bits per sample compressed to 4 bits per sample). 
+    <LI> Microsoft 8 bit A-law an u-law formats (16 bits per sample compressed to 8 bits per sample). 
+    <LI> Microsoft WAV files using GSM 6.10 encoding.
+    <LI> Apple/SGI AIFF and AIFC uncompressed 8, 16, 24 and 32 bit integer PCM. 
+    <LI> Sun/NeXT AU/SND format (big endian 8, 16, 24 and 32 bit PCM, 8 bit u-law and 8 bit A-law). 
+    <LI> Dec AU format (little endian 8, 16, 24 and 32 bit PCM, 8 bit u-law and 8 bit A-law). 
+    <LI> Headerless 8kHz 8bit u-law encoded AU/SND files.
+    <LI> G721 and G723 ADPCM encoded AU/SND files.
+    <LI> RAW header-less PCM files of 8 (signed and unsigned), 16, 24 and 32 bits. The 16, 24 and 32 
+			bit files may be big or little endian byte ordering. The 8 bit samples may be signed
+			or unsigned values.
+    <LI> Amiga uncompressed IFF / 8SVX / 16SV PCM files (8 and 16 bit).
+    <LI> Ensoniq PARIS big and little endian, 16 and 24 bit PCM files (.PAF).
+	</UL>
+<BR>
+	Some of the file formats I am also interested in adding are:
+	<UL>
+	<LI> Soundfont II.
+	<LI> Gravis Ultrasound patch files.
+	<LI> Kurzweil K2000 sampler files.
+	<LI> MPEG Layer 3.
+	</UL>
+<BR>
+	Other file formats may also be added on request.
+<BR><BR>
+
+<A NAME="History">
+<FONT SIZE=+20 COLOR="#5050FF"><BR><B>History</B></FONT>
+
+<BR><BR>
+	My first attempt at reading and writing WAV files was in 1990 or so under Windows
+	3.1. I started using Linux in early 1995 and contributed some code to the 
+		<A HREF="http://www.vaxxine.com/ve3wwg/gnuwave.html">wavplay</A>
+	program which would eventually mutate into this library. As one of my interests
+	is Digital Signal Processing (DSP) I decided that as well as reading data from an
+	audio file in the native format (typically 16 bit short integers) it would also 
+	be useful to be able to have the library do the conversion to floating point numbers
+	for DSP applications. It then dawned on me that whatever file format (anything from
+	8 bit unsigned chars, to 32 bit floating point numbers) the library should be able 
+	to convert the data to whatever format the library user wishes to use it in. For 
+	example, in a sound playback program, the library caller typically wants the sound 
+	data in 16 bit short integers to dump into a sound card even though the data in the
+	file may be 32 bit floating point numbers (ie Microsoft's WAVE_FORMAT_IEEE_FLOAT 
+	format). Another example would be someone doing speech recognition research who has
+	recorded some speech as a 16 bit WAV file but wants to process it as double precision 
+	floating point numbers.
+<BR><BR>
+    Here is the release history for libsndfile :
+	<UL>
+	<LI>Version 0.0.8 (Feb 15 1999) First official release.
+	<LI>Version 0.0.9 (Mar 14 1999) Added support for IMA ADPCM WAV files and
+		8 bit PCM AIFF, AU and WAV files.
+	<LI>Version 0.0.12 (Jun 19 1999) Added <B>read only</B> support for MS ADPCM WAV files plus
+		a number of bug fixes and code cleanups. It now also compiles and runs on Win32 systems
+		using the Microsoft compiler (thanks to the efforts of Albert Faber).
+	<LI>Version 0.0.15 (Jul 30 1999) Added ability to write MS ADPCM WAV files. Added WAV and AU
+		file A-law and u-law encoding/decoding. Added RAW headerless PCM file handling. It now
+		also compiles and runs on MacOS using the Metrowerks compiler (thanks to Ben "Jacobs").
+	<LI>Version 0.0.16 (Jul 31 1999) Fixed minor MacOS problems.
+	<LI>Version 0.0.17 (Nov 16 1999) Added Ensoniq PARIS audio file format, Amiga IFF / 8SVX / 16SV
+		file format and minor bug fixes.
+	<LI>Version 0.0.18 (Apr 25 2000) Added read/write capabilities for GSM 6.10 encoded WAV files.
+	<LI>Version 0.0.19 (May 20 2000) Minor bug fix for GSM 6.10 encoded WAV files on big endian 
+	<LI>Version 0.0.20 (May 30 2000) Minor bug fix for LinuxPPC. Fixes endian-ness related compile 
+	<LI>Version 0.0.21 (Aug 16 2000) Added handling of headerless AU/SND files. Added handling
+		of G721 and G723 ADPCM AU/SND files. New improved Win32 compiling and use instructions. 
+		License change from GPL to LGPL.
+	<LI>Version 0.0.22 (Oct 17 2000) Bug fix for G723 encoded AU files. References to GPL replaced
+		with LGPL.
+	</UL>
+<BR>
+	
+<A NAME="Similar">
+<FONT SIZE=+20 COLOR="#5050FF"><BR><B>Similar or Related Projects</B></FONT>
+
+<BR><BR>
+	<UL>
+	<LI><A HREF="http://home.sprynet.com/~cbagwell/sox.html">SoX</A> is a program for 
+		converting between sound file formats.
+	<LI><A HREF="http://members.home.com/ve3wwg/gnuwave.html">Wavplay</A> started out 
+		as a minimal WAV file player under Linux and has mutated into Gnuwave a client/server
+		application for more general multimedia and games sound playback.
+	<LI><A HREF="http://www.68k.org/~michael/audiofile/">Audiofile</A> (libaudiofile) is 
+		a library similar to libsndfile but with a different programming interface. The 
+		author Michael Pruett has set out to clone (and fix some bugs) the libaudiofile 
+		library which ships with SGI's IRIX OS. If I had known of this project earlier I 
+		may not have started on libsndfile.	
+	<LI><A HREF="ftp://ccrma-ftp.stanford.edu/pub/Lisp/sndlib.tar.gz">sndlib.tar.gz</A> is 
+		another library written by Bill Schottstaedt of CCRMA.
+	</UL>
+<BR>
+
+<A NAME="Licensing">
+<FONT SIZE=+20 COLOR="#5050FF"><BR><B>Licensing</B></FONT>
+
+<BR><BR>
+	libsndfile is released under the terms of the GNU Lesser General Public License. You may 
+	read the license 
+		<A HREF="http://www.gnu.org/copyleft/lesser.html">here</A> 
+	or read a simple explanation of the ideas behind the GPL and the LGPL  
+		<A HREF="http://www.gnu.org/copyleft/copyleft.html">here</A>. 
+<BR><BR>
+	
+<A NAME="Download">
+<FONT SIZE=+20 COLOR="#5050FF"><BR><B>Download</B></FONT>
+
+<BR><BR>
+	Here is the latest version. It is available in the following formats.
+	<UL>
+	<LI>Source code as a .tar.gz :
+		<A HREF="libsndfile-0.0.21.tar.gz">libsndfile-0.0.21.tar.gz</A>
+	<LI>Source code as a Zip file :
+		<A HREF="libsndfile-0_0_21.zip">libsndfile-0_0_21.zip</A>
+	<LI>Linux source RPM :
+		<A HREF="libsndfile-0.0.21-1.src.rpm">libsndfile-0.0.21-1.src.rpm</A>
+	<LI>Linux i386 binary RPM :
+		<A HREF="libsndfile-0.0.21-1.i386.rpm">libsndfile-0.0.21-1.i386.rpm</A>
+	<LI>Linux i386 development RPM :
+		<A HREF="libsndfile-devel-0.0.21-1.i386.rpm">libsndfile-devel-0.0.21-1.i386.rpm</A>
+		
+	</UL>
+<BR><BR>
+
+<HR>
+
+<BR>
+	The latest version of this document can be found
+		<A HREF="http://www.zip.com.au/~erikd/libsndfile/">here</A>.
+
+<P>
+Author : 
+	<A HREF="mailto:erikd@zip.com.au">Erik de Castro Lopo</a>
+<BR>
+
+</P>
+
+This page has been accessed
+	<IMG SRC="/cgi-bin/counter?ft=6|frgb=55;55;55|tr=0|trgb=0;0;0|
+	wxh=15;20|md=6|dd=B|st=1|sh=1|df=libsndfile.dat" HEIGHT=30 WIDTH=100>
+times.
+<! Oct 13, 2000 - 20000 hits>
+
+<BR><BR>
+<BR>
+
+</FONT>
+
+
+</BODY>
+</HTML>
