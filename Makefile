@@ -1,9 +1,10 @@
-# On X86 machines it is HIGHLY Recomended that you compile only with 
-# -march=i686 -finline-functions -funroll-loops -fomit-frame-pointer
-# Do NOT Compile with -O of ANY kind. It looks like gcc's optimizations are
-# either starving registers, or causing huge cache misses for Intel Processors.
-# Its currently twice as fast with no -O than any -O.
-# 
+# On X86 machines it is HIGHLY Recomended that if you want to compile with any
+# -O setting you NOT use -O. use -O2 to -O6. -O is broken. Also note that you
+# MUST use -ffast-math with -O2 to -O6. If you do not, it will be SLOWER then
+# using no -O altogether. On a Pentium 3, the fastest optimizations are:
+# -O6 -march=i686 -finline-functions -funroll-loops -fomit-frame-pointer
+# -ffast-math
+#
 prefix = /usr/local
 
 DESTDIR = 

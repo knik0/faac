@@ -151,3 +151,11 @@ CVS Tue Feb 22 19:18:25 CST 2000
 The Outfield Bangin': track 2: Bangin' On My Heart
 Still Nothing.
 NO PROFILE
+
+------------------------------------------------------------------------------
+thebard
+CVS Tue Feb 22 19:18:25 CST 2000
+-O6 -march=i686 -finline-functions -funroll-loops -fomit-frame-pointer -ffast-math
+3 min, 12.13 sec.
+The Outfield Bangin': track 2: Bangin' On My Heart
+Bingo! Got it. -O core dumps, and -O2 to -O6 are slower than thuer non optimized counterparts, unless you add -ffast-math. then things are speedy. The assembly it produces still has room for speed. Still more work to do.
