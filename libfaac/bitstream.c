@@ -24,9 +24,10 @@ copyright notice must be included in all copies or derivative works.
 Copyright (c) 1997.
 **********************************************************************/
 /*
- * $Id: bitstream.c,v 1.25 2003/03/24 10:08:10 menno Exp $
+ * $Id: bitstream.c,v 1.26 2003/07/16 16:27:34 knik Exp $
  */
 
+#include <stdio.h>
 #include <stdlib.h>
 
 #include "coder.h"
@@ -101,6 +102,46 @@ static int ByteAlign(BitStream* bitStream,
 
 
 
+static int WriteFAACStr(BitStream *bitStream, char *version, int write)
+{
+  int i;
+  char str[200];
+  int len, padbits, count;
+  int bitcnt;
+
+  sprintf(str, "libfaac %s", version);
+
+  len = strlen(str) + 1;
+  padbits = (8 - ((bitStream->numBit + 7) % 8)) % 8;
+  count = len + 3;
+
+  bitcnt = LEN_SE_ID + 4 + ((count < 15) ? 0 : 8) + count * 8;
+  if (!write)
+    return bitcnt;
+
+  PutBit(bitStream, ID_FIL, LEN_SE_ID);
+  if (count < 15)
+  {
+    PutBit(bitStream, count, 4);
+  }
+  else
+  {
+    PutBit(bitStream, 15, 4);
+    PutBit(bitStream, count - 14, 8);
+  }
+
+  PutBit(bitStream, 0, padbits);
+  PutBit(bitStream, 0, 8);
+  PutBit(bitStream, 0, 8); // just in case
+  for (i = 0; i < len; i++)
+    PutBit(bitStream, str[i], 8);
+
+  PutBit(bitStream, 0, 8 - padbits);
+
+  return bitcnt;
+}
+
+
 int WriteBitstream(faacEncHandle hEncoder,
                    CoderInfo *coderInfo,
                    ChannelInfo *channelInfo,
@@ -118,6 +159,9 @@ int WriteBitstream(faacEncHandle hEncoder,
 	}else{
 		bits = 0; // compilier will remove it, byt anyone will see that current size of bitstream is 0
 	}
+
+    if (hEncoder->frameNum == 4)
+      WriteFAACStr(bitStream, hEncoder->config.name, 1);
 
     for (channel = 0; channel < numChannel; channel++) {
 
@@ -203,6 +247,8 @@ static int CountBitstream(faacEncHandle hEncoder,
 		bits = 0; // compilier will remove it, byt anyone will see that current size of bitstream is 0
 	}
 
+    if (hEncoder->frameNum == 4)
+      bits += WriteFAACStr(bitStream, hEncoder->config.name, 0);
 
     for (channel = 0; channel < numChannel; channel++) {
 
