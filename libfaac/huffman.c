@@ -23,7 +23,7 @@ must be included in all copies or derivative works. Copyright 1996.
 
 ***********/
 /*
- * $Id: huffman.c,v 1.10 2004/07/12 08:46:43 corrados Exp $
+ * $Id: huffman.c,v 1.11 2005/02/02 07:53:20 sur Exp $
  */
 
 #include <math.h>
@@ -57,6 +57,10 @@ void HuffmanEnd(CoderInfo *coderInfo, unsigned int numChannels)
     for (channel = 0; channel < numChannels; channel++) {
         if (coderInfo[channel].data) FreeMemory(coderInfo[channel].data);
         if (coderInfo[channel].len) FreeMemory(coderInfo[channel].len);
+
+#ifdef DRM
+        if (coderInfo[channel].num_data_cw) FreeMemory(coderInfo[channel].num_data_cw);
+#endif
     }
 }
 
