@@ -318,7 +318,6 @@ loop1:
 }
 
 int inner_loop(AACQuantInfo *quantInfo,
-//			   double *p_spectrum,
 			   double *pow_spectrum,
 			   int quant[NUM_COEFF],
 			   int max_bits)
@@ -330,7 +329,6 @@ int inner_loop(AACQuantInfo *quantInfo,
 	{
 		quantInfo->common_scalefac += 1;
 		quantize(quantInfo, pow_spectrum, quant);
-//		bits = count_bits(quantInfo, quant, quantInfo->book_vector);
 		bits = count_bits(quantInfo, quant);
 	} while ( bits > max_bits );
 
@@ -338,7 +336,6 @@ int inner_loop(AACQuantInfo *quantInfo,
 }
 
 int search_common_scalefac(AACQuantInfo *quantInfo,
-//						   double *p_spectrum,
 						   double *pow_spectrum,
 						   int quant[NUM_COEFF],
 						   int desired_rate)
@@ -397,7 +394,7 @@ int calc_noise(AACQuantInfo *quantInfo,
 	int i, sb, sbw;
 	int over = 0, count = 0;
 	double invQuantFac;
-	double linediff;
+	double linediff, noise;
 
 	*over_noise = 0.0;
 	*tot_noise = 0.0;
@@ -427,25 +424,20 @@ int calc_noise(AACQuantInfo *quantInfo,
 		}
 		error_energy[sb] = error_energy[sb] / sbw;		
 		
-		if( (max_sb_noise > 0) && (error_energy[sb] < 1e-7 ) ) {
-			double diff = max_sb_noise-error_energy[sb];
-			double fac  = pow(diff/max_sb_noise,4);
-			error_energy[sb] += diff*fac;
-		}
-		if (allowed_dist[sb] != 0.0)
-			error_energy[sb] = 10*log10(error_energy[sb] / allowed_dist[sb]);
-		else error_energy[sb] = 0;
-		if (error_energy[sb] > 0) {
+		noise = error_energy[sb] / allowed_dist[sb];
+
+		/* multiplying here is adding in dB */
+		*tot_noise *= max(noise, 1E-20);
+		if (noise>1) {
 			over++;
-			*over_noise += error_energy[sb];
+			/* multiplying here is adding in dB */
+			*over_noise *= noise;
 		}
-		*tot_noise += error_energy[sb];
-		*max_noise = max(*max_noise, error_energy[sb]);
+		*max_noise = max(*max_noise,noise);
+		error_energy[sb] = noise;
 		count++;
   	}
 
-	if (count>1) *tot_noise /= count;
-	if (over>1) *over_noise /= over;
 	return over;
 }
 
@@ -465,8 +457,14 @@ int quant_compare(int best_over, double best_tot_noise, double best_over_noise,
 	*/
 	int better;
 
+	better =   over  < best_over ||  ( over == best_over
+		&& over_noise < best_over_noise )
+		||  ( over == best_over && over_noise==best_over_noise
+		&& tot_noise < best_tot_noise);
+
+#if 0
 	better = ((over < best_over) ||
-			((over==best_over) && (over_noise<best_over_noise)) ) ;
+		((over==best_over) && (over_noise<best_over_noise)) ) ;
 	better = min(better, max_noise < best_max_noise);
 	better = min(better, tot_noise < best_tot_noise);
 	better = min(better, (tot_noise < best_tot_noise) &&
@@ -486,6 +484,7 @@ int quant_compare(int best_over, double best_tot_noise, double best_over_noise,
 		)
 		)
 		));
+#endif
 
 	return better;
 }

@@ -180,23 +180,19 @@ PSY_STATVARIABLE_LONG    psy_stvar_long[MAX_TIME_CHANNELS*2];
 PSY_STATVARIABLE_SHORT    psy_stvar_short[MAX_TIME_CHANNELS*2];
                                /* variables for short block */
 
-/* added by T. Araki (1997.10.16) end */
 
 void EncTf_psycho_acoustic_init( void )
 {
 	int chanNum;
 
-	/* added by T. Araki (1997.10.16) */
 	psy_fft_table_init(&fft_tbl_long, &fft_tbl_short);
 	/* initializing fft table */
 	for (chanNum=0;chanNum<MAX_TIME_CHANNELS*2;chanNum++) {
 		psy_calc_init(&sample[chanNum], &psy_stvar_long[chanNum], &psy_stvar_short[chanNum]);
 		/* initializing static variables */
 	}
-	/* added by T. Araki (1997.10.16) end */
 }
 
-/* added by T. Okada (1997.07.10) */
 void psy_fft_table_init(FFT_TABLE_LONG *fft_tbl_long,
 			FFT_TABLE_SHORT *fft_tbl_short
 			)
@@ -210,7 +206,6 @@ void psy_fft_table_init(FFT_TABLE_LONG *fft_tbl_long,
 		fft_tbl_short->hw[i] = 0.5 * (1-cos(2.0*M_PI*(i+0.5)/(BLOCK_LEN_SHORT*2)));
 
 }
-/* added by T. Okada (1997.07.10) end */
 
 /*
  * This Function calculates the Frequency in Hertz given a
@@ -248,7 +243,6 @@ double hz2bark (double hz)
     return (bark);
 }
 
-/* added by T. Araki (1997.07.10) */
 void psy_part_table_init(double sampling_rate,
 						 PARTITION_TABLE_LONG *part_tbl_long,
 						 PARTITION_TABLE_SHORT *part_tbl_short
@@ -256,28 +250,28 @@ void psy_part_table_init(double sampling_rate,
 {
     int b,bb;
     double tmp;
-	int j;
 	int cbands, prev_cbound, crit_bands, cbound;
+
 
 	cbands = (int)hz2bark(sampling_rate/2.0) + 1;
 	cbands *= 3;
 	part_tbl_long->sampling_rate = (int)sampling_rate;
 	part_tbl_long->w_low[0] = 0;
-	part_tbl_long->w_high[0] = 0;
+	part_tbl_long->w_high[0] = 1;
 	part_tbl_long->width[0] = 1;
     prev_cbound = 0;
 	crit_bands = 0;
-	for(j = 1; j <= cbands; j++)
+	for(b = 1; b <= cbands; b++)
 	{
-		cbound = (int)(bark2hz((double)j/3) * (double)BLOCK_LEN_LONG * 2.0 / sampling_rate + 0.5);
+		cbound = (int)(bark2hz((double)b/3) * (double)BLOCK_LEN_LONG * 2.0 / sampling_rate + 0.5);
 		if(cbound > prev_cbound) {
 			crit_bands++;
 			part_tbl_long->w_low[crit_bands] = min(prev_cbound,BLOCK_LEN_LONG-1);
-			part_tbl_long->w_high[crit_bands] = min(cbound-1,BLOCK_LEN_LONG-1);
+			part_tbl_long->w_high[crit_bands] = min(cbound,BLOCK_LEN_LONG);
 			part_tbl_long->width[crit_bands] = 
-				part_tbl_long->w_high[crit_bands] - part_tbl_long->w_low[crit_bands] + 1;
+				part_tbl_long->w_high[crit_bands] - part_tbl_long->w_low[crit_bands];
 			prev_cbound = cbound;
-			if (part_tbl_long->w_high[crit_bands] == (BLOCK_LEN_LONG-1))
+			if (part_tbl_long->w_high[crit_bands] == BLOCK_LEN_LONG)
 				break;
 		}
 	}
@@ -287,21 +281,21 @@ void psy_part_table_init(double sampling_rate,
 	cbands /= 3;
 	part_tbl_short->sampling_rate = (int)sampling_rate;
 	part_tbl_short->w_low[0] = 0;
-	part_tbl_short->w_high[0] = 0;
+	part_tbl_short->w_high[0] = 1;
 	part_tbl_short->width[0] = 1;
         prev_cbound = 0;
 	crit_bands = 0;
-	for(j = 1; j <= cbands; j++)
+	for(b = 1; b <= cbands; b++)
 	{
-		cbound = (int)(bark2hz((double)j/*/3*/) * (double)BLOCK_LEN_SHORT * 2.0 / sampling_rate +0.5);
+		cbound = (int)(bark2hz((double)b/*/3*/) * (double)BLOCK_LEN_SHORT * 2.0 / sampling_rate +0.5);
 		if(cbound > prev_cbound) {
 			crit_bands++;
 			part_tbl_short->w_low[crit_bands] = min(prev_cbound,BLOCK_LEN_SHORT-1);
-			part_tbl_short->w_high[crit_bands] = min(cbound-1,BLOCK_LEN_SHORT-1);
+			part_tbl_short->w_high[crit_bands] = min(cbound,BLOCK_LEN_SHORT);
 			part_tbl_short->width[crit_bands] = 
-				part_tbl_short->w_high[crit_bands] - part_tbl_short->w_low[crit_bands] + 1;
+				part_tbl_short->w_high[crit_bands] - part_tbl_short->w_low[crit_bands];
 			prev_cbound = cbound;
-			if (part_tbl_short->w_high[crit_bands] == (BLOCK_LEN_SHORT-1))
+			if (part_tbl_short->w_high[crit_bands] == BLOCK_LEN_SHORT)
 				break;
 		}
 	}
@@ -327,7 +321,7 @@ void psy_part_table_init(double sampling_rate,
 
 	// Calculate the spreading function
 	{
-		double tmpx,tmpy,tmpz,b1,b2;
+		double tmpx,tmpy,tmp,x,b1,b2;
 		int b, bb;
 
 		for( b = 0; b < part_tbl_long->len; b++) {
@@ -335,14 +329,20 @@ void psy_part_table_init(double sampling_rate,
 			for( bb = 0; bb < part_tbl_long->len; bb++) {
 				b1 = dyn_long.bval[bb];
 
-				//tmpx = (b2 >= b1) ? 3.0*(b2-b1) : 1.5*(b2-b1);
-				tmpx = (b >= bb) ? 3.0*(b2-b1) : 1.5*(b2-b1);
+				if (b>=bb) tmpx = (b2 - b1)*3.0;
+				else       tmpx = (b2 - b1)*1.5; 
 
-				tmpz = 8.0 * psy_min( (tmpx-0.5)*(tmpx-0.5) - 2.0*(tmpx-0.5),0.0 );
+				if(tmpx>=0.5 && tmpx<=2.5)
+				{
+					tmp = tmpx - 0.5;
+					x = 8.0 * (tmp*tmp - 2.0 * tmp);
+				}
+				else x = 0.0;
+				tmpx += 0.474;
+				tmpy = 15.811389 + 7.5*tmpx - 17.5*sqrt(1.0+tmpx*tmpx);
 
-				tmpy = 15.811389 + 7.5*(tmpx + 0.474)-17.5 *sqrt(1.0 + (tmpx+0.474)*(tmpx+0.474));
-
-				dyn_long.spreading[b][bb] = ( tmpy < -100.0 ? 0.0 : pow(10.0, (tmpz + tmpy)/10.0) );
+				if (tmpy <= -60.0) dyn_long.spreading[b][bb] = 0.0;
+				else               dyn_long.spreading[b][bb] = exp( (x + tmpy)*0.2302585093 ); 
 			}
 		}
 
@@ -351,37 +351,37 @@ void psy_part_table_init(double sampling_rate,
 			for( bb = 0; bb < part_tbl_short->len; bb++) {
 				b1 = dyn_short.bval[bb];
 
-				//tmpx = (b2 >= b1) ? 3.0*(b2-b1) : 1.5*(b2-b1);
-				tmpx = (b >= bb) ? 3.0*(b2-b1) : 1.5*(b2-b1);
-				
-				tmpz = 8.0 * psy_min( (tmpx-0.5)*(tmpx-0.5) - 2.0*(tmpx-0.5),0.0 );
+				if (b>=bb) tmpx = (b2 - b1)*3.0;
+				else       tmpx = (b2 - b1)*1.5; 
 
-				tmpy = 15.811389 + 7.5*(tmpx + 0.474)-17.5 *sqrt(1.0 + (tmpx+0.474)*(tmpx+0.474));
+				if(tmpx>=0.5 && tmpx<=2.5)
+				{
+					tmp = tmpx - 0.5;
+					x = 8.0 * (tmp*tmp - 2.0 * tmp);
+				}
+				else x = 0.0;
+				tmpx += 0.474;
+				tmpy = 15.811389 + 7.5*tmpx - 17.5*sqrt(1.0+tmpx*tmpx);
 
-				dyn_short.spreading[b][bb] = ( tmpy < -100.0 ? 0.0 : pow(10.0, (tmpz + tmpy)/10.0) );
+				if (tmpy <= -60.0) dyn_short.spreading[b][bb] = 0.0;
+				else               dyn_short.spreading[b][bb] = exp( (x + tmpy)*0.2302585093 ); 
 			}
 		}
 	}
 
-    /* added by T. Okada (1997.07.10) */
     for( b = 0; b < part_tbl_long->len; b++){
 		tmp = 0.0;
 		for( bb = 0; bb < part_tbl_long->len; bb++)
-			//tmp += sprdngf( (*part_tbl_long),(*part_tbl_short), bb, b, 0);
 			tmp += dyn_long.spreading[bb][b];
 		dyn_long.rnorm[b] = 1.0/tmp;
     }
-    /* added by T. Okada (1997.07.10) end */
 
-    /* added by T. Araki (1997.10.16) */
     for( b = 0; b < part_tbl_short->len; b++){
 		tmp = 0.0;
 		for( bb = 0; bb < part_tbl_short->len; bb++)
-			//tmp += sprdngf( (*part_tbl_long), (*part_tbl_short), bb, b, 1);
 			tmp += dyn_short.spreading[bb][b];
 		dyn_short.rnorm[b] = 1.0/tmp;
     }
-    /* added by T. Araki (1997.10.16) end */
 
 	for(b = 0; b < part_tbl_long->len; b++) {
 		dyn_long.bmax[b] = pow(10, 1.25*(1-cos(PI*b/part_tbl_long->len))-2.5);
@@ -422,9 +422,7 @@ void psy_calc_init(
     }
 
 	psy_stvar_long->p_nb = NPART_LONG;
-	/* added by T. Araki (1997.07.10) end */
 
-	/* added by T. Araki (1997.10.16) */
 	for(i = 0; i < BLOCK_LEN_SHORT; i++) {
 		psy_stvar_short->last6_fft_r[i] = 0.0;
 		psy_stvar_short->last6_fft_f[i] = 0.0;
@@ -435,9 +433,9 @@ void psy_calc_init(
     for(i = 0; i < NPART_SHORT; i++){
 		psy_stvar_short->last7_nb[i] = 90.0;
     }
-	/* added by T. Araki (1997.10.16) end */
-sqrt2048 = 1/sqrt(2048);
-sqrt256 = 1/sqrt(256);
+
+	sqrt2048 = 1/sqrt(2048);
+	sqrt256 = 1/sqrt(256);
 }
 
 void psy_fill_lookahead(double *p_time_signal[], int no_of_chan)
@@ -468,8 +466,6 @@ void EncTf_psycho_acoustic(
 	int             chanNum, i;
     SR_INFO         *p_sri;
 
-	/* added by T. Araki (1997.07.10) */
-
     static int   flag = 0;
 
     PSY_VARIABLE_LONG    psy_var_long[4];  /* variables for long block */
@@ -486,7 +482,6 @@ void EncTf_psycho_acoustic(
 		p_sri++;
 	}
 
-	/* added by T. Araki (1997.07.10) */
 	if( flag==0 ) {
 		psy_part_table_init(sampling_rate, &part_tbl_long, &part_tbl_short);
 		/* initializing Table B 2.1.*.a, B 2.1.*.b in N1650 */
@@ -822,7 +817,6 @@ void psy_step3(PSY_STATVARIABLE_LONG *psy_stvar_long,
 		psy_var_long->f_pred[w] = 2.0 * psy_stvar_long->fft_f[p1_l + w] - psy_stvar_long->fft_f[p2_l + w];
     }
 
-	/* added by T. Araki (1997.10.16) */
     for(w = 0; w < BLOCK_LEN_SHORT; w++){
         psy_var_short->r_pred[0][w] = 2.0 * psy_stvar_short->last7_fft_r[w] - psy_stvar_short->last6_fft_r[w];
         psy_var_short->f_pred[0][w] = 2.0 * psy_stvar_short->last7_fft_f[w] - psy_stvar_short->last6_fft_f[w];
@@ -843,7 +837,6 @@ void psy_step3(PSY_STATVARIABLE_LONG *psy_stvar_long,
         psy_stvar_short->last7_fft_r[w] = psy_stvar_short->fft_r[7][w];
 		psy_stvar_short->last7_fft_f[w] = psy_stvar_short->fft_f[7][w];
     }
-	/* added by T. Araki (1997.10.16) end */
 }
 
 void psy_step4(PSY_STATVARIABLE_LONG *psy_stvar_long,
@@ -856,7 +849,6 @@ void psy_step4(PSY_STATVARIABLE_LONG *psy_stvar_long,
     int w,i;
     double r,f,rp,fp;
 
-	/* added by T. Araki (1997.10.16) */
     for(i = 0; i < MAX_SHORT_WINDOWS; i++){
         for(w = 0; w < BLOCK_LEN_SHORT; w++){
 			r = psy_stvar_short->fft_r[i][w];
@@ -874,7 +866,6 @@ void psy_step4(PSY_STATVARIABLE_LONG *psy_stvar_long,
 				psy_var_short->c[i][w] = 0.0; /* tmp */
 		}
     }
-	/* added by T. Araki (1997.10.16) end */
 
     for(w = 0; w < 16; w++){
 		r = psy_stvar_long->fft_r[psy_stvar_long->p_fft+w];
@@ -938,23 +929,20 @@ void psy_step5(PARTITION_TABLE_LONG *part_tbl_long,
 		psy_var_long->e[b] = 0.0;
 		tmp_cb = 0.0;
 
-		/* added by T. Araki (1997.10.16) */
-		for(w = part_tbl_long->w_low[b]; w <= part_tbl_long->w_high[b]; w++){
+		for(w = part_tbl_long->w_low[b]; w < part_tbl_long->w_high[b]; w++){
 			psy_var_long->e[b] += psy_sqr(psy_stvar_long->fft_r[psy_stvar_long->p_fft+w]);
 			tmp_cb += psy_sqr(psy_stvar_long->fft_r[psy_stvar_long->p_fft+w]) * psy_var_long->c[w];
 		}
-		/* added by T. Araki (1997.10.16) end */
 
 		psy_var_long->cb[b] = tmp_cb;
     }
 
-	/* added by T. Araki (1997.10.16) */
     for(i = 0; i < MAX_SHORT_WINDOWS; i++){
         for(b = 0; b < part_tbl_short->len; b++){
 			psy_var_short->e[i][b] = 0.0;
 			tmp_cb = 0.0;
 
-			for(w = part_tbl_short->w_low[b]; w <= part_tbl_short->w_high[b]; w++){
+			for(w = part_tbl_short->w_low[b]; w < part_tbl_short->w_high[b]; w++){
 				psy_var_short->e[i][b] += psy_sqr(psy_stvar_short->fft_r[i][w]);
 				tmp_cb += psy_sqr(psy_stvar_short->fft_r[i][w]) * psy_var_short->c[i][w];
 			}
@@ -962,7 +950,6 @@ void psy_step5(PARTITION_TABLE_LONG *part_tbl_long,
 			psy_var_short->cb[i][b] = tmp_cb;
 		}
     }
-	/* added by T. Araki (1997.10.16) end */
 }
 
 
@@ -999,7 +986,6 @@ void psy_step6(PARTITION_TABLE_LONG *part_tbl_long,
 		}
 	}
 
-	/* added by T. Araki (1997.10.16) */
 	for(i = 0; i < MAX_SHORT_WINDOWS; i++){ 
 		for(b = 0; b < part_tbl_short->len; b++){
 			ecb = 0.0;
@@ -1022,7 +1008,6 @@ void psy_step6(PARTITION_TABLE_LONG *part_tbl_long,
 			}
 		}
 	}
-	/* added by T. Araki (1997.10.16) end */
 }
 
 void psy_step7(PARTITION_TABLE_LONG *part_tbl_long,
@@ -1047,7 +1032,6 @@ void psy_step7(PARTITION_TABLE_LONG *part_tbl_long,
     }
 
 
-	/* added by T. Araki (1997.10.16) */
     for(i = 0;  i < MAX_SHORT_WINDOWS; i++){
         for(b = 0; b < part_tbl_short->len; b++){
 			if (psy_var_short->cbb[i][b]>0.0) {
@@ -1063,7 +1047,6 @@ void psy_step7(PARTITION_TABLE_LONG *part_tbl_long,
 //				printf("%d\t%.2f\n", b, psy_var_short->tb[i][b]);
 		}
     }
-	/* added by T. Araki (1997.10.16) end */
 }
 
 
@@ -1098,12 +1081,10 @@ void psy_step8(PARTITION_TABLE_LONG *part_tbl_long,
 		psy_var_long->snr[b] = psy_var_long->tb[b] * tmn + (1.0 - psy_var_long->tb[b] ) * nmt;
 	}
 
-	/* added by T. Araki (1997.10.16) */
 	for(i = 0;  i < MAX_SHORT_WINDOWS; i++){
 		for(b = 0; b < part_tbl_short->len; b++)
 			psy_var_short->snr[i][b] = psy_var_short->tb[i][b] * tmn + (1.0 - psy_var_short->tb[i][b] ) * nmt ;
 	}
-	/* added by T. Araki (1997.10.16) end */
 }    
 
 void psy_step9(PARTITION_TABLE_LONG *part_tbl_long,
@@ -1117,12 +1098,10 @@ void psy_step9(PARTITION_TABLE_LONG *part_tbl_long,
     for(b = 0; b < part_tbl_long->len; b++)
 		psy_var_long->bc[b] = pow(10.0, -psy_var_long->snr[b]/10.0);
 
-	/* added by T. Araki (1997.10.16) */
     for(i = 0;  i < MAX_SHORT_WINDOWS; i++){
         for(b = 0; b < part_tbl_short->len; b++)
 			psy_var_short->bc[i][b] = pow(10.0, -psy_var_short->snr[i][b]/10.0);
     }
-	/* added by T. Araki (1997.10.16) end */
 }
 
 void psy_step10(PARTITION_TABLE_LONG *part_tbl_long,
@@ -1144,14 +1123,12 @@ void psy_step10(PARTITION_TABLE_LONG *part_tbl_long,
 			= psy_var_long->en[b] * psy_var_long->bc[b];
     }
 
-	/* added by T. Araki (1997.10.16) */
     for(i = 0;  i < MAX_SHORT_WINDOWS; i++){
         for(b = 0; b < part_tbl_short->len; b++){
 			psy_stvar_short->nb[i][b]
 				= psy_var_short->en[i][b] * psy_var_short->bc[i][b];
 		}
     }
-	/* added by T. Araki (1997.10.16) end */
 }
 
 void psy_step11(PARTITION_TABLE_LONG *part_tbl_long, 
@@ -1174,7 +1151,6 @@ void psy_step11(PARTITION_TABLE_LONG *part_tbl_long,
 			psy_stvar_long->nb[p1+b] = temp;
     }
 
-	/* added by T. Araki (1997.10.16) */
     for(b = 0; b < part_tbl_short->len; b++){
 		temp = psy_min( psy_stvar_short->nb[0][b], 1.0*psy_stvar_short->last7_nb[b]);
 		if (temp > 0.01)
@@ -1192,7 +1168,6 @@ void psy_step11(PARTITION_TABLE_LONG *part_tbl_long,
 				psy_stvar_short->nb[i][b] = temp;
 		}
 	}
-	/* added by T. Araki (1997.10.16) end */
 }
 
 void psy_step11MS(PARTITION_TABLE_LONG *part_tbl_long, 
@@ -1376,7 +1351,7 @@ void psy_step14(SR_INFO *p_sri,
     for(b = 0; b < part_tbl_long->len; b++){
         thr = psy_stvar_long->nb[psy_stvar_long->p_nb + b]
 			/ part_tbl_long->width[b];
-        for(w = part_tbl_long->w_low[b]; w <= part_tbl_long->w_high[b]; w++){
+        for(w = part_tbl_long->w_low[b]; w < part_tbl_long->w_high[b]; w++){
 			psy_var_long->thr[w] = thr;
 		}
     }
@@ -1404,7 +1379,6 @@ void psy_step14(SR_INFO *p_sri,
 		}
     }
 
-	/* added by T. Araki (1997.10.16) */
     for(i = 0; i < MAX_SHORT_WINDOWS; i++){
         w_high = 0;
 		for(n = 0; n < p_sri->num_cb_short; n++){
@@ -1419,7 +1393,7 @@ void psy_step14(SR_INFO *p_sri,
 
 		for(b = 0; b < part_tbl_short->len; b++){
             thr = psy_stvar_short->nb[i][b] / part_tbl_short->width[b];
-			for(w = part_tbl_short->w_low[b]; w <= part_tbl_short->w_high[b]; w++){
+			for(w = part_tbl_short->w_low[b]; w < part_tbl_short->w_high[b]; w++){
 				psy_var_short->thr[i][w] = thr;
 			}
 		}
@@ -1447,7 +1421,6 @@ void psy_step14(SR_INFO *p_sri,
 			}
 		}
     }
-	/* added by T. Araki (1997.10.16) end */
 }
 
 
