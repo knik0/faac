@@ -16,7 +16,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: main.c,v 1.35 2003/06/21 08:59:31 knik Exp $
+ * $Id: main.c,v 1.36 2003/06/26 19:40:53 knik Exp $
  */
 
 #ifdef HAVE_CONFIG_H
@@ -85,7 +85,7 @@ int main(int argc, char *argv[])
     unsigned int mpegVersion = MPEG2;
     unsigned int objectType = LOW;
     unsigned int useMidSide = 1;
-    static unsigned int useTns = 1;
+    static unsigned int useTns = 0;
     unsigned int useAdts = 1;
     int cutOff = -1;
     int bitRate = 0;
@@ -106,12 +106,13 @@ int main(int argc, char *argv[])
 
     FILE *outfile;
 
-    fprintf(stderr, "FAAC - Freeware Advanced Audio Coder\n");
     // get faac version
     hEncoder = faacEncOpen(44100, 2, &samplesInput, &maxBytesOutput);
     myFormat = faacEncGetCurrentConfiguration(hEncoder);
     if (myFormat->version == FAAC_CFG_VERSION)
     {
+      fprintf(stderr, "%s(see the faac.html file for more details)\n\n",
+	     myFormat->copyright);
       fprintf(stderr, "libfaac version %s\n", myFormat->name);
       faacEncClose(hEncoder);
     }
@@ -132,6 +133,7 @@ int main(int argc, char *argv[])
             { "objecttype", 0, 0, 'o' },
             { "raw", 0, 0, 'r' },
             { "nomidside", 0, 0, 'n' },
+            { "tns", 0, &useTns, 1 },
             { "notns", 0, &useTns, 0 },
             { "cutoff", 1, 0, 'c' },
             { "quality", 1, 0, 'q' },
@@ -260,21 +262,22 @@ int main(int argc, char *argv[])
     /* check that we have at least two non-option arguments */
     if ((argc - optind) < 2 || dieUsage == 1)
     {
-        fprintf(stderr, "\nUsage: %s -options infile outfile\n", progName);
-        fprintf(stderr, "Options:\n");
-	fprintf(stderr, "  -a <x>\tSet average bitrate to approximately x kbps/channel.\n");
-        fprintf(stderr, "  -c <bandwidth>\tSet the bandwidth in Hz. (default=automatic)\n");
-        fprintf(stderr, "  -q <quality>\tSet quantizer quality.\n");
-        fprintf(stderr, "  --notns\tDisable TNS coding.\n");
-//        fprintf(stderr, "  -n     Don\'t use mid/side coding.\n");
-        fprintf(stderr, "  -m X   AAC MPEG version, X can be 2 or 4.\n");
-        fprintf(stderr, "  -o X   AAC object type, X can be LC, MAIN or LTP.\n");
-        fprintf(stderr, "  -r     RAW AAC output file.\n");
-        fprintf(stderr, "  -P     Raw PCM input mode (default 44100Hz 16bit stereo).\n");
-        fprintf(stderr, "  -R     Raw PCM input rate.\n");
-        fprintf(stderr, "  -B     Raw PCM input sample size (16 default or 8bits).\n");
-        fprintf(stderr, "  -C     Raw PCM input channels.\n");
-	fprintf(stderr, "\n Note: output bitrate depends on -c and -q.\n");
+	printf("\nUsage: %s -options infile outfile\n", progName);
+	printf("Options:\n");
+	printf("  -a <x>\tSet average bitrate to approximately x kbps/channel.\n");
+	printf("  -c <bandwidth>\tSet the bandwidth in Hz. (default=automatic)\n");
+	printf("  -q <quality>\tSet quantizer quality.\n");
+	printf("  --tns  \tEnable TNS coding.\n");
+	printf("  --notns\tDisable TNS coding.\n");
+	printf("  -n     Don\'t use mid/side coding.\n");
+	printf("  -m X   AAC MPEG version, X can be 2 or 4.\n");
+	printf("  -o X   AAC object type, X can be LC, MAIN or LTP.\n");
+	printf("  -r     RAW AAC output file.\n");
+	printf("  -P     Raw PCM input mode (default 44100Hz 16bit stereo).\n");
+	printf("  -R     Raw PCM input rate.\n");
+	printf("  -B     Raw PCM input sample size (16 default or 8bits).\n");
+	printf("  -C     Raw PCM input channels.\n");
+	printf("More details on FAAC usage can be found in the faac.html file.\n");
 
         return 1;
     }
@@ -474,6 +477,11 @@ int main(int argc, char *argv[])
 
 /*
 $Log: main.c,v $
+Revision 1.36  2003/06/26 19:40:53  knik
+TNS disabled by default.
+Copyright info moved to library.
+Print help to standard output.
+
 Revision 1.35  2003/06/21 08:59:31  knik
 raw input support moved to input.c
 
