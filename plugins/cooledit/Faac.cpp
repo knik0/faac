@@ -154,21 +154,30 @@ BOOL DialogMsgProcAbout(HWND hWndDlg, UINT Message, WPARAM wParam, LPARAM lParam
 	{
 	case WM_INITDIALOG:
 		{
-		char buf[512];
+		  char buf[512];
+		  unsigned long samplesInput, maxBytesOutput;
+
+		  faacEncHandle hEncoder =
+		    faacEncOpen(44100, 2, &samplesInput, &maxBytesOutput);
+		  faacEncConfigurationPtr myFormat =
+		    faacEncGetCurrentConfiguration(hEncoder);
+
 			sprintf(buf,
 					APP_NAME " plugin " APP_VER " by Antonio Foranna\n\n"
 					"Engines used:\n"
-					"\tFAAC v%g\n"
+					"\tlibfaac v%s\n"
 					"\tFAAD2 v" FAAD2_VERSION "\n"
 					"\t" PACKAGE " v" VERSION "\n\n"
 					"This code is given with FAAC package and does not contain executables.\n"
 					"This program is free software and can be distributed/modifyed under the terms of the GNU General Public License.\n"
 					"This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY.\n\n"
 					"Compiled on %s\n",
-					/*FAACENC_VERSION*/ FAAC_CFG_VERSION,
+				(myFormat->version == FAAC_CFG_VERSION)
+				? myFormat->name : " bad version",
 					__DATE__
 					);
 			SetDlgItemText(hWndDlg, IDC_L_ABOUT, buf);
+			faacEncClose(hEncoder);
 		}
 		break;
 	case WM_COMMAND:
