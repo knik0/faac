@@ -16,7 +16,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: maingui.c,v 1.19 2003/02/25 10:51:59 menno Exp $
+ * $Id: maingui.c,v 1.20 2003/03/27 17:11:33 knik Exp $
  */
 
 #include <windows.h>
@@ -147,7 +147,7 @@ static DWORD WINAPI EncodeFile(LPVOID pParam)
         if (hEncoder)
         {
             HANDLE hOutfile;
-            char szTemp[64];
+	    char szTemp[256];
 
             /* set encoder configuration */
             faacEncConfigurationPtr config = faacEncGetCurrentConfiguration(hEncoder);
@@ -162,10 +162,15 @@ static DWORD WINAPI EncodeFile(LPVOID pParam)
             if (config->aacObjectType == SSR) /* Set to LTP */
                 config->aacObjectType = LTP;
 
-            GetDlgItemText(hWnd, IDC_BITRATE, szTemp, sizeof(szTemp));
-            config->bitRate = atoi(szTemp);
+            GetDlgItemText(hWnd, IDC_QUALITY, szTemp, sizeof(szTemp));
+	    config->quantqual = atoi(szTemp);
+	    if (IsDlgButtonChecked(hWnd, IDC_BWCTL) == BST_CHECKED)
+	    {
             GetDlgItemText(hWnd, IDC_BANDWIDTH, szTemp, sizeof(szTemp));
             config->bandWidth = atoi(szTemp);
+	    }
+	    else
+	      config->bandWidth = 0;
 
             if (!faacEncSetConfiguration(hEncoder, config))
             {
@@ -181,16 +186,22 @@ static DWORD WINAPI EncodeFile(LPVOID pParam)
                 return 0;
             }
 
+	    sprintf(szTemp, "%ld", config->quantqual);
+	    SetDlgItemText(hWnd, IDC_QUALITY, szTemp);
+
+	    sprintf(szTemp, "%d", config->bandWidth);
+	    SetDlgItemText(hWnd, IDC_BANDWIDTH, szTemp);
+
             /* open the output file */
             hOutfile = CreateFile(outputFilename, GENERIC_WRITE, 0, NULL,
                 CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
 
             if (hOutfile != INVALID_HANDLE_VALUE)
             {
-                UINT startTime = GetTickCount(), lastUpdated = 0;
+                UINT startTime = GetTickCount(), lastUpdated = 50;
                 DWORD totalBytesRead = 0;
 
-                unsigned int bytesInput = 0, bytesConsumed = 0;
+                unsigned int bytesInput = 0;
                 DWORD numberOfBytesWritten = 0;
                 short *pcmbuf;
                 unsigned char *bitbuf;
@@ -221,21 +232,26 @@ static DWORD WINAPI EncodeFile(LPVOID pParam)
 
                     totalBytesRead += bytesInput;
 
-                    timeElapsed = (GetTickCount () - startTime) / 1000;
-                    timeEncoded = totalBytesRead / (sampleRate * numChannels * sizeof (short));
+                    timeElapsed = (GetTickCount () - startTime) / 10;
+                    timeEncoded = 100.0 * totalBytesRead / (sampleRate * numChannels * sizeof (short));
 
-                    if (timeElapsed > lastUpdated)
+                    if (timeElapsed > (lastUpdated + 20))
                     {
                         float factor;
+			unsigned timeLeft;
 
                         lastUpdated = timeElapsed;
 
                         factor = (float) timeEncoded / (float) (timeElapsed ? timeElapsed : 1);
+			timeLeft = 10.0 * infile->samples / sampleRate / factor - 0.1 * timeElapsed;
 
-                        sprintf(szTemp, "Playing time: %2.2i:%2.2i:%2.2i  Encoding time: %2.2i:%2.2i:%2.2i  Factor: %.1f",
-                            timeEncoded / 3600, (timeEncoded % 3600) / 60, timeEncoded % 60,
-                            timeElapsed / 3600, (timeElapsed % 3600) / 60, timeElapsed % 60,
-                            factor);
+			sprintf(szTemp, "Playing time: %2.2i:%04.1f\tEncoding time: %2.2i:%04.1f\n"
+				"Play/enc factor: %.2f\tEstimated time left: %2.2i:%04.1f",
+				timeEncoded / 6000, 0.01 * (timeEncoded % 6000),
+				timeElapsed / 6000, 0.01 * (timeElapsed % 6000),
+				factor,
+				timeLeft / 600, 0.1 * (timeLeft % 600)
+			       );
 
                         SetDlgItemText(hWnd, IDC_TIME, szTemp);
                     }
@@ -292,6 +308,27 @@ static BOOL WINAPI DialogProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
     switch (msg)
     {
     case WM_INITDIALOG:
+      {
+        unsigned long samplesInput, maxBytesOutput;
+	faacEncHandle hEncoder =
+	  faacEncOpen(44100, 2, &samplesInput, &maxBytesOutput);
+	faacEncConfigurationPtr myFormat =
+	  faacEncGetCurrentConfiguration(hEncoder);
+
+	if (myFormat->version == FAAC_CFG_VERSION)
+	{
+	  char txt[100];
+	  sprintf(txt, "libfaac version %s", myFormat->name);
+	  SetDlgItemText(hWnd, IDC_COMPILEDATE, txt);
+	}
+	else
+	{
+	  MessageBox(hWnd, "wrong libfaac version", "FAAC",
+		     MB_OK | MB_ICONERROR);
+          PostMessage(hWnd, WM_CLOSE, 0, 0);
+	}
+	faacEncClose(hEncoder);
+      }
 
         inputFilename[0] = 0x00;
 
@@ -308,10 +345,8 @@ static BOOL WINAPI DialogProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
         CheckDlgButton(hWnd, IDC_USELFE, FALSE);
         CheckDlgButton(hWnd, IDC_USERAW, FALSE);
         CheckDlgButton(hWnd, IDC_USETNS, TRUE);
-        SetDlgItemText(hWnd, IDC_BITRATE, "64000");
-        SetDlgItemText(hWnd, IDC_BANDWIDTH, "18000");
-
-        SetDlgItemText(hWnd, IDC_COMPILEDATE, "Ver: " __DATE__);
+        SetDlgItemText(hWnd, IDC_QUALITY, "100");
+        SetDlgItemText(hWnd, IDC_BANDWIDTH, "0");
 
         DragAcceptFiles(hWnd, TRUE);
         return TRUE;
@@ -332,7 +367,7 @@ static BOOL WINAPI DialogProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 
             if ( !Encoding )
             {
-                int retval;
+                DWORD retval;
                 CreateThread(NULL,0,EncodeFile,hWnd,0,&retval);
                 Encoding = TRUE;
                 SetDlgItemText(hWnd, IDOK, "Stop");
@@ -364,6 +399,19 @@ static BOOL WINAPI DialogProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
             }
 
             break;
+	case IDC_BWCTL:
+	  switch (IsDlgButtonChecked(hWnd, IDC_BWCTL))
+	  {
+	  case BST_CHECKED:
+	    EnableWindow(GetDlgItem(hWnd, IDC_BANDWIDTH), TRUE);
+	    //SetDlgItemText(hWnd, IDC_BANDWIDTH, "0");
+            break;
+	  case BST_UNCHECKED:
+	    EnableWindow(GetDlgItem(hWnd, IDC_BANDWIDTH), FALSE);
+	    //SetDlgItemText(hWnd, IDC_BANDWIDTH, "");
+            break;
+	  }
+	  break;
         }
 
         break;
