@@ -18,7 +18,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: main.c,v 1.77 2004/08/19 15:33:30 menno Exp $
+ * $Id: main.c,v 1.78 2004/12/08 11:07:17 menno Exp $
  */
 
 #ifdef _MSC_VER
@@ -713,7 +713,6 @@ int main(int argc, char *argv[])
       rawEndian = 0;
       break;
     case 'H':
-      abort();
       dieMessage = long_help;
       break;
     case 'h':
@@ -1144,6 +1143,9 @@ int main(int argc, char *argv[])
 
 /*
 $Log: main.c,v $
+Revision 1.78  2004/12/08 11:07:17  menno
+Make long help work again
+
 Revision 1.77  2004/08/19 15:33:30  menno
 typo
 it's not bad to have this option, but people should be warned that they can get severe playback problems with RAW AAC files (anything other then 44100 will not be decoded properly unless you know that it has that samplerate). Seeking is also not possible on these files.
