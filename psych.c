@@ -52,9 +52,9 @@ Copyright (c) 1997.
 
 Source file: 
 
-$Id: psych.c,v 1.2 1999/12/13 10:37:35 menno Exp $
-$Id: psych.c,v 1.2 1999/12/13 10:37:35 menno Exp $
-$Id: psych.c,v 1.2 1999/12/13 10:37:35 menno Exp $
+$Id: psych.c,v 1.3 1999/12/16 17:20:55 menno Exp $
+$Id: psych.c,v 1.3 1999/12/16 17:20:55 menno Exp $
+$Id: psych.c,v 1.3 1999/12/16 17:20:55 menno Exp $
 
 **********************************************************************/
 
@@ -274,26 +274,24 @@ static PARTITION_TABLE_LONG    *part_tbl_long;
                                /* partition table for long block */
 static PARTITION_TABLE_SHORT    *part_tbl_short;
                                /* partition table for short block */
-/*static PSY_STATVARIABLE_LONG    psy_stvar_long;*/
 static PSY_STATVARIABLE_LONG    psy_stvar_long[MAX_TIME_CHANNELS+2];
                                /* static variables for long block */
-/*static PSY_STATVARIABLE_SHORT    psy_stvar_short;*/
 static PSY_STATVARIABLE_SHORT    psy_stvar_short[MAX_TIME_CHANNELS+2];
                                /* static variables for short block */
 /* added by T. Araki (1997.10.16) end */
 
 void EncTf_psycho_acoustic_init( void )
 {
-  int chanNum;
-/* added by T. Araki (1997.10.16) */
-      psy_fft_table_init(&fft_tbl_long, &fft_tbl_short);
-         /* initializing fft table */
-      for (chanNum=0;chanNum<MAX_TIME_CHANNELS+2;chanNum++) {
-	psy_calc_init(&sample[chanNum], &psy_stvar_long[chanNum], &psy_stvar_short[chanNum]);
-	/* initializing static variables */
-  }
-/* added by T. Araki (1997.10.16) end */
+	int chanNum;
 
+	/* added by T. Araki (1997.10.16) */
+	psy_fft_table_init(&fft_tbl_long, &fft_tbl_short);
+	/* initializing fft table */
+	for (chanNum=0;chanNum<MAX_TIME_CHANNELS+2;chanNum++) {
+		psy_calc_init(&sample[chanNum], &psy_stvar_long[chanNum], &psy_stvar_short[chanNum]);
+		/* initializing static variables */
+	}
+	/* added by T. Araki (1997.10.16) end */
 }
 
 /* added by T. Okada (1997.07.10) */
@@ -302,16 +300,16 @@ void psy_fft_table_init(FFT_TABLE_LONG *fft_tbl_long,
 			)
 {    
 
-    int i,j,k,n,n2,n4,n8;
-    double c,s,dc,ds,t;
+	int i,j,k,n,n2,n4,n8;
+	double c,s,dc,ds,t;
 
-    /* generating Hann window */
-    for(i = 0; i < BLOCK_LEN_LONG*2; i++)
+	/* generating Hann window */
+	for(i = 0; i < BLOCK_LEN_LONG*2; i++)
 		fft_tbl_long->hw[i] = 0.5 * (1-cos(2.0*M_PI*(i+0.5)/(BLOCK_LEN_LONG*2)));
-    for(i = 0; i < BLOCK_LEN_SHORT*2; i++)
+	for(i = 0; i < BLOCK_LEN_SHORT*2; i++)
 		fft_tbl_short->hw[i] = 0.5 * (1-cos(2.0*M_PI*(i+0.5)/(BLOCK_LEN_SHORT*2)));
 
-    /* generating sin table (long) */
+	/* generating sin table (long) */
     n = BLOCK_LEN_LONG * 2;
     n2 = n/2;  
     n4 = n2/2;  
@@ -585,7 +583,7 @@ void EncTf_psycho_acoustic(
 	}
 
 	{
-		ch =0;
+		ch = 0;
 		psy_step1(p_time_signal,sample, no_of_chan);
 		psy_step2(&sample[no_of_chan], &psy_stvar_long[no_of_chan], &psy_stvar_short[no_of_chan], &fft_tbl_long, 
 			&fft_tbl_short, ch);
@@ -616,14 +614,8 @@ void EncTf_psycho_acoustic(
 
 		psy_step5(part_tbl_long, part_tbl_short, &psy_stvar_long[no_of_chan], &psy_stvar_short[no_of_chan], 
 			&psy_var_long, &psy_var_short, ch);
-		psy_step6(part_tbl_long, part_tbl_short, &psy_var_long, &psy_var_short);
-
-		for (b = 0; b < 70; b++)
-			psy_stvar_long[no_of_chan].en[b] = psy_var_long.en[b];
-		for (i = 0; i < 8; i++)
-			for (b = 0; b < 42; b++)
-				psy_stvar_short[no_of_chan].en[i][b] = psy_var_short.en[i][b];
-
+		psy_step6(part_tbl_long, part_tbl_short, &psy_stvar_long[no_of_chan], &psy_stvar_short[no_of_chan],
+			&psy_var_long, &psy_var_short);
 		psy_step7(part_tbl_long, part_tbl_short, &psy_var_long, &psy_var_short);
 
 		if (no_of_chan < 2) {
@@ -653,7 +645,7 @@ void EncTf_psycho_acoustic(
 		psy_step13(&psy_var_long, block_type, ch);
 		psy_step14(p_sri, part_tbl_long, part_tbl_short, &psy_stvar_long[no_of_chan], 
 			&psy_stvar_short[no_of_chan], &psy_var_long, &psy_var_short, ch);
-		psy_step15(use_ms_l, use_ms_s, p_sri, &psy_var_long, &psy_var_short, no_of_chan);
+		psy_step15(use_ms_l, use_ms_s, p_sri, &psy_stvar_long[0], &psy_stvar_short[0], &psy_var_long, &psy_var_short, no_of_chan);
 	}	
 
 	/*  for( ch=0; ch<no_of_chan; ch++ ) { */
@@ -976,13 +968,13 @@ void psy_step4(PSY_STATVARIABLE_LONG *psy_stvar_long,
 }
 
 void psy_step5(PARTITION_TABLE_LONG *part_tbl_long, 
-	       PARTITION_TABLE_SHORT *part_tbl_short, 
-	       PSY_STATVARIABLE_LONG *psy_stvar_long,
+			   PARTITION_TABLE_SHORT *part_tbl_short, 
+			   PSY_STATVARIABLE_LONG *psy_stvar_long,
                PSY_STATVARIABLE_SHORT *psy_stvar_short,
-	       PSY_VARIABLE_LONG *psy_var_long, 
-	       PSY_VARIABLE_SHORT *psy_var_short,
-	       int ch
-	       )
+			   PSY_VARIABLE_LONG *psy_var_long, 
+			   PSY_VARIABLE_SHORT *psy_var_short,
+			   int ch
+			   )
 {
     int b,w,i;
     double tmp_cb;
@@ -1019,10 +1011,12 @@ void psy_step5(PARTITION_TABLE_LONG *part_tbl_long,
 }
 
 void psy_step6(PARTITION_TABLE_LONG *part_tbl_long, 
-	       PARTITION_TABLE_SHORT *part_tbl_short, 
-	       PSY_VARIABLE_LONG *psy_var_long, 
-	       PSY_VARIABLE_SHORT *psy_var_short
-	       )
+			   PARTITION_TABLE_SHORT *part_tbl_short, 
+			   PSY_STATVARIABLE_LONG *psy_stvar_long,
+               PSY_STATVARIABLE_SHORT *psy_stvar_short,
+			   PSY_VARIABLE_LONG *psy_var_long, 
+			   PSY_VARIABLE_SHORT *psy_var_short
+			   )
 {
     int b,bb,i;
     double ecb,ct;
@@ -1041,7 +1035,7 @@ void psy_step6(PARTITION_TABLE_LONG *part_tbl_long,
 		} else {
 			psy_var_long->cb[b] = 0.0;
 		}
-		psy_var_long->en[b] = ecb * part_tbl_long->rnorm[b];
+		psy_stvar_long->en[b] = psy_var_long->en[b] = ecb * part_tbl_long->rnorm[b];
     }
 
 	/* added by T. Araki (1997.10.16) */
@@ -1059,7 +1053,7 @@ void psy_step6(PARTITION_TABLE_LONG *part_tbl_long,
 			} else {
 				psy_var_short->cb[i][b] = 0.0;
 			}
-			psy_var_short->en[i][b] = ecb * part_tbl_short->rnorm[b];
+			psy_stvar_short->en[i][b] = psy_var_short->en[i][b] = ecb * part_tbl_short->rnorm[b];
 		}
     }
 	/* added by T. Araki (1997.10.16) end */
@@ -1195,7 +1189,7 @@ void psy_step11(PARTITION_TABLE_LONG *part_tbl_long,
 
 	/* added by T. Araki (1997.10.16) */
     for(b = 0; b < part_tbl_short->len; b++){
-		temp = psy_min( psy_stvar_short->nb[0][b], 2.0*psy_stvar_short->last7_nb[b]);
+		temp = psy_min( psy_stvar_short->nb[0][b], 1.0*psy_stvar_short->last7_nb[b]);
 		if (temp > 0.01)
 			psy_stvar_short->nb[0][b] = temp;
     }
@@ -1206,7 +1200,7 @@ void psy_step11(PARTITION_TABLE_LONG *part_tbl_long,
 
 	for(i = 1;  i < MAX_SHORT_WINDOWS; i++){
 		for(b = 0; b < part_tbl_short->len; b++){
-			temp = psy_min( psy_stvar_short->nb[i][b],2.0*psy_stvar_short->nb[i - 1][b]);
+			temp = psy_min( psy_stvar_short->nb[i][b],1.0*psy_stvar_short->nb[i - 1][b]);
 			if (temp > 0.01)
 				psy_stvar_short->nb[i][b] = temp;
 		}
@@ -1231,7 +1225,10 @@ void psy_step11andahalf(PARTITION_TABLE_LONG *part_tbl_long,
 
 	if (ch==3) {
 		for(b = 0; b < part_tbl_long->len; b++) {
-			t = psy_stvar_long[2].nb[p1+b]/psy_stvar_long[3].nb[p1+b];
+			if (psy_stvar_long[3].nb[p1+b] != 0.0)
+				t = psy_stvar_long[2].nb[p1+b]/psy_stvar_long[3].nb[p1+b];
+			else
+				t = 0;
 			if (t>1)
 				t = 1/t;
 			tempL = max(psy_stvar_long[0].nb[p1+b]*t, min(psy_stvar_long[0].nb[p1+b], part_tbl_long->bmax[b]*psy_stvar_long[0].en[b]));
@@ -1251,7 +1248,10 @@ void psy_step11andahalf(PARTITION_TABLE_LONG *part_tbl_long,
 
 		for (i = 0; i < MAX_SHORT_WINDOWS; i++) {
 			for(b = 0; b < part_tbl_short->len; b++) {
-				t = psy_stvar_short[2].nb[i][b]/psy_stvar_short[3].nb[i][b];
+				if (psy_stvar_short[3].nb[i][b] != 0.0)
+					t = psy_stvar_short[2].nb[i][b]/psy_stvar_short[3].nb[i][b];
+				else
+					t = 0;
 				if (t>1)
 					t = 1/t;
 				tempL = max(psy_stvar_short[0].nb[i][b]*t, min(psy_stvar_short[0].nb[i][b], part_tbl_short->bmax[b]*psy_stvar_short[0].en[i][b]));
@@ -1412,54 +1412,51 @@ void psy_step14(SR_INFO *p_sri,
 }
 
 
-void psy_step15(int use_ms_l[49],
-				int use_ms_s[8][15],
+void psy_step15(int use_ms_l[49], int use_ms_s[8][15],
 				SR_INFO *p_sri,
-				PSY_VARIABLE_LONG *psy_var_long, 
-				PSY_VARIABLE_SHORT *psy_var_short,
+				PSY_STATVARIABLE_LONG *psy_stvar_long,
+				PSY_STATVARIABLE_SHORT *psy_stvar_short,
+				PSY_VARIABLE_LONG *psy_var_long, PSY_VARIABLE_SHORT *psy_var_short,
 				int ch
 				)
 {
-	static double save_npart_l[49];
-	static double save_npart_s[8][14];
-
 	int b, i;
 	double temp, x1, x2, db;
 
 	if (ch == 0) {
 		for (b = 0; b < p_sri->num_cb_long; b++)
-			save_npart_l[b] = psy_var_long->npart[b];
+			psy_stvar_long->save_npart_l[b] = psy_var_long->npart[b];
 		for (i = 0; i < 8; i++)
 			for (b = 0; b < p_sri->num_cb_short; b++)
-				save_npart_s[i][b] = psy_var_short->npart[i][b];
+				psy_stvar_short->save_npart_s[i][b] = psy_var_short->npart[i][b];
 	}
 
 	if (ch == 1) {
 		for (b = 0; b < p_sri->num_cb_long; b++) {
-			x1 = min(save_npart_l[b],psy_var_long->npart[b]);
-			x2 = max(save_npart_l[b],psy_var_long->npart[b]);
+			x1 = min(psy_stvar_long->save_npart_l[b],psy_var_long->npart[b]);
+			x2 = max(psy_stvar_long->save_npart_l[b],psy_var_long->npart[b]);
 			if (x2 >= 1000*x1)
 				db=30;
 			else
 				db = 10*log10(x2/x1);
 			temp = 0.35*(db)/5.0;
 //			printf("%d\t%f\n", b, temp);
-			if (temp < 0.5)
+			if (temp < 0.35)
 				use_ms_l[b] = 1;
 			else
 				use_ms_l[b] = 0;
 		}
 		for (i = 0; i < 8; i++) {
 			for (b = 0; b < p_sri->num_cb_short; b++) {
-				x1 = min(save_npart_s[i][b],psy_var_short->npart[i][b]);
-				x2 = max(save_npart_s[i][b],psy_var_short->npart[i][b]);
+				x1 = min(psy_stvar_short->save_npart_s[i][b],psy_var_short->npart[i][b]);
+				x2 = max(psy_stvar_short->save_npart_s[i][b],psy_var_short->npart[i][b]);
 				if (x2 >= 1000*x1)
 					db=30;
 				else
 					db = 10*log10(x2/x1);
 				temp = 0.35*(db)/5.0;
 //				printf("%d\t%f\n", b, temp);
-				if (temp < 0.5)
+				if (temp < 0.35)
 					use_ms_s[i][b] = 1;
 				else
 					use_ms_s[i][b] = 0;

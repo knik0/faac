@@ -106,6 +106,7 @@ typedef struct {
   int    p_fft; /* pointer for fft_r and fft_f */
   double nb[NPART_LONG*2];
   double en[NPART_LONG];
+  double save_npart_l[NSFB_LONG];
   int    p_nb; /* pointer for nb */
   double ismr[NSFB_LONG]; /* 1/SMR in each swb */
 } PSY_STATVARIABLE_LONG;
@@ -136,6 +137,7 @@ typedef struct {
   double last7_fft_f[BLOCK_LEN_SHORT];
   double nb[MAX_SHORT_WINDOWS][NPART_SHORT];
   double en[MAX_SHORT_WINDOWS][NPART_SHORT];
+  double save_npart_s[MAX_SHORT_WINDOWS][NSFB_SHORT];
   double last7_nb[NPART_SHORT];
   double ismr[MAX_SHORT_WINDOWS][NSFB_SHORT]; /* 1/SMR in each swb */
 } PSY_STATVARIABLE_SHORT;
@@ -246,19 +248,21 @@ void psy_step4(PSY_STATVARIABLE_LONG *psy_stvar_long,
 	       );
 
 void psy_step5(PARTITION_TABLE_LONG *part_tbl_long, 
-	       PARTITION_TABLE_SHORT *part_tbl_short, 
-	       PSY_STATVARIABLE_LONG *psy_stvar_long,
+			   PARTITION_TABLE_SHORT *part_tbl_short, 
+			   PSY_STATVARIABLE_LONG *psy_stvar_long,
                PSY_STATVARIABLE_SHORT *psy_stvar_short,
-	       PSY_VARIABLE_LONG *psy_var_long, 
-	       PSY_VARIABLE_SHORT *psy_var_short,
-	       int ch
-	       );
+			   PSY_VARIABLE_LONG *psy_var_long, 
+			   PSY_VARIABLE_SHORT *psy_var_short,
+			   int ch
+			   );
 
 void psy_step6(PARTITION_TABLE_LONG *part_tbl_long, 
-	       PARTITION_TABLE_SHORT *part_tbl_short, 
-	       PSY_VARIABLE_LONG *psy_var_long, 
-	       PSY_VARIABLE_SHORT *psy_var_short
-	       );
+			   PARTITION_TABLE_SHORT *part_tbl_short, 
+			   PSY_STATVARIABLE_LONG *psy_stvar_long,
+               PSY_STATVARIABLE_SHORT *psy_stvar_short,
+			   PSY_VARIABLE_LONG *psy_var_long, 
+			   PSY_VARIABLE_SHORT *psy_var_short
+			   );
 
 void psy_step7(PARTITION_TABLE_LONG *part_tbl_long, 
 	       PARTITION_TABLE_SHORT *part_tbl_short, 
@@ -323,9 +327,11 @@ void psy_step14(SR_INFO *p_sri,
 		PSY_VARIABLE_SHORT *psy_var_short,
 		int ch);
 
-void psy_step15(int use_ms_l[49],
-				int use_ms_s[8][15],
+void psy_step15(int use_ms_l[NSFB_LONG],
+				int use_ms_s[MAX_SHORT_WINDOWS][NSFB_SHORT],
 				SR_INFO *p_sri,
+				PSY_STATVARIABLE_LONG *psy_stvar_long, 
+				PSY_STATVARIABLE_SHORT *psy_stvar_short, 
 				PSY_VARIABLE_LONG *psy_var_long, 
 				PSY_VARIABLE_SHORT *psy_var_short,
 				int ch
