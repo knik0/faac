@@ -1,3 +1,48 @@
+2001-10-16  menno
+	* plugins/cooledit/aacinfo.c:
+	* plugins/cooledit/aacinfo.h:
+	* plugins/cooledit/faac.c:
+	* plugins/cooledit/resource.h:
+	* plugins/winamp/AACINFO.C:
+	* plugins/winamp/AACINFO.H:
+	* plugins/winamp/FAAC.rc:
+	* plugins/winamp/Out_faac.c:
+	* plugins/winamp/RESOURCE.H:
+		Bugfixes by 4N
+
+2001-10-11  menno
+	* plugins/cooledit/.cvsignore:
+	* plugins/cooledit/Config.c:
+	* plugins/cooledit/FAAD.DSP:
+	* plugins/cooledit/FAAD.rc:
+	* plugins/cooledit/Logo.bmp:
+	* plugins/cooledit/Readme.txt:
+	* plugins/cooledit/aacinfo.c:
+	* plugins/cooledit/aacinfo.h:
+	* plugins/cooledit/bitmap1.bmp:
+	* plugins/cooledit/faac.c:
+	* plugins/cooledit/faad.c:
+	* plugins/cooledit/faad.def:
+	* plugins/cooledit/faad.dsw:
+	* plugins/cooledit/filters.h:
+	* plugins/cooledit/main.c:
+	* plugins/cooledit/resource.h:
+	* plugins/winamp/.cvsignore:
+	* plugins/winamp/AACINFO.C:
+	* plugins/winamp/AACINFO.H:
+	* plugins/winamp/Config.c:
+	* plugins/winamp/FAAC.rc:
+	* plugins/winamp/FILTERS.H:
+	* plugins/winamp/Logo.bmp:
+	* plugins/winamp/OUT.H:
+	* plugins/winamp/Open.bmp:
+	* plugins/winamp/Out_faac.c:
+	* plugins/winamp/RESOURCE.H:
+	* plugins/winamp/ReadMe.txt:
+	* plugins/winamp/out_FAAC.dsp:
+	* plugins/winamp/out_FAAC.dsw:
+		Structure changes to the CVS tree
+
 2001-10-07  menno
 	* common/libsndfile/src/common.h:
 	* common/libsndfile/src/sndfile.h:
@@ -52,49 +97,7 @@
 	* libfaac/tns.h:
 		Made FAAC legal :-)
 
-2001-08-03  menno
-	* cooledit/Config.c:
-	* cooledit/FAAD.DSP:
-	* cooledit/FAAD.rc:
-	* cooledit/Readme.txt:
-	* cooledit/aacinfo.c:
-	* cooledit/aacinfo.h:
-	* cooledit/bitmap1.bmp:
-	* cooledit/faac.c:
-	* cooledit/faad.c:
-	* cooledit/main.c:
-	* cooledit/resource.h:
-	* winamp/.cvsignore:
-	* winamp/AACINFO.C:
-	* winamp/AACINFO.H:
-	* winamp/Config.c:
-	* winamp/FAAC.H:
-	* winamp/FAAC.rc:
-	* winamp/FILTERS.H:
-	* winamp/Logo.bmp:
-	* winamp/OUT.H:
-	* winamp/Open.bmp:
-	* winamp/Out_faac.c:
-	* winamp/RESOURCE.H:
-	* winamp/ReadMe.txt:
-	* winamp/out_FAAC.dsp:
-	* winamp/out_FAAC.dsw:
-		Updated cooledit plugin
-		New winamp output plugin
-
 2001-07-12  menno
-	* cooledit/FAAD.rc:
-	* cooledit/Readme.txt:
-	* cooledit/aacinfo.c:
-	* cooledit/aacinfo.h:
-	* cooledit/faac.c:
-	* cooledit/faad.c:
-	* cooledit/faad.def:
-	* cooledit/main.c:
-	* cooledit/resource.h:
-		Major bugfixes to Cooledit filter
-		encoding now works
-
 	* libfaac/.cvsignore:
 	* libfaac/libfaac.def:
 	* libfaac/libfaac_dll.dsp:
@@ -104,40 +107,6 @@
 2001-07-08  menno
 	* libfaac/frame.c:
 		Small config bugfix
-
-	* cooledit/FAAD.DSP:
-	* cooledit/faacflt.dsp:
-	* cooledit/faacflt.dsw:
-	* cooledit/faad.def:
-	* cooledit/faad.dsw:
-		Fixed CoolEdit filter
-
-	* cooledit/FAAD.DSP:
-		Correct processor used
-
-2001-07-02  menno
-	* cooledit/faac.c:
-	* cooledit/faac.h:
-	* cooledit/faacflt.dsp:
-	* cooledit/faad.c:
-	* cooledit/faad.h:
-		Fixes for compiling CoolEdit filter
-
-	* cooledit/.cvsignore:
-	* cooledit/FAAD.rc:
-	* cooledit/Logo.bmp:
-	* cooledit/aacinfo.c:
-	* cooledit/aacinfo.h:
-	* cooledit/faac.c:
-	* cooledit/faac.h:
-	* cooledit/faacflt.dsp:
-	* cooledit/faacflt.dsw:
-	* cooledit/faad.c:
-	* cooledit/faad.h:
-	* cooledit/filters.h:
-	* cooledit/main.c:
-	* cooledit/resource.h:
-		Added CoolEdit filter
 
 2001-06-27  menno
 	* bootstrap:
@@ -446,8 +415,6 @@
 	* frontend/faac.dsw:
 	* frontend/faacgui.dsp:
 	* frontend/faacgui.dsw:
-	* wingui/faac_wingui.dsp:
-	* wingui/faac_wingui.dsw:
 		Added libsndfile to the CVS tree, making compilation a lot easier
 
 2001-05-08  menno
@@ -470,30 +437,6 @@
 	* libfaac/libfaac.dsp:
 	* todo.txt:
 		Added support for MAIN AAC object type
-
-2001-04-29  flyingfox
-	* wingui/EncoderJob.cpp:
-	* wingui/EncoderJob.h:
-	* wingui/EncoderJobProcessingManager.cpp:
-	* wingui/EncoderJobProcessingManager.h:
-	* wingui/EncoderQualityPageDialog.cpp:
-	* wingui/EncoderQualityPageDialog.h:
-	* wingui/EncoderQualityPropertyPageContents.cpp:
-	* wingui/EncoderQualityPropertyPageContents.h:
-	* wingui/faac_wingui.rc:
-	* wingui/resource.h:
-		- disabled job list persistence (file format incompatibility)
-		- disabled job list multiple selection (property merging is not working properly anyway)
-		- added MPEG version support
-		- changed AAC profile to AAC object type
-		- disabled LTP under MPEG version 2 (if LTP selected it will go back to LC)
-
-2001-04-27  flyingfox
-	* wingui/faac_wingui.dsp:
-		fixed debug build
-
-	* wingui/EncoderJobProcessingManager.cpp:
-		fixed compile error
 
 2001-04-19  menno
 	* frontend/faacgui.rc:
@@ -520,40 +463,11 @@
 	* libfaac/frame.h:
 	* libfaac/ltp.c:
 	* libfaac/tns.c:
-	* wingui/EncoderJobProcessingManager.cpp:
-	* wingui/faac_wingui.rc:
 		Fixed MPEG4 object type problem
 
 2001-04-10  menno
 	* libfaac/tns.c:
 		Fixed another MPEG4/2 issue TNS order
-
-	* wingui/EncoderGeneralPageDialog.cpp:
-	* wingui/EncoderGeneralPageDialog.h:
-	* wingui/EncoderJob.cpp:
-	* wingui/EncoderJob.h:
-	* wingui/EncoderJobProcessingManager.cpp:
-	* wingui/EncoderJobProcessingManager.h:
-	* wingui/Job.cpp:
-	* wingui/Job.h:
-	* wingui/JobListUpdatable.h:
-	* wingui/PageCheckboxCtrlContent.cpp:
-	* wingui/PageCheckboxCtrlContent.h:
-	* wingui/PageComboBoxCtrlContent.cpp:
-	* wingui/PageComboBoxCtrlContent.h:
-	* wingui/PageEditCtrlContent.cpp:
-	* wingui/PageEditCtrlContent.h:
-	* wingui/PageRadioGroupCtrlContent.h:
-	* wingui/RecursiveDirectoryTraverser.cpp:
-	* wingui/RecursiveDirectoryTraverser.h:
-	* wingui/WindowUtil.cpp:
-	* wingui/WindowUtil.h:
-	* wingui/faac_wingui.dsp:
-	* wingui/faac_wingui.rc:
-	* wingui/faac_winguiDlg.cpp:
-	* wingui/faac_winguiDlg.h:
-	* wingui/resource.h:
-		Big update of GUI
 
 2001-04-03  menno
 	* libfaac/bitstream.c:
@@ -565,20 +479,6 @@
 	* libfaac/bitstream.c:
 		Re: ADTS layer fixed for MPEG-4
 
-2001-04-01  xfhobbes
-	* wingui/AskCreateDirectoryDialog.cpp:
-	* wingui/AskCreateDirectoryDialog.h:
-	* wingui/JobProcessingDynamicUserInputInfo.cpp:
-	* wingui/JobProcessingDynamicUserInputInfo.h:
-		added general user input tracking during job list processing and
-		question for target directory creation where appropriate
-
-	* wingui/AbstractJob.cpp:
-	* wingui/AbstractJob.h:
-		improved progress counter; added general user input tracking
-		during job list processing; added column in the job list ctrl
-		to display the outcome of job processing
-
 2001-03-19  menno
 	* libfaac/frame.c:
 		Table data fix for 8kHz
@@ -586,48 +486,6 @@
 	* frontend/main.c:
 	* libfaac/bitstream.c:
 		Correct encoding of files other than 2 channel now
-
-2001-03-18  xfhobbes
-	* wingui/.cvsignore:
-	* wingui/AbstractJob.cpp:
-	* wingui/AbstractJob.h:
-	* wingui/EncoderGeneralPageDialog.cpp:
-	* wingui/EncoderJob.cpp:
-	* wingui/EncoderJob.h:
-	* wingui/EncoderJobProcessingManager.cpp:
-	* wingui/EncoderJobProcessingManager.h:
-	* wingui/FloatingPropertyDialog.cpp:
-	* wingui/FloatingPropertyDialog.h:
-	* wingui/Job.cpp:
-	* wingui/Listobj.cpp:
-	* wingui/ProcessJobStatusDialog.cpp:
-	* wingui/ProcessJobStatusDialog.h:
-	* wingui/ProcessJobStatusDialog2.cpp:
-	* wingui/ProcessJobStatusDialog2.h:
-	* wingui/ProcessingStatusDialogInfoFeedbackCallbackInterface.h:
-	* wingui/RecursiveDirectoryTraverser.cpp:
-	* wingui/RecursiveDirectoryTraverser.h:
-	* wingui/TItemList.h:
-	* wingui/faac_wingui.clw:
-	* wingui/faac_wingui.cpp:
-	* wingui/faac_wingui.dsp:
-	* wingui/faac_wingui.h:
-	* wingui/faac_wingui.rc:
-	* wingui/faac_winguiDlg.cpp:
-	* wingui/faac_winguiDlg.h:
-	* wingui/resource.h:
-		Major update: roughly consolidated filter job functionality, 
-		added shell open support and several other things, cleaned up
-		scc files and ignore list
-
-	* wingui/faac_winguiDlg.cpp:
-		Moved beep after completed processing from individual beep for
-		every job to a global one per processing command.
-
-	* wingui/EncoderJobProcessingManager.cpp:
-	* wingui/EncoderJobProcessingManager.h:
-		Rewrote DoProcessing() method to comply to rules of Hungarian
-		Notation and to common C++ code styles.
 
 2001-03-18  menno
 	* faac_wingui.nsi:
@@ -639,118 +497,8 @@
 
 2001-03-17  menno
 	* libfaac/bitstream.c:
-	* wingui/faac_wingui.clw:
 		Added MPEG2 AAC support (compile with MPEG2AAC defined)
 		make sure you don't use LTP when using MPEG2 AAC, because it is not supported in MPEG2 AAC
-
-2001-03-15  menno
-	* wingui/Listobj.cpp:
-		Small bugfix
-
-2001-03-14  menno
-	* wingui/.cvsignore:
-	* wingui/AbstractJob.cpp:
-	* wingui/AbstractJob.h:
-	* wingui/AbstractPageCtrlContent.cpp:
-	* wingui/AbstractPageCtrlContent.h:
-	* wingui/AbstractPropertyPageContents.cpp:
-	* wingui/AbstractPropertyPageContents.h:
-	* wingui/ConcreteJobBase.cpp:
-	* wingui/ConcreteJobBase.h:
-	* wingui/EncoderGeneralPageDialog.cpp:
-	* wingui/EncoderGeneralPageDialog.h:
-	* wingui/EncoderGeneralPropertyPageContents.cpp:
-	* wingui/EncoderGeneralPropertyPageContents.h:
-	* wingui/EncoderId3PageDialog.cpp:
-	* wingui/EncoderId3PageDialog.h:
-	* wingui/EncoderId3PropertyPageContents.cpp:
-	* wingui/EncoderId3PropertyPageContents.h:
-	* wingui/EncoderJob.cpp:
-	* wingui/EncoderJob.h:
-	* wingui/EncoderJobProcessingManager.cpp:
-	* wingui/EncoderJobProcessingManager.h:
-	* wingui/EncoderQualityPageDialog.cpp:
-	* wingui/EncoderQualityPageDialog.h:
-	* wingui/EncoderQualityPropertyPageContents.cpp:
-	* wingui/EncoderQualityPropertyPageContents.h:
-	* wingui/FaacWinguiProgramSettings.cpp:
-	* wingui/FaacWinguiProgramSettings.h:
-	* wingui/FileListQueryManager.cpp:
-	* wingui/FileListQueryManager.h:
-	* wingui/FileMaskAssembler.cpp:
-	* wingui/FileMaskAssembler.h:
-	* wingui/FilePathCalc.cpp:
-	* wingui/FilePathCalc.h:
-	* wingui/FileSerializable.cpp:
-	* wingui/FileSerializable.h:
-	* wingui/FileSerializableJobList.cpp:
-	* wingui/FileSerializableJobList.h:
-	* wingui/FloatingPropertyDialog.cpp:
-	* wingui/FloatingPropertyDialog.h:
-	* wingui/FolderDialog.cpp:
-	* wingui/FolderDialog.h:
-	* wingui/Id3TagInfo.cpp:
-	* wingui/Id3TagInfo.h:
-	* wingui/Job.cpp:
-	* wingui/Job.h:
-	* wingui/JobList.cpp:
-	* wingui/JobList.h:
-	* wingui/JobListCtrlDescribable.cpp:
-	* wingui/JobListCtrlDescribable.h:
-	* wingui/JobListUpdatable.cpp:
-	* wingui/JobListUpdatable.h:
-	* wingui/JobListsToConfigureSaver.cpp:
-	* wingui/JobListsToConfigureSaver.h:
-	* wingui/ListCtrlStateSaver.cpp:
-	* wingui/ListCtrlStateSaver.h:
-	* wingui/Listobj.cpp:
-	* wingui/PageCheckboxCtrlContent.cpp:
-	* wingui/PageCheckboxCtrlContent.h:
-	* wingui/PageComboBoxCtrlContent.cpp:
-	* wingui/PageComboBoxCtrlContent.h:
-	* wingui/PageEditCtrlContent.cpp:
-	* wingui/PageEditCtrlContent.h:
-	* wingui/PageRadioGroupCtrlContent.cpp:
-	* wingui/PageRadioGroupCtrlContent.h:
-	* wingui/ProcessJobStatusDialog.cpp:
-	* wingui/ProcessJobStatusDialog.h:
-	* wingui/ProcessJobStatusDialog2.cpp:
-	* wingui/ProcessJobStatusDialog2.h:
-	* wingui/ProcessingStartStopPauseInteractable.cpp:
-	* wingui/ProcessingStartStopPauseInteractable.h:
-	* wingui/ProcessingStatusDialogInfoFeedbackCallbackInterface.cpp:
-	* wingui/ProcessingStatusDialogInfoFeedbackCallbackInterface.h:
-	* wingui/PropertiesDummyParentDialog.cpp:
-	* wingui/PropertiesDummyParentDialog.h:
-	* wingui/PropertiesTabParentDialog.cpp:
-	* wingui/PropertiesTabParentDialog.h:
-	* wingui/ReadMe.txt:
-	* wingui/RecursiveDirectoryTraverser.cpp:
-	* wingui/RecursiveDirectoryTraverser.h:
-	* wingui/SourceTargetFilePair.cpp:
-	* wingui/SourceTargetFilePair.h:
-	* wingui/StdAfx.cpp:
-	* wingui/StdAfx.h:
-	* wingui/SupportedPropertyPagesData.cpp:
-	* wingui/SupportedPropertyPagesData.h:
-	* wingui/TItemList.cpp:
-	* wingui/TItemList.h:
-	* wingui/WindowUtil.cpp:
-	* wingui/WindowUtil.h:
-	* wingui/faac_wingui.clw:
-	* wingui/faac_wingui.cpp:
-	* wingui/faac_wingui.dsp:
-	* wingui/faac_wingui.dsw:
-	* wingui/faac_wingui.h:
-	* wingui/faac_wingui.rc:
-	* wingui/faac_winguiDlg.cpp:
-	* wingui/faac_winguiDlg.h:
-	* wingui/listobj.h:
-	* wingui/res/faac_wingui.ico:
-	* wingui/res/faac_wingui.rc2:
-	* wingui/res/toolbarm.bmp:
-	* wingui/resource.h:
-		New GUI application
 
 2001-03-13  menno
 	* frontend/.cvsignore:
