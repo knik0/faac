@@ -16,7 +16,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: main.c,v 1.45 2003/09/08 16:28:21 knik Exp $
+ * $Id: main.c,v 1.46 2003/09/24 16:30:34 knik Exp $
  */
 
 #ifdef _MSC_VER
@@ -152,6 +152,8 @@ int main(int argc, char *argv[])
     int rawBits = 16;
     int rawRate = 44100;
 
+    int shortctl = SHORTCTL_NORMAL;
+
     FILE *outfile;
 
 #ifdef HAVE_LIBMP4V2
@@ -197,6 +199,7 @@ int main(int argc, char *argv[])
             { "pcmsamplerate", 1, 0, 'R'},
             { "pcmsamplebits", 1, 0, 'B'},
             { "pcmchannels", 1, 0, 'C'},
+            { "shortctl", 1, 0, 300},
 #ifdef HAVE_LIBMP4V2
             { "createmp4", 0, 0, 'w'},
 #endif
@@ -322,6 +325,9 @@ int main(int argc, char *argv[])
             mp4 = 1;
             break;
 #endif
+        case 300:
+            shortctl = atoi(optarg);
+            break;
         case '?':
             break;
         default:
@@ -347,6 +353,7 @@ int main(int argc, char *argv[])
         printf("  -m X   AAC MPEG version, X can be 2 or 4.\n");
         printf("  -o X   AAC object type. (0=Low Complexity (default), 1=Main, 2=LTP)\n");
         printf("  -r     RAW AAC output file.\n");
+        printf("  --shortctl <x>  Enforce block type (1 = no short; 2 = no long)\n");
         printf("  -P     Raw PCM input mode (default 44100Hz 16bit stereo).\n");
         printf("  -R     Raw PCM input rate.\n");
         printf("  -B     Raw PCM input sample size (8, 16 (default), 24 or 32bits).\n");
@@ -423,6 +430,17 @@ int main(int argc, char *argv[])
     myFormat->aacObjectType = objectType;
     myFormat->mpegVersion = mpegVersion;
     myFormat->useTns = useTns;
+    switch (shortctl)
+    {
+    case SHORTCTL_NOSHORT:
+      fprintf(stderr, "disabling short blocks\n");
+      myFormat->shortctl = shortctl;
+      break;
+    case SHORTCTL_NOLONG:
+      fprintf(stderr, "disabling long blocks\n");
+      myFormat->shortctl = shortctl;
+      break;
+    }
     if (infile->channels >= 6)
         myFormat->useLfe = 1;
     myFormat->allowMidside = useMidSide;
@@ -660,6 +678,9 @@ int main(int argc, char *argv[])
 
 /*
 $Log: main.c,v $
+Revision 1.46  2003/09/24 16:30:34  knik
+Added option to enforce block type.
+
 Revision 1.45  2003/09/08 16:28:21  knik
 conditional libmp4v2 compilation
 
