@@ -16,7 +16,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: main.c,v 1.21 2001/06/09 14:33:26 menno Exp $
+ * $Id: main.c,v 1.22 2001/06/25 07:45:33 menno Exp $
  */
 
 #ifdef _WIN32
@@ -24,7 +24,6 @@
 #endif
 
 #ifdef __unix__
-#define min(a,b) ( (a) < (b) ? (a) : (b) )
 #include <sys/time.h>
 #include <sys/resource.h>
 #include <unistd.h>
@@ -39,9 +38,27 @@
 #include <faac.h>
 
 
+#ifndef min
+#define min(a,b) ( (a) < (b) ? (a) : (b) )
+#endif
+
 /* globals */
 char* progName;
 
+int StringCompI(char const *str1, char const *str2, unsigned long len)
+{
+    signed int c1 = 0, c2 = 0;
+
+    while (len--) {
+        c1 = tolower(*str1++);
+        c2 = tolower(*str2++);
+
+        if (c1 == 0 || c1 != c2)
+            break;
+    }
+
+    return c1 - c2;
+}
 
 int main(int argc, char *argv[])
 {
@@ -130,9 +147,9 @@ int main(int argc, char *argv[])
                 if (sscanf(optarg, "%s", i) < 1) {
                     objectType = LOW;
                 } else {
-                    if (strcmpi(i, "MAIN") == 0)
+                    if (StringCompI(i, "MAIN", 4) == 0)
                         objectType = MAIN;
-                    else if (strcmpi(i, "LTP") == 0)
+                    else if (StringCompI(i, "LTP", 3) == 0)
                         objectType = LTP;
                     else
                         objectType = LOW;
