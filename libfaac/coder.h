@@ -16,7 +16,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: coder.h,v 1.12 2004/07/04 12:10:52 corrados Exp $
+ * $Id: coder.h,v 1.13 2005/02/02 07:49:10 sur Exp $
  */
 
 #ifndef CODER_H
@@ -29,12 +29,21 @@ extern "C" {
 /* Allow encoding of Digital Radio Mondiale (DRM) */
 //#define DRM
 
+/* Allow encoding of Digital Radio Mondiale (DRM) with transform length 1024 */
+//#define DRM_1024
+
 #define MAX_CHANNELS 64
 
 #ifdef DRM
-# define FRAME_LEN 1024//960 // not working with 960, fixme
-# define BLOCK_LEN_LONG 1024//960
-# define BLOCK_LEN_SHORT 128//120
+#ifdef DRM_1024
+# define FRAME_LEN 1024
+# define BLOCK_LEN_LONG 1024
+# define BLOCK_LEN_SHORT 128
+#else
+# define FRAME_LEN 960
+# define BLOCK_LEN_LONG 960
+# define BLOCK_LEN_SHORT 120
+#endif /* DRM_1024 */
 #else
 # define FRAME_LEN 1024
 # define BLOCK_LEN_LONG 1024
