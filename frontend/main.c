@@ -18,7 +18,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: main.c,v 1.64 2004/04/03 15:54:48 danchr Exp $
+ * $Id: main.c,v 1.65 2004/04/03 17:47:40 danchr Exp $
  */
 
 #ifdef _MSC_VER
@@ -166,7 +166,7 @@ const char *long_help =
   "  --disc X\tSet disc to X (number/total)\n"
   "  --year X\tSet year to X\n"
   "  --cover-art X\tRead cover art from file X\n"
-  "\t\tSupported image formats are jpg and png."
+  "\t\tSupported image formats are jpg and png.\n"
   "  --comment X\tSet comment to X\n"
 #else
   "  MP4 support unavailable.\n"
@@ -278,6 +278,20 @@ enum container_format {
 #ifndef _WIN32
 void signal_handler(int signal) {
     running = 0;
+}
+#endif
+
+#ifdef HAVE_LIBMP4V2
+static int check_image_header(const char *buf) {
+  if (!strncmp(buf, "\x89\x50\x4E\x47\x0D\x0A\x1A\x0A", 8))
+    return 1; /* PNG */
+  else if (!strncmp(buf, "\xFF\xD8\xFF\xE0", 4) &&
+	   !strncmp(buf + 6, "JFIF\0", 5))
+    return 1; /* JPEG */
+  else if (!strncmp(buf, "GIF87a", 6) || !strncmp(buf, "GIF89a", 6))
+    return 1; /* GIF */
+  else
+    return 0;
 }
 #endif
 
@@ -585,15 +599,12 @@ int main(int argc, char *argv[])
 		    dieMessage = "Error reading cover art file!\n";
 		    free(art);
 		    art = NULL;
-		} else if (artSize < 12 ||
-			   (strncmp(art, "\x89\x50\x4E\x47\x0D\x0A\x1A\x0A", 8)
-			    && (strncmp(art, "\xFF\xD8\xFF\xE0", 4) || 
-				strncmp(art + 6, "JFIF", 5)))) {
+		} else if (artSize < 12 || !check_image_header(art)) {
 		    /* the above expression checks the image signature */
-		    dieMessage = "Cover image is neither PNG nor JPEG\n";
+		    dieMessage = "Unrecognised cover image file format\n";
 		    free(art);
 		    art = NULL;
-		}		  
+		}
 
 		fclose(artFile);
 	    } else {
@@ -1071,6 +1082,9 @@ int main(int argc, char *argv[])
 
 /*
 $Log: main.c,v $
+Revision 1.65  2004/04/03 17:47:40  danchr
+fix typo + add GIF support
+
 Revision 1.64  2004/04/03 15:54:48  danchr
 make TNS default
 
