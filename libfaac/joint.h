@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: joint.h,v 1.1 2001/01/17 11:21:40 menno Exp $
+ * $Id: joint.h,v 1.2 2001/01/23 13:23:04 menno Exp $
  */
 
 #ifndef JOINT_H
@@ -30,7 +30,7 @@ extern "C" {
 
 
 void MSEncode(CoderInfo *coderInfo, ChannelInfo *channelInfo, double *spectrum[MAX_CHANNELS],
-			  int numberOfChannels, short msenable);
+			  unsigned int numberOfChannels, unsigned int msenable);
 
 #ifdef __cplusplus
 }
