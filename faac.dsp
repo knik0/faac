@@ -144,6 +144,10 @@ SOURCE=.\rateconv.c
 # End Source File
 # Begin Source File
 
+SOURCE=.\rdft_spectrum.c
+# End Source File
+# Begin Source File
+
 SOURCE=.\tns.c
 # End Source File
 # Begin Source File

@@ -52,9 +52,9 @@ Copyright (c) 1997.
 
 Source file:
 
-$Id: psych.c,v 1.29 2000/02/02 22:38:58 menno Exp $
-$Id: psych.c,v 1.29 2000/02/02 22:38:58 menno Exp $
-$Id: psych.c,v 1.29 2000/02/02 22:38:58 menno Exp $
+$Id: psych.c,v 1.30 2000/02/04 16:26:03 menno Exp $
+$Id: psych.c,v 1.30 2000/02/04 16:26:03 menno Exp $
+$Id: psych.c,v 1.30 2000/02/04 16:26:03 menno Exp $
 
 **********************************************************************/
 
@@ -65,6 +65,8 @@ $Id: psych.c,v 1.29 2000/02/02 22:38:58 menno Exp $
 #include "tf_main.h"
 #include "psych.h"
 #include "transfo.h"
+
+void complspectrum( double *f, unsigned lg2n );
 
 
 SR_INFO sr_info_aac[MAX_SAMPLING_RATES+1] =
@@ -617,7 +619,6 @@ void psy_step1(double* p_time_signal[],
 	}
 }
 
-
 void psy_step2(double sample[][BLOCK_LEN_LONG*2],
                PSY_STATVARIABLE_LONG *psy_stvar_long,
                PSY_STATVARIABLE_SHORT *psy_stvar_short,
@@ -626,8 +627,9 @@ void psy_step2(double sample[][BLOCK_LEN_LONG*2],
 			   int ch
 			   )
 {
-    int w,i,l,unscambled;
-    double t_re,t_im, sqrtN;
+    int w,l;
+    double sqrtN;
+	double data[2048];
 
     /* FFT for long */
     psy_stvar_long->p_fft += BLOCK_LEN_LONG;
@@ -638,21 +640,16 @@ void psy_step2(double sample[][BLOCK_LEN_LONG*2],
 	sqrtN = 1/sqrt(2048);
 
     /* windowing */
-    for(i = 0; i < BLOCK_LEN_LONG*2; i++){
-		FFTarray[i].re = fft_tbl_long->hw[i] * sample[ch][i];
-		FFTarray[i].im = 0.0;
+    for(w = 0; w < BLOCK_LEN_LONG*2; w++){
+		data[w] = fft_tbl_long->hw[w] * sample[ch][w];
     }
 
-    pfftw_2048(FFTarray);
+	complspectrum(data, 11);
 
 	for(w = 0; w < BLOCK_LEN_LONG; w++){
-		unscambled = unscambled2048[w];
-		t_re = FFTarray[unscambled].re;
-		t_im = FFTarray[unscambled].im;
-		psy_stvar_long->fft_r[w+psy_stvar_long->p_fft] = hypot(t_re,t_im) * sqrtN;
-
+		psy_stvar_long->fft_r[w+psy_stvar_long->p_fft] = data[w] * sqrtN;
 		if (w < 420)
-			psy_stvar_long->fft_f[w+psy_stvar_long->p_fft] = atan2(t_im, t_re);
+			psy_stvar_long->fft_f[w+psy_stvar_long->p_fft] = data[w+BLOCK_LEN_LONG];
     }
 
 	/* FFT for short */
@@ -661,21 +658,16 @@ void psy_step2(double sample[][BLOCK_LEN_LONG*2],
 	for(l = 0; l < MAX_SHORT_WINDOWS; l++){
 
         /* windowing */
-        for(i = 0; i < BLOCK_LEN_SHORT*2; i++){
-			FFTarray[i].re = fft_tbl_short->hw[i] * sample[ch][OFFSET_FOR_SHORT + (BLOCK_LEN_SHORT * l) + i];
-			FFTarray[i].im = 0.0;
+        for(w = 0; w < BLOCK_LEN_SHORT*2; w++){
+			data[w] = fft_tbl_short->hw[w] * sample[ch][OFFSET_FOR_SHORT + (BLOCK_LEN_SHORT * l) + w];
 		}
 
-		pfftw_256(FFTarray);
+		complspectrum(data, 8);
 
 		for(w = 0; w < BLOCK_LEN_SHORT; w++){
-			unscambled = unscambled256[w];
-			t_re = FFTarray[unscambled].re;
-			t_im = FFTarray[unscambled].im;
-			psy_stvar_short->fft_r[l][w] = hypot(t_re,t_im) * sqrtN;
-
+			psy_stvar_short->fft_r[l][w] = data[w] * sqrtN;
 			if (w < 60)
-				psy_stvar_short->fft_f[l][w] = atan2(t_im, t_re);
+				psy_stvar_short->fft_f[l][w] = data[w+BLOCK_LEN_SHORT];
 		}
     }
 }
@@ -742,9 +734,9 @@ void psy_step4(PSY_STATVARIABLE_LONG *psy_stvar_long,
 		rp = psy_var_long->r_pred[w];
 		fp = psy_var_long->f_pred[w];
 
-		if( r + fabs(rp) != 0.0 )
+		if( fabs(r) + fabs(rp) != 0.0 )
 			psy_var_long->c[w] = sqrt( psy_sqr(r*cos(f) - rp*cos(fp))
-				+psy_sqr(r*sin(f) - rp*sin(fp)) )/ ( r + fabs(rp) ) ;
+				+psy_sqr(r*sin(f) - rp*sin(fp)) )/ ( r + fabs(rp) );
 		else
 			psy_var_long->c[w] = 0.0; /* tmp */
     }
@@ -760,7 +752,7 @@ void psy_step4(PSY_STATVARIABLE_LONG *psy_stvar_long,
 			rp = psy_var_short->r_pred[i][w];
 			fp = psy_var_short->f_pred[i][w];
 
-			if( r + fabs(rp) != 0.0 )
+			if( fabs(r) + fabs(rp) != 0.0 )
 				psy_var_short->c[i][w] = sqrt( psy_sqr(r*cos(f) - rp*cos(fp))
 					+psy_sqr(r*sin(f) - rp*sin(fp)) )/ ( r + fabs(rp) ) ;
 			else
@@ -886,6 +878,8 @@ void psy_step7(PARTITION_TABLE_LONG *part_tbl_long,
 			psy_var_long->tb[b] = 1.0;
 		else if( psy_var_long->tb[b] < 0.0 )
 			psy_var_long->tb[b] = 0.0;
+//		if ((psy_var_long->tb[b]<1.0)&&(psy_var_long->tb[b]>0.5))
+//			printf("%d\t%.2f\n", b, psy_var_long->tb[b]);
     }
 
 
@@ -901,6 +895,8 @@ void psy_step7(PARTITION_TABLE_LONG *part_tbl_long,
 				psy_var_short->tb[i][b] = 1.0;
 			else if( psy_var_short->tb[i][b] < 0.0 )
 				psy_var_short->tb[i][b] = 0.0;
+//			if ((psy_var_short->tb[i][b]<1.0)&&(psy_var_short->tb[i][b]>0.5))
+//				printf("%d\t%.2f\n", b, psy_var_short->tb[i][b]);
 		}
     }
 	/* added by T. Araki (1997.10.16) end */
