@@ -16,7 +16,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: frame.h,v 1.16 2002/08/07 18:12:08 knik Exp $
+ * $Id: frame.h,v 1.17 2002/08/09 16:27:20 knik Exp $
  */
 
 #ifndef FRAME_H
@@ -40,6 +40,11 @@ extern "C" {
     #define FAACAPI
   #endif
 #endif
+
+typedef struct {
+  psymodel_t *model;
+  char *name;
+} psymodellist_t;
 
 typedef struct faacEncConfiguration
 {
@@ -71,6 +76,11 @@ typedef struct faacEncConfiguration
 		/AV
 	*/
 	unsigned int outputFormat;
+
+	// psychoacoustic model list
+	const psymodellist_t *psymodellist;
+	// selected index in psymodellist
+	unsigned int psymodelidx;
 
 } faacEncConfiguration, *faacEncConfigurationPtr;
 
@@ -118,6 +128,8 @@ typedef struct {
 
     /* Configuration data */
     faacEncConfiguration config;
+
+    psymodel_t *psymodel;
 
 } faacEncStruct, *faacEncHandle;
 

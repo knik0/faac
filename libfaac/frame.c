@@ -16,7 +16,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: frame.c,v 1.27 2002/08/07 18:11:34 knik Exp $
+ * $Id: frame.c,v 1.28 2002/08/09 16:27:20 knik Exp $
  */
 
 /*
@@ -46,7 +46,11 @@
 #include "ltp.h"
 #include "backpred.h"
 
-psymodel_t *psymodel = &psymodel2;
+static const psymodellist_t psymodellist[] = {
+  {&psymodel2, "knipsycho psychoacoustic"},
+  {&psymodel1, "ISO psychoacoustic model"},
+  {NULL}
+};
 
 static SR_INFO srInfo[12+1];
 
@@ -136,6 +140,17 @@ int FAACAPI faacEncSetConfiguration(faacEncHandle hEncoder,
     if (hEncoder->config.bandWidth > (hEncoder->sampleRate / 2))
       hEncoder->config.bandWidth = hEncoder->sampleRate / 2;
 
+    // reset psymodel
+    hEncoder->psymodel->PsyEnd(&hEncoder->gpsyInfo, hEncoder->psyInfo, hEncoder->numChannels);
+    if (config->psymodelidx >= (sizeof(psymodellist) / sizeof(psymodellist[0]) - 1))
+      config->psymodelidx = (sizeof(psymodellist) / sizeof(psymodellist[0])) - 2;
+    hEncoder->config.psymodelidx = config->psymodelidx;
+    hEncoder->psymodel = psymodellist[hEncoder->config.psymodelidx].model;
+    hEncoder->psymodel->PsyInit(&hEncoder->gpsyInfo, hEncoder->psyInfo, hEncoder->numChannels,
+	      hEncoder->sampleRate, hEncoder->srInfo->cb_width_long,
+	      hEncoder->srInfo->num_cb_long, hEncoder->srInfo->cb_width_short,
+	      hEncoder->srInfo->num_cb_short);
+
     /* OK */
     return 1;
 }
@@ -170,6 +185,10 @@ faacEncHandle FAACAPI faacEncOpen(unsigned long sampleRate,
     hEncoder->config.useTns = 0;
     hEncoder->config.bitRate = 64000; /* default bitrate / channel */
     hEncoder->config.bandWidth = hEncoder->config.bitRate / 4;
+    hEncoder->config.psymodellist = psymodellist;
+    hEncoder->config.psymodelidx = 0;
+    hEncoder->psymodel =
+      hEncoder->config.psymodellist[hEncoder->config.psymodelidx].model;
 
 	/*
 		by default we have to be compatible with all previous software
@@ -199,7 +218,7 @@ faacEncHandle FAACAPI faacEncOpen(unsigned long sampleRate,
     }
 
     /* Initialize coder functions */
-    psymodel->PsyInit(&hEncoder->gpsyInfo, hEncoder->psyInfo, hEncoder->numChannels,
+    hEncoder->psymodel->PsyInit(&hEncoder->gpsyInfo, hEncoder->psyInfo, hEncoder->numChannels,
         hEncoder->sampleRate, hEncoder->srInfo->cb_width_long,
         hEncoder->srInfo->num_cb_long, hEncoder->srInfo->cb_width_short,
         hEncoder->srInfo->num_cb_short); 
@@ -225,7 +244,7 @@ int FAACAPI faacEncClose(faacEncHandle hEncoder)
     unsigned int channel;
 
     /* Deinitialize coder functions */
-    psymodel->PsyEnd(&hEncoder->gpsyInfo, hEncoder->psyInfo, hEncoder->numChannels);
+    hEncoder->psymodel->PsyEnd(&hEncoder->gpsyInfo, hEncoder->psyInfo, hEncoder->numChannels);
 
     FilterBankEnd(hEncoder);
 
@@ -323,7 +342,7 @@ int FAACAPI faacEncEncode(faacEncHandle hEncoder,
 
         /* Psychoacoustics */
         /* Update buffers and run FFT on new samples */
-	psymodel->PsyBufferUpdate(&hEncoder->gpsyInfo, &hEncoder->psyInfo[channel],
+	hEncoder->psymodel->PsyBufferUpdate(&hEncoder->gpsyInfo, &hEncoder->psyInfo[channel],
 				  hEncoder->next3SampleBuff[channel], bandWidth);
     }
 
@@ -331,12 +350,12 @@ int FAACAPI faacEncEncode(faacEncHandle hEncoder,
         return 0;
 
     /* Psychoacoustics */
-    psymodel->PsyCalculate(channelInfo, &hEncoder->gpsyInfo, hEncoder->psyInfo,
+    hEncoder->psymodel->PsyCalculate(channelInfo, &hEncoder->gpsyInfo, hEncoder->psyInfo,
         hEncoder->srInfo->cb_width_long, hEncoder->srInfo->num_cb_long,
         hEncoder->srInfo->cb_width_short,
         hEncoder->srInfo->num_cb_short, numChannels);
 
-    psymodel->BlockSwitch(coderInfo, hEncoder->psyInfo, numChannels);
+    hEncoder->psymodel->BlockSwitch(coderInfo, hEncoder->psyInfo, numChannels);
 
     /* AAC Filterbank, MDCT with overlap and add */
     for (channel = 0; channel < numChannels; channel++) {

@@ -16,7 +16,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: main.c,v 1.24 2002/08/07 18:19:20 knik Exp $
+ * $Id: main.c,v 1.25 2002/08/09 16:29:41 knik Exp $
  */
 
 #ifdef _WIN32
@@ -31,6 +31,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <ctype.h>
 
 #include <sndfile.h>
 #include <getopt.h>
@@ -78,6 +79,7 @@ int main(int argc, char *argv[])
     unsigned int useAdts = 1;
     unsigned int cutOff = 0;
     unsigned long bitRate = 64000;
+    int psymodelidx = -1;
 
     char *audioFileName;
     char *aacFileName;
@@ -194,11 +196,12 @@ int main(int argc, char *argv[])
             break;
         }
 	case 'p':
-	  if (!strcmp(optarg, "1"))
-	    psymodel = &psymodel1;
-	  else if (!strcmp(optarg, "2"))
-	    psymodel = &psymodel2;
+	  {
+	    unsigned int i;
+	    if (sscanf(optarg, "%u", &i) > 0)
+	      psymodelidx = i;
 	  break;
+	  }
         case '?':
             break;
         default:
@@ -210,20 +213,31 @@ int main(int argc, char *argv[])
     /* check that we have at least two non-option arguments */
     if ((argc - optind) < 2)
     {
+      int i;
+
+      // get available psymodels
+      hEncoder = faacEncOpen(44100, 2, &samplesInput, &maxBytesOutput);
+      myFormat = faacEncGetCurrentConfiguration(hEncoder);
+
         fprintf(stderr, "USAGE: %s -options infile outfile\n", progName);
         fprintf(stderr, "Options:\n");
         fprintf(stderr, "  -m X   AAC MPEG version, X can be 2 or 4.\n");
         fprintf(stderr, "  -o X   AAC object type, X can be LC, MAIN or LTP.\n");
-	fprintf(stderr, "  -p 1   Use ISO psychoacoustic model.%s\n",
-		(psymodel == &psymodel1) ? " (default)" : "");
-	fprintf(stderr, "  -p 2   Use kpsycho psychoacoustic.%s\n",
-		(psymodel == &psymodel2) ? " (default)" : "");
+	for (i = 0; myFormat->psymodellist[i].ptr; i++)
+	{
+	  fprintf(stderr, "  -p %d   Use %s.%s\n", i,
+		  myFormat->psymodellist[i].name,
+		  (i == myFormat->psymodelidx) ? " (default)" : "");
+	}
         fprintf(stderr, "  -n     Don\'t use mid/side coding.\n");
         fprintf(stderr, "  -r     RAW AAC output file.\n");
         fprintf(stderr, "  -t     Use TNS coding.\n");
     fprintf(stderr,
 	    "  -c X   Set the bandwidth, X in Hz. (default=automatic)\n");
     fprintf(stderr, "  -b X   Set the bitrate per channel, X in kbps.\n\n");
+
+    faacEncClose(hEncoder);
+
         return 1;
     }
 
@@ -266,6 +280,8 @@ int main(int argc, char *argv[])
     myFormat->bitRate = bitRate;
     myFormat->bandWidth = cutOff;
     myFormat->outputFormat = useAdts;
+    if (psymodelidx >= 0)
+      myFormat->psymodelidx = psymodelidx;
     if (!faacEncSetConfiguration(hEncoder, myFormat)) {
         fprintf(stderr, "Unsupported output format!\n");
         return 1;
