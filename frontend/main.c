@@ -16,7 +16,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: main.c,v 1.23 2001/10/26 11:21:23 menno Exp $
+ * $Id: main.c,v 1.24 2002/08/07 18:19:20 knik Exp $
  */
 
 #ifdef _WIN32
@@ -76,7 +76,7 @@ int main(int argc, char *argv[])
     unsigned int useMidSide = 1;
     unsigned int useTns = 0;
     unsigned int useAdts = 1;
-    unsigned int cutOff = 18000;
+    unsigned int cutOff = 0;
     unsigned long bitRate = 64000;
 
     char *audioFileName;
@@ -120,7 +120,7 @@ int main(int argc, char *argv[])
             { "bitrate", 1, 0, 'b' }
         };
 
-        c = getopt_long(argc, argv, "m:o:rntc:b:",
+	c = getopt_long(argc, argv, "m:o:rntc:b:p:",
             long_options, &option_index);
 
         if (c == -1)
@@ -182,15 +182,23 @@ int main(int argc, char *argv[])
             }
             break;
         }
-        case 'b': {
+	case 'b':
+	  {
             unsigned int i;
-            if (sscanf(optarg, "%u", &i) < 1) {
                 bitRate = 64000;
-            } else {
-                bitRate = i;
+	    if (sscanf(optarg, "%u", &i) > 0)
+	    {
+	      if (i > 0 && i < 1000)
+		bitRate = i * 1000;
             }
             break;
         }
+	case 'p':
+	  if (!strcmp(optarg, "1"))
+	    psymodel = &psymodel1;
+	  else if (!strcmp(optarg, "2"))
+	    psymodel = &psymodel2;
+	  break;
         case '?':
             break;
         default:
@@ -206,11 +214,16 @@ int main(int argc, char *argv[])
         fprintf(stderr, "Options:\n");
         fprintf(stderr, "  -m X   AAC MPEG version, X can be 2 or 4.\n");
         fprintf(stderr, "  -o X   AAC object type, X can be LC, MAIN or LTP.\n");
+	fprintf(stderr, "  -p 1   Use ISO psychoacoustic model.%s\n",
+		(psymodel == &psymodel1) ? " (default)" : "");
+	fprintf(stderr, "  -p 2   Use kpsycho psychoacoustic.%s\n",
+		(psymodel == &psymodel2) ? " (default)" : "");
         fprintf(stderr, "  -n     Don\'t use mid/side coding.\n");
         fprintf(stderr, "  -r     RAW AAC output file.\n");
         fprintf(stderr, "  -t     Use TNS coding.\n");
-        fprintf(stderr, "  -c X   Set the bandwidth, X in Hz.\n");
-        fprintf(stderr, "  -b X   Set the bitrate per channel, X in bps.\n\n");
+    fprintf(stderr,
+	    "  -c X   Set the bandwidth, X in Hz. (default=automatic)\n");
+    fprintf(stderr, "  -b X   Set the bitrate per channel, X in kbps.\n\n");
         return 1;
     }
 
@@ -282,6 +295,8 @@ int main(int argc, char *argv[])
                 bitbuf,
                 maxBytesOutput);
 
+      if (!(currentFrame & 63))
+      {
 #ifndef _DEBUG
             sprintf(percent, "%.2f encoding %s.",
                 min((double)(currentFrame*100)/frames,100), audioFileName);
@@ -290,6 +305,7 @@ int main(int argc, char *argv[])
 #ifdef _WIN32
             SetConsoleTitle(percent);
 #endif
+      }
 
             /* all done, bail out */
             if (!bytesInput && !bytesWritten)
@@ -313,7 +329,8 @@ int main(int argc, char *argv[])
         nTotSecs = (end-begin)/1000;
         nMins = nTotSecs / 60;
         nSecs = nTotSecs - (60*nMins);
-        fprintf(stderr, "Encoding %s took:\t%d:%.2d\t\n", audioFileName, nMins, nSecs);
+	fprintf(stderr, "Encoding %s took:\t%.2fsec\n", audioFileName,
+		(double)(end - begin) / 1000);
 #else
 #ifdef __unix__
         if (getrusage(RUSAGE_SELF, &usage) == 0) {
