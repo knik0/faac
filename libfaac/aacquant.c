@@ -17,7 +17,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: aacquant.c,v 1.29 2003/12/17 21:00:22 knik Exp $
+ * $Id: aacquant.c,v 1.30 2004/07/04 12:10:52 corrados Exp $
  */
 
 #include <math.h>
@@ -229,6 +229,11 @@ int AACQuantize(CoderInfo *coderInfo,
 
     /* place the codewords and their respective lengths in arrays data[] and len[] respectively */
     /* there are 'counter' elements in each array, and these are variable length arrays depending on the input */
+#ifdef DRM
+    coderInfo->iLenReordSpData = 0; /* init length of reordered spectral data */
+    coderInfo->iLenLongestCW = 0; /* init length of longest codeword */
+    coderInfo->cur_cw = 0; /* init codeword counter */
+#endif
     coderInfo->spectral_count = 0;
     sb = 0;
     for(i = 0; i < coderInfo->nr_of_sfb; i++) {
@@ -239,9 +244,10 @@ int AACQuantize(CoderInfo *coderInfo,
             coderInfo->sfb_offset[i],
             coderInfo->sfb_offset[i+1]-coderInfo->sfb_offset[i]);
 
-	if (coderInfo->book_vector[i])
-          sb = i;
+        if (coderInfo->book_vector[i])
+              sb = i;
     }
+
     // FIXME: Check those max_sfb/nr_of_sfb. Isn't it the same?
     coderInfo->max_sfb = coderInfo->nr_of_sfb = sb + 1;
 
@@ -598,7 +604,7 @@ int SortForGrouping(CoderInfo* coderInfo,
 {
     int i,j,ii;
     int index = 0;
-    double xr_tmp[1024];
+    double xr_tmp[FRAME_LEN];
     int group_offset=0;
     int k=0;
     int windowOffset = 0;
@@ -626,13 +632,13 @@ int SortForGrouping(CoderInfo* coderInfo,
         for (k=0; k<*nr_of_sfb; k++) {
             for (j=0; j < window_group_length[i]; j++) {
                 for (ii=0;ii< sfb_width_table[k];ii++)
-                    xr_tmp[index++] = xr[ii+ sfb_offset[k] + 128*j +group_offset];
+                    xr_tmp[index++] = xr[ii+ sfb_offset[k] + BLOCK_LEN_SHORT*j +group_offset];
             }
         }
-        group_offset +=  128*window_group_length[i];
+        group_offset +=  BLOCK_LEN_SHORT*window_group_length[i];
     }
 
-    for (k=0; k<1024; k++){
+    for (k=0; k<FRAME_LEN; k++){
         xr[k] = xr_tmp[k];
     }
 

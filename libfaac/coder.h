@@ -16,7 +16,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: coder.h,v 1.11 2003/06/26 19:19:51 knik Exp $
+ * $Id: coder.h,v 1.12 2004/07/04 12:10:52 corrados Exp $
  */
 
 #ifndef CODER_H
@@ -26,15 +26,24 @@
 extern "C" {
 #endif /* __cplusplus */
 
+/* Allow encoding of Digital Radio Mondiale (DRM) */
+//#define DRM
 
 #define MAX_CHANNELS 64
-#define FRAME_LEN 1024
+
+#ifdef DRM
+# define FRAME_LEN 1024//960 // not working with 960, fixme
+# define BLOCK_LEN_LONG 1024//960
+# define BLOCK_LEN_SHORT 128//120
+#else
+# define FRAME_LEN 1024
+# define BLOCK_LEN_LONG 1024
+# define BLOCK_LEN_SHORT 128
+#endif
 
 #define NSFB_LONG  51
 #define NSFB_SHORT 15
 #define MAX_SHORT_WINDOWS 8
-#define BLOCK_LEN_LONG 1024
-#define BLOCK_LEN_SHORT 128
 #define MAX_SCFAC_BANDS ((NSFB_SHORT+1)*MAX_SHORT_WINDOWS)
 
 enum WINDOW_TYPE {
@@ -153,6 +162,15 @@ typedef struct {
 
     /* Lengths of spectral bitstream elements */
     int *len;
+
+#ifdef DRM
+    int *num_data_cw;
+    int cur_cw;
+    int all_sfb;
+
+    int iLenLongestCW;
+    int iLenReordSpData;
+#endif
 
     /* Holds the requantized spectrum */
     double *requantFreq;

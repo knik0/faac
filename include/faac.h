@@ -16,7 +16,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: faac.h,v 1.32 2003/11/24 18:10:32 knik Exp $
+ * $Id: faac.h,v 1.33 2004/07/04 12:12:05 corrados Exp $
  */
 
 #ifndef _FAAC_H_
@@ -48,6 +48,10 @@ psymodellist_t;
 
 
 typedef void *faacEncHandle;
+
+#ifndef HAVE_INT32_T
+typedef int int32_t;
+#endif
 
 /*
 	Allows an application to get FAAC version info. This is intended

@@ -23,7 +23,7 @@ must be included in all copies or derivative works. Copyright 1996.
 
 ***********/
 /*
- * $Id: huffman.c,v 1.8 2002/08/30 16:22:46 knik Exp $
+ * $Id: huffman.c,v 1.9 2004/07/04 12:10:52 corrados Exp $
  */
 
 #include <math.h>
@@ -43,6 +43,10 @@ void HuffmanInit(CoderInfo *coderInfo, unsigned int numChannels)
     for (channel = 0; channel < numChannels; channel++) {
         coderInfo[channel].data = (int*)AllocMemory(5*FRAME_LEN*sizeof(int));
         coderInfo[channel].len = (int*)AllocMemory(5*FRAME_LEN*sizeof(int));
+
+#ifdef DRM
+        coderInfo[channel].num_data_cw = (int*)AllocMemory(FRAME_LEN*sizeof(int));
+#endif
     }
 }
 
@@ -88,7 +92,7 @@ int BitSearch(CoderInfo *coderInfo,
 */
 
 {
-    int i,j,k,n;
+    int i,j,k;
     int hop;
     int min_book_choice[112][3];
     int bit_stats[240][3];
@@ -349,7 +353,6 @@ int OutputBits(CoderInfo *coderInfo,
      OutputBits() is called, counter starts at the value it left off from the previous call.
 
    */
-
     int esc_sequence;
     int len_esc;
     int index;
@@ -359,8 +362,12 @@ int OutputBits(CoderInfo *coderInfo,
     int counter;
 
     /* Set up local pointers to coderInfo elements data and len */
-    int* data= coderInfo->data;
-    int* len=  coderInfo->len;
+    int* data=      coderInfo->data;
+    int* len=       coderInfo->len;
+#ifdef DRM
+    int* num_data = coderInfo->num_data_cw;
+    int cur_cw_len;
+#endif
 
     counter = coderInfo->spectral_count;
 
@@ -368,10 +375,18 @@ int OutputBits(CoderInfo *coderInfo,
     case 0:
     case INTENSITY_HCB2:
     case INTENSITY_HCB:
+#ifdef DRM
+        for(i=offset;i<offset+length;i=i+4){
+#endif
         /* This case also applies to intensity stereo encoding */
         coderInfo->data[counter] = 0;
         coderInfo->len[counter++] = 0;
         coderInfo->spectral_count = counter;  /* send the current count back to the outside world */
+
+#ifdef DRM
+        num_data[coderInfo->cur_cw++] = 1;
+        }
+#endif
         return(bits);
     case 1:
         for(i=offset;i<offset+length;i=i+4){
@@ -381,6 +396,12 @@ int OutputBits(CoderInfo *coderInfo,
             bits += tmp;
             data[counter] = codebook;
             len[counter++] = tmp;
+#ifdef DRM
+            num_data[coderInfo->cur_cw++] = 1;
+            coderInfo->iLenReordSpData += tmp;
+            if (tmp > coderInfo->iLenLongestCW)
+                coderInfo->iLenLongestCW = tmp;
+#endif
         }
         coderInfo->spectral_count = counter;  /* send the current count back to the outside world */
         return(bits);
@@ -392,6 +413,12 @@ int OutputBits(CoderInfo *coderInfo,
             bits += tmp;
             data[counter] = codebook;
             len[counter++] = tmp;
+#ifdef DRM
+            num_data[coderInfo->cur_cw++] = 1;
+            coderInfo->iLenReordSpData += tmp;
+            if (tmp > coderInfo->iLenLongestCW)
+                coderInfo->iLenLongestCW = tmp;
+#endif
         }
         coderInfo->spectral_count = counter;  /* send the current count back to the outside world */
         return(bits);
@@ -403,18 +430,37 @@ int OutputBits(CoderInfo *coderInfo,
             bits = bits + tmp;
             data[counter] = codebook;
             len[counter++] = tmp;
+#ifdef DRM
+            num_data[coderInfo->cur_cw] = 1;
+            cur_cw_len = tmp;
+#endif
             for(j=0;j<4;j++){
                 if(quant[i+j] > 0) {  /* send out '0' if a positive value */
                     data[counter] = 0;
                     len[counter++] = 1;
                     bits += 1;
+#ifdef DRM
+                    num_data[coderInfo->cur_cw]++;
+                    cur_cw_len += 1;
+#endif
                 } else
                 if(quant[i+j] < 0) {  /* send out '1' if a negative value */
                     data[counter] = 1;
                     len[counter++] = 1;
                     bits += 1;
+#ifdef DRM
+                    num_data[coderInfo->cur_cw]++;
+                    cur_cw_len += 1;
+#endif
                 }
             }
+#ifdef DRM
+            coderInfo->iLenReordSpData += cur_cw_len;
+            if (cur_cw_len > coderInfo->iLenLongestCW)
+                coderInfo->iLenLongestCW = cur_cw_len;
+
+            coderInfo->cur_cw++;
+#endif
         }
         coderInfo->spectral_count = counter;  /* send the current count back to the outside world */
         return(bits);
@@ -426,18 +472,37 @@ int OutputBits(CoderInfo *coderInfo,
             bits = bits + tmp;
             data[counter] = codebook;
             len[counter++] = tmp;
+#ifdef DRM
+            num_data[coderInfo->cur_cw] = 1;
+            cur_cw_len = tmp;
+#endif
             for(j=0;j<4;j++){
                 if(quant[i+j] > 0) {  /* send out '0' if a positive value */
                     data[counter] = 0;
                     len[counter++] = 1;
                     bits += 1;
+#ifdef DRM
+                    num_data[coderInfo->cur_cw]++;
+                    cur_cw_len += 1;
+#endif
                 } else
                 if(quant[i+j] < 0) {  /* send out '1' if a negative value */
                     data[counter] = 1;
                     len[counter++] = 1;
                     bits += 1;
+#ifdef DRM
+                    num_data[coderInfo->cur_cw]++;
+                    cur_cw_len += 1;
+#endif
                 }
             }
+#ifdef DRM
+            coderInfo->iLenReordSpData += cur_cw_len;
+            if (cur_cw_len > coderInfo->iLenLongestCW)
+                coderInfo->iLenLongestCW = cur_cw_len;
+
+            coderInfo->cur_cw++;
+#endif
         }
         coderInfo->spectral_count = counter;  /* send the current count back to the outside world */
         return(bits);
@@ -449,6 +514,12 @@ int OutputBits(CoderInfo *coderInfo,
             bits = bits + tmp;
             data[counter] = codebook;
             len[counter++] = tmp;
+#ifdef DRM
+            num_data[coderInfo->cur_cw++] = 1;
+            coderInfo->iLenReordSpData += tmp;
+            if (tmp > coderInfo->iLenLongestCW)
+                coderInfo->iLenLongestCW = tmp;
+#endif
         }
         coderInfo->spectral_count = counter;  /* send the current count back to the outside world */
         return(bits);
@@ -460,6 +531,12 @@ int OutputBits(CoderInfo *coderInfo,
             bits = bits + tmp;
             data[counter] = codebook;
             len[counter++] = tmp;
+#ifdef DRM
+            num_data[coderInfo->cur_cw++] = 1;
+            coderInfo->iLenReordSpData += tmp;
+            if (tmp > coderInfo->iLenLongestCW)
+                coderInfo->iLenLongestCW = tmp;
+#endif
         }
         coderInfo->spectral_count = counter;  /* send the current count back to the outside world */
         return(bits);
@@ -471,18 +548,37 @@ int OutputBits(CoderInfo *coderInfo,
             bits = bits + tmp;
             data[counter] = codebook;
             len[counter++] = tmp;
+#ifdef DRM
+            num_data[coderInfo->cur_cw] = 1;
+            cur_cw_len = tmp;
+#endif
             for(j=0;j<2;j++){
                 if(quant[i+j] > 0) {  /* send out '0' if a positive value */
                     data[counter] = 0;
                     len[counter++] = 1;
                     bits += 1;
+#ifdef DRM
+                    num_data[coderInfo->cur_cw]++;
+                    cur_cw_len += 1;
+#endif
                 } else
                 if(quant[i+j] < 0) {  /* send out '1' if a negative value */
                     data[counter] = 1;
                     len[counter++] = 1;
                     bits += 1;
+#ifdef DRM
+                    num_data[coderInfo->cur_cw]++;
+                    cur_cw_len += 1;
+#endif
                 }
             }
+#ifdef DRM
+            coderInfo->iLenReordSpData += cur_cw_len;
+            if (cur_cw_len > coderInfo->iLenLongestCW)
+                coderInfo->iLenLongestCW = cur_cw_len;
+
+            coderInfo->cur_cw++;
+#endif
         }
         coderInfo->spectral_count = counter;  /* send the current count back to the outside world */
         return(bits);
@@ -494,18 +590,37 @@ int OutputBits(CoderInfo *coderInfo,
             bits = bits + tmp;
             data[counter] = codebook;
             len[counter++] = tmp;
+#ifdef DRM
+            num_data[coderInfo->cur_cw] = 1;
+            cur_cw_len = tmp;
+#endif
             for(j=0;j<2;j++){
                 if(quant[i+j] > 0) {  /* send out '0' if a positive value */
                     data[counter] = 0;
                     len[counter++] = 1;
                     bits += 1;
+#ifdef DRM
+                    num_data[coderInfo->cur_cw]++;
+                    cur_cw_len += 1;
+#endif
                 } else
                 if(quant[i+j] < 0) {  /* send out '1' if a negative value */
                     data[counter] = 1;
                     len[counter++] = 1;
                     bits += 1;
+#ifdef DRM
+                    num_data[coderInfo->cur_cw]++;
+                    cur_cw_len += 1;
+#endif
                 }
             }
+#ifdef DRM
+            coderInfo->iLenReordSpData += cur_cw_len;
+            if (cur_cw_len > coderInfo->iLenLongestCW)
+                coderInfo->iLenLongestCW = cur_cw_len;
+
+            coderInfo->cur_cw++;
+#endif
         }
         coderInfo->spectral_count = counter;  /* send the current count back to the outside world */
         return(bits);
@@ -517,19 +632,37 @@ int OutputBits(CoderInfo *coderInfo,
             bits = bits + tmp;
             data[counter] = codebook;
             len[counter++] = tmp;
-
+#ifdef DRM
+            num_data[coderInfo->cur_cw] = 1;
+            cur_cw_len = tmp;
+#endif
             for(j=0;j<2;j++){
                 if(quant[i+j] > 0) {  /* send out '0' if a positive value */
                     data[counter] = 0;
                     len[counter++] = 1;
                     bits += 1;
+#ifdef DRM
+                    num_data[coderInfo->cur_cw]++;
+                    cur_cw_len += 1;
+#endif
                 } else
                 if(quant[i+j] < 0) {  /* send out '1' if a negative value */
                     data[counter] = 1;
                     len[counter++] = 1;
                     bits += 1;
+#ifdef DRM
+                    num_data[coderInfo->cur_cw]++;
+                    cur_cw_len += 1;
+#endif
                 }
             }
+#ifdef DRM
+            coderInfo->iLenReordSpData += cur_cw_len;
+            if (cur_cw_len > coderInfo->iLenLongestCW)
+                coderInfo->iLenLongestCW = cur_cw_len;
+
+            coderInfo->cur_cw++;
+#endif
         }
         coderInfo->spectral_count = counter;  /* send the current count back to the outside world */
         return(bits);
@@ -541,19 +674,37 @@ int OutputBits(CoderInfo *coderInfo,
             bits = bits + tmp;
             data[counter] = codebook;
             len[counter++] = tmp;
-
+#ifdef DRM
+            num_data[coderInfo->cur_cw] = 1;
+            cur_cw_len = tmp;
+#endif
             for(j=0;j<2;j++){
                 if(quant[i+j] > 0) {  /* send out '0' if a positive value */
                     data[counter] = 0;
                     len[counter++] = 1;
                     bits += 1;
+#ifdef DRM
+                    num_data[coderInfo->cur_cw]++;
+                    cur_cw_len += 1;
+#endif
                 } else
                 if(quant[i+j] < 0) {  /* send out '1' if a negative value */
                     data[counter] = 1;
                     len[counter++] = 1;
                     bits += 1;
+#ifdef DRM
+                    num_data[coderInfo->cur_cw]++;
+                    cur_cw_len += 1;
+#endif
                 }
             }
+#ifdef DRM
+            coderInfo->iLenReordSpData += cur_cw_len;
+            if (cur_cw_len > coderInfo->iLenLongestCW)
+                coderInfo->iLenLongestCW = cur_cw_len;
+
+            coderInfo->cur_cw++;
+#endif
         }
         coderInfo->spectral_count = counter;  /* send the current count back to the outside world */
         return(bits);
@@ -581,6 +732,10 @@ int OutputBits(CoderInfo *coderInfo,
             bits += tmp;
             data[counter] = codebook;
             len[counter++] = tmp;
+#ifdef DRM
+            num_data[coderInfo->cur_cw] = 1;
+            cur_cw_len = tmp;
+#endif
 
             /* Take care of the sign bits */
             for(j=0;j<2;j++){
@@ -588,11 +743,19 @@ int OutputBits(CoderInfo *coderInfo,
                     data[counter] = 0;
                     len[counter++] = 1;
                     bits += 1;
+#ifdef DRM
+                    num_data[coderInfo->cur_cw]++;
+                    cur_cw_len += 1;
+#endif
                 } else
                 if(quant[i+j] < 0) {  /* send out '1' if a negative value */
                     data[counter] = 1;
                     len[counter++] = 1;
                     bits += 1;
+#ifdef DRM
+                    num_data[coderInfo->cur_cw]++;
+                    cur_cw_len += 1;
+#endif
                 }
             }
 
@@ -603,12 +766,20 @@ int OutputBits(CoderInfo *coderInfo,
                 bits += len_esc;
                 data[counter] = esc_sequence;
                 len[counter++] = len_esc;
+#ifdef DRM
+                num_data[coderInfo->cur_cw]++;
+                cur_cw_len += len_esc;
+#endif
 
                 /* then code and transmit the second escape_sequence */
                 esc_sequence = CalculateEscSequence(quant[i+1],&len_esc);
                 bits += len_esc;
                 data[counter] = esc_sequence;
                 len[counter++] = len_esc;
+#ifdef DRM
+                num_data[coderInfo->cur_cw]++;
+                cur_cw_len += len_esc;
+#endif
             }
             else if (ABS(quant[i]) >= 16) {  /* the first codeword was above 16, not the second one */
                 /* code and transmit the escape_sequence */
@@ -616,6 +787,10 @@ int OutputBits(CoderInfo *coderInfo,
                 bits += len_esc;
                 data[counter] = esc_sequence;
                 len[counter++] = len_esc;
+#ifdef DRM
+                num_data[coderInfo->cur_cw]++;
+                cur_cw_len += len_esc;
+#endif
             }
             else if (ABS(quant[i+1]) >= 16) { /* the second codeword was above 16, not the first one */
                 /* code and transmit the escape_sequence */
@@ -623,9 +798,20 @@ int OutputBits(CoderInfo *coderInfo,
                 bits += len_esc;
                 data[counter] = esc_sequence;
                 len[counter++] = len_esc;
+#ifdef DRM
+                num_data[coderInfo->cur_cw]++;
+                cur_cw_len += len_esc;
+#endif
             }
+#ifdef DRM
+            coderInfo->iLenReordSpData += cur_cw_len;
+            if (cur_cw_len > coderInfo->iLenLongestCW)
+                coderInfo->iLenLongestCW = cur_cw_len;
+
+            coderInfo->cur_cw++;
+#endif
         }
-        coderInfo -> spectral_count = counter;  /* send the current count back to the outside world */
+        coderInfo->spectral_count = counter;  /* send the current count back to the outside world */
         return(bits);
     }
     return 0;
@@ -809,9 +995,14 @@ int SortBookNumbers(CoderInfo *coderInfo,
     int previous;
     int max, bit_len/*,sfbs*/;
     int max_sfb,g,band;
+	int sect_cb_bits = 4;
 
     /* Set local pointers to coderInfo elements */
     int* book_vector = coderInfo->book_vector;
+
+#ifdef DRM
+    sect_cb_bits = 5; /* 5 bits in case of VCB11 */
+#endif
 
     if (coderInfo->block_type == ONLY_SHORT_WINDOW){
         max = 7;
@@ -832,11 +1023,25 @@ int SortBookNumbers(CoderInfo *coderInfo,
 
         previous = book_vector[band];
         if (writeFlag) {
-            PutBit(bitStream,book_vector[band],4);
+            PutBit(bitStream,book_vector[band],sect_cb_bits);
         }
-        bit_count += 4;
+        bit_count += sect_cb_bits;
 
         for (i=band+1;i<band+max_sfb;i++) {
+#ifdef DRM
+            /* sect_len is not transmitted in case the codebook for a */
+            /* section is 11 or in the range of 16 and 31 */
+            if ((previous == 11) ||
+                ((previous >= 16) && (previous <= 32)))
+            {
+                if (writeFlag)
+                    PutBit(bitStream,book_vector[i],sect_cb_bits);
+                bit_count += sect_cb_bits;
+                previous = book_vector[i];
+                repeat_counter=1;
+
+            } else
+#endif
             if( (book_vector[i] != previous)) {
                 if (writeFlag) {
                     PutBit(bitStream,repeat_counter,bit_len);
@@ -850,11 +1055,10 @@ int SortBookNumbers(CoderInfo *coderInfo,
                 }
 
                 if (writeFlag)
-                    PutBit(bitStream,book_vector[i],4);
-                bit_count += 4;
+                    PutBit(bitStream,book_vector[i],sect_cb_bits);
+                bit_count += sect_cb_bits;
                 previous = book_vector[i];
                 repeat_counter=1;
-
             }
             /* if the length of the section is longer than the amount of bits available in */
             /* the bitsream, "max", then start up an escape sequence */
@@ -870,18 +1074,21 @@ int SortBookNumbers(CoderInfo *coderInfo,
             }
         }
 
-        if (writeFlag)
-            PutBit(bitStream,repeat_counter,bit_len);
-        bit_count += bit_len;
-
-        if (repeat_counter == max) {  /* special case if the last section length is an */
-            /* escape sequence */
+#ifdef DRM
+        if (!((previous == 11) || ((previous >= 16) && (previous <= 32))))
+#endif
+        {
             if (writeFlag)
-                PutBit(bitStream,0,bit_len);
+                PutBit(bitStream,repeat_counter,bit_len);
             bit_count += bit_len;
+
+            if (repeat_counter == max) {  /* special case if the last section length is an */
+                /* escape sequence */
+                if (writeFlag)
+                    PutBit(bitStream,0,bit_len);
+                bit_count += bit_len;
+            }
         }
-
-
     }  /* Bottom of group iteration */
 
     return bit_count;

@@ -24,7 +24,7 @@ copyright notice must be included in all copies or derivative works.
 Copyright (c) 1997.
 **********************************************************************/
 /*
- * $Id: bitstream.c,v 1.27 2003/10/14 15:23:44 menno Exp $
+ * $Id: bitstream.c,v 1.28 2004/07/04 12:10:52 corrados Exp $
  */
 
 #include <stdio.h>
@@ -99,7 +99,17 @@ static int WriteByte(BitStream *bitStream,
                      int numBit);
 static int ByteAlign(BitStream* bitStream,
                      int writeFlag);
-
+#ifdef DRM
+static int PutBitHcr(BitStream *bitStream,
+                     unsigned long curpos,
+                     unsigned long data,
+                     int numBit);
+static int rewind_word(int W, int len);
+static int WriteReorderedSpectralData(CoderInfo *coderInfo,
+                                      BitStream *bitStream,
+                                      int writeFlag);
+static void calc_CRC(BitStream *bitStream, int len);
+#endif
 
 
 static int WriteFAACStr(BitStream *bitStream, char *version, int write)
@@ -430,6 +440,7 @@ static int WriteSCE(CoderInfo *coderInfo,
 {
     int bits = 0;
 
+#ifndef DRM
     if (writeFlag) {
         /* write Single Element Channel (SCE) identifier */
         PutBit(bitStream, ID_SCE, LEN_SE_ID);
@@ -440,6 +451,7 @@ static int WriteSCE(CoderInfo *coderInfo,
 
     bits += LEN_SE_ID;
     bits += LEN_TAG;
+#endif
 
     /* Write an Individual Channel Stream element */
     bits += WriteICS(coderInfo, bitStream, 0, objectType, writeFlag);
@@ -510,7 +522,13 @@ static int WriteICSInfo(CoderInfo *coderInfo,
             PutBit(bitStream, coderInfo->max_sfb, LEN_MAX_SFBL);
         }
         bits += LEN_MAX_SFBL;
-
+#ifdef DRM
+    }
+    if (writeFlag) {
+        PutBit(bitStream,coderInfo->tnsInfo.tnsDataPresent,LEN_TNS_PRES);
+    }
+    bits += LEN_TNS_PRES;
+#endif
         if (objectType == LTP)
         {
             bits++;
@@ -527,7 +545,9 @@ static int WriteICSInfo(CoderInfo *coderInfo,
 
             bits += WritePredictorData(coderInfo, bitStream, writeFlag);
         }
+#ifndef DRM
     }
+#endif
 
     return bits;
 }
@@ -542,22 +562,53 @@ static int WriteICS(CoderInfo *coderInfo,
     /* returns the number of bits written to the bitstream */
     int bits = 0;
 
+#ifndef DRM
     /* Write the 8-bit global_gain */
     if (writeFlag)
         PutBit(bitStream, coderInfo->global_gain, LEN_GLOB_GAIN);
     bits += LEN_GLOB_GAIN;
+#endif
 
     /* Write ics information */
     if (!commonWindow) {
         bits += WriteICSInfo(coderInfo, bitStream, objectType, commonWindow, writeFlag);
     }
 
+#ifdef DRM
+    /* Write the 8-bit global_gain */
+    if (writeFlag)
+        PutBit(bitStream, coderInfo->global_gain, LEN_GLOB_GAIN);
+    bits += LEN_GLOB_GAIN;
+#endif
+
     bits += SortBookNumbers(coderInfo, bitStream, writeFlag);
     bits += WriteScalefactors(coderInfo, bitStream, writeFlag);
+#ifdef DRM
+    if (writeFlag) {
+        /* length_of_reordered_spectral_data */
+        PutBit(bitStream, coderInfo->iLenReordSpData, LEN_HCR_REORDSD);
+
+        /* length_of_longest_codeword */
+        PutBit(bitStream, coderInfo->iLenLongestCW, LEN_HCR_LONGCW);
+    }
+    bits += LEN_HCR_REORDSD + LEN_HCR_LONGCW;
+#else
     bits += WritePulseData(coderInfo, bitStream, writeFlag);
+#endif
     bits += WriteTNSData(coderInfo, bitStream, writeFlag);
+#ifndef DRM
     bits += WriteGainControlData(coderInfo, bitStream, writeFlag);
+#endif
+
+#ifdef DRM
+    /* DRM CRC calculation */
+    if (writeFlag)
+        calc_CRC(bitStream, bits);
+
+    bits += WriteReorderedSpectralData(coderInfo, bitStream, writeFlag);
+#else
     bits += WriteSpectralData(coderInfo, bitStream, writeFlag);
+#endif
 
     /* Return number of bits */
     return bits;
@@ -675,10 +726,12 @@ static int WriteTNSData(CoderInfo *coderInfo,
 
     TnsInfo* tnsInfoPtr = &coderInfo->tnsInfo;
 
+#ifndef DRM
     if (writeFlag) {
         PutBit(bitStream,tnsInfoPtr->tnsDataPresent,LEN_TNS_PRES);
     }
     bits += LEN_TNS_PRES;
+#endif
 
     /* If TNS is not present, bail */
     if (!tnsInfoPtr->tnsDataPresent) {
@@ -875,8 +928,14 @@ BitStream *OpenBitStream(int size, unsigned char *buffer)
 
     bitStream = AllocMemory(sizeof(BitStream));
     bitStream->size = size;
+#ifdef DRM
+    /* skip first byte for CRC */
+    bitStream->numBit = 8;
+    bitStream->currentBit = 8;
+#else
     bitStream->numBit = 0;
     bitStream->currentBit = 0;
+#endif
     bitStream->data = buffer;
     SetMemory(bitStream->data, 0, size);
 
@@ -905,8 +964,10 @@ static int WriteByte(BitStream *bitStream,
 
     idx = (bitStream->currentBit / BYTE_NUMBIT) % bitStream->size;
     numUsed = bitStream->currentBit % BYTE_NUMBIT;
+#ifndef DRM
     if (numUsed == 0)
         bitStream->data[idx] = 0;
+#endif
     bitStream->data[idx] |= (data & ((1<<numBit)-1)) <<
         (BYTE_NUMBIT-numUsed-numBit);
     bitStream->currentBit += numBit;
@@ -958,3 +1019,343 @@ static int ByteAlign(BitStream *bitStream, int writeFlag)
     return j;
 }
 
+#ifdef DRM
+/*
+    ****************************************************************************
+    The following code was written by Volker Fischer (c) 2004
+
+    The GNU Lesser General Public License as published by the
+    Free Software Foundation applies to this code.
+    ****************************************************************************
+*/
+#define LEN_PRESORT_CODEBOOK 22
+static const unsigned short PresortedCodebook_VCB11[] = {11, 31, 30, 29, 28, 27, 26, 25, 24, 23, 22, 21, 20, 19, 18, 17, 16, 9, 7, 5, 3, 1};
+static const int maxCwLen[32] = {0, 11, 9, 20, 16, 13, 11, 14, 12, 17, 14, 49,
+    0, 0, 0, 0, 14, 17, 21, 21, 25, 25, 29, 29, 29, 29, 33, 33, 33, 37, 37, 41}; /* 8.5.3.3.3.1 */
+
+typedef struct { /* segment parameters */
+    unsigned int left; /* left start of free space in segment */
+    unsigned int right; /* right position of free space in segment */
+    unsigned int len; /* length of free space in segment */
+} segment_t;
+
+typedef struct { /* codeword parameters */
+    unsigned int   cw_offset; /* offset in actual codeword data vector */
+    unsigned short window; /* which window belongs to this codeword */
+    unsigned short cb; /* codebook */
+    unsigned short num_sl_cw; /* number of spectral lines per codeword */
+    unsigned int   cw_nr; /* codeword number in the window */
+    unsigned short cw_len; /* codeword lenght */
+    unsigned short num_data; /* number of data cells for codeword */
+} cw_info_t;
+
+static int PutBitHcr(BitStream *bitStream,
+                     unsigned long curpos,
+                     unsigned long data,
+                     int numBit)
+{ /* data can be written at an arbitrary position in the bitstream */
+    bitStream->currentBit = curpos;
+    return PutBit(bitStream, data, numBit);
+}
+
+static int rewind_word(int W, int len)
+{ /* rewind len (max. 32) bits so that the MSB becomes LSB */
+    short i;
+    int tmp_W = 0;
+
+    for (i = 0; i < len; i++) {
+        tmp_W <<= 1;
+        if (W & (1<<i)) tmp_W |= 1;
+    }
+    return tmp_W;
+}
+
+static int WriteReorderedSpectralData(CoderInfo *coderInfo,
+                                      BitStream *bitStream,
+                                      int writeFlag)
+{
+    int i, j;
+    int cursegmsize, accsegmsize = 0;
+    int segmcnt = 0;
+    long startbitpos;
+    segment_t segment[FRAME_LEN];
+    int* window_group_length = coderInfo->window_group_length;
+    int* sfb_offset = coderInfo->sfb_offset;
+
+    cw_info_t cw_info[FRAME_LEN];
+    cw_info_t cw_info_preso[FRAME_LEN];
+
+    int num_cw = coderInfo->cur_cw;
+    int window_cw_cnt[MAX_SHORT_WINDOWS] = {0,0,0,0,0,0,0,0};
+
+    int presort, set, num_sets;
+
+    unsigned short cur_cb, cw_cnt;
+    short is_backwards;
+    int diff, tmp_data, cw_part_cnt, cur_cw_part;
+
+    int cur_cw_len, cur_data;
+    int sfb_cnt, win_cnt, acc_win_cnt, win_grp_cnt;
+    int coeff_cnt, last_sfb, cur_sfb_len;
+
+    /* set up local pointers to data and len */
+    /* data array contains data to be written */
+    /* len array contains lengths of data words */
+    int* data = coderInfo->data;
+    int* len  = coderInfo->len;
+    int* num_data = coderInfo->num_data_cw;
+
+    if (writeFlag) {
+        /* build offset table */
+        cur_data = 0;
+        cw_info[0].cw_offset = 0;
+        for (i = 0; i < num_cw; i++) {
+            cur_cw_len = 0;
+            for (j = 0; j < num_data[i]; j++) {
+                cur_cw_len += len[cur_data++];
+            }
+
+            cw_info[i].num_data = num_data[i];
+            cw_info[i].cw_len = cur_cw_len;
+            if (i > 0) /* calculate offset (codeword info parameter) */
+                cw_info[i].cw_offset = cw_info[i - 1].cw_offset + num_data[i - 1];
+        }
+
+        /* presort codewords ------------------------------------------------ */
+        /* classify codewords first */
+        sfb_cnt = win_cnt = win_grp_cnt = coeff_cnt = last_sfb = acc_win_cnt = 0;
+        cur_sfb_len = sfb_offset[1] / window_group_length[0];
+        cur_cb = coderInfo->book_vector[0];
+        for (i = 0; i < num_cw; i++) {
+            /* Set codeword info parameters */
+            cw_info[i].cb = cur_cb;
+            cw_info[i].num_sl_cw = (cur_cb < FIRST_PAIR_HCB) ? QUAD_LEN : PAIR_LEN;
+
+            cw_info[i].window = acc_win_cnt + win_cnt;
+            cw_info[i].cw_nr = window_cw_cnt[cw_info[i].window];
+            window_cw_cnt[cw_info[i].window]++;
+
+            coeff_cnt += cw_info[i].num_sl_cw;
+            if (coeff_cnt - last_sfb >= cur_sfb_len) {
+                last_sfb += cur_sfb_len;
+
+                win_cnt++; /* next window */
+                if (win_cnt == window_group_length[win_grp_cnt]) {
+                    win_cnt = 0;
+
+                    sfb_cnt++; /* next sfb */
+                    if (sfb_cnt == coderInfo->all_sfb) {
+                        sfb_cnt = 0;
+
+                        acc_win_cnt += window_group_length[win_grp_cnt];
+                        win_grp_cnt++; /* next window group */
+                    }
+
+                    /* new codebook and sfb length */
+                    cur_cb = coderInfo->book_vector[sfb_cnt];
+                    if (last_sfb < FRAME_LEN) {
+                        cur_sfb_len = (sfb_offset[sfb_cnt + 1] - sfb_offset[sfb_cnt])
+                            / window_group_length[win_grp_cnt];
+                    }
+                }
+            }
+        }
+
+        /* presorting (first presorting step) */
+        /* only needed for short windows */
+        if (coderInfo->block_type == ONLY_SHORT_WINDOW) {
+            for (i = 0; i < MAX_SHORT_WINDOWS; i++)
+                window_cw_cnt[i] = 0; /* reset all counters */
+
+            win_cnt = 0;
+            cw_cnt = 0;
+            for (i = 0; i < num_cw; i++) {
+                for (j = 0; j < num_cw; j++) {
+                    if (cw_info[j].window == win_cnt) {
+                        if (cw_info[j].cw_nr == window_cw_cnt[win_cnt]) {
+                            cw_info_preso[cw_cnt++] = cw_info[j];
+                            window_cw_cnt[win_cnt]++;
+
+                            /* check if two one-dimensional codewords */
+                            if (cw_info[j].num_sl_cw == PAIR_LEN) {
+                                cw_info_preso[cw_cnt++] = cw_info[j + 1];
+                                window_cw_cnt[win_cnt]++;
+                            }
+
+                            win_cnt++; /* next window */
+                            if (win_cnt == MAX_SHORT_WINDOWS)
+                                win_cnt = 0;
+                        }
+                    }
+                }
+            }
+        } else {
+            for (i = 0; i < num_cw; i++) {
+                cw_info_preso[i] = cw_info[i]; /* just copy */
+            }
+        }
+
+        /* presorting (second presorting step) */
+        cw_cnt = 0;
+        for (presort = 0; presort < LEN_PRESORT_CODEBOOK; presort++) {
+            /* next codebook that has to be processed according to presorting */
+            unsigned short nextCB = PresortedCodebook_VCB11[presort];
+
+            for (i = 0; i < num_cw; i++) {
+                /* process only codewords that are due now */
+                if ((cw_info_preso[i].cb == nextCB) ||
+                    ((nextCB < ESC_HCB) && (cw_info_preso[i].cb == nextCB + 1)))
+                {
+                    cw_info[cw_cnt++] = cw_info_preso[i];
+                }
+            }
+        }
+
+        /* init segments */
+        accsegmsize = 0;
+        for (i = 0; i < num_cw; i++) {
+            /* 8.5.3.3.3.2 Derivation of segment width */
+            cursegmsize = min(maxCwLen[cw_info[i].cb], coderInfo->iLenLongestCW);
+
+            if (accsegmsize + cursegmsize > coderInfo->iLenReordSpData) {
+                /* the last segment is extended until iLenReordSpData */
+                segment[segmcnt - 1].right = coderInfo->iLenReordSpData - 1;
+                segment[segmcnt - 1].len = coderInfo->iLenReordSpData - segment[segmcnt - 1].left;
+                break;
+            }
+
+            segment[segmcnt].left = accsegmsize;
+            segment[segmcnt].right = accsegmsize + cursegmsize - 1;
+            segment[segmcnt++].len = cursegmsize;
+            accsegmsize += cursegmsize;
+        }
+
+        /* store current bit position */
+        startbitpos = bitStream->currentBit;
+
+        /* write write priority codewords (PCWs) and nonPCWs ---------------- */
+        num_sets = num_cw / segmcnt; /* number of sets */
+
+        for (set = 0; set <= num_sets; set++) {
+            int trial;
+
+            /* ever second set the bit order is reversed */
+            is_backwards = set % 2;
+
+            for (trial = 0; trial < segmcnt; trial++) {
+                int codewordBase;
+                int set_encoded = segmcnt;
+
+                if (set == num_sets)
+                    set_encoded = num_cw - set * segmcnt; /* last set is shorter than the rest */
+
+                for (codewordBase = 0; codewordBase < segmcnt; codewordBase++) {
+                    int segment_index = (trial + codewordBase) % segmcnt;
+                    int codeword_index = codewordBase + set * segmcnt;
+
+                    if (codeword_index >= num_cw)
+                        break;
+
+                    if ((cw_info[codeword_index].cw_len > 0) && (segment[segment_index].len > 0)) {
+                        /* codeword is not yet written (completely) */
+                        /* space left in this segment */
+                        short tmplen;
+
+                        /* how many bits can be written? */
+                        if (segment[segment_index].len >= cw_info[codeword_index].cw_len) {
+                            tmplen = cw_info[codeword_index].cw_len;
+                            set_encoded--; /* CW fits into segment */
+                        } else {
+                            tmplen = segment[segment_index].len;
+                        }
+
+                        /* Adjust lengths */
+                        cw_info[codeword_index].cw_len -= tmplen;
+                        segment[segment_index].len -= tmplen;
+
+                        /* write codewords to bitstream */
+                        for (cw_part_cnt = 0; cw_part_cnt < cw_info[codeword_index].num_data; cw_part_cnt++) {
+                            cur_cw_part = cw_info[codeword_index].cw_offset + cw_part_cnt;
+
+                            if (len[cur_cw_part] <= tmplen) {
+                                /* write complete data, no partitioning */
+                                if (is_backwards) {
+                                    /* write data in reversed bit-order */
+                                    PutBitHcr(bitStream, startbitpos + segment[segment_index].right - len[cur_cw_part] + 1,
+                                        rewind_word(data[cur_cw_part], len[cur_cw_part]), len[cur_cw_part]);
+
+                                    segment[segment_index].right -= len[cur_cw_part];
+                                } else {
+                                    PutBitHcr(bitStream, startbitpos + segment[segment_index].left,
+                                        data[cur_cw_part], len[cur_cw_part]);
+
+                                    segment[segment_index].left += len[cur_cw_part];
+                                }
+
+                                tmplen -= len[cur_cw_part];
+                                len[cur_cw_part] = 0;
+                            } else {
+                                /* codeword part must be partitioned */
+                                /* data must be taken from the left side */
+                                tmp_data = data[cur_cw_part];
+
+                                diff = len[cur_cw_part] - tmplen;
+                                tmp_data >>= diff;
+
+                                /* remove bits which are already used */
+                                data[cur_cw_part] &= (1 << diff) - 1 /* diff number of ones */;
+                                len[cur_cw_part] = diff;
+
+                                if (is_backwards) {
+                                    /* write data in reversed bit-order */
+                                    PutBitHcr(bitStream, startbitpos + segment[segment_index].right - tmplen + 1,
+                                        rewind_word(tmp_data, tmplen), tmplen);
+
+                                    segment[segment_index].right -= tmplen;
+                                } else {
+                                    PutBitHcr(bitStream, startbitpos + segment[segment_index].left,
+                                        tmp_data, tmplen);
+
+                                    segment[segment_index].left += tmplen;
+                                }
+
+                                tmplen = 0;
+                            }
+                            
+                            if (tmplen == 0)
+                                break; /* all data written for this segment trial */
+                        }
+                    }
+                } /* of codewordBase */
+
+                if (set_encoded == 0)
+                    break; /* no unencoded codewords left in this set */
+            } /* of trial */
+        }
+
+        /* set parameter for bit stream to current correct position */
+        bitStream->currentBit = startbitpos + coderInfo->iLenReordSpData;
+        bitStream->numBit = bitStream->currentBit;
+    }
+
+    return coderInfo->iLenReordSpData;
+}
+
+static void calc_CRC(BitStream *bitStream, int len)
+{
+    int i;
+    unsigned char r = 255;  /* Initialize to all ones */
+
+    /* CRC polynome used x^8 + x^4 + x^3 + x^2 +1 */
+#define GPOLY 0435
+
+    for (i = 8; i < len + 8; i++) {
+        r = ( (r << 1) ^ (( (
+            ( bitStream->data[i / 8] >> (7 - (i % 8)) )
+            & 1) ^ ((r >> 7) & 1)) * GPOLY )) & 0xFF;
+    }
+
+    /* CRC is stored inverted, per definition at first byte in stream */
+    bitStream->data[0] = ~r;
+}
+#endif

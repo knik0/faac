@@ -16,7 +16,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: frame.c,v 1.61 2004/05/03 11:37:16 danchr Exp $
+ * $Id: frame.c,v 1.62 2004/07/04 12:10:52 corrados Exp $
  */
 
 /*
@@ -188,6 +188,14 @@ int FAACAPI faacEncSetConfiguration(faacEncHandle hEncoder,
 			int rate; // per channel at 44100 sampling frequency
 			int cutoff;
 		}	rates[] = {
+#ifdef DRM
+            /* DRM needs lower bit-rates. We've chosen higher bandwidth values and
+               decrease the quantizer quality at the same time to preserve the
+               low bit-rate */
+            {7000,  1500},
+            {15000, 3000},
+            {23000, 4000},
+#endif
 			{29500, 5000},
 			{37500, 7000},
 			{47000, 10000},
@@ -199,7 +207,11 @@ int FAACAPI faacEncSetConfiguration(faacEncHandle hEncoder,
 		int f0, f1;
 		int r0, r1;
 
-		config->quantqual = 100;
+#ifdef DRM
+        config->quantqual = 40; /* init with a lower value for DRM */
+#else
+        config->quantqual = 100;
+#endif
 
 		config->bitRate = (double)config->bitRate * 44100 / hEncoder->sampleRate;
 
@@ -218,19 +230,19 @@ int FAACAPI faacEncSetConfiguration(faacEncHandle hEncoder,
 
 		if (config->bitRate > r1)
 			config->bitRate = r1;
-		if (config->bitRate < r0)
-			config->bitRate = r0;
+        if (config->bitRate < r0)
+            config->bitRate = r0;
 
 		if (f1 > f0)
-			config->bandWidth =
-					pow((double)config->bitRate / r1,
-					log((double)f1 / f0) / log ((double)r1 / r0)) * (double)f1;
+            config->bandWidth =
+                    pow((double)config->bitRate / r1,
+                    log((double)f1 / f0) / log ((double)r1 / r0)) * (double)f1;
 		else
 			config->bandWidth = f1;
 
 		config->bandWidth =
 				(double)config->bandWidth * hEncoder->sampleRate / 44100;
-				config->bitRate = (double)config->bitRate * hEncoder->sampleRate / 44100;
+		config->bitRate = (double)config->bitRate * hEncoder->sampleRate / 44100;
 
 		if (config->bandWidth > bwbase)
 		  config->bandWidth = bwbase;
@@ -240,7 +252,7 @@ int FAACAPI faacEncSetConfiguration(faacEncHandle hEncoder,
 
     if (!config->bandWidth)
     {
-                config->bandWidth = (config->quantqual - 100) * bwmult + bwbase;
+        config->bandWidth = (config->quantqual - 100) * bwmult + bwbase;
     }
 
     hEncoder->config.bandWidth = config->bandWidth;
@@ -289,8 +301,12 @@ faacEncHandle FAACAPI faacEncOpen(unsigned long sampleRate,
     unsigned int channel;
     faacEncHandle hEncoder;
 
-    *inputSamples = 1024*numChannels;
+    *inputSamples = FRAME_LEN*numChannels;
     *maxOutputBytes = (6144/8)*numChannels;
+
+#ifdef DRM
+    *maxOutputBytes += 1; /* for CRC */
+#endif
 
     hEncoder = (faacEncStruct*)AllocMemory(sizeof(faacEncStruct));
     SetMemory(hEncoder, 0, sizeof(faacEncStruct));
@@ -770,7 +786,7 @@ int FAACAPI faacEncEncode(faacEncHandle hEncoder,
         /* If short window, reconstruction not needed for prediction */
         if ((coderInfo[channel].block_type == ONLY_SHORT_WINDOW)) {
             int sind;
-            for (sind = 0; sind < 1024; sind++) {
+            for (sind = 0; sind < BLOCK_LEN_LONG; sind++) {
 				coderInfo[channel].requantFreq[sind] = 0.0;
             }
         } else {
@@ -816,12 +832,11 @@ int FAACAPI faacEncEncode(faacEncHandle hEncoder,
     if (hEncoder->config.bitRate)
 	{
 		double fix;
-		int desbits = numChannels * (hEncoder->config.bitRate * 1024)
+		int desbits = numChannels * (hEncoder->config.bitRate * FRAME_LEN)
 				/ hEncoder->sampleRate;
 		int diff = (frameBytes * 8) - desbits;
 
 		hEncoder->bitDiff += diff;
-
 		fix = (double)hEncoder->bitDiff / desbits;
 		fix *= 0.01;
 		fix = max(fix, -0.2);
@@ -832,8 +847,15 @@ int FAACAPI faacEncEncode(faacEncHandle hEncoder,
 			hEncoder->aacquantCfg.quality *= (1.0 - fix);
 			if (hEncoder->aacquantCfg.quality > 300)
 				hEncoder->aacquantCfg.quality = 300;
-			if (hEncoder->aacquantCfg.quality < 50)
-				hEncoder->aacquantCfg.quality = 50;
+#ifdef DRM
+            /* since we have very low bit-rates in DRM, we have to decrease the
+               bandwidth and also decrease the quality */
+            if (hEncoder->aacquantCfg.quality < 10)
+                hEncoder->aacquantCfg.quality = 10;
+#else           
+            if (hEncoder->aacquantCfg.quality < 50)
+                hEncoder->aacquantCfg.quality = 50;
+#endif
 		}
     }
 
@@ -948,6 +970,18 @@ static SR_INFO srInfo[12+1] =
 
 /*
 $Log: frame.c,v $
+Revision 1.62  2004/07/04 12:10:52  corrados
+made faac compliant with Digital Radio Mondiale (DRM) (DRM macro must be set)
+implemented HCR tool, VCB11, CRC, scalable bitstream order
+note: VCB11 only uses codebook 11! TODO: implement codebooks 16-32
+960 transform length is not yet implemented (TODO)! Use 1024 for encoding and 960 for decoding, resulting in a lot of artefacts
+
+Revision 1.62  2004/07/  corrados
+made faac compliant with Digital Radio Mondiale (DRM) (DRM macro must be set)
+implemented HCR tool, VCB11, CRC, scalable bitstream order
+note: VCB11 only uses codebook 11! TODO: implement codebooks 16-32
+960 transform length is not yet implemented (TODO)! Use 1024 for encoding and 960 for decoding, resulting in a lot of artefacts
+
 Revision 1.61  2004/05/03 11:37:16  danchr
 bump version to unstable 1.24+
 

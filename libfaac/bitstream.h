@@ -32,7 +32,7 @@ copyright notice must be included in all copies or derivative works.
 Copyright (c) 1996.
 **********************************************************************/
 /*
- * $Id: bitstream.h,v 1.13 2002/08/19 16:35:53 knik Exp $
+ * $Id: bitstream.h,v 1.14 2004/07/04 12:10:52 corrados Exp $
  */
 
 #ifndef BITSTREAM_H
@@ -103,6 +103,15 @@ extern "C" {
 
 #define LEN_PC_COMM 8
 
+#ifdef DRM
+# define LEN_HCR_REORDSD 14
+# define LEN_HCR_LONGCW 6
+# define FIRST_PAIR_HCB 5
+# define QUAD_LEN 4
+# define PAIR_LEN 2
+# define ESC_HCB 11
+#endif
+
 #define ID_SCE 0
 #define ID_CPE 1
 #define ID_CCE 2
@@ -118,10 +127,10 @@ extern "C" {
 #define MPEG4 0
 
 /* AAC object types */
-#define MAIN 0
-#define LOW  1
-#define SSR  2
-#define LTP  3
+#define MAIN 1
+#define LOW  2
+#define SSR  3
+#define LTP  4
 
 
 #define BYTE_NUMBIT 8       /* bits in byte (char) */

@@ -16,7 +16,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: faaccfg.h,v 1.2 2003/10/29 10:31:24 stux Exp $
+ * $Id: faaccfg.h,v 1.3 2004/07/04 12:12:05 corrados Exp $
  */
 
 #ifndef _FAACCFG_H_
@@ -29,10 +29,10 @@
 #define MPEG4 0
 
 /* AAC object types */
-#define MAIN 0
-#define LOW  1
-#define SSR  2
-#define LTP  3
+#define MAIN 1
+#define LOW  2
+#define SSR  3
+#define LTP  4
 
 /* Input Formats */
 #define FAAC_INPUT_NULL    0
