@@ -32,7 +32,7 @@ copyright notice must be included in all copies or derivative works.
 Copyright (c) 1996.
 **********************************************************************/
 /*
- * $Id: bitstream.h,v 1.11 2001/09/04 18:39:35 menno Exp $
+ * $Id: bitstream.h,v 1.12 2001/12/07 08:40:52 menno Exp $
  */
 
 #ifndef BITSTREAM_H
@@ -178,6 +178,7 @@ static int WriteLFE(CoderInfo *coderInfo,
 static int WriteICSInfo(CoderInfo *coderInfo,
                         BitStream *bitStream,
                         int objectType,
+                        int common_window,
                         int writeFlag);
 
 static int WriteICS(CoderInfo *coderInfo,

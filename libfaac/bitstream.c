@@ -24,7 +24,7 @@ copyright notice must be included in all copies or derivative works.
 Copyright (c) 1997.
 **********************************************************************/
 /*
- * $Id: bitstream.c,v 1.22 2001/11/29 19:36:28 menno Exp $
+ * $Id: bitstream.c,v 1.23 2001/12/07 08:40:52 menno Exp $
  */
 
 #include <stdlib.h>
@@ -278,7 +278,7 @@ static int WriteCPE(CoderInfo *coderInfoL,
     if (channelInfo->common_window) {
         int numWindows, maxSfb;
 
-        bits += WriteICSInfo(coderInfoL, bitStream, objectType, writeFlag);
+        bits += WriteICSInfo(coderInfoL, bitStream, objectType, channelInfo->common_window, writeFlag);
         numWindows = coderInfoL->num_window_groups;
         maxSfb = coderInfoL->max_sfb;
 
@@ -359,6 +359,7 @@ static int WriteLFE(CoderInfo *coderInfo,
 static int WriteICSInfo(CoderInfo *coderInfo,
                         BitStream *bitStream,
                         int objectType,
+                        int common_window,
                         int writeFlag)
 {
     int grouping_bits;
@@ -393,10 +394,23 @@ static int WriteICSInfo(CoderInfo *coderInfo,
             PutBit(bitStream, coderInfo->max_sfb, LEN_MAX_SFBL);
         }
         bits += LEN_MAX_SFBL;
+
         if (objectType == LTP)
+        {
+            bits++;
+            if(writeFlag)
+                PutBit(bitStream, coderInfo->ltpInfo.global_pred_flag, 1); /* Prediction Global used */
+
             bits += WriteLTPPredictorData(coderInfo, bitStream, writeFlag);
-        else
+            if (common_window)
+                bits += WriteLTPPredictorData(coderInfo, bitStream, writeFlag);
+        } else {
+            bits++;
+            if (writeFlag)
+                PutBit(bitStream, coderInfo->pred_global_flag, LEN_PRED_PRES);  /* predictor_data_present */
+
             bits += WritePredictorData(coderInfo, bitStream, writeFlag);
+        }
     }
 
     return bits;
@@ -419,7 +433,7 @@ static int WriteICS(CoderInfo *coderInfo,
 
     /* Write ics information */
     if (!commonWindow) {
-        bits += WriteICSInfo(coderInfo, bitStream, objectType, writeFlag);
+        bits += WriteICSInfo(coderInfo, bitStream, objectType, commonWindow, writeFlag);
     }
 
     bits += SortBookNumbers(coderInfo, bitStream, writeFlag);
@@ -439,18 +453,15 @@ static int WriteLTPPredictorData(CoderInfo *coderInfo, BitStream *bitStream, int
     int bits;
     LtpInfo *ltpInfo = &coderInfo->ltpInfo;
 
-    bits = 1;
-
-	if(writeFlag)
-		PutBit(bitStream, ltpInfo->global_pred_flag, 1); /* Prediction Global used */
+    bits = 0;
 
     if (ltpInfo->global_pred_flag)
     {
-		
+
         if(writeFlag)
             PutBit(bitStream, 1, 1); /* LTP used */
 		bits++;
-		
+
         switch(coderInfo->block_type)
         {
         case ONLY_LONG_WINDOW:
@@ -464,14 +475,15 @@ static int WriteLTPPredictorData(CoderInfo *coderInfo, BitStream *bitStream, int
                 PutBit(bitStream, ltpInfo->weight_idx,  LEN_LTP_COEF);
             }
 
-            last_band = ((coderInfo->nr_of_sfb < MAX_LT_PRED_LONG_SFB) ?
-                coderInfo->nr_of_sfb : MAX_LT_PRED_LONG_SFB);
+//            last_band = ((coderInfo->nr_of_sfb < MAX_LT_PRED_LONG_SFB) ?
+//                coderInfo->nr_of_sfb : MAX_LT_PRED_LONG_SFB);
+            last_band = coderInfo->nr_of_sfb;
 
             bits += last_band;
             if(writeFlag)
                 for (i = 0; i < last_band; i++)
                     PutBit(bitStream, ltpInfo->sfb_prediction_used[i], LEN_LTP_LONG_USED);
-                break;
+            break;
 
         default:
             break;
@@ -492,7 +504,6 @@ static int WritePredictorData(CoderInfo *coderInfo,
     int numBands = min(coderInfo->max_pred_sfb, coderInfo->nr_of_sfb);
 
     if (writeFlag) {
-        PutBit(bitStream, predictorDataPresent, LEN_PRED_PRES);  /* predictor_data_present */
         if (predictorDataPresent) {
             int b;
             if (coderInfo->reset_group_number == -1) {
@@ -508,7 +519,6 @@ static int WritePredictorData(CoderInfo *coderInfo,
             }
         }
     }
-    bits = LEN_PRED_PRES;
     bits += (predictorDataPresent) ?
         (LEN_PRED_RST +
         ((coderInfo->reset_group_number)!=-1)*LEN_PRED_RSTGRP +
