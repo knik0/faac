@@ -15,10 +15,11 @@
 
 double       fhg_window_long[BLOCK_LEN_LONG];
 double       fhg_window_short[BLOCK_LEN_SHORT];
+int sizedouble; // temp value
 
-/*****************************
-  Fast MDCT & IMDCT Code
-*****************************/
+/*******************************************************************************
+                               Fast MDCT & IMDCT Code
+*******************************************************************************/
 void MDCT (fftw_real *data, int N)
 {
     fftw_real tempr, tempi, c, s, cold, cfreq, sfreq; /* temps for pre and post twiddle */
@@ -203,8 +204,11 @@ for( i=0; i<BLOCK_LEN_LONG; i++ )
 	fhg_window_long[i] = sin((M_PI/(2*BLOCK_LEN_LONG)) * (i + 0.5));
 for( i=0; i<BLOCK_LEN_SHORT; i++ )
 	fhg_window_short[i] = sin((M_PI/(2*BLOCK_LEN_SHORT)) * (i + 0.5));
+sizedouble = sizeof (double);
 }
-
+/*******************************************************************************
+                                    T/F mapping
+*******************************************************************************/
 void buffer2freq(double           p_in_data[],
 		 double           p_out_mdct[],
 		 double           p_overlap[],
@@ -216,7 +220,6 @@ void buffer2freq(double           p_in_data[],
 	double         transf_buf[ 2*BLOCK_LEN_LONG ];
 	double         *p_o_buf;
 	int            k,i;
-        int sizedouble = sizeof(double);
 
 	static int firstTime=1;
 
@@ -257,7 +260,7 @@ void buffer2freq(double           p_in_data[],
                 memcpy(p_out_mdct+BLOCK_LEN_LONG,p_o_buf+BLOCK_LEN_LONG,NFLAT_LS*sizedouble);
                 for ( i = 0 ; i < BLOCK_LEN_SHORT ; i++)
                         p_out_mdct[i+BLOCK_LEN_LONG+NFLAT_LS] = p_o_buf[i+BLOCK_LEN_LONG+NFLAT_LS] * fhg_window_short[BLOCK_LEN_SHORT-i-1];
-                memset(p_out_mdct+2*BLOCK_LEN_LONG-1-NFLAT_LS,0,NFLAT_LS*sizedouble);
+                memset(p_out_mdct+BLOCK_LEN_LONG+NFLAT_LS+BLOCK_LEN_SHORT,0,NFLAT_LS*sizedouble);
 		MDCT( p_out_mdct, 2*BLOCK_LEN_LONG );
 		break;
 
@@ -304,7 +307,6 @@ void freq2buffer(double           p_in_data[],
 
 	double  *fp;
 	int     k,i;
-        int sizedouble = sizeof(double);
 
 	/* Assemble overlap buffer */
         memcpy(overlap_buf,p_overlap,BLOCK_LEN_LONG*sizedouble);
@@ -340,12 +342,12 @@ void freq2buffer(double           p_in_data[],
                         memcpy(o_buf+BLOCK_LEN_LONG,transf_buf+BLOCK_LEN_LONG,NFLAT_LS*sizedouble);
                         for ( i = 0 ; i < BLOCK_LEN_SHORT ; i++)
                                 o_buf[i+BLOCK_LEN_LONG+NFLAT_LS] = transf_buf[i+BLOCK_LEN_LONG+NFLAT_LS] * fhg_window_short[BLOCK_LEN_SHORT-i-1];
-                        memset(o_buf+2*BLOCK_LEN_LONG-1-NFLAT_LS,0,NFLAT_LS*sizedouble);
+                        memset(o_buf+BLOCK_LEN_LONG+NFLAT_LS+BLOCK_LEN_SHORT,0,NFLAT_LS*sizedouble);
 		}
 		else { /* overlap_select == NON_OVERLAPPED */
                         for ( i = 0 ; i < BLOCK_LEN_SHORT ; i++)
                                 transf_buf[i+BLOCK_LEN_LONG+NFLAT_LS] *= fhg_window_short[BLOCK_LEN_SHORT-i-1];
-                        memset(transf_buf+2*BLOCK_LEN_LONG-1-NFLAT_LS,0,NFLAT_LS*sizedouble);
+                        memset(transf_buf+BLOCK_LEN_LONG+NFLAT_LS+BLOCK_LEN_SHORT,0,NFLAT_LS*sizedouble);
 		}
 		break;
 
@@ -395,7 +397,7 @@ void freq2buffer(double           p_in_data[],
 				fp    += 2*BLOCK_LEN_SHORT;
 			}
 		}
-                memset(o_buf+2*BLOCK_LEN_LONG-1-NFLAT_LS,0,NFLAT_LS*sizedouble);
+                memset(o_buf+BLOCK_LEN_LONG+NFLAT_LS+BLOCK_LEN_SHORT,0,NFLAT_LS*sizedouble);
 		break;
 	}
 
@@ -410,31 +412,22 @@ void freq2buffer(double           p_in_data[],
         memcpy(p_overlap,o_buf+BLOCK_LEN_LONG,BLOCK_LEN_LONG*sizedouble);
 }
 
-/***********************************************************************************************/
+/******************************************************************************/
 
 void specFilter (double p_in[],
-				 double p_out[],
-				 int  samp_rate,
-				 int lowpass_freq,
-				 int    specLen
-				 )
+                 double p_out[],
+		 int  samp_rate,
+		 int lowpass_freq,
+		 int    specLen
+		 )
 {
-	float lowpass;
-	int    xlowpass,i;
+	int lowpass,xlowpass;
 
 	/* calculate the last line which is not zero */
-	lowpass = (float)lowpass_freq * (float)specLen;
-	lowpass /= (samp_rate>>1);
-	lowpass += 1.0;             /* round up to ensure that the desired upper frequency limit is correct */
-	xlowpass = ((int)lowpass < specLen) ? (int)lowpass : specLen ;
+	lowpass = (lowpass_freq * specLen) / (samp_rate>>1) + 1;
+	xlowpass = (lowpass < specLen) ? lowpass : specLen ;
 
-	if( p_out != p_in ) {
-		for (i = 0; i < specLen; i++ ) {
-			p_out[i] = p_in[i];
-		}
-	}
-	for (i = xlowpass; i <specLen ; i++ ) {
-		p_out[i]  = 0;
-	}
+	if( p_out != p_in )  memcpy(p_out,p_in,specLen*sizedouble);
+        memset(p_out+xlowpass,0,(specLen-xlowpass)*sizedouble);
 }
 
