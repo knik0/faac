@@ -52,9 +52,9 @@ Copyright (c) 1997.
 
 Source file:
 
-$Id: psych.c,v 1.42 2000/02/07 19:27:08 menno Exp $
-$Id: psych.c,v 1.42 2000/02/07 19:27:08 menno Exp $
-$Id: psych.c,v 1.42 2000/02/07 19:27:08 menno Exp $
+$Id: psych.c,v 1.43 2000/02/07 19:52:47 menno Exp $
+$Id: psych.c,v 1.43 2000/02/07 19:52:47 menno Exp $
+$Id: psych.c,v 1.43 2000/02/07 19:52:47 menno Exp $
 
 **********************************************************************/
 
@@ -1097,12 +1097,16 @@ void psy_step12(PARTITION_TABLE_LONG *part_tbl_long,
 				)
 {
     int b;
+	double temp;
 
     psy_var_long->pe = 0.0;
     for(b = 0; b < part_tbl_long->len; ++b){
-		psy_var_long->pe -= part_tbl_long->width[b]
-			* log10((psy_stvar_long->nb[psy_stvar_long->p_nb + b] + 0.0000000001)
-			/ (psy_var_long->e[b] + 0.0000000001)); 
+		temp = part_tbl_long->width[b]
+			* log((psy_stvar_long->nb[psy_stvar_long->p_nb + b] + 0.0000000001)
+			/ (psy_var_long->e[b] + 0.0000000001));
+		temp = min(0,temp);
+
+		psy_var_long->pe -= temp;
     }
 //	if(psy_var_long->pe > 1100)
 //		printf("%f\t\n",psy_var_long->pe);
@@ -1113,7 +1117,7 @@ void psy_step13(PSY_VARIABLE_LONG *psy_var_long,
 				int ch
 				)
 {
-	if(psy_var_long->pe > 1100) {
+	if(psy_var_long->pe > 1250) {
         *block_type = ONLY_SHORT_WINDOW;
 	} else {
         *block_type = ONLY_LONG_WINDOW;
