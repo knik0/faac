@@ -2,6 +2,7 @@
 // Copyright (C) 2003 Janne Hyvärinen
 //
 // Changes:
+//  0.4   (2003-12-11): Added support for average bitrate controlling
 //  0.3.5 (2003-10-17): Changed way gapless encoding is handled (iTunes is buggy...)
 //  0.3.4 (2003-10-14): Fixed AAC object type selecting
 //  0.3.3 (2003-10-02): Removed gapless support for raw AAC files, it was hacky and recent libfaad changes broke it
@@ -34,7 +35,7 @@
 #include <faac.h>
 #include <version.h>
 
-#define FOO_FAAC_VERSION     "0.3.5"
+#define FOO_FAAC_VERSION     "0.4"
 
 #define FF_AAC  0
 #define FF_MP4  1
@@ -43,18 +44,22 @@
 #define FF_DEFAULT_OBJECTTYPE   LOW
 #define FF_DEFAULT_MIDSIDE      1
 #define FF_DEFAULT_TNS          0
-#define FF_DEFAULT_BITRATE      0
 #define FF_DEFAULT_QUANTQUAL    100
+#define FF_DEFAULT_AVGBRATE     64
 #define FF_DEFAULT_CUTOFF       -1
 #define FF_DEFAULT_MP4CONTAINER FF_MP4
+#define FF_DEFAULT_USE_QQ       1
+#define FF_DEFAULT_USE_AB       0
 
 static cfg_int cfg_objecttype ( "objecttype", FF_DEFAULT_OBJECTTYPE );
 static cfg_int cfg_midside ( "midside", FF_DEFAULT_MIDSIDE );
 static cfg_int cfg_tns ( "tns", FF_DEFAULT_TNS );
-static cfg_int cfg_bitrate ( "bitrate", FF_DEFAULT_BITRATE );
 static cfg_int cfg_quantqual ( "quantqual", FF_DEFAULT_QUANTQUAL );
+static cfg_int cfg_avgbrate ( "avgbrate", FF_DEFAULT_AVGBRATE );
 static cfg_int cfg_cutoff ( "cutoff", FF_DEFAULT_CUTOFF );
 static cfg_int cfg_mp4container ( "mp4container", FF_DEFAULT_MP4CONTAINER );
+static cfg_int cfg_use_qq ( "use_qq", FF_DEFAULT_USE_QQ );
+static cfg_int cfg_use_ab ( "use_ab", FF_DEFAULT_USE_AB );
 
 DECLARE_COMPONENT_VERSION ( "FAAC encoder", FOO_FAAC_VERSION, "Uses libfaac version " FAAC_VERSION );
 
@@ -73,6 +78,7 @@ private:
     int cutOff;
     int bitRate;
     unsigned long quantqual;
+    int use_qq, use_ab;
 
     int create_mp4;
 
@@ -97,8 +103,10 @@ public:
         useMidSide = cfg_midside;
         useTns = cfg_tns;
         cutOff = cfg_cutoff;
-        bitRate = cfg_bitrate;
+        bitRate = cfg_avgbrate * 1000;
         quantqual = cfg_quantqual;
+        use_qq = cfg_use_qq;
+        use_ab = cfg_use_ab;
         hEncoder = 0;
         myFormat = 0;
 
@@ -136,15 +144,23 @@ public:
 
         encode_error = false;
         path = filename;
-        if ( path.is_empty() ) return 0;
+        if ( src_file ) src_file->handle_query ( &info ); else info.reset();
 
-        m_reader = file::g_open ( path, reader::MODE_WRITE_NEW );
-        if ( !m_reader ) {
-            console::error ( string_printf ("Can't write to '%s'", (const char *)path) );
+        console::info ( "AAC encoding with FAAC version " FAAC_VERSION );
+        console::info ( string_printf ("Source file: %s", (const char *)info.get_file_path()) );
+        console::info ( string_printf ("Destination file: %s", (const char *)path) );
+
+        if ( path.is_empty() ) {
+            console::error ( "No destination name" );
             return 0;
         }
 
-        if ( src_file ) src_file->handle_query ( &info ); else info.reset();
+        m_reader = file::g_open ( path, reader::MODE_WRITE_NEW );
+        if ( !m_reader ) {
+            console::error ( "Can't write to destination" );
+            return 0;
+        }
+
         return 1;
     }
                 
@@ -199,9 +215,9 @@ public:
             myFormat->useLfe = (nch == 6) ? 1 : 0;
             myFormat->useTns = useTns;
             myFormat->allowMidside = useMidSide;
-            if ( bitRate ) myFormat->bitRate = bitRate;
+            if ( use_ab ) myFormat->bitRate = bitRate;
             myFormat->bandWidth = cutOff;
-            if ( quantqual > 0 ) myFormat->quantqual = quantqual;
+            if ( use_qq ) myFormat->quantqual = quantqual;
             myFormat->outputFormat = create_mp4 ? 0 : 1;
             myFormat->inputFormat = FAAC_INPUT_FLOAT;
 
@@ -234,6 +250,12 @@ public:
             cutOff = myFormat->bandWidth;
             quantqual = myFormat->quantqual;
             bitRate = myFormat->bitRate;
+
+            if ( bitRate > 0 ) {
+                console::info ( string_printf ("Using quantizer quality %i and average bitrate of %i kbps per channel", quantqual, bitRate/1000) );
+            } else {
+                console::info ( string_printf ("Using quantizer quality %i and no average bitrate control", quantqual, bitRate) );
+            }
 
             encode_error = false;
         }
@@ -337,7 +359,10 @@ public:
         if ( m_reader ) {
             bool success = !encode_error && (m_reader->get_length() > 0);
 
-            if ( success ) write_tag();
+            if ( success ) {
+                write_tag();
+                console::info ( "Encoding finished successfully" );
+            }
 
             if ( create_mp4 ) {
                 MP4Close ( MP4hFile );
@@ -347,7 +372,10 @@ public:
             m_reader->reader_release();
             m_reader = 0;
 
-            if ( !success ) file::g_remove ( path );
+            if ( !success ) {
+                console::info ( "Encoding failed" );
+                file::g_remove ( path );
+            }
         }
     }
 
@@ -548,6 +576,11 @@ static cutoff_list_t cutoff_list[] = {
     {  10000, "10000"     },
 };
 
+#define QQ_MIN      10
+#define QQ_MAX      500
+#define AB_MIN      8
+#define AB_MAX      384
+
 class config_faac : public config {
     static void update ( HWND wnd )
     {
@@ -585,6 +618,12 @@ class config_faac : public config {
         uSendDlgItemMessage ( wnd, IDC_QUANTQUAL_SLIDER, TBM_SETPOS, 1, cfg_quantqual );
         uSetDlgItemText ( wnd, IDC_QUANTQUAL_EDIT, string_printf ("%i", (int)cfg_quantqual) );
 
+        uSendDlgItemMessage ( wnd, IDC_AVGBRATE_SLIDER, TBM_SETPOS, 1, cfg_avgbrate );
+        uSetDlgItemText ( wnd, IDC_AVGBRATE_EDIT, string_printf ("%i", (int)cfg_avgbrate) );
+
+        CheckDlgButton ( wnd, IDC_USE_QQ, cfg_use_qq );
+        CheckDlgButton ( wnd, IDC_USE_AB, cfg_use_ab );
+
         CheckDlgButton ( wnd, IDC_MIDSIDE, cfg_midside );
         CheckDlgButton ( wnd, IDC_TNS, cfg_tns );
     }
@@ -612,7 +651,8 @@ class config_faac : public config {
                     uSendMessageText ( wnd_cutoff, CB_ADDSTRING, 0, cutoff_list[i].name );
                 }
 
-                uSendDlgItemMessage ( wnd, IDC_QUANTQUAL_SLIDER, TBM_SETRANGE, 0, MAKELONG(10, 500) );
+                uSendDlgItemMessage ( wnd, IDC_QUANTQUAL_SLIDER, TBM_SETRANGE, 0, MAKELONG(QQ_MIN, QQ_MAX) );
+                uSendDlgItemMessage ( wnd, IDC_AVGBRATE_SLIDER, TBM_SETRANGE, 0, MAKELONG(AB_MIN, AB_MAX) );
 
                 update ( wnd );
             }
@@ -637,15 +677,30 @@ class config_faac : public config {
             case IDC_QUANTQUAL_EDIT | (EN_KILLFOCUS<<16):
                 {
                     cfg_quantqual = GetDlgItemInt ( wnd, IDC_QUANTQUAL_EDIT, 0, 0 );
-                    if ( cfg_quantqual < 10 || cfg_quantqual > 500 ) {
-                        if ( cfg_quantqual < 10 ) {
-                            cfg_quantqual = 10;
+                    if ( cfg_quantqual < QQ_MIN || cfg_quantqual > QQ_MAX ) {
+                        if ( cfg_quantqual < QQ_MIN ) {
+                            cfg_quantqual = QQ_MIN;
                         } else {
-                            cfg_quantqual = 500;
+                            cfg_quantqual = QQ_MAX;
                         }
                         uSetDlgItemText ( wnd, IDC_QUANTQUAL_EDIT, string_printf ("%i", (int)cfg_quantqual) );
                     }
                     uSendDlgItemMessage ( wnd, IDC_QUANTQUAL_SLIDER, TBM_SETPOS, 1, cfg_quantqual );
+                }
+                break;
+
+            case IDC_AVGBRATE_EDIT | (EN_KILLFOCUS<<16):
+                {
+                    cfg_avgbrate = GetDlgItemInt ( wnd, IDC_AVGBRATE_EDIT, 0, 0 );
+                    if ( cfg_avgbrate < AB_MIN || cfg_quantqual > AB_MAX ) {
+                        if ( cfg_avgbrate< AB_MIN ) {
+                            cfg_avgbrate = AB_MIN;
+                        } else {
+                            cfg_avgbrate = AB_MAX;
+                        }
+                        uSetDlgItemText ( wnd, IDC_AVGBRATE_EDIT, string_printf ("%i", (int)cfg_avgbrate) );
+                    }
+                    uSendDlgItemMessage ( wnd, IDC_AVGBRATE_SLIDER, TBM_SETPOS, 1, cfg_avgbrate );
                 }
                 break;
 
@@ -685,14 +740,28 @@ class config_faac : public config {
                 }
                 break;
 
+            case IDC_USE_QQ:
+                {
+                    cfg_use_qq = !cfg_use_qq;
+                }
+                break;
+
+            case IDC_USE_AB:
+                {
+                    cfg_use_ab = !cfg_use_ab;
+                }
+                break;
+
             case IDC_DEFAULTS:
                 {
                     cfg_objecttype = FF_DEFAULT_OBJECTTYPE;
                     cfg_midside = FF_DEFAULT_MIDSIDE;
                     cfg_tns = FF_DEFAULT_TNS;
-                    cfg_bitrate = FF_DEFAULT_BITRATE;
+                    cfg_avgbrate = FF_DEFAULT_AVGBRATE;
                     cfg_quantqual = FF_DEFAULT_QUANTQUAL;
                     cfg_cutoff = FF_DEFAULT_CUTOFF;
+                    cfg_use_qq = FF_DEFAULT_USE_QQ;
+                    cfg_use_ab = FF_DEFAULT_USE_AB;
                     update ( wnd );
                 }
                 break;
@@ -700,9 +769,16 @@ class config_faac : public config {
             break;
 
         case WM_HSCROLL:
-            {
-                cfg_quantqual = uSendDlgItemMessage ( wnd, IDC_QUANTQUAL_SLIDER, TBM_GETPOS, 0, 0 );
+            switch ( uGetWindowLong((HWND)lp, GWL_ID) ) {
+            case IDC_QUANTQUAL_SLIDER:
+                cfg_quantqual = uSendMessage ( (HWND)lp, TBM_GETPOS, 0, 0 );
                 uSetDlgItemText ( wnd, IDC_QUANTQUAL_EDIT, string_printf ("%i", (int)cfg_quantqual) );
+                break;
+
+            case IDC_AVGBRATE_SLIDER:
+                cfg_avgbrate = uSendMessage ( (HWND)lp, TBM_GETPOS, 0, 0 );
+                uSetDlgItemText ( wnd, IDC_AVGBRATE_EDIT, string_printf ("%i", (int)cfg_avgbrate) );
+                break;
             }
             break;
         }
