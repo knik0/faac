@@ -14,6 +14,7 @@ public:
 	void	DeleteRegKey(char *SubKey);
 
 	void	setRegBool(char *keyStr , BOOL val);
+	void	setRegBool(char *keyStr , bool val);
 	void	setRegByte(char *keyStr , BYTE val);
 	void	setRegWord(char *keyStr , WORD val);
 	void	setRegDword(char *keyStr , DWORD val);
@@ -22,6 +23,7 @@ public:
 	void	setRegValN(char *keyStr , BYTE *addr,  DWORD size);
 
 	BOOL	getSetRegBool(char *keyStr, BOOL var);
+	bool	getSetRegBool(char *keyStr, bool var);
 	BYTE	getSetRegByte(char *keyStr, BYTE var);
 	WORD	getSetRegWord(char *keyStr, WORD var);
 	DWORD	getSetRegDword(char *keyStr, DWORD var);

@@ -26,11 +26,14 @@ LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
 // Dialog
 //
 
-IDD_COMPRESSION DIALOG DISCARDABLE  0, 0, 184, 126
+IDD_ENCODER DIALOG DISCARDABLE  0, 0, 184, 126
 STYLE DS_MODALFRAME | WS_POPUP | WS_VISIBLE | WS_CAPTION | WS_SYSMENU
 CAPTION "MPEG4-AAC options"
 FONT 8, "MS Sans Serif"
 BEGIN
+    DEFPUSHBUTTON   "&OK",IDOK,72,107,36,14
+    PUSHBUTTON      "&Cancel",IDCANCEL,108,107,36,14
+    PUSHBUTTON      "&About",IDC_BTN_ABOUT,144,107,36,14
     CONTROL         "Automatic configuration",IDC_CHK_AUTOCFG,"Button",
                     BS_AUTOCHECKBOX | WS_TABSTOP,4,4,90,10
     CONTROL         "MPEG4",IDC_RADIO_MPEG4,"Button",BS_AUTORADIOBUTTON | 
@@ -49,24 +52,40 @@ BEGIN
                     WS_GROUP,59,29,42,10
     CONTROL         "ADTS",IDC_RADIO_ADTS,"Button",BS_AUTORADIOBUTTON,59,42,
                     41,9
-    CONTROL         "Allow Mid/Side",IDC_ALLOWMIDSIDE,"Button",
+    CONTROL         "Allow Mid/Side",IDC_CHK_ALLOWMIDSIDE,"Button",
                     BS_AUTOCHECKBOX | WS_TABSTOP,108,21,63,10
-    CONTROL         "Use TNS",IDC_USETNS,"Button",BS_AUTOCHECKBOX | 
+    CONTROL         "Use TNS",IDC_CHK_USETNS,"Button",BS_AUTOCHECKBOX | 
                     WS_TABSTOP,108,33,45,10
-    CONTROL         "Use LFE channel",IDC_USELFE,"Button",BS_AUTOCHECKBOX | 
-                    WS_DISABLED | WS_TABSTOP,108,46,67,10
+    CONTROL         "Use LFE channel",IDC_CHK_USELFE,"Button",
+                    BS_AUTOCHECKBOX | WS_DISABLED | WS_TABSTOP,108,46,67,10
     COMBOBOX        IDC_CB_BITRATE,132,68,48,30,CBS_DROPDOWN | WS_VSCROLL | 
                     WS_TABSTOP
     COMBOBOX        IDC_CB_BANDWIDTH,132,85,48,30,CBS_DROPDOWN | WS_VSCROLL | 
                     WS_TABSTOP
-    DEFPUSHBUTTON   "OK",IDOK,72,107,36,14
-    PUSHBUTTON      "Cancel",IDCANCEL,108,107,36,14
-    PUSHBUTTON      "About",IDC_BTN_ABOUT,144,107,36,14
     GROUPBOX        "AAC type",IDC_STATIC,4,18,48,38
     GROUPBOX        "Profile",IDC_STATIC,4,62,48,59
     LTEXT           "Bitrate per channel",IDC_STATIC,59,73,60,8
     LTEXT           "Bandwidth",IDC_STATIC,59,89,34,8
     GROUPBOX        "Header",IDC_STATIC,55,18,48,38
+END
+
+IDD_DECODER DIALOG DISCARDABLE  0, 0, 114, 76
+STYLE DS_MODALFRAME | WS_POPUP | WS_VISIBLE | WS_CAPTION | WS_SYSMENU
+CAPTION "MPEG4-AAC options"
+FONT 8, "MS Sans Serif"
+BEGIN
+    DEFPUSHBUTTON   "&OK",IDOK,70,25,36,14
+    PUSHBUTTON      "&Cancel",IDCANCEL,70,40,36,14
+    PUSHBUTTON      "&About",IDC_BTN_ABOUT,70,55,36,14
+    CONTROL         "Main",IDC_RADIO_MAIN,"Button",BS_AUTORADIOBUTTON | 
+                    WS_GROUP,15,17,31,10
+    CONTROL         "Low",IDC_RADIO_LOW,"Button",BS_AUTORADIOBUTTON,15,30,29,
+                    10
+    CONTROL         "SSR",IDC_RADIO_SSR,"Button",BS_AUTORADIOBUTTON | 
+                    WS_DISABLED,15,41,31,10
+    CONTROL         "LTP",IDC_RADIO_LTP,"Button",BS_AUTORADIOBUTTON,15,54,29,
+                    10
+    GROUPBOX        "Profile",IDC_STATIC,7,7,48,62
 END
 
 
@@ -104,17 +123,86 @@ END
 #ifdef APSTUDIO_INVOKED
 GUIDELINES DESIGNINFO DISCARDABLE 
 BEGIN
-    IDD_COMPRESSION, DIALOG
+    IDD_ENCODER, DIALOG
     BEGIN
         LEFTMARGIN, 4
         RIGHTMARGIN, 180
         TOPMARGIN, 4
         BOTTOMMARGIN, 121
     END
+
+    IDD_DECODER, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 106
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 69
+    END
 END
 #endif    // APSTUDIO_INVOKED
 
 #endif    // English (U.S.) resources
+/////////////////////////////////////////////////////////////////////////////
+
+
+/////////////////////////////////////////////////////////////////////////////
+// Italian (Italy) resources
+
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_ITA)
+#ifdef _WIN32
+LANGUAGE LANG_ITALIAN, SUBLANG_ITALIAN
+#pragma code_page(1252)
+#endif //_WIN32
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Dialog
+//
+
+IDD_ABOUT DIALOG DISCARDABLE  0, 0, 191, 230
+STYLE DS_MODALFRAME | WS_POPUP | WS_VISIBLE | WS_CAPTION
+CAPTION "About"
+FONT 8, "MS Sans Serif"
+BEGIN
+    DEFPUSHBUTTON   "&OK",IDOK,134,208,50,14
+    CONTROL         104,IDC_AUDIOCODING,"Static",SS_BITMAP | SS_NOTIFY | 
+                    SS_SUNKEN,7,7,178,69
+    CONTROL         107,IDC_MPEG4IP,"Static",SS_BITMAP | SS_NOTIFY | 
+                    SS_SUNKEN,7,203,59,19
+    CONTROL         106,IDC_EMAIL,"Static",SS_BITMAP | SS_NOTIFY,77,204,43,
+                    18
+    LTEXT           "Static",IDC_L_ABOUT,7,55,177,142
+END
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// DESIGNINFO
+//
+
+#ifdef APSTUDIO_INVOKED
+GUIDELINES DESIGNINFO DISCARDABLE 
+BEGIN
+    IDD_ABOUT, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 184
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 222
+    END
+END
+#endif    // APSTUDIO_INVOKED
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Bitmap
+//
+
+IDB_AUDIOCODING         BITMAP  DISCARDABLE     "AudioCoding.bmp"
+IDB_EMAIL               BITMAP  DISCARDABLE     "Email.bmp"
+IDB_MPEG4IP             BITMAP  DISCARDABLE     "mpeg4ip-v.bmp"
+#endif    // Italian (Italy) resources
 /////////////////////////////////////////////////////////////////////////////
 
 

@@ -1,6 +1,6 @@
 +-----------------------------------------------------------------+
 |                                                                 |
-|                            FAAD Readme                          |
+|                            FAAC Readme                          |
 |                            -----------                          |
 |                                                                 |
 +-----------------------------------------------------------------+
@@ -12,17 +12,17 @@ but WITHOUT ANY WARRANTY.
 
 ----------------------------------------------------------------------------
 
-FAAD is a codec plugin for Cooledit
+FAAC is a codec plugin for Cooledit
 to import .aac/.mp4 files and to export in AAC format.
 
 To use it:
 ----------
 
-In visual studio set "Active Configuration = FAAD - win32 Release" and compile,
-copy FAAC.flt into CoolEdit folder
-delete flt.dat
+1) put FAAC and FAAD2 packages into the same folder;
+2) open the project, set "Active Configuration = FAAC - win32 Release" and compile;
+3) copy FAAC.flt into CoolEdit folder and delete flt.dat
 
 ----------------------------------------------------------------------------
 
 For suggestions, bugs report, etc., you can contact me at
-kreel@interfree.it
+kreel@tiscali.it

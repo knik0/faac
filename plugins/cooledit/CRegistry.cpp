@@ -1,5 +1,5 @@
 /*
-FAAD - codec plugin for Cooledit
+FAAC - codec plugin for Cooledit
 Copyright (C) 2002 Antonio Foranna
 
 This program is free software; you can redistribute it and/or modify
@@ -16,7 +16,7 @@ along with this program; if not, write to the Free Software
 Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 			
 The author can be contacted at:
-kreel@interfree.it
+kreel@tiscali.it
 */
 
 //#include "stdafx.h"
@@ -24,6 +24,12 @@ kreel@interfree.it
 #include <string.h>
 #include <memory.h>
 #include "CRegistry.h"
+
+
+
+// *****************************************************************************
+
+
 
 CRegistry::CRegistry()
 {
@@ -33,19 +39,21 @@ CRegistry::CRegistry()
 
 CRegistry::~CRegistry()
 {
-	if(regKey)
-		RegCloseKey(regKey);
-	if(path)
-		free(path);
+	closeReg();
 }
+
+
+
 // *****************************************************************************
-// *****************************************************************************
-// *****************************************************************************
+
+
 
 #define setPath(SubKey) \
 	if(path) \
 		free(path); \
 	path=strdup(SubKey);
+
+// -----------------------------------------------------------------------------------------------
 
 BOOL CRegistry::openReg(HKEY hKey, char *SubKey)
 {
@@ -63,7 +71,7 @@ BOOL CRegistry::openReg(HKEY hKey, char *SubKey)
 		return FALSE;
 	}
 }
-// *****************************************************************************
+// -----------------------------------------------------------------------------------------------
 
 BOOL CRegistry::openCreateReg(HKEY hKey, char *SubKey)
 {
@@ -91,7 +99,7 @@ BOOL CRegistry::openCreateReg(HKEY hKey, char *SubKey)
 		}
 	}
 }
-// *****************************************************************************
+// -----------------------------------------------------------------------------------------------
 
 void CRegistry::closeReg()
 {
@@ -102,24 +110,29 @@ void CRegistry::closeReg()
 		delete path; 
 	path=NULL;
 }
+
+
+
 // *****************************************************************************
-// *****************************************************************************
-// *****************************************************************************
+
+
 
 void CRegistry::DeleteRegVal(char *SubKey)
 {
 	RegDeleteValue(regKey,SubKey);
 }
-// *****************************************************************************
+// -----------------------------------------------------------------------------------------------
 
 void CRegistry::DeleteRegKey(char *SubKey)
 {
 	RegDeleteKey(regKey,SubKey);
 }
 
+
+
 // *****************************************************************************
-// *****************************************************************************
-// *****************************************************************************
+
+
 
 void CRegistry::setRegBool(char *keyStr , BOOL val)
 {
@@ -129,7 +142,17 @@ DWORD len;
 		tempVal!=val)
 		RegSetValueEx(regKey , keyStr , NULL , REG_BINARY , (BYTE *)&val , sizeof(BOOL));
 }
-// *****************************************************************************
+// -----------------------------------------------------------------------------------------------
+
+void CRegistry::setRegBool(char *keyStr , bool val)
+{
+bool tempVal;
+DWORD len;
+	if(RegQueryValueEx(regKey , keyStr , NULL , NULL, (BYTE *)&tempVal , &len )!=ERROR_SUCCESS ||
+		tempVal!=val)
+		RegSetValueEx(regKey , keyStr , NULL , REG_BINARY , (BYTE *)&val , sizeof(bool));
+}
+// -----------------------------------------------------------------------------------------------
 
 void CRegistry::setRegByte(char *keyStr , BYTE val)
 {
@@ -140,7 +163,7 @@ DWORD	len;
 		tempVal!=val)
 		RegSetValueEx(regKey , keyStr , NULL , REG_DWORD , (BYTE *)&t , sizeof(DWORD));
 }
-// *****************************************************************************
+// -----------------------------------------------------------------------------------------------
 
 void CRegistry::setRegWord(char *keyStr , WORD val)
 {
@@ -151,7 +174,7 @@ DWORD	len;
 		tempVal!=val)
 		RegSetValueEx(regKey , keyStr , NULL , REG_DWORD , (BYTE *)&t , sizeof(DWORD));
 }
-// *****************************************************************************
+// -----------------------------------------------------------------------------------------------
 
 void CRegistry::setRegDword(char *keyStr , DWORD val)
 {
@@ -161,7 +184,7 @@ DWORD len;
 		tempVal!=val)
 		RegSetValueEx(regKey , keyStr , NULL , REG_DWORD , (BYTE *)&val , sizeof(DWORD));
 }
-// *****************************************************************************
+// -----------------------------------------------------------------------------------------------
 
 void CRegistry::setRegFloat(char *keyStr , float val)
 {
@@ -171,7 +194,7 @@ DWORD len;
 		tempVal!=val)
 		RegSetValueEx(regKey , keyStr , NULL , REG_BINARY , (BYTE *)&val , sizeof(float));
 }
-// *****************************************************************************
+// -----------------------------------------------------------------------------------------------
 
 void CRegistry::setRegStr(char *keyStr , char *valStr)
 {
@@ -193,7 +216,7 @@ DWORD slen=strlen(valStr)+1;
 		delete tempVal;
 	}
 }
-// *****************************************************************************
+// -----------------------------------------------------------------------------------------------
 
 void CRegistry::setRegValN(char *keyStr , BYTE *addr,  DWORD size)
 {
@@ -217,8 +240,6 @@ DWORD len;
 
 
 // *****************************************************************************
-// *****************************************************************************
-// *****************************************************************************
 
 
 
@@ -234,7 +255,21 @@ DWORD len=sizeof(BOOL);
 	}
 	return tempVal;
 }
-// *****************************************************************************
+// -----------------------------------------------------------------------------------------------
+
+bool CRegistry::getSetRegBool(char *keyStr, bool val)
+{
+bool tempVal;
+DWORD len=sizeof(bool);
+
+	if(RegQueryValueEx(regKey , keyStr , NULL , NULL, (BYTE *)&tempVal , &len )!=ERROR_SUCCESS)
+	{
+		RegSetValueEx(regKey , keyStr , NULL , REG_BINARY , (BYTE *)&val , sizeof(bool));
+		return val;
+	}
+	return tempVal;
+}
+// -----------------------------------------------------------------------------------------------
 
 BYTE CRegistry::getSetRegByte(char *keyStr, BYTE val)
 {
@@ -249,7 +284,7 @@ DWORD len=sizeof(DWORD);
 	}
 	return (BYTE)tempVal;
 }
-// *****************************************************************************
+// -----------------------------------------------------------------------------------------------
 
 WORD CRegistry::getSetRegWord(char *keyStr, WORD val)
 {
@@ -264,7 +299,7 @@ DWORD len=sizeof(DWORD);
 	}
 	return (WORD)tempVal;
 }
-// *****************************************************************************
+// -----------------------------------------------------------------------------------------------
 
 DWORD CRegistry::getSetRegDword(char *keyStr, DWORD val)
 {
@@ -278,7 +313,7 @@ DWORD len=sizeof(DWORD);
 	}
 	return (DWORD)tempVal;
 }
-// *****************************************************************************
+// -----------------------------------------------------------------------------------------------
 
 float CRegistry::getSetRegFloat(char *keyStr, float val)
 {
@@ -292,7 +327,7 @@ DWORD len=sizeof(float);
 	}
 	return tempVal;
 }
-// *****************************************************************************
+// -----------------------------------------------------------------------------------------------
 
 int CRegistry::getSetRegStr(char *keyStr, char *tempString, char *dest, int maxLen)
 {
@@ -311,7 +346,7 @@ DWORD tempLen=maxLen;
 	}
 	return tempLen;
 }
-// *****************************************************************************
+// -----------------------------------------------------------------------------------------------
 
 int CRegistry::getSetRegValN(char *keyStr, BYTE *tempAddr, BYTE *addr, DWORD size)
 {

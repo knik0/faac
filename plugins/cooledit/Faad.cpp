@@ -1,5 +1,5 @@
 /*
-FAAD - codec plugin for Cooledit
+FAAC - codec plugin for Cooledit
 Copyright (C) 2002 Antonio Foranna
 
 This program is free software; you can redistribute it and/or modify
@@ -16,51 +16,43 @@ along with this program; if not, write to the Free Software
 Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 			
 The author can be contacted at:
-kreel@interfree.it
+kreel@tiscali.it
 */
 
 #include <windows.h>
 #include <stdio.h>		// FILE *
+#include "resource.h"
 #include "filters.h"	// CoolEdit
-#include "defines.h"	// my defines
 #include <faac.h>
 #include <faad.h>
 #include <mp4.h>
-#ifdef __cplusplus
 extern "C" {
-#endif
 #include <aacinfo.h>	// get_AAC_format()
-#ifdef __cplusplus
 }
-#endif
+#include "CRegistry.h"
+#include "Defines.h"	// my defines
+#include "Structs.h"	// my structs
+
+// *********************************************************************************************
+
+extern HINSTANCE hInst;
+
+// -----------------------------------------------------------------------------------------------
+
+extern BOOL DialogMsgProcAbout(HWND hWndDlg, UINT Message, WPARAM wParam, LPARAM lParam);
 
 // *********************************************************************************************
 
 #define MAX_CHANNELS	2
 #define	FAAD_STREAMSIZE	(FAAD_MIN_STREAMSIZE*MAX_CHANNELS)
-
-// -----------------------------------------------------------------------------------------------
-
-#define FREE(ptr) \
-{ \
-	if(ptr) \
-		free(ptr); \
-	ptr=0; \
-}
+#define RAW		0
+#define ADIF	1
+#define ADTS	2
 
 // *********************************************************************************************
 
 typedef struct input_tag // any special vars associated with input file
 {
-//AAC
-FILE			*aacFile;
-DWORD			src_size;		// size of compressed file
-DWORD			tagsize;
-DWORD			bytes_read;		// from file
-DWORD			bytes_consumed;	// by faadDecDecode
-long			bytes_into_buffer;
-unsigned char	*buffer;
-
 //MP4
 MP4FileHandle	mp4File;
 MP4SampleId		sampleId,
@@ -68,15 +60,27 @@ MP4SampleId		sampleId,
 int				track;
 BYTE			type;
 
+//AAC
+FILE			*aacFile;
+DWORD			src_size;		// size of compressed file
+DWORD			tagsize;
+DWORD			bytes_read;		// from file
+DWORD			bytes_consumed;	// from buffer by faadDecDecode
+long			bytes_into_buffer;
+unsigned char	*buffer;
+
+// Raw AAC
+DWORD			bytesconsumed;	// to decode current frame by faadDecDecode
+
 // GLOBAL
 faacDecHandle	hDecoder;
 faadAACInfo		file_info;
 DWORD			len_ms;			// length of file in milliseconds
-WORD			wChannels;
-DWORD			dwSamprate;
-WORD			wBitsPerSample;
-// char			*src_name;		// name of compressed file
-DWORD			dst_size;		// size of decoded file. It's needed to set the length of progress bar
+WORD			Channels;
+DWORD			Samprate;
+WORD			BitsPerSample;
+DWORD			dst_size;		// size of decoded file. Cooledit needs it to update its progress bar
+//char			*src_name;		// name of compressed file
 bool			IsAAC;
 } MYINPUT;
 // -----------------------------------------------------------------------------------------------
@@ -117,6 +121,7 @@ static const char* mpeg4AudioNames[]=
 	"Reserved",
 	"Reserved"
 };
+
 // *********************************************************************************************
 
 int id3v2_tag(unsigned char *buffer)
@@ -137,23 +142,24 @@ int id3v2_tag(unsigned char *buffer)
 
 int GetAACTrack(MP4FileHandle infile)
 {
-    // find AAC track
-    int i, rc;
-	int numTracks = MP4GetNumberOfTracks(infile, NULL, 0);
+// find AAC track
+int i, rc;
+int numTracks = MP4GetNumberOfTracks(infile, NULL, 0);
 
 	for (i = 0; i < numTracks; i++)
     {
-        MP4TrackId trackId = MP4FindTrackId(infile, i, NULL, 0);
-        const char* trackType = MP4GetTrackType(infile, trackId);
+    MP4TrackId trackId = MP4FindTrackId(infile, i, NULL, 0);
+    const char* trackType = MP4GetTrackType(infile, trackId);
 
         if (!strcmp(trackType, MP4_AUDIO_TRACK_TYPE))
         {
-            unsigned char *buff = NULL;
-            unsigned __int32 buff_size = 0;
-            unsigned char dummy2_8, dummy3_8, dummy4_8, dummy5_8, dummy6_8,
-                dummy7_8, dummy8_8;
-            unsigned long dummy1_32;
-            MP4GetTrackESConfiguration(infile, trackId, (unsigned __int8 **)&buff, &buff_size);
+        unsigned char *buff = NULL;
+        unsigned __int32 buff_size = 0;
+        unsigned char dummy2_8, dummy3_8, dummy4_8, dummy5_8, dummy6_8,
+            dummy7_8, dummy8_8;
+        unsigned long dummy1_32;
+
+			MP4GetTrackESConfiguration(infile, trackId, (unsigned __int8 **)&buff, &buff_size);
 
             if (buff)
             {
@@ -170,6 +176,123 @@ int GetAACTrack(MP4FileHandle infile)
 
     // can't decode this
     return -1;
+}
+// *********************************************************************************************
+
+void ReadCfgDec(MY_DEC_CFG *cfg) 
+{ 
+CRegistry reg;
+
+	if(reg.openCreateReg(HKEY_LOCAL_MACHINE,REGISTRY_PROGRAM_NAME  "\\FAAD"))
+	{
+		cfg->DecCfg.defObjectType=reg.getSetRegByte("Profile",LOW);
+		cfg->DecCfg.defSampleRate=reg.getSetRegDword("SampleRate",44100);
+		cfg->DecCfg.outputFormat=reg.getSetRegByte("Bps",FAAD_FMT_16BIT);
+		cfg->Channels=reg.getSetRegByte("Channels",2);
+	}
+	else
+		MessageBox(0,"Can't open registry!",0,MB_OK|MB_ICONSTOP);
+}
+// -----------------------------------------------------------------------------------------------
+
+void WriteCfgDec(MY_DEC_CFG *cfg)
+{ 
+CRegistry reg;
+
+	if(reg.openCreateReg(HKEY_LOCAL_MACHINE,REGISTRY_PROGRAM_NAME  "\\FAAD"))
+	{
+		reg.setRegByte("Profile",cfg->DecCfg.defObjectType); 
+		reg.setRegDword("SampleRate",cfg->DecCfg.defSampleRate); 
+		reg.setRegByte("Bps",cfg->DecCfg.outputFormat);
+		reg.setRegByte("Channels",cfg->Channels);
+	}
+	else
+		MessageBox(0,"Can't open registry!",0,MB_OK|MB_ICONSTOP);
+}
+// -----------------------------------------------------------------------------------------------
+
+//	EnableWindow(GetDlgItem(hWndDlg, IDC_RADIO_SSR), Enabled);
+#define DISABLE_CTRL(Enabled) \
+{ \
+    EnableWindow(GetDlgItem(hWndDlg, IDC_RADIO_MAIN), Enabled); \
+    EnableWindow(GetDlgItem(hWndDlg, IDC_RADIO_LOW), Enabled); \
+    EnableWindow(GetDlgItem(hWndDlg, IDC_RADIO_LTP), Enabled); \
+}
+// -----------------------------------------------------------------------------------------------
+
+static MY_DEC_CFG *CfgDecoder;
+
+BOOL DialogMsgProcDecoder(HWND hWndDlg, UINT Message, WPARAM wParam, LPARAM lParam)
+{
+	switch(Message)
+	{
+	case WM_INITDIALOG:
+		{
+			if(!lParam)
+			{
+				MessageBox(hWndDlg,"Pointer==NULL",0,MB_OK|MB_ICONSTOP);
+				EndDialog(hWndDlg, 0);
+				return TRUE;
+			}
+			CfgDecoder=(MY_DEC_CFG *)lParam;
+
+			switch(CfgDecoder->DecCfg.defObjectType)
+			{
+			case MAIN:
+				CheckDlgButton(hWndDlg,IDC_RADIO_MAIN,TRUE);
+				break;
+			case LOW:
+				CheckDlgButton(hWndDlg,IDC_RADIO_LOW,TRUE);
+				break;
+			case SSR:
+				CheckDlgButton(hWndDlg,IDC_RADIO_SSR,TRUE);
+				break;
+			case LTP:
+				CheckDlgButton(hWndDlg,IDC_RADIO_LTP,TRUE);
+				break;
+			}
+		}
+		break; // End of WM_INITDIALOG                                 
+
+	case WM_CLOSE:
+		// Closing the Dialog behaves the same as Cancel               
+		PostMessage(hWndDlg, WM_COMMAND, IDCANCEL, 0);
+		break; // End of WM_CLOSE                                      
+
+	case WM_COMMAND:
+		switch(LOWORD(wParam))
+		{
+		case IDOK:
+			{
+				if(IsDlgButtonChecked(hWndDlg,IDC_RADIO_MAIN))
+					CfgDecoder->DecCfg.defObjectType=MAIN;
+				if(IsDlgButtonChecked(hWndDlg,IDC_RADIO_LOW))
+					CfgDecoder->DecCfg.defObjectType=LOW;
+				if(IsDlgButtonChecked(hWndDlg,IDC_RADIO_SSR))
+					CfgDecoder->DecCfg.defObjectType=SSR;
+				if(IsDlgButtonChecked(hWndDlg,IDC_RADIO_LTP))
+					CfgDecoder->DecCfg.defObjectType=LTP;
+
+				EndDialog(hWndDlg, (DWORD)CfgDecoder);
+			}
+			break;
+
+        case IDCANCEL:
+			// Ignore data values entered into the controls        
+			// and dismiss the dialog window returning FALSE
+			EndDialog(hWndDlg, (DWORD)FALSE);
+			break;
+
+		case IDC_BTN_ABOUT:
+				DialogBox((HINSTANCE)hInst,(LPCSTR)MAKEINTRESOURCE(IDD_ABOUT), (HWND)hWndDlg, (DLGPROC)DialogMsgProcAbout);
+			break;
+		}
+		break; // End of WM_COMMAND
+	default: 
+		return FALSE;
+	}
+ 
+	return TRUE;
 }
 
 // *********************************************************************************************
@@ -190,16 +313,16 @@ WORD len;
 
 long FAR PASCAL FilterGetFileSize(HANDLE hInput)
 {
-DWORD dst_size;
+	if(!hInput)
+		return 0;
 
-	if(hInput)  
-	{
-		MYINPUT *mi;
-		mi=(MYINPUT *)GlobalLock(hInput);
-		dst_size=mi->dst_size;
-		
-		GlobalUnlock(hInput);
-	}
+DWORD	dst_size;
+MYINPUT	*mi;
+
+	GLOBALLOCK(mi,hInput,MYINPUT,return 0);
+	dst_size=mi->dst_size;
+	
+	GlobalUnlock(hInput);
 
 	return dst_size;
 }
@@ -213,32 +336,24 @@ DWORD FAR PASCAL FilterOptionsString(HANDLE hInput, LPSTR szString)
 		return 0;
 	}
 
-char buf[20];
-MYINPUT *mi;
+MYINPUT	*mi;
 
-mi=(MYINPUT *)GlobalLock(hInput);
+	GLOBALLOCK(mi,hInput,MYINPUT,return 0);
 
-	lstrcpy(szString,"");
-	
-	if(mi->file_info.version==2)
-		lstrcat(szString,"MPEG2 - ");
-	else
-		lstrcat(szString,"MPEG4 - ");
-	
-	sprintf(buf,"%lu bps\n",mi->file_info.bitrate);
-	lstrcat(szString,buf);
+	sprintf(szString,"MPEG%d - %lu bps\n", mi->file_info.version, mi->file_info.bitrate);
 	
 	if(mi->IsAAC)  // AAC file --------------------------------------------------------------------
 	{
 		switch(mi->file_info.headertype)
 		{
-		case 0:
-			lstrcat(szString,"RAW\n");
-			break;
-		case 1:
+		case RAW:
+			lstrcpy(szString,"AAC\nRaw");
+			GlobalUnlock(hInput);
+			return 0; // call FilterGetOptions()
+		case ADIF:
 			lstrcat(szString,"ADIF\n");
 			break;
-		case 2:
+		case ADTS:
 			lstrcat(szString,"ADTS\n");
 			break;
 		}
@@ -263,8 +378,23 @@ mi=(MYINPUT *)GlobalLock(hInput);
 		lstrcat(szString,mpeg4AudioNames[mi->type]);
 	
 	GlobalUnlock(hInput);
+	return 1; // don't call FilterGetOptions()
+}
+// *********************************************************************************************
 
-	return 1;
+DWORD FAR PASCAL FilterOptions(HANDLE hInput)
+{
+/*
+	FilterGetOptions() is called if this function and FilterSetOptions() are exported and FilterOptionsString() returns 0
+	FilterSetOptions() is called only if this function is exported and and it returns 0
+*/
+	return 0;
+}
+// ---------------------------------------------------------------------------------------------
+
+DWORD FAR PASCAL FilterSetOptions(HANDLE hInput, DWORD dwOptions, LONG lSamprate, WORD wChannels, WORD wBPS)
+{
+	return dwOptions;
 }
 // *********************************************************************************************
 
@@ -273,10 +403,21 @@ void FAR PASCAL CloseFilterInput(HANDLE hInput)
 	if(!hInput)
 		return;
 
-MYINPUT far *mi;
+MYINPUT *mi;
 
-	mi=(MYINPUT far *)GlobalLock(hInput);
+	GLOBALLOCK(mi,hInput,MYINPUT,return);
 	
+// Raw AAC file ----------------------------------------------------------------------------------
+	if(mi->file_info.headertype==RAW)
+	{
+	CRegistry	reg;
+
+		if(reg.openCreateReg(HKEY_LOCAL_MACHINE,REGISTRY_PROGRAM_NAME  "\\FAAD"))
+			reg.setRegBool("OpenDialog",FALSE);
+		else
+			MessageBox(0,"Can't open registry!",0,MB_OK|MB_ICONSTOP);
+	}
+
 // AAC file --------------------------------------------------------------------------------------
 	if(mi->aacFile)
 		fclose(mi->aacFile);
@@ -309,7 +450,9 @@ MYINPUT far *mi;
 	} \
 	return 0; \
 }
+// -----------------------------------------------------------------------------------------------
 
+extern DWORD FAR PASCAL ReadFilterInput(HANDLE hInput, unsigned char far *bufout, long lBytes);
 // return handle that will be passed in to close, and write routines
 HANDLE FAR PASCAL OpenFilterInput(LPSTR lpstrFilename, long far *lSamprate, WORD far *wBitsPerSample, WORD far *wChannels, HWND hWnd, long far *lChunkSize)
 {
@@ -319,13 +462,15 @@ faacDecConfigurationPtr	config;
 DWORD					samplerate;
 BYTE					channels,
 						BitsPerSample=16;
+DWORD					Bitrate4RawAAC=0;
+BYTE					Channels4RawAAC=0;
 
-	hInput=GlobalAlloc(GMEM_MOVEABLE|GMEM_SHARE|GMEM_ZEROINIT,sizeof(MYINPUT));
-	if(!hInput)
+start_point:
+
+	if(!(hInput=GlobalAlloc(GMEM_MOVEABLE|GMEM_SHARE|GMEM_ZEROINIT,sizeof(MYINPUT))))
 		ERROR_OFI("Memory allocation error: hInput");
-	mi=(MYINPUT *)GlobalLock(hInput);
-	memset(mi,0,sizeof(MYINPUT));
-
+	if(!(mi=(MYINPUT *)GlobalLock(hInput)))
+		ERROR_OFI("GlobalLock(hInput)");
 
 	mi->IsAAC=strcmpi(lpstrFilename+lstrlen(lpstrFilename)-4,".aac")==0;
 
@@ -356,7 +501,6 @@ BYTE					channels,
 
 		length=MP4GetTrackDuration(mi->mp4File, track);
 		mi->len_ms=(DWORD)MP4ConvertFromTrackDuration(mi->mp4File, track, length, MP4_MSECS_TIME_SCALE);
-//		mi->file_info.bitrate=(int)MP4GetTrackIntegerProperty(mi->mp4File, track, "mdia.minf.stbl.stsd.mp4a.esds.decConfigDescr.avgBitrate");
 		mi->file_info.bitrate=MP4GetTrackBitRate(mi->mp4File, track);
 		mi->file_info.version=MP4GetTrackAudioType(mi->mp4File, track)==MP4_MPEG4_AUDIO_TYPE ? 4 : 2;
 		mi->numSamples=MP4GetTrackNumberOfSamples(mi->mp4File, track);
@@ -378,10 +522,9 @@ BYTE					channels,
 		setvbuf(mi->aacFile,NULL,_IOFBF,32767);
 
 		// get size of file
-		tmp=ftell(mi->aacFile);
 		fseek(mi->aacFile, 0, SEEK_END);
 		mi->src_size=ftell(mi->aacFile);
-		fseek(mi->aacFile, tmp, SEEK_SET);
+		fseek(mi->aacFile, 0, SEEK_SET);
 
 		if(!(mi->buffer=(BYTE *)malloc(FAAD_STREAMSIZE)))
 			ERROR_OFI("Memory allocation error"); 
@@ -429,33 +572,86 @@ BYTE					channels,
 			mi->tagsize=tagsize;
 		}
 
-		if(!(mi->hDecoder=faacDecOpen()))
-			ERROR_OFI("Can't open library");
-
 		if(get_AAC_format(lpstrFilename, &mi->file_info, &seek_table, &seek_table_length, 0))
 		{
 			FREE(seek_table);
-			ERROR_OFI("Error retrieving information form input file");
+			ERROR_OFI("Error retrieving information from input file");
 		}
 		FREE(seek_table);
 
-		if(mi->file_info.headertype==0)
-		{
-			config=faacDecGetCurrentConfiguration(mi->hDecoder);
-			config->defObjectType=mi->file_info.object_type;
-			config->defSampleRate=mi->file_info.sampling_rate;
-			config->outputFormat=FAAD_FMT_16BIT;
-			faacDecSetConfiguration(mi->hDecoder, config);
-		}
+		if(!(mi->hDecoder=faacDecOpen()))
+			ERROR_OFI("Can't open library");
+
+		if(mi->file_info.headertype==RAW)
+			if(!*lSamprate && !*wBitsPerSample && !*wChannels)
+			{
+			CRegistry	reg;
+
+				if(reg.openCreateReg(HKEY_LOCAL_MACHINE,REGISTRY_PROGRAM_NAME  "\\FAAD"))
+					reg.setRegBool("OpenDialog",TRUE);
+				else
+					ERROR_OFI("Can't open registry!");
+			/*
+			CoolEdit resamples audio if the following code is activated
+				*wBitsPerSample=BitsPerSample;
+				*wChannels=2;
+				*lSamprate=44100;
+			*/
+				GlobalUnlock(hInput);
+				return hInput;
+			}
+			else
+			{
+			MY_DEC_CFG	Cfg;
+
+				ReadCfgDec(&Cfg);
+				config=faacDecGetCurrentConfiguration(mi->hDecoder);
+				config->defObjectType=Cfg.DecCfg.defObjectType;
+				config->defSampleRate=Cfg.DecCfg.defSampleRate;//*lSamprate; // doesn't work! Why???
+				config->outputFormat=Cfg.DecCfg.outputFormat;
+				faacDecSetConfiguration(mi->hDecoder, config);
+
+				if(Bitrate4RawAAC)
+					mi->file_info.bitrate=Bitrate4RawAAC*Channels4RawAAC;
+				else
+				{
+				DWORD	Samples,
+						BytesConsumed;
+
+					if((mi->bytes_consumed=faacDecInit(mi->hDecoder, mi->buffer, &samplerate, &channels)) < 0)
+						ERROR_OFI("Can't init library");
+					mi->bytes_into_buffer-=mi->bytes_consumed;
+					if(!(Samples=ReadFilterInput(hInput,0,0)/sizeof(short)))
+						ERROR_OFI(0);
+					BytesConsumed=mi->bytesconsumed;
+					ReadFilterInput(hInput,0,0);
+					if(BytesConsumed>mi->bytesconsumed)
+						mi->bytesconsumed=BytesConsumed;
+					Bitrate4RawAAC=(mi->bytesconsumed*8*Cfg.DecCfg.defSampleRate)/Samples;
+					if(!Bitrate4RawAAC)
+						Bitrate4RawAAC=1000; // try to continue decoding
+					Channels4RawAAC=(BYTE)mi->Channels;
+					if(!Channels4RawAAC)
+						ERROR_OFI("Channels reported by decoder: 0");
+					if(Channels4RawAAC!=Cfg.Channels)
+					{
+					char	buf[256]="";
+						sprintf(buf,"Channels reported by decoder: %d",mi->Channels);
+						MessageBox(0,buf,0,MB_OK|MB_ICONWARNING);
+					}
+					GlobalUnlock(hInput);
+					CloseFilterInput(hInput);
+					goto start_point;
+				}
+			}
 
 		if((mi->bytes_consumed=faacDecInit(mi->hDecoder, mi->buffer, &samplerate, &channels)) < 0)
 			ERROR_OFI("Can't init library");
 		mi->bytes_into_buffer-=mi->bytes_consumed;
-/*
-		if(mi->bytes_consumed>0)
-			faacDecInit reports there is an header to skip
-		this operation will be done in ReadFilterInput
-*/
+
+		if(Channels4RawAAC)
+			channels=Channels4RawAAC;
+
 		mi->len_ms=(DWORD)((1000*((float)mi->src_size*8))/mi->file_info.bitrate);
 	} // END AAC file -----------------------------------------------------------------------------
 
@@ -472,7 +668,7 @@ BYTE					channels,
 		BitsPerSample=32;
 		break;
 	default:
-		ERROR_OFI("Invalid format");
+		ERROR_OFI("Invalid Bps");
 	}
 
 	if(mi->len_ms)
@@ -485,13 +681,12 @@ BYTE					channels,
 	*wChannels=(WORD)channels;
 	*lChunkSize=(BitsPerSample/8)*1024*channels;
 
-	mi->wChannels=(WORD)channels;
-	mi->dwSamprate=samplerate;
-	mi->wBitsPerSample=*wBitsPerSample;
+	mi->Channels=(WORD)channels;
+	mi->Samprate=samplerate;
+	mi->BitsPerSample=*wBitsPerSample;
 //	mi->src_name=strdup(lpstrFilename);
 
 	GlobalUnlock(hInput);
-
 	return hInput;
 }
 // *********************************************************************************************
@@ -504,21 +699,22 @@ BYTE					channels,
 		GlobalUnlock(hInput); \
 	return 0; \
 }
+// -----------------------------------------------------------------------------------------------
 
 DWORD FAR PASCAL ReadFilterInput(HANDLE hInput, unsigned char far *bufout, long lBytes)
 {
 	if(!hInput)
-		ERROR_RFI("Memory allocation error: hInput");
-
+		return 0;
+	
 DWORD				read,
 					tmp,
-					shorts_decoded=0;
+					BytesDecoded=0;
 unsigned char		*buffer=0;
 faacDecFrameInfo	frameInfo;
 char				*sample_buffer=0;
 MYINPUT				*mi;
 
-	mi=(MYINPUT *)GlobalLock(hInput);
+	GLOBALLOCK(mi,hInput,MYINPUT,return 0);
 
 	if(!mi->IsAAC) // MP4 file --------------------------------------------------------------------------
 	{   
@@ -539,10 +735,10 @@ MYINPUT				*mi;
 			}
 
 			sample_buffer=(char *)faacDecDecode(mi->hDecoder,&frameInfo,buffer);
-			shorts_decoded=frameInfo.samples*sizeof(short);
-			memcpy(bufout,sample_buffer,shorts_decoded);
+			BytesDecoded=frameInfo.samples*sizeof(short);
+			memcpy(bufout,sample_buffer,BytesDecoded);
 			FREE(buffer);
-		}while(!shorts_decoded && !frameInfo.error);
+		}while(!BytesDecoded && !frameInfo.error);
 	}
 	else // AAC file --------------------------------------------------------------------------
 	{   
@@ -578,20 +774,25 @@ MYINPUT				*mi;
 				if(mi->bytes_read<mi->src_size)
 					ERROR_RFI("ReadFilterInput: buffer empty!")
 				else
-					return 0;
+					ERROR_RFI(0)
 
 			sample_buffer=(char *)faacDecDecode(mi->hDecoder,&frameInfo,buffer);
-			shorts_decoded=frameInfo.samples*sizeof(short);
-			memcpy(bufout,sample_buffer,shorts_decoded);
-		    mi->bytes_consumed +=frameInfo.bytesconsumed;
+			BytesDecoded=frameInfo.samples*sizeof(short);
+			if(bufout)
+				memcpy(bufout,sample_buffer,BytesDecoded);
+			else // Data needed to decode Raw files
+			{
+				mi->bytesconsumed=frameInfo.bytesconsumed;
+				mi->Channels=frameInfo.channels;
+			}
+		    mi->bytes_consumed+=frameInfo.bytesconsumed;
 			mi->bytes_into_buffer-=mi->bytes_consumed;
-		}while(!shorts_decoded && !frameInfo.error);
+		}while(!BytesDecoded && !frameInfo.error);
 	} // END AAC file --------------------------------------------------------------------------
-
-	GlobalUnlock(hInput);
 
 	if(frameInfo.error)
 		ERROR_RFI((char *)faacDecGetErrorMessage(frameInfo.error));
 
-	return shorts_decoded;
+	GlobalUnlock(hInput);
+	return BytesDecoded;
 }

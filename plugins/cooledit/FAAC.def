@@ -12,5 +12,7 @@ EXPORTS
 	FilterGetFileSize
 	FilterOptionsString
 	FilterGetOptions
-	GetSuggestedSampleType	@16
+	GetSuggestedSampleType
 	DIALOGMsgProc
+	FilterOptions
+	FilterSetOptions

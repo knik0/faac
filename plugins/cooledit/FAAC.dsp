@@ -125,7 +125,7 @@ SOURCE=.\CRegistry.h
 # End Source File
 # Begin Source File
 
-SOURCE=.\defines.h
+SOURCE=.\Defines.h
 # End Source File
 # Begin Source File
 
@@ -137,16 +137,36 @@ SOURCE=..\..\..\faad2\include\faad.h
 # End Source File
 # Begin Source File
 
-SOURCE=.\FILTERS.H
+SOURCE=.\Filters.h
 # End Source File
 # Begin Source File
 
 SOURCE=.\resource.h
 # End Source File
+# Begin Source File
+
+SOURCE=.\Structs.h
+# End Source File
 # End Group
 # Begin Group "Resource Files"
 
 # PROP Default_Filter "ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe"
+# Begin Source File
+
+SOURCE=.\AudioCoding.bmp
+# End Source File
+# Begin Source File
+
+SOURCE=.\Email.bmp
+# End Source File
+# Begin Source File
+
+SOURCE=.\Mail.bmp
+# End Source File
+# Begin Source File
+
+SOURCE=".\mpeg4ip-v.bmp"
+# End Source File
 # End Group
 # End Target
 # End Project
