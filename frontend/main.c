@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: main.c,v 1.4 2001/02/05 21:47:49 menno Exp $
+ * $Id: main.c,v 1.5 2001/02/26 13:55:29 oxygene Exp $
  */
 
 #ifdef _WIN32
@@ -24,6 +24,7 @@
 #endif
 
 #ifdef __unix__
+#define min(a,b) ( (a) < (b) ? (a) : (b) )
 #include <sys/time.h>
 #include <sys/resource.h>
 #include <unistd.h>
