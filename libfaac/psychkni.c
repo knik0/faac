@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: psychkni.c,v 1.14 2003/11/16 05:02:52 stux Exp $
+ * $Id: psychkni.c,v 1.15 2003/12/10 17:48:55 knik Exp $
  */
 #include <stdio.h>
 #include <stdlib.h>
@@ -167,9 +167,8 @@ static void PsyCheckShort(PsyInfo * psyInfo)
   else
     totchg2 = 0.0;
 
-  psyInfo->block_type = ((totchg > 1.0) && (totchg2 > 0.07))
+  psyInfo->block_type = ((totchg > 1.0) && (totchg2 > 0.04))
     ? ONLY_SHORT_WINDOW : ONLY_LONG_WINDOW;
-  //psyInfo->block_type = 0 ? ONLY_SHORT_WINDOW : ONLY_LONG_WINDOW;
 
 #if 0
   {
