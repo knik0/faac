@@ -16,7 +16,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: input.c,v 1.10 2003/08/17 19:38:15 menno Exp $
+ * $Id: input.c,v 1.11 2003/10/17 17:11:18 knik Exp $
  */
 
 #ifdef HAVE_CONFIG_H
@@ -197,7 +197,7 @@ pcmfile_t *wav_open_read(const char *name, int rawinput)
     else
     {
       fseek(sndf->f, 0 , SEEK_END);
-      sndf->samples = ftell(sndf->f) / (sndf->samplebytes * sndf->channels);
+      sndf->samples = ftell(sndf->f);
       rewind(sndf->f);
     }
   }

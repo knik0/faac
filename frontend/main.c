@@ -16,7 +16,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: main.c,v 1.47 2003/10/12 14:30:29 knik Exp $
+ * $Id: main.c,v 1.48 2003/10/17 17:11:18 knik Exp $
  */
 
 #ifdef _MSC_VER
@@ -151,6 +151,7 @@ int main(int argc, char *argv[])
     int rawChans = 0; // disabled by default
     int rawBits = 16;
     int rawRate = 44100;
+    int rawEndian = 1;
 
     int shortctl = SHORTCTL_NORMAL;
 
@@ -203,12 +204,13 @@ int main(int argc, char *argv[])
 #ifdef HAVE_LIBMP4V2
             { "createmp4", 0, 0, 'w'},
 #endif
+	    { "pcmswapbytes", 0, 0, 'X'},
             { 0, 0, 0, 0}
         };
         int c = -1;
         int option_index = 0;
 
-        c = getopt_long(argc, argv, "a:m:o:rnc:q:PR:B:C:I:"
+        c = getopt_long(argc, argv, "a:m:o:rnc:q:PR:B:C:I:X"
 #ifdef HAVE_LIBMP4V2
                         "w"
 #endif
@@ -328,6 +330,9 @@ int main(int argc, char *argv[])
         case 300:
             shortctl = atoi(optarg);
             break;
+	case 'X':
+	  rawEndian = 0;
+	  break;
         case '?':
             break;
         default:
@@ -358,6 +363,7 @@ int main(int argc, char *argv[])
         printf("  -R     Raw PCM input rate.\n");
         printf("  -B     Raw PCM input sample size (8, 16 (default), 24 or 32bits).\n");
         printf("  -C     Raw PCM input channels.\n");
+	printf("  -X     Raw PCM swap input bytes\n");
         printf("  -I <C,LF> Input channel config, default is 3,4 (Center third, LF fourth)\n");
 #ifdef HAVE_LIBMP4V2
         printf("  -w     Wrap AAC data in MP4 container\n");
@@ -378,9 +384,11 @@ int main(int argc, char *argv[])
         infile = wav_open_read(audioFileName, 1);
         if (infile)
         {
+	  infile->bigendian = rawEndian;
             infile->channels = rawChans;
             infile->samplebytes = rawBits / 8;
             infile->samplerate = rawRate;
+	    infile->samples /= (infile->channels & infile->samplebytes);
         }
     }
     else // header input
@@ -679,6 +687,9 @@ int main(int argc, char *argv[])
 
 /*
 $Log: main.c,v $
+Revision 1.48  2003/10/17 17:11:18  knik
+fixed raw input
+
 Revision 1.47  2003/10/12 14:30:29  knik
 more accurate average bitrate control
 
