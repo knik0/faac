@@ -262,27 +262,15 @@ int EncTfFrame (faacAACStream *as, BsBitStream  *fixed_stream)
 			} /* end for(i ..) */
 		} /* end for(chanNum ... ) */
 
-		if (as->use_MS == 0) {
-			for (chanNum=2;chanNum<4;chanNum++) {
-				if (chanNum == 2) {
-					for(i = 0; i < block_size_samples; i++){
-						DTimeSigLookAheadBuf[chanNum][i] = (DTimeSigLookAheadBuf[0][i]+DTimeSigLookAheadBuf[1][i])/2;
-					}
-				} else {
-					for(i = 0; i < block_size_samples; i++){
-						DTimeSigLookAheadBuf[chanNum][i] = (DTimeSigLookAheadBuf[0][i]-DTimeSigLookAheadBuf[1][i])/2;
-					}
-				}
-			}
-		} else if (as->use_MS == 1) {
+		if (as->use_MS == 1) {
 			for (chanNum=0;chanNum<2;chanNum++) {
 				if (chanNum == 0) {
 					for(i = 0; i < block_size_samples; i++){
-						DTimeSigLookAheadBuf[chanNum][i] = (as->inputBuffer[0][i]+as->inputBuffer[1][i])/2;
+						DTimeSigLookAheadBuf[chanNum][i] = (as->inputBuffer[0][i]+as->inputBuffer[1][i])*0.5;
 					}
 				} else {
 					for(i = 0; i < block_size_samples; i++){
-						DTimeSigLookAheadBuf[chanNum][i] = (as->inputBuffer[0][i]-as->inputBuffer[1][i])/2;
+						DTimeSigLookAheadBuf[chanNum][i] = (as->inputBuffer[0][i]-as->inputBuffer[1][i])*0.5;
 					}
 				}
 			}
@@ -291,10 +279,7 @@ int EncTfFrame (faacAACStream *as, BsBitStream  *fixed_stream)
 	}
 
 	if (fixed_stream == NULL) {
-		if (as->use_MS != -1)
-			psy_fill_lookahead(DTimeSigLookAheadBuf, max_ch+2);
-		else
-			psy_fill_lookahead(DTimeSigLookAheadBuf, max_ch);
+		psy_fill_lookahead(DTimeSigLookAheadBuf, max_ch);
 
 		return FNO_ERROR; /* quick'n'dirty fix for encoder startup    HP 21-aug-96 */
 	}

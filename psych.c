@@ -52,9 +52,9 @@ Copyright (c) 1997.
 
 Source file:
 
-$Id: psych.c,v 1.26 2000/01/30 22:24:42 menno Exp $
-$Id: psych.c,v 1.26 2000/01/30 22:24:42 menno Exp $
-$Id: psych.c,v 1.26 2000/01/30 22:24:42 menno Exp $
+$Id: psych.c,v 1.27 2000/01/31 18:59:30 menno Exp $
+$Id: psych.c,v 1.27 2000/01/31 18:59:30 menno Exp $
+$Id: psych.c,v 1.27 2000/01/31 18:59:30 menno Exp $
 
 **********************************************************************/
 
@@ -510,11 +510,25 @@ void EncTf_psycho_acoustic(
 
 	{
 		ch = 0;
-		psy_step1(p_time_signal,sample, no_of_chan);
-		psy_step2(&sample[no_of_chan], &psy_stvar_long[no_of_chan], &psy_stvar_short[no_of_chan], &fft_tbl_long, 
-			&fft_tbl_short, ch);
-		psy_step3(&psy_stvar_long[no_of_chan], &psy_stvar_short[no_of_chan], &psy_var_long, &psy_var_short, ch);
-		psy_step4(&psy_stvar_long[no_of_chan], &psy_stvar_short[no_of_chan], &psy_var_long, &psy_var_short, ch);
+		if (no_of_chan < 2) {
+			psy_step1(p_time_signal,sample, no_of_chan);
+			psy_step2(&sample[no_of_chan], &psy_stvar_long[no_of_chan], &psy_stvar_short[no_of_chan], &fft_tbl_long, 
+				&fft_tbl_short, ch);
+			psy_step3(&psy_stvar_long[no_of_chan], &psy_stvar_short[no_of_chan], &psy_var_long, &psy_var_short, ch);
+			psy_step4(&psy_stvar_long[no_of_chan], &psy_stvar_short[no_of_chan], &psy_var_long, &psy_var_short, ch);
+		} else if (no_of_chan == 3) {
+			int w, l;
+			for (w = 0; w < BLOCK_LEN_LONG; w++) {
+				psy_stvar_long[2].fft_r[w+psy_stvar_long->p_fft] = (psy_stvar_long[0].fft_r[w+psy_stvar_long->p_fft]+psy_stvar_long[1].fft_r[w+psy_stvar_long->p_fft])*0.5;
+				psy_stvar_long[3].fft_r[w+psy_stvar_long->p_fft] = (psy_stvar_long[0].fft_r[w+psy_stvar_long->p_fft]-psy_stvar_long[1].fft_r[w+psy_stvar_long->p_fft])*0.5;
+			}
+			for (l = 0; l < MAX_SHORT_WINDOWS; l++) {
+				for (w = 0; w < BLOCK_LEN_LONG; w++) {
+					psy_stvar_short[2].fft_r[l][w] = (psy_stvar_short[0].fft_r[l][w]+psy_stvar_short[1].fft_r[l][w])*0.5;
+					psy_stvar_short[3].fft_r[l][w] = (psy_stvar_short[0].fft_r[l][w]-psy_stvar_short[1].fft_r[l][w])*0.5;
+				}
+			}
+		}
 
 		if (no_of_chan == 0) {
 			for (b = 0; b < NPART_LONG; b++)
@@ -564,10 +578,6 @@ void EncTf_psycho_acoustic(
 			&psy_var_long, &psy_var_short, ch);
 		psy_step11andahalf(&part_tbl_long, &part_tbl_short, psy_stvar_long, psy_stvar_short, no_of_chan);
 		psy_step11(&part_tbl_long, &part_tbl_short, &psy_stvar_long[no_of_chan], &psy_stvar_short[no_of_chan], ch);
-		psy_step12(&part_tbl_long, &part_tbl_short, &psy_stvar_long[no_of_chan], &psy_stvar_short[no_of_chan],
-			&psy_var_long, &psy_var_short, ch);
-//		psy_step13(&psy_var_long, block_type, no_of_chan);
-		psy_step13(&psy_var_long, block_type, ch);
 		psy_step14(p_sri, &part_tbl_long, &part_tbl_short, &psy_stvar_long[no_of_chan],
 			&psy_stvar_short[no_of_chan], &psy_var_long, &psy_var_short, ch);
 		psy_step15(psy_stvar_long[no_of_chan].use_ms, psy_stvar_short[no_of_chan].use_ms, p_sri, &psy_stvar_long[0], &psy_stvar_short[0], &psy_var_long, &psy_var_short, no_of_chan);
@@ -1057,53 +1067,6 @@ void psy_step11andahalf(PARTITION_TABLE_LONG *part_tbl_long,
 					psy_stvar_short[1].nb[i][b] = tempR;
 				}
 			}
-		}
-	}
-}
-
-
-/* added by T. Araki (1997.7.10) */
-void psy_step12(PARTITION_TABLE_LONG *part_tbl_long,
-				PARTITION_TABLE_SHORT *part_tbl_short,
-				PSY_STATVARIABLE_LONG *psy_stvar_long,
-				PSY_STATVARIABLE_SHORT *psy_stvar_short,
-				PSY_VARIABLE_LONG *psy_var_long,
-				PSY_VARIABLE_SHORT *psy_var_short,
-				int ch
-				)
-{
-    int b;
-
-    psy_var_long->pe = 0.0;
-    for(b = 0; b < part_tbl_long->len; b++){
-		double tp = log((psy_stvar_long->nb[psy_stvar_long->p_nb + b] + 0.0001)
-			/ (psy_var_long->e[b] + 0.0001)); 
-
-		tp = min(0.0, tp);
-		psy_var_long->pe -= part_tbl_long->width[b] * tp;
-    }
-}
-
-void psy_step13(PSY_VARIABLE_LONG *psy_var_long, 
-	        enum WINDOW_TYPE *block_type,
-		int ch
-		)
-{
-	static int old_type;
-//	if (psy_var_long->pe > 1800)
-//	printf("%f\n", psy_var_long->pe);
-
-	if (ch == 0) {
-		if(psy_var_long->pe < 1800) {
-			old_type = ONLY_LONG_WINDOW;
-		} else {
-			old_type = ONLY_SHORT_WINDOW;
-		}
-	} else if(ch == 1) {
-		if((psy_var_long->pe < 1800) && (old_type == ONLY_LONG_WINDOW)) {
-			*block_type = ONLY_LONG_WINDOW;
-		} else {
-			*block_type = ONLY_SHORT_WINDOW;
 		}
 	}
 }
