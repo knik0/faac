@@ -92,11 +92,12 @@ BEGIN
     CONTROL         "Use LTP",IDC_USELTP,"Button",BS_AUTOCHECKBOX | 
                     BS_LEFTTEXT | WS_TABSTOP,13,100,71,10
     RTEXT           "-",IDC_COMPILEDATE,196,160,63,8
-    GROUPBOX        "AAC Profile",IDC_STATIC,203,71,50,46
-    CONTROL         "Main",IDC_MAIN,"Button",BS_AUTORADIOBUTTON,210,92,31,10
-    CONTROL         "LC",IDC_LC,"Button",BS_AUTORADIOBUTTON,210,81,25,10
+    GROUPBOX        "AAC Profile",IDC_STATIC,200,71,53,46
+    CONTROL         "Main LTP",IDC_MAIN,"Button",BS_AUTORADIOBUTTON,204,92,
+                    47,10
+    CONTROL         "LC",IDC_LC,"Button",BS_AUTORADIOBUTTON,204,81,25,10
     CONTROL         "SSR",IDC_SSR,"Button",BS_AUTORADIOBUTTON | WS_DISABLED,
-                    210,103,31,10
+                    204,103,31,10
 END
 
 

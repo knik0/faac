@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: frame.c,v 1.16 2001/03/19 13:19:29 menno Exp $
+ * $Id: frame.c,v 1.17 2001/04/11 13:50:31 menno Exp $
  */
 
 /*
@@ -58,10 +58,10 @@ int FAACAPI faacEncSetConfiguration(faacEncHandle hEncoder,
 	hEncoder->config.useLfe = config->useLfe;
 	hEncoder->config.useTns = config->useTns;
 	hEncoder->config.useLtp = config->useLtp;
-	hEncoder->config.aacProfile = config->aacProfile;
+	hEncoder->config.aacObjectType = config->aacObjectType;
 
-	 /* No SSR supported yet */
-	if ((hEncoder->config.aacProfile != MAIN)&&(hEncoder->config.aacProfile != LOW))
+	 /* No SSR / MAIN supported for now */
+	if ((hEncoder->config.aacObjectType != LTP)&&(hEncoder->config.aacObjectType != LOW))
 		return 0;
 
 	/* Re-init TNS for new profile */
@@ -103,7 +103,7 @@ faacEncHandle FAACAPI faacEncOpen(unsigned long sampleRate,
 	hEncoder->flushFrame = 0;
 
 	/* Default configuration */
-	hEncoder->config.aacProfile = MAIN;
+	hEncoder->config.aacObjectType = LTP;
 	hEncoder->config.allowMidside = 1;
 	hEncoder->config.useLfe = 0;
 	hEncoder->config.useTns = 0;
@@ -193,7 +193,7 @@ int FAACAPI faacEncEncode(faacEncHandle hEncoder,
 	CoderInfo *coderInfo = hEncoder->coderInfo;
 	unsigned int numChannels = hEncoder->numChannels;
 	unsigned int sampleRate = hEncoder->sampleRate;
-	unsigned int aacProfile = hEncoder->config.aacProfile;
+	unsigned int aacObjectType = hEncoder->config.aacObjectType;
 	unsigned int useLfe = hEncoder->config.useLfe;
 	unsigned int useTns = hEncoder->config.useTns;
 	unsigned int useLtp = hEncoder->config.useLtp;
@@ -346,7 +346,7 @@ int FAACAPI faacEncEncode(faacEncHandle hEncoder,
 			tnsInfo_for_LTP = NULL;
 
 		if(channelInfo[channel].present && (!channelInfo[channel].lfe) &&
-			(coderInfo[channel].block_type != ONLY_SHORT_WINDOW) && (useLtp)) 
+			(coderInfo[channel].block_type != ONLY_SHORT_WINDOW) && (useLtp) && (aacObjectType == LTP)) 
 		{
 			LtpEncode(hEncoder,
 				&coderInfo[channel],
@@ -392,7 +392,7 @@ int FAACAPI faacEncEncode(faacEncHandle hEncoder,
 			else
 				tnsDecInfo = NULL;
 			
-			if ((!channelInfo[channel].lfe) && (useLtp)) {  /* no reconstruction needed for LFE channel*/
+			if ((!channelInfo[channel].lfe) && (useLtp) && (aacObjectType == LTP)) {  /* no reconstruction needed for LFE channel*/
 
 				LtpReconstruct(&coderInfo[channel], &(coderInfo[channel].ltpInfo),
 					coderInfo[channel].requantFreq);

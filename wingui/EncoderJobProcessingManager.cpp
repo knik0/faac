@@ -267,7 +267,11 @@ bool CEncoderJobProcessingManager::DoProcessing()
 			pEncConfig->useLfe = poJob->GetUseLfe() ? 1 : 0;
 			pEncConfig->bitRate = poJob->GetBitRate();
 			pEncConfig->bandWidth = poJob->GetBandwidth();
-			pEncConfig->aacProfile = GetAacProfileConstant(poJob->GetAacProfile());
+			pEncConfig->aacObjectType = GetAacProfileConstant(poJob->GetAacProfile());
+
+			/* temp fix for MPEG4 LTP object type */
+			if (pEncConfig->aacObjectType == 1)
+				pEncConfig->aacObjectType = 3;
 
 			if (!faacEncSetConfiguration(hEncoder, pEncConfig))
 			{
@@ -421,7 +425,7 @@ int CEncoderJobProcessingManager::GetAacProfileConstant(CEncoderJob::EAacProfile
 		}
 	case CEncoderJob::eAacProfileMain:
 		{
-			return MAIN;
+			return LTP;
 		}
 	case CEncoderJob::eAacProfileSsr:
 		{

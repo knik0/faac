@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: maingui.c,v 1.12 2001/03/12 20:12:37 menno Exp $
+ * $Id: maingui.c,v 1.13 2001/04/11 13:50:31 menno Exp $
  */
 
 #include <windows.h>
@@ -158,9 +158,9 @@ static DWORD WINAPI EncodeFile(LPVOID pParam)
 			config->useTns = IsDlgButtonChecked(hWnd, IDC_USETNS) == BST_CHECKED ? 1 : 0;
 			config->useLfe = IsDlgButtonChecked(hWnd, IDC_USELFE) == BST_CHECKED ? 1 : 0;
 			config->useLtp = IsDlgButtonChecked(hWnd, IDC_USELTP) == BST_CHECKED ? 1 : 0;
-			config->aacProfile = IsDlgButtonChecked(hWnd, IDC_LC) == BST_CHECKED ? LOW : 0;
-			config->aacProfile = IsDlgButtonChecked(hWnd, IDC_MAIN) == BST_CHECKED ? MAIN : 0;
-			config->aacProfile = IsDlgButtonChecked(hWnd, IDC_SSR) == BST_CHECKED ? SSR : 0;
+			config->aacObjectType = IsDlgButtonChecked(hWnd, IDC_LC) == BST_CHECKED ? LOW : 0;
+			config->aacObjectType = IsDlgButtonChecked(hWnd, IDC_MAIN) == BST_CHECKED ? LTP : 0;
+			config->aacObjectType = IsDlgButtonChecked(hWnd, IDC_SSR) == BST_CHECKED ? SSR : 0;
 			GetDlgItemText(hWnd, IDC_BITRATE, szTemp, sizeof(szTemp));
 			config->bitRate = atoi(szTemp);
 			GetDlgItemText(hWnd, IDC_BANDWIDTH, szTemp, sizeof(szTemp));

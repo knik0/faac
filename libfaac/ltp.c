@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: ltp.c,v 1.3 2001/03/12 16:58:37 menno Exp $
+ * $Id: ltp.c,v 1.4 2001/04/11 13:50:31 menno Exp $
  */
 
 #include <stdio.h>
@@ -123,7 +123,7 @@ static double snr_pred(double *mdct_in, double *mdct_pred, int *sfb_flag, int *s
 	return (num_bit);
 }
 
-static void prediction(short *buffer, double *predicted_samples, double *weight, int lag,
+static void prediction(double *buffer, double *predicted_samples, double *weight, int lag,
 				int flen)
 {
 	int i, offset;
@@ -161,7 +161,7 @@ static void w_quantize(double *freq, int *ltp_idx)
 	*freq = codebook[*ltp_idx];
 }
 
-static int pitch(double *sb_samples, short *x_buffer, int flen, int lag0, int lag1, 
+static int pitch(double *sb_samples, double *x_buffer, int flen, int lag0, int lag1, 
 		  double *predicted_samples, double *gain, int *cb_idx)
 {
 	int i, j, delay;
@@ -287,7 +287,7 @@ void LtpInit(faacEncHandle hEncoder)
 	for (channel = 0; channel < hEncoder->numChannels; channel++) {
 		LtpInfo *ltpInfo = &(hEncoder->coderInfo[channel].ltpInfo);
 
-		ltpInfo->buffer = AllocMemory(NOK_LT_BLEN * sizeof(short));
+		ltpInfo->buffer = AllocMemory(NOK_LT_BLEN * sizeof(double));
 		ltpInfo->mdct_predicted = AllocMemory(2*BLOCK_LEN_LONG*sizeof(double));
 		ltpInfo->time_buffer = AllocMemory(BLOCK_LEN_LONG*sizeof(double));
 		ltpInfo->ltp_overlap_buffer = AllocMemory(BLOCK_LEN_LONG*sizeof(double));
@@ -409,10 +409,7 @@ void  LtpUpdate(LtpInfo *ltpInfo, double *time_signal,
 
 	for(i = 0; i < block_size_long; i++) 
 	{
-		ltpInfo->buffer[NOK_LT_BLEN - 2 * block_size_long + i] = 
-			(short)double_to_int(time_signal[i]);
-
-		ltpInfo->buffer[NOK_LT_BLEN - block_size_long + i] = 
-			(short)double_to_int(overlap_signal[i]);
+		ltpInfo->buffer[NOK_LT_BLEN - 2 * block_size_long + i] = time_signal[i];
+		ltpInfo->buffer[NOK_LT_BLEN - block_size_long + i] = overlap_signal[i];
 	}
 }

@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: coder.h,v 1.4 2001/03/05 11:33:37 menno Exp $
+ * $Id: coder.h,v 1.5 2001/04/11 13:50:31 menno Exp $
  */
 
 #ifndef CODER_H
@@ -105,7 +105,7 @@ typedef struct
 	int delay[MAX_SHORT_WINDOWS];
 	int global_pred_flag;
 	int side_info;
-	short *buffer;
+	double *buffer;
 	double *mdct_predicted;
 
 	double *time_buffer;

@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: bitstream.c,v 1.11 2001/04/03 19:32:13 menno Exp $
+ * $Id: bitstream.c,v 1.12 2001/04/11 13:50:31 menno Exp $
  */
 
 #include <stdlib.h>
@@ -187,7 +187,7 @@ static int WriteADTSHeader(faacEncHandle hEncoder,
 #endif
 		PutBit(bitStream, 0, 2); /* layer == 0 */
 		PutBit(bitStream, 1, 1); /* protection absent */
-		PutBit(bitStream, hEncoder->config.aacProfile, 2); /* profile */
+		PutBit(bitStream, hEncoder->config.aacObjectType, 2); /* profile */
 		PutBit(bitStream, hEncoder->sampleRateIdx, 4); /* sampling rate */
 		PutBit(bitStream, 0, 1); /* private bit */
 		PutBit(bitStream, hEncoder->numChannels, 3); /* ch. config (must be > 0) */

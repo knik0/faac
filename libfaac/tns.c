@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: tns.c,v 1.4 2001/04/10 18:48:58 menno Exp $
+ * $Id: tns.c,v 1.5 2001/04/11 13:50:31 menno Exp $
  */
 
 #include <math.h>
@@ -59,13 +59,14 @@ void TnsInit(faacEncHandle hEncoder)
 {
 	unsigned int channel;
 	int fsIndex = hEncoder->sampleRateIdx;
-	int profile = hEncoder->config.aacProfile;
+	int profile = hEncoder->config.aacObjectType;
 
 	for (channel = 0; channel < hEncoder->numChannels; channel++) {
 		TnsInfo *tnsInfo = &hEncoder->coderInfo[channel].tnsInfo;
 
 		switch( profile ) {
-		case MAIN :
+		case MAIN:
+		case LTP:
 			tnsInfo->tnsMaxBandsLong = tnsMaxBandsLongMainLow[fsIndex];
 			tnsInfo->tnsMaxBandsShort = tnsMaxBandsShortMainLow[fsIndex];
 #ifdef MPEG2AAC

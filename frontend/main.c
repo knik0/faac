@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: main.c,v 1.12 2001/03/19 20:53:37 menno Exp $
+ * $Id: main.c,v 1.13 2001/04/11 13:50:31 menno Exp $
  */
 
 #ifdef _WIN32
@@ -74,7 +74,7 @@ int main(int argc, char *argv[])
 	{
 		printf("USAGE: %s -options infile outfile\n", argv[0]);
 		printf("Options:\n");
-		printf("  -pX   AAC profile, X=L gives LC, X=M gives MAIN\n");
+		printf("  -pX   AAC object type, X=L gives LC, X=M gives MAIN with LTP\n");
 		printf("  -nm   Don\'t use mid/side coding\n");
 		printf("  -tns  Use TNS coding\n");
 		printf("  -ltp  Use LTP coding\n");
@@ -120,9 +120,9 @@ int main(int argc, char *argv[])
 				switch(argv[i][1]) {
 				case 'p': case 'P':
 					if ((argv[i][2] == 'l') || (argv[i][2] == 'L'))
-						myFormat->aacProfile = LOW;
+						myFormat->aacObjectType = LOW;
 					else if ((argv[i][2] == 'm') || (argv[i][2] == 'M'))
-						myFormat->aacProfile = MAIN;
+						myFormat->aacObjectType = LTP;
 				break;
 				case 't': case 'T':
 					if ((argv[i][2] == 'n') || (argv[i][2] == 'N'))
