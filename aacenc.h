@@ -19,6 +19,7 @@ typedef struct {
 	                   // if it is -1 MS is totally off.
 	int use_IS;        // If 1, IS stereo is on, if 0, it is off
 	int use_TNS;       // If 1, TNS is on, if 0, it is off
+	int use_LTP;       // If 1, LTP is on, if 0, it is off
 } faacAACConfig;
 
 // This structure is for internal use of the encoder only.
@@ -35,6 +36,7 @@ typedef struct {
 	int use_MS;
 	int use_IS;
 	int use_TNS;
+	int use_LTP;
 	int profile;
 	double **inputBuffer;
 } faacAACStream;

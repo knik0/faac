@@ -530,7 +530,7 @@ int EncTfFrame (faacAACStream *as, BsBitStream  *fixed_stream)
 		/*******************************************************************************/
 		for(chanNum=0;chanNum<max_ch;chanNum++) 
 		{
-			if(block_type[chanNum] != ONLY_SHORT_WINDOW) 
+			if(as->use_LTP && (block_type[chanNum] != ONLY_SHORT_WINDOW)) 
 			{
 				if(channelInfo[chanNum].cpe)
 				{

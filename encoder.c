@@ -65,6 +65,7 @@ faacAACStream *faacEncodeInit(faacAACConfig *ac, int *samplesToRead, int *bitBuf
 	as->use_MS = ac->use_MS;
 	as->use_IS = ac->use_IS;
 	as->use_TNS = ac->use_TNS;
+	as->use_LTP = ac->use_LTP;
 	as->profile = ac->profile;
 	as->is_first_frame = 1;
 
@@ -280,7 +281,7 @@ faacVersion *faacEncodeVersion(void)
 	faacVersion *faacv = malloc(sizeof(faacVersion));
 
 	faacv->DLLMajorVersion = 2;
-	faacv->DLLMinorVersion = 0;
+	faacv->DLLMinorVersion = 10;
 	faacv->MajorVersion = 0;
 	faacv->MinorVersion = 55;
 	strcpy(faacv->HomePage, "http://www.slimline.net/aac/");
@@ -345,6 +346,7 @@ void usage(void)
 	printf(" -nm   Don't use mid/side stereo coding.\n");
 	printf("       The default for MS is intelligent switching.\n");
 	printf(" -nt   Don't use TNS (Temporal Noise Shaping).\n");
+	printf(" -np   Don't use LTP (Long Term Prediction).\n");
 	printf(" -nh   No header will be written to the AAC file.\n");
 	printf(" -is   Use intensity stereo coding.\n");
 	printf(" -oX   Set output directory.\n");
@@ -375,7 +377,7 @@ int main(int argc, char *argv[])
 	int i, frames, cfr;
 	int profile = MAIN_PROFILE;
 	int no_header = 0;
-	int use_IS = 0, use_MS = 0, use_TNS = 1;
+	int use_IS = 0, use_MS = 0, use_TNS = 1, use_LTP = 1;
 	int bit_rate = 128;
 	char out_dir[255];
 	int out_dir_set = 0;
@@ -466,6 +468,8 @@ int main(int argc, char *argv[])
 					use_MS = -1;
 				else if (argv[i][2] == 't' || 'T')
 					use_TNS = 0;
+				else if (argv[i][2] == 'p' || 'P')
+					use_LTP = 0;
 				else
 					no_header = 1;
 				break;
@@ -551,6 +555,7 @@ int main(int argc, char *argv[])
 		ac.use_MS = use_MS;
 		ac.use_IS = use_IS;
 		ac.use_TNS = use_TNS;
+		ac.use_LTP = use_LTP;
 		ac.write_header = !no_header;
 
 		as = faacEncodeInit(&ac, &readNumSample, &bitBufSize, &headerSize);
