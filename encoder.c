@@ -99,8 +99,10 @@ faacAACStream *faacEncodeInit(faacAACConfig *ac, int *samplesToRead, int *bitBuf
 			-1,			/* in: 100dB cutoff freq / input bandwidth */
 			samplesToRead);		/* out: num input samples / frame */
 		as->samplesToRead = *samplesToRead;
-	} else
+	} else {
 		*samplesToRead = 1024*as->channels;
+		as->samplesToRead = *samplesToRead;
+	}
 
 	as->savedSize = 0;
 
