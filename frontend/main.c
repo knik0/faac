@@ -18,7 +18,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: main.c,v 1.72 2004/08/02 20:41:59 danchr Exp $
+ * $Id: main.c,v 1.73 2004/08/02 20:53:23 danchr Exp $
  */
 
 #ifdef _MSC_VER
@@ -42,7 +42,8 @@
 #include <signal.h>
 #endif
 
-#ifdef __APPLE__
+/* the BSD derivatives don't define __unix__ */
+#if defined(__APPLE__) || defined(__NetBSD__) || defined(__FreeBSD__) || defined(__OpenBSD__) || defined(__bsdi__)
 #define __unix__
 #endif
 
@@ -1141,6 +1142,9 @@ int main(int argc, char *argv[])
 
 /*
 $Log: main.c,v $
+Revision 1.73  2004/08/02 20:53:23  danchr
+*BSD portability fix
+
 Revision 1.72  2004/08/02 20:41:59  danchr
 NetBSD portability fix + fixing metadata bugs w/ sscanf()
 
