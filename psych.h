@@ -75,18 +75,29 @@ typedef struct {
 } FFT_TABLE_SHORT;
  
 typedef struct {
+  double bval[NPART_LONG];
+  double qsthr[NPART_LONG];
+  double rnorm[NPART_LONG];
+  double bmax[NPART_LONG];
+  double spreading[NPART_LONG][NPART_LONG];
+} DYN_PART_TABLE_LONG;
+
+typedef struct {
   int    sampling_rate;
   int    len;      /* length of the table */
   int    w_low[NPART_LONG];
   int    w_high[NPART_LONG];
   int    width[NPART_LONG];
-  double bval[NPART_LONG];
-  double qsthr[NPART_LONG];
-  double e_qsthr[NPART_LONG]; /* absolute threshold (energy) in each partition */  
-  double rnorm[NPART_LONG];
-  double bmax[NPART_LONG];
-  double spreading[NPART_LONG][NPART_LONG];
+  DYN_PART_TABLE_LONG *dyn;
 } PARTITION_TABLE_LONG;
+
+typedef struct {
+  double bval[NPART_SHORT];
+  double qsthr[NPART_SHORT];
+  double rnorm[NPART_SHORT];
+  double bmax[NPART_SHORT];
+  double spreading[NPART_SHORT][NPART_SHORT];
+} DYN_PART_TABLE_SHORT;
 
 typedef struct {
   int    sampling_rate;
@@ -94,12 +105,7 @@ typedef struct {
   int    w_low[NPART_SHORT];
   int    w_high[NPART_SHORT];
   int    width[NPART_SHORT];
-  double bval[NPART_SHORT];
-  double qsthr[NPART_SHORT];
-  double e_qsthr[NPART_SHORT]; /* absolute threshold (energy) in each partition */  
-  double rnorm[NPART_SHORT];
-  double bmax[NPART_SHORT];
-  double spreading[NPART_SHORT][NPART_SHORT];
+  DYN_PART_TABLE_SHORT *dyn;
 } PARTITION_TABLE_SHORT;
 
 typedef struct {
