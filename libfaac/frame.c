@@ -16,7 +16,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: frame.c,v 1.30 2002/10/08 18:53:01 menno Exp $
+ * $Id: frame.c,v 1.31 2002/10/11 18:00:15 menno Exp $
  */
 
 /*
@@ -259,7 +259,7 @@ int FAACAPI faacEncClose(faacEncHandle hEncoder)
         if (hEncoder->ltpTimeBuff[channel]) FreeMemory(hEncoder->ltpTimeBuff[channel]);
         if (hEncoder->sampleBuff[channel]) FreeMemory(hEncoder->sampleBuff[channel]);
         if (hEncoder->nextSampleBuff[channel]) FreeMemory(hEncoder->nextSampleBuff[channel]);
-		if (hEncoder->next2SampleBuff[channel]) FreeMemory (hEncoder>next2SampleBuff[channel]);
+		if (hEncoder->next2SampleBuff[channel]) FreeMemory (hEncoder->next2SampleBuff[channel]);
     }
 
     /* Free handle */
@@ -657,6 +657,9 @@ static SR_INFO srInfo[12+1] =
 
 /*
 $Log: frame.c,v $
+Revision 1.31  2002/10/11 18:00:15  menno
+small bugfix
+
 Revision 1.30  2002/10/08 18:53:01  menno
 Fixed some memory leakage
 
