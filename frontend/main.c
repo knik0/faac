@@ -16,7 +16,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: main.c,v 1.53 2003/12/20 04:32:48 stux Exp $
+ * $Id: main.c,v 1.54 2004/02/14 10:31:23 knik Exp $
  */
 
 #ifdef _MSC_VER
@@ -191,8 +191,6 @@ int main(int argc, char *argv[])
             { "objecttype", 0, 0, 'o' },
             { "raw", 0, 0, 'r' },
             { "nomidside", 0, 0, 'n' },
-            { "tns", 0, &useTns, 1 },
-            { "notns", 0, &useTns, 0 },
             { "cutoff", 1, 0, 'c' },
             { "quality", 1, 0, 'q' },
             { "pcmraw", 0, 0, 'P'},
@@ -200,6 +198,8 @@ int main(int argc, char *argv[])
             { "pcmsamplebits", 1, 0, 'B'},
             { "pcmchannels", 1, 0, 'C'},
             { "shortctl", 1, 0, 300},
+            { "tns", 0, 0, 301},
+            { "notns", 0, 0, 302},
 #ifdef HAVE_LIBMP4V2
             { "createmp4", 0, 0, 'w'},
 #endif
@@ -219,7 +219,10 @@ int main(int argc, char *argv[])
             break;
 
         if (!c)
-            continue;
+        {
+          dieUsage = 1;
+          break;
+        }
 
         switch (c) {
         case 'm':
@@ -329,14 +332,20 @@ int main(int argc, char *argv[])
         case 300:
             shortctl = atoi(optarg);
             break;
+        case 301:
+            useTns = 1;
+            break;
+        case 302:
+            useTns = 0;
+            break;
 	case 'X':
 	  rawEndian = 0;
 	  break;
         case '?':
             break;
         default:
-            fprintf(stderr, "%s: unknown option specified, ignoring: %c\n",
-                progName, c);
+          dieUsage = 1;
+          break;
         }
     }
 
@@ -345,7 +354,7 @@ int main(int argc, char *argv[])
     {
         printf("\nUsage: %s -options infile outfile\n", progName);
         printf("Options:\n");
-        printf("  -a <x>\tSet average bitrate to x kbps/channel.\n");
+        printf("  -a <x> Set average bitrate to x kbps/channel. (lower quality mode)\n");
         printf("  -c <bandwidth>\tSet the bandwidth in Hz. (default=automatic)\n");
         printf("  -q <quality>\tSet quantizer quality.\n");
 #if !DEFAULT_TNS
@@ -681,6 +690,9 @@ int main(int argc, char *argv[])
 
 /*
 $Log: main.c,v $
+Revision 1.54  2004/02/14 10:31:23  knik
+Print help and exit when unknown option is specified.
+
 Revision 1.53  2003/12/20 04:32:48  stux
 i've added sms00's OSX patch to faac
 
