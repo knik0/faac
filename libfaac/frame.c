@@ -16,7 +16,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: frame.c,v 1.33 2003/04/13 08:37:23 knik Exp $
+ * $Id: frame.c,v 1.34 2003/05/01 09:31:39 knik Exp $
  */
 
 /*
@@ -52,7 +52,6 @@ static char *libfaacName = FAAC_VERSION " (" __DATE__ ")";
 
 static const psymodellist_t psymodellist[] = {
   {&psymodel2, "knipsycho psychoacoustic"},
-  {&psymodel1, "ISO psychoacoustic model"},
   {NULL}
 };
 
@@ -108,7 +107,7 @@ faacEncConfigurationPtr FAACAPI faacEncGetCurrentConfiguration(faacEncHandle hEn
 int FAACAPI faacEncSetConfiguration(faacEncHandle hEncoder,
                                     faacEncConfigurationPtr config)
 {
-    hEncoder->config.allowMidside = config->allowMidside;
+    hEncoder->config.allowMidside = 0;//config->allowMidside;
     hEncoder->config.useLfe = config->useLfe;
     hEncoder->config.useTns = config->useTns;
     hEncoder->config.aacObjectType = config->aacObjectType;
@@ -145,23 +144,17 @@ int FAACAPI faacEncSetConfiguration(faacEncHandle hEncoder,
 
     if (config->bandWidth)
       hEncoder->config.bandWidth = config->bandWidth;
-    else // set according to quality
+    else if (config->bitRate)
     {
       static const int bwdefault = 16000;
 
-      if (config->quantqual)
-	hEncoder->config.bandWidth =
-	  pow((double)config->quantqual / 100.0, 1.3) * bwdefault;
-      else if (config->bitRate)
 	hEncoder->config.bandWidth =
 	  pow((double)config->bitRate / 64000, 1.3) * bwdefault;
-      else
-        hEncoder->config.bandWidth = bwdefault;
     }
 
     // check bandwidth
     if (hEncoder->config.bandWidth < 100)
-      hEncoder->config.bandWidth = hEncoder->config.bitRate / 4;
+      hEncoder->config.bandWidth = 100;
     if (hEncoder->config.bandWidth > (hEncoder->sampleRate / 2))
       hEncoder->config.bandWidth = hEncoder->sampleRate / 2;
 
@@ -525,6 +518,23 @@ int FAACAPI faacEncEncode(faacEncHandle hEncoder,
         }
     }
 
+    // fix max_sfb in CPE mode
+    for (channel = 0; channel < numChannels; channel++)
+    {
+	if (channelInfo[channel].present
+	    && (channelInfo[channel].cpe)
+	    && (channelInfo[channel].ch_is_left))
+	{
+	  CoderInfo *cil, *cir;
+
+	  cil = &coderInfo[channel];
+	  cir = &coderInfo[channelInfo[channel].paired_ch];
+
+	  cil->max_sfb = cir->max_sfb = max(cil->max_sfb, cir->max_sfb);
+          cil->nr_of_sfb = cir->nr_of_sfb = cil->max_sfb;
+	}
+    }
+
     MSReconstruct(coderInfo, channelInfo, numChannels);
 
     for (channel = 0; channel < numChannels; channel++)
@@ -689,6 +699,12 @@ static SR_INFO srInfo[12+1] =
 
 /*
 $Log: frame.c,v $
+Revision 1.34  2003/05/01 09:31:39  knik
+removed ISO psyodel
+disabled m/s coding
+fixed default bandwidth
+reduced max_sfb check
+
 Revision 1.33  2003/04/13 08:37:23  knik
 version number moved to version.h
 
