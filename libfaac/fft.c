@@ -1,6 +1,6 @@
 /*
  * FAAC - Freeware Advanced Audio Coder
- * $Id: fft.c,v 1.7 2002/08/21 16:52:25 knik Exp $
+ * $Id: fft.c,v 1.8 2002/11/23 17:32:54 knik Exp $
  * Copyright (C) 2002 Krzysztof Nikiel
  *
  * This library is free software; you can redistribute it and/or
@@ -164,7 +164,7 @@ void fft(double *xr, double *xi, int logm)
 
 void rfft(double *x, int logm)
 {
-   static double xi[1 << MAXLOGM];
+   double xi[1 << MAXLOGM];
 
    if (logm > MAXLOGM)
    {
@@ -200,6 +200,9 @@ void ffti(double *xr, double *xi, int logm)
 
 /*
 $Log: fft.c,v $
+Revision 1.8  2002/11/23 17:32:54  knik
+rfft: made xi a local variable
+
 Revision 1.7  2002/08/21 16:52:25  knik
 new simplier and faster fft routine and correct real fft
 new real fft is just a complex fft wrapper so it is slower than optimal but
