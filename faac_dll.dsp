@@ -158,6 +158,10 @@ SOURCE=.\transfo.c
 
 SOURCE=.\winswitch.c
 # End Source File
+# Begin Source File
+
+SOURCE=.\faac.c
+# End Source File
 # End Group
 # Begin Group "Resource Files"
 
