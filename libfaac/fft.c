@@ -1,6 +1,6 @@
 /*
  * FAAC - Freeware Advanced Audio Coder
- * $Id: fft.c,v 1.8 2002/11/23 17:32:54 knik Exp $
+ * $Id: fft.c,v 1.9 2003/09/07 16:48:01 knik Exp $
  * Copyright (C) 2002 Krzysztof Nikiel
  *
  * This library is free software; you can redistribute it and/or
@@ -26,7 +26,8 @@
 #include "fft.h"
 #include "util.h"
 
-#define MAXLOGM 11
+#define MAXLOGM 9
+#define MAXLOGR 8
 
 typedef float fftfloat;
 
@@ -164,11 +165,11 @@ void fft(double *xr, double *xi, int logm)
 
 void rfft(double *x, int logm)
 {
-   double xi[1 << MAXLOGM];
+   double xi[1 << MAXLOGR];
 
-   if (logm > MAXLOGM)
+   if (logm > MAXLOGR)
    {
-     fprintf(stderr, "fft size too big\n");
+     fprintf(stderr, "rfft size too big\n");
      exit(1);
    }
 
@@ -200,6 +201,9 @@ void ffti(double *xr, double *xi, int logm)
 
 /*
 $Log: fft.c,v $
+Revision 1.9  2003/09/07 16:48:01  knik
+reduced arrays size
+
 Revision 1.8  2002/11/23 17:32:54  knik
 rfft: made xi a local variable
 
