@@ -120,10 +120,6 @@ SOURCE=.\huffman.c
 # End Source File
 # Begin Source File
 
-SOURCE=.\is.c
-# End Source File
-# Begin Source File
-
 SOURCE=.\mc_enc.c
 # End Source File
 # Begin Source File
