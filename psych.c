@@ -52,9 +52,9 @@ Copyright (c) 1997.
 
 Source file:
 
-$Id: psych.c,v 1.45 2000/02/08 12:12:47 oxygene2000 Exp $
-$Id: psych.c,v 1.45 2000/02/08 12:12:47 oxygene2000 Exp $
-$Id: psych.c,v 1.45 2000/02/08 12:12:47 oxygene2000 Exp $
+$Id: psych.c,v 1.46 2000/02/14 08:22:02 lenox Exp $
+$Id: psych.c,v 1.46 2000/02/14 08:22:02 lenox Exp $
+$Id: psych.c,v 1.46 2000/02/14 08:22:02 lenox Exp $
 
 **********************************************************************/
 
@@ -64,9 +64,9 @@ $Id: psych.c,v 1.45 2000/02/08 12:12:47 oxygene2000 Exp $
 #include <memory.h>
 #include "tf_main.h"
 #include "psych.h"
+#include "transfo.h"
 
-void complspectrum( double *f, unsigned lg2n );
-
+double sqrt2048, sqrt256;
 
 SR_INFO sr_info_aac[MAX_SAMPLING_RATES+1] =
 {
@@ -218,7 +218,7 @@ void psy_fft_table_init(FFT_TABLE_LONG *fft_tbl_long,
 /* added by T. Okada (1997.07.10) end */
 
 /*
- * This Function calculates the Frequency in Hertz given a 
+ * This Function calculates the Frequency in Hertz given a
  * Bark-value. It uses the Traunmueller-formula for bark>2
  * and a linear inerpolation below. 
  * KAF
@@ -448,6 +448,8 @@ void psy_calc_init(
 		psy_stvar_short->last7_nb[i] = 90.0;
     }
 	/* added by T. Araki (1997.10.16) end */
+sqrt2048 = 1/sqrt(2048);
+sqrt256 = 1/sqrt(256);
 }
 
 void psy_fill_lookahead(double *p_time_signal[], int no_of_chan)
@@ -553,7 +555,7 @@ void EncTf_psycho_acoustic(
 					psy_var_short.c[i][b] = psy_stvar_short[1].save_cw[i][b];
 		}
 
-		psy_step5(&part_tbl_long, &part_tbl_short, &psy_stvar_long[no_of_chan], &psy_stvar_short[no_of_chan], 
+		psy_step5(&part_tbl_long, &part_tbl_short, &psy_stvar_long[no_of_chan], &psy_stvar_short[no_of_chan],
 			&psy_var_long, &psy_var_short, ch);
 		psy_step6(&part_tbl_long, &part_tbl_short, &psy_stvar_long[no_of_chan], &psy_stvar_short[no_of_chan],
 			&psy_var_long, &psy_var_short);
@@ -607,7 +609,7 @@ void EncTf_psycho_acoustic(
 	}
 }
 
-void psy_step1(double* p_time_signal[], 
+void psy_step1(double* p_time_signal[],
 	       double sample[][BLOCK_LEN_LONG*2], 
 	       int ch)
 {
@@ -628,10 +630,7 @@ void psy_step2(double sample[][BLOCK_LEN_LONG*2],
 			   )
 {
     int w,l;
-    double sqrtN;
-	double data[2048+1024]; // +1024 becuase of problems in FFT
-
-	memset(data, 0, (2048+1024)*sizeof(double));
+    double data[2048],a,b;
 
     /* FFT for long */
     psy_stvar_long->p_fft += BLOCK_LEN_LONG;
@@ -639,36 +638,69 @@ void psy_step2(double sample[][BLOCK_LEN_LONG*2],
     if(psy_stvar_long->p_fft == BLOCK_LEN_LONG * 3)
 		psy_stvar_long->p_fft = 0;
 
-	sqrtN = 1/sqrt(2048);
-
     /* windowing */
-	for(w = 0; w < BLOCK_LEN_LONG*2; w++){
-		data[w] = fft_tbl_long->hw[w] * sample[ch][w];
+	for(w = 0; w < BLOCK_LEN_LONG; w++){
+                FFTarray[w].re = fft_tbl_long->hw[(w<<1)] * sample[ch][w<<1];
+                FFTarray[w].im = fft_tbl_long->hw[(w<<1)+1] * sample[ch][(w<<1)+1];
 	}
 
-	complspectrum(data, 11);
+        realft2048(data);
 
 	for(w = 0; w < BLOCK_LEN_LONG; w++){
-		psy_stvar_long->fft_r[w+psy_stvar_long->p_fft] = data[w] * sqrtN;
-		if (w < 420)
-			psy_stvar_long->fft_f[w+psy_stvar_long->p_fft] = data[w+BLOCK_LEN_LONG];
-    }
+                a = data[(w<<1)];
+                b = data[(w<<1)+1];
+		psy_stvar_long->fft_r[w+psy_stvar_long->p_fft] = sqrt(a*a + b*b) * sqrt2048;
+
+//		if (w < 420)
+        		if( a > 0.0 ){
+        			if( b >= 0.0 )
+        				psy_stvar_long->fft_f[w+psy_stvar_long->p_fft] = atan2( b, a );
+        			else
+        				psy_stvar_long->fft_f[w+psy_stvar_long->p_fft] = atan2( b, a )+ M_PI * 2.0;
+        		} else if( a < 0.0 ) {
+        			psy_stvar_long->fft_f[w+psy_stvar_long->p_fft] = atan2( b, a ) + M_PI;
+        		} else {
+        			if( b > 0.0 )
+        				psy_stvar_long->fft_f[w+psy_stvar_long->p_fft] = M_PI * 0.5;
+        			else if( b < 0.0 )
+        				psy_stvar_long->fft_f[w+psy_stvar_long->p_fft] = M_PI * 1.5;
+        			else
+        				psy_stvar_long->fft_f[w+psy_stvar_long->p_fft] = 0.0;
+        		}
+
+        }
 
 	/* FFT for short */
-	sqrtN = 1/sqrt(256);
-
 	for(l = 0; l < MAX_SHORT_WINDOWS; l++){
 
         /* windowing */
-        for(w = 0; w < BLOCK_LEN_SHORT*2; w++){
-			data[w] = fft_tbl_short->hw[w] * sample[ch][OFFSET_FOR_SHORT + (BLOCK_LEN_SHORT * l) + w];
+        for(w = 0; w < BLOCK_LEN_SHORT; w++){
+		FFTarray[w].re = fft_tbl_short->hw[w<<1] * sample[ch][OFFSET_FOR_SHORT + (BLOCK_LEN_SHORT * l) + (w<<1)];
+		FFTarray[w].im = fft_tbl_short->hw[(w<<1)+1] * sample[ch][OFFSET_FOR_SHORT + (BLOCK_LEN_SHORT * l) + (w<<1)+1];
 		}
 
-		complspectrum(data, 8);
+                realft256(data);
 
 		for(w = 0; w < BLOCK_LEN_SHORT; w++){
-			psy_stvar_short->fft_r[l][w] = data[w] * sqrtN;
-			psy_stvar_short->fft_f[l][w] = data[w+BLOCK_LEN_SHORT];
+                        a = data[(w<<1)];
+                        b = data[(w<<1)+1];
+        		psy_stvar_short->fft_r[l][w]= sqrt(a*a + b*b) * sqrt256;
+
+        		if( a > 0.0 ){
+        			if( b >= 0.0 )
+        				psy_stvar_short->fft_f[l][w] = atan2( b, a );
+        			else
+        				psy_stvar_short->fft_f[l][w] = atan2( b, a )+ M_PI * 2.0;
+        		} else if( a < 0.0 ) {
+        			psy_stvar_short->fft_f[l][w] = atan2( b, a ) + M_PI;
+        		} else {
+        			if( b > 0.0 )
+        				psy_stvar_short->fft_f[l][w] = M_PI * 0.5;
+        			else if( b < 0.0 )
+        				psy_stvar_short->fft_f[l][w] = M_PI * 1.5;
+        			else
+        				psy_stvar_short->fft_f[l][w] = 0.0;
+        		}
 		}
     }
 }

@@ -4,6 +4,8 @@
 #include "transfo.h"
 #include "shape_win.h"
 
+#define NFLAT_LS 448  // (BLOCK_LEN_LONG - BLOCK_LEN_SHORT) / 2
+
 #ifndef M_PI
 #define M_PI        3.14159265358979323846
 #endif
@@ -12,9 +14,9 @@
 #define M_PI_2      1.57079632679489661923
 #endif
 
-#define NFLAT_LS 448  // (BLOCK_LEN_LONG - BLOCK_LEN_SHORT) / 2
-
-int sizedouble; // temp value
+int sizedouble;
+double wpi256,wpr256;
+double wpi2048,wpr2048;
 
 /*******************************************************************************
                                Fast MDCT & IMDCT Code
@@ -491,5 +493,94 @@ void specFilter (double p_in[],
 
 	if( p_out != p_in )  memcpy(p_out,p_in,specLen*sizedouble);
         memset(p_out+xlowpass,0,(specLen-xlowpass)*sizedouble);
+}
+
+void initrft(void)
+{
+double theta,wtemp;
+
+theta  = -M_PI/128.0;
+wpi256 = sin(theta);
+wtemp  = sin(0.5*theta);
+wpr256 = -2.0*wtemp*wtemp;
+
+theta   = -M_PI/1024.0;
+wpi2048 = sin(theta);
+wtemp   = sin(0.5*theta);
+wpr2048 = -2.0*wtemp*wtemp;
+}
+
+void realft256(double *data)
+{
+	int i,i1,i2,i3,i4;
+	double h1r,h1i,h2r,h2i,t1,t2,t3;
+	double wr,wi,wtemp;
+
+        pfftw_128(FFTarray);
+        for (i = 0; i < 128; i++){
+             data[(i<<1)] = FFTarray[unscambled128[i]].re;
+             data[(i<<1)+1]= FFTarray[unscambled128[i]].im;
+             }
+
+        wr=1.0+wpr256;
+	wi=wpi256;
+	for (i=1;i<64;i++) {
+		i4=1+(i3=257-(i2=1+(i1=i+i)));
+		h1r=0.5*(data[i1]+data[i3]);
+		h1i=0.5*(data[i2]-data[i4]);
+		h2r=0.5*(data[i2]+data[i4]);
+		h2i=-0.5*(data[i1]-data[i3]);
+                t1=wr*h2r;
+                t2=wi*h2i;
+                t3=wr*h2i+wi*h2r;
+
+                data[i1]=h1r+t1-t2;
+		data[i2]=h1i+t3;
+		data[i3]=h1r-t1+t2;
+		data[i4]=-h1i+t3;
+                wtemp=wr;
+		wr=wtemp*wpr256-wi*wpi256+wr;
+		wi=wi*wpr256+wtemp*wpi256+wi;
+	}
+	data[0] = data[0]+data[1];
+	data[1] = 0;
+        data[129] = -data[129]; // hack to emulate complex FFT
+}
+
+void realft2048(double *data)
+{
+	int i,i1,i2,i3,i4;
+	double h1r,h1i,h2r,h2i,t1,t2,t3;
+	double wr,wi,wtemp;
+
+        pfftw_1024(FFTarray);
+        for (i = 0; i < 1024; i++){
+             data[(i<<1)] = FFTarray[unscambled1024[i]].re;
+             data[(i<<1)+1]= FFTarray[unscambled1024[i]].im;
+             }
+
+        wr=1.0+wpr2048;
+	wi=wpi2048;
+	for (i=1;i<512;i++) {
+		i4=1+(i3=2049-(i2=1+(i1=i+i)));
+		h1r=0.5*(data[i1]+data[i3]);
+		h1i=0.5*(data[i2]-data[i4]);
+		h2r=0.5*(data[i2]+data[i4]);
+		h2i=-0.5*(data[i1]-data[i3]);
+                t1=wr*h2r;
+                t2=wi*h2i;
+                t3=wr*h2i+wi*h2r;
+
+                data[i1]=h1r+t1-t2;
+		data[i2]=h1i+t3;
+		data[i3]=h1r-t1+t2;
+		data[i4]=-h1i+t3;
+                wtemp=wr;
+		wr=wtemp*wpr2048-wi*wpi2048+wr;
+		wi=wi*wpr2048+wtemp*wpi2048+wi;
+	}
+	data[0] = data[0]+data[1];
+	data[1] = 0;
+        data[1025] = -data[1025]; // hack to emulate complex FFT
 }
 

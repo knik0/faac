@@ -23,15 +23,22 @@ DEFINE_PFFTW(16)
 DEFINE_PFFTW(32)
 DEFINE_PFFTW(64)
 DEFINE_PFFTW(128)
+DEFINE_PFFTW(256)
 DEFINE_PFFTW(512)
+DEFINE_PFFTW(1024)
 
 void make_FFT_order(void);
 void make_MDCT_windows(void);
 void IMDCT(fftw_real *data, int N);
 void MDCT(fftw_real *data, int N);
+void realft2048(double *data);
+void realft256(double *data);
+void initrft(void);
 
-extern int unscambled64[64];    /* the permutation array for FFT64*/
-extern int unscambled512[512];  /* the permutation array for FFT512*/
-extern fftw_complex FFTarray[512];    /* the array for in-place FFT */
+extern int unscambled64[64];      /* the permutation array for FFT64*/
+extern int unscambled128[128];    /* the permutation array for FFT128*/
+extern int unscambled512[512];    /* the permutation array for FFT512*/
+extern int unscambled1024[1024];  /* the permutation array for FFT1024*/
+extern fftw_complex FFTarray[1024];    /* the array for in-place FFT */
 
 #endif	  /*	TRANSFORM_H		*/
