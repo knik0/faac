@@ -116,10 +116,6 @@ SOURCE=.\fastfft.c
 # End Source File
 # Begin Source File
 
-SOURCE=.\fft.c
-# End Source File
-# Begin Source File
-
 SOURCE=.\imdct.c
 # End Source File
 # Begin Source File

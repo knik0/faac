@@ -16,6 +16,7 @@
 #include "aac_qc.h"
 #include "all.h"
 #include "aac_se_enc.h"
+#define SQRT2 sqrt(2)
 
 /* AAC tables */
 
@@ -23,6 +24,8 @@
  * and bitrates correctly.                               */
 
 /* Tables for maximum nomber of scalefactor bands */
+/* Needs more fine-tuning. Only the values for 44.1kHz have been changed
+   on lower bitrates. */
 int max_sfb_s[] = { 12, 12, 12, 13, 14, 13, 15, 15, 15, 15, 15, 15 };
 int max_sfb_l[] = { 49, 49, 47, 48, 49, 51, 47, 47, 43, 43, 43, 40 };
 
@@ -34,7 +37,7 @@ double *spectral_line_vector[MAX_TIME_CHANNELS];
 double *reconstructed_spectrum[MAX_TIME_CHANNELS];
 double *overlap_buffer[MAX_TIME_CHANNELS];
 double *DTimeSigBuf[MAX_TIME_CHANNELS];
-double *DTimeSigLookAheadBuf[MAX_TIME_CHANNELS];
+double *DTimeSigLookAheadBuf[MAX_TIME_CHANNELS+2];
 
 /* static variables used by the T/F mapping */
 enum QC_MOD_SELECT qc_select = AAC_QC;                   /* later f(encPara) */
@@ -79,7 +82,7 @@ void EncTfFree (void)
 		if (reconstructed_spectrum[chanNum]) free(reconstructed_spectrum[chanNum]);
 		if (overlap_buffer[chanNum]) free(overlap_buffer[chanNum]);
 	}
-	for (chanNum=0;chanNum<MAX_TIME_CHANNELS;chanNum++) {
+	for (chanNum=0;chanNum<MAX_TIME_CHANNELS+2;chanNum++) {
 		if (DTimeSigLookAheadBuf[chanNum]) free(DTimeSigLookAheadBuf[chanNum]);
 	}
 }
@@ -146,7 +149,7 @@ void EncTfInit (faacAACConfig *ac, int VBR_setting)
 		memset(overlap_buffer[chanNum],0,(block_size_samples)*sizeof(double));
 		block_type[chanNum] = ONLY_LONG_WINDOW;
 	}
-	for (chanNum=0;chanNum<MAX_TIME_CHANNELS;chanNum++) {
+	for (chanNum=0;chanNum<MAX_TIME_CHANNELS+2;chanNum++) {
 		DTimeSigLookAheadBuf[chanNum]   = (double*)malloc((block_size_samples)*sizeof(double));
 		memset(DTimeSigLookAheadBuf[chanNum],0,(block_size_samples)*sizeof(double));
 	}
@@ -236,10 +239,23 @@ int EncTfFrame (faacAACStream *as, BsBitStream  *fixed_stream)
 				DTimeSigLookAheadBuf[chanNum][i] = as->inputBuffer[chanNum][i];
 			} /* end for(i ..) */
 		} /* end for(chanNum ... ) */
+
+		for (chanNum=2;chanNum<4;chanNum++) {
+			if (chanNum == 2) {
+				for(i = 0; i < block_size_samples; i++){
+					DTimeSigLookAheadBuf[chanNum][i] = (DTimeSigLookAheadBuf[0][i]+DTimeSigLookAheadBuf[1][i])/SQRT2;
+				}
+			} else {
+				for(i = 0; i < block_size_samples; i++){
+					DTimeSigLookAheadBuf[chanNum][i] = (DTimeSigLookAheadBuf[0][i]-DTimeSigLookAheadBuf[1][i])/SQRT2;
+				}
+			}
+		}
+
 	}
 
 	if (fixed_stream == NULL) {
-		psy_fill_lookahead(DTimeSigLookAheadBuf, max_ch);
+		psy_fill_lookahead(DTimeSigLookAheadBuf, max_ch+2);
 
 		return FNO_ERROR; /* quick'n'dirty fix for encoder startup    HP 21-aug-96 */
 	}
@@ -259,25 +275,12 @@ int EncTfFrame (faacAACStream *as, BsBitStream  *fixed_stream)
 	******************************************************************************************************************************/
 	{
 		int chanNum;
-		for (chanNum=0;chanNum<max_ch;chanNum++) {
+		for (chanNum=0;chanNum<max_ch+2;chanNum++) {
 
 			EncTf_psycho_acoustic(
 				sampling_rate,
 				chanNum,
 				&DTimeSigLookAheadBuf[chanNum],
-				&next_desired_block_type[chanNum],
-				(int)qc_select,
-				block_size_samples,
-				chpo_long,
-				chpo_short
-				);
-		}
-		for (chanNum=2;chanNum<4;chanNum++) {
-
-			EncTf_psycho_acoustic(
-				sampling_rate,
-				chanNum,
-				NULL,
 				&next_desired_block_type[chanNum],
 				(int)qc_select,
 				block_size_samples,

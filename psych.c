@@ -52,9 +52,9 @@ Copyright (c) 1997.
 
 Source file: 
 
-$Id: psych.c,v 1.10 1999/12/23 15:41:14 menno Exp $
-$Id: psych.c,v 1.10 1999/12/23 15:41:14 menno Exp $
-$Id: psych.c,v 1.10 1999/12/23 15:41:14 menno Exp $
+$Id: psych.c,v 1.11 1999/12/29 13:51:11 menno Exp $
+$Id: psych.c,v 1.11 1999/12/29 13:51:11 menno Exp $
+$Id: psych.c,v 1.11 1999/12/29 13:51:11 menno Exp $
 
 **********************************************************************/
 
@@ -65,8 +65,6 @@ $Id: psych.c,v 1.10 1999/12/23 15:41:14 menno Exp $
 #include "tf_main.h"
 #include "psych.h"
 
-void fft(float *x_real, float *energy, int N);
-void fft_side(float x_real0[],float x_real1[], float *x_real, float *energy, int N, int sign);
 
 SR_INFO sr_info_aac[MAX_SAMPLING_RATES+1] =
 {
@@ -270,6 +268,8 @@ PARTITION_TABLE_SHORT  part_tbl_short_all[MAX_SAMPLING_RATES+1] =
 double          sample[MAX_TIME_CHANNELS+2][BLOCK_LEN_LONG*2];
                                /* sample value */
 
+FFT_TABLE_LONG    fft_tbl_long;  /* table for long fft */
+FFT_TABLE_SHORT    fft_tbl_short;  /* table for short fft */
 PARTITION_TABLE_LONG    *part_tbl_long;  
                                /* partition table for long block */
 PARTITION_TABLE_SHORT    *part_tbl_short;
@@ -279,18 +279,115 @@ PSY_STATVARIABLE_LONG    psy_stvar_long[MAX_TIME_CHANNELS+2];
 PSY_STATVARIABLE_SHORT    psy_stvar_short[MAX_TIME_CHANNELS+2];
                                /* static variables for short block */
 /* added by T. Araki (1997.10.16) end */
-DYN_PARTITION_TABLE_SHORT dyn_short;
-DYN_PARTITION_TABLE_LONG dyn_long;
 
 void EncTf_psycho_acoustic_init( void )
 {
 	int chanNum;
 
+	/* added by T. Araki (1997.10.16) */
+	psy_fft_table_init(&fft_tbl_long, &fft_tbl_short);
+	/* initializing fft table */
 	for (chanNum=0;chanNum<MAX_TIME_CHANNELS+2;chanNum++) {
 		psy_calc_init(&sample[chanNum], &psy_stvar_long[chanNum], &psy_stvar_short[chanNum]);
 		/* initializing static variables */
 	}
+	/* added by T. Araki (1997.10.16) end */
 }
+
+/* added by T. Okada (1997.07.10) */
+void psy_fft_table_init(FFT_TABLE_LONG *fft_tbl_long, 
+			FFT_TABLE_SHORT *fft_tbl_short
+			)
+{    
+
+	int i,j,k,n,n2,n4,n8;
+	double c,s,dc,ds,t;
+
+	/* generating Hann window */
+	for(i = 0; i < BLOCK_LEN_LONG*2; i++)
+		fft_tbl_long->hw[i] = 0.5 * (1-cos(2.0*M_PI*(i+0.5)/(BLOCK_LEN_LONG*2)));
+	for(i = 0; i < BLOCK_LEN_SHORT*2; i++)
+		fft_tbl_short->hw[i] = 0.5 * (1-cos(2.0*M_PI*(i+0.5)/(BLOCK_LEN_SHORT*2)));
+
+	/* generating sin table (long) */
+    n = BLOCK_LEN_LONG * 2;
+    n2 = n/2;  
+    n4 = n2/2;  
+    n8 = n4/2;
+
+    t = sin(M_PI / (double)n);
+    dc = 2.0*t*t;
+    ds = sqrt(dc * (2.0 - dc));
+    t = 2*dc;
+    c = fft_tbl_long->st[n4] = 1.0;
+    s = fft_tbl_long->st[0] = 0;
+
+    for(i = 1; i < n8; i++){
+	c -= dc;  dc += t * c;
+	s += ds;  ds -= t * s;
+	fft_tbl_long->st[i] = s;  fft_tbl_long->st[n4 - i] = c;
+    }
+    if (n8 != 0) fft_tbl_long->st[n8] = sqrt(0.5);
+    for (i = 0; i < n4; i++)
+	fft_tbl_long->st[n2 - i] = fft_tbl_long->st[i];
+    for (i = 0; i < n2 + n4; i++)
+	fft_tbl_long->st[i + n2] = -fft_tbl_long->st[i];
+
+    /* generating sin table (short) */
+    n = BLOCK_LEN_SHORT * 2;
+    n2 = n/2;  
+    n4 = n2/2;  
+    n8 = n4/2;
+
+    t = sin(M_PI / (double)n);
+    dc = 2*t*t;
+    ds = sqrt(dc * (2.0 - dc));
+    t = 2*dc;
+    c = fft_tbl_short->st[n4] = 1.0;
+    s = fft_tbl_short->st[0] = 0;
+
+    for(i = 1; i < n8; i++){
+		c -= dc;  dc += t * c;
+		s += ds;  ds -= t * s;
+		fft_tbl_short->st[i] = s;  fft_tbl_short->st[n4 - i] = c;
+    }
+    if (n8 != 0) fft_tbl_short->st[n8] = sqrt(0.5);
+    for (i = 0; i < n4; i++)
+		fft_tbl_short->st[n2 - i] = fft_tbl_short->st[i];
+    for (i = 0; i < n2 + n4; i++)
+		fft_tbl_short->st[i + n2] = - fft_tbl_short->st[i];
+
+    /* generating bit inverse table (long) */
+    n = BLOCK_LEN_LONG * 2;
+    n2 = n/2; i = j = 0;
+
+    for(;;){
+		fft_tbl_long->brt[i] = j;
+		if( ++i >= n ) break;
+		k = n2;
+		while(k <= j){
+			j -= k;
+			k /= 2;
+		}
+		j += k;
+    }
+
+    /* generating bit inverse table (short) */
+    n = BLOCK_LEN_SHORT * 2;
+    n2 = n/2; i = j = 0;
+
+    for(;;){
+	fft_tbl_short->brt[i] = j;
+	if( ++i >= n ) break;
+	k = n2;
+	while(k <= j){
+	    j -= k;
+	    k /= 2;
+	}
+	j += k;
+    }
+}
+/* added by T. Okada (1997.07.10) end */
 
 /* added by T. Araki (1997.07.10) */
 void psy_part_table_init( 
@@ -329,8 +426,7 @@ void psy_part_table_init(
 			double ji = j + ((*part_tbl_long)->width[b]-1)/2.0;
 			double freq = (*part_tbl_long)->sampling_rate*ji/2048;
 			double bark = 13*atan(0.00076*freq)+3.5*atan((freq/7500)*(freq/7500));
-			//(*part_tbl_long)->bval[b] = bark;
-			dyn_long.bval[b] = bark;
+			(*part_tbl_long)->bval[b] = bark;
 		}
 	}
 
@@ -346,7 +442,7 @@ void psy_part_table_init(
 			double ji = j + ((*part_tbl_short)->width[b]-1)/2.0;
 			double freq = (*part_tbl_short)->sampling_rate*ji/256;
 			double bark = 13*atan(0.00076*freq) + 3.5*atan((freq/7500)*(freq/7500));
-			dyn_short.bval[b]=bark;
+			(*part_tbl_short)->bval[b]=bark;
 		}
 	}
 
@@ -356,11 +452,9 @@ void psy_part_table_init(
 		int b, bb;
 
 		for( b = 0; b < (*part_tbl_long)->len; b++) {
-			//b2 = (*part_tbl_long)->bval[b];
-			b2 = dyn_long.bval[b];
+			b2 = (*part_tbl_long)->bval[b];
 			for( bb = 0; bb < (*part_tbl_long)->len; bb++) {
-				//b1 = (*part_tbl_long)->bval[bb];
-				b1 = dyn_long.bval[bb];
+				b1 = (*part_tbl_long)->bval[bb];
 
 				//tmpx = (b2 >= b1) ? 3.0*(b2-b1) : 1.5*(b2-b1);
 				tmpx = (bb >= b) ? 3.0*(b2-b1) : 1.5*(b2-b1);
@@ -369,14 +463,14 @@ void psy_part_table_init(
 
 				tmpy = 15.811389 + 7.5*(tmpx + 0.474)-17.5 *sqrt(1.0 + (tmpx+0.474)*(tmpx+0.474));
 
-				dyn_long.spreading[b][bb] = ( tmpy < -100.0 ? 0.0 : pow(10.0, (tmpz + tmpy)/10.0) );
+				(*part_tbl_long)->spreading[b][bb] = ( tmpy < -100.0 ? 0.0 : pow(10.0, (tmpz + tmpy)/10.0) );
 			}
 		}
 
 		for( b = 0; b < (*part_tbl_short)->len; b++) {
-			b2 = dyn_short.bval[b];
+			b2 = (*part_tbl_short)->bval[b];
 			for( bb = 0; bb < (*part_tbl_short)->len; bb++) {
-				b1 = dyn_short.bval[bb];
+				b1 = (*part_tbl_short)->bval[bb];
 
 				//tmpx = (b2 >= b1) ? 3.0*(b2-b1) : 1.5*(b2-b1);
 				tmpx = (bb >= b) ? 3.0*(b2-b1) : 1.5*(b2-b1);
@@ -385,7 +479,7 @@ void psy_part_table_init(
 
 				tmpy = 15.811389 + 7.5*(tmpx + 0.474)-17.5 *sqrt(1.0 + (tmpx+0.474)*(tmpx+0.474));
 
-				dyn_short.spreading[b][bb] = ( tmpy < -100.0 ? 0.0 : pow(10.0, (tmpz + tmpy)/10.0) );
+				(*part_tbl_short)->spreading[b][bb] = ( tmpy < -100.0 ? 0.0 : pow(10.0, (tmpz + tmpy)/10.0) );
 			}
 		}
 	}
@@ -395,8 +489,8 @@ void psy_part_table_init(
 		tmp = 0.0;
 		for( bb = 0; bb < (*part_tbl_long)->len; bb++)
 			//tmp += sprdngf( (*part_tbl_long),(*part_tbl_short), bb, b, 0);
-			tmp += dyn_long.spreading[bb][b];
-		dyn_long.rnorm[b] = 1.0/tmp;
+			tmp += (*part_tbl_long)->spreading[bb][b];
+		(*part_tbl_long)->rnorm[b] = 1.0/tmp;
     }
     /* added by T. Okada (1997.07.10) end */
 
@@ -405,26 +499,17 @@ void psy_part_table_init(
 		tmp = 0.0;
 		for( bb = 0; bb < (*part_tbl_short)->len; bb++)
 			//tmp += sprdngf( (*part_tbl_long), (*part_tbl_short), bb, b, 1);
-			tmp += dyn_short.spreading[bb][b];
-		dyn_short.rnorm[b] = 1.0/tmp;
+			tmp += (*part_tbl_short)->spreading[bb][b];
+		(*part_tbl_short)->rnorm[b] = 1.0/tmp;
     }
     /* added by T. Araki (1997.10.16) end */
 
 	for(b = 0; b < (*part_tbl_long)->len; b++) {
-		dyn_long.bmax[b] = pow(10, -3*(0.5+0.5*(M_PI*(min(dyn_long.bval[b], 15.5)/15.5))));
+		(*part_tbl_long)->bmax[b] = pow(10, -3*(0.5+0.5*(M_PI*(min((*part_tbl_long)->bval[b], 15.5)/15.5))));
 	}
 	for(b = 0; b < (*part_tbl_short)->len; b++) {
-		dyn_short.bmax[b] = pow(10, -3*(0.5+0.5*(M_PI*(min(dyn_short.bval[b], 15.5)/15.5))));
+		(*part_tbl_short)->bmax[b] = pow(10, -3*(0.5+0.5*(M_PI*(min((*part_tbl_short)->bval[b], 15.5)/15.5))));
 	}
-
-	/* generating Hann window */
-	for(b = 0; b < BLOCK_LEN_LONG*2; b++)
-		dyn_long.hw[b] = 0.5 * (1-cos(2.0*M_PI*(b+0.5)/(BLOCK_LEN_LONG*2)));
-	for(b = 0; b < BLOCK_LEN_SHORT*2; b++)
-		dyn_short.hw[b] = 0.5 * (1-cos(2.0*M_PI*(b+0.5)/(BLOCK_LEN_SHORT*2)));
-
-	(*part_tbl_short)->dyn = &dyn_short;
-	(*part_tbl_long)->dyn = &dyn_long;
 }
 
 
@@ -441,6 +526,15 @@ void psy_calc_init(
 		sample[ch][i] = 0.0;
 	}
 
+    /*  for(ch = 0; ch < Chans; ++ch){ */
+    for(i = 0; i < BLOCK_LEN_LONG*3; i++){
+      psy_stvar_long->fft_r[i] = 0.0;
+      psy_stvar_long->fft_f[i] = 0.0;
+    }
+    /*  }*/
+
+  psy_stvar_long->p_fft = 0;
+
   /*  for(ch = 0; ch < Chans; ++ch){*/
     for(i = 0; i < NPART_LONG*2; i++){
       psy_stvar_long->nb[i] = 90.0;
@@ -449,6 +543,16 @@ void psy_calc_init(
 
   psy_stvar_long->p_nb = NPART_LONG;
 /* added by T. Araki (1997.07.10) end */
+
+/* added by T. Araki (1997.10.16) */
+  /*  for(ch = 0; ch < Chans; ++ch){*/
+  for(i = 0; i < BLOCK_LEN_SHORT; i++) {
+      psy_stvar_short->last6_fft_r[i] = 0.0;
+      psy_stvar_short->last6_fft_f[i] = 0.0;
+      psy_stvar_short->last7_fft_r[i] = 0.0;
+      psy_stvar_short->last7_fft_f[i] = 0.0;
+    }
+    /*  }*/
 
     /*  for(ch = 0; ch < Chans; ++ch){*/
     for(i = 0; i < NPART_SHORT; i++){
@@ -520,13 +624,11 @@ void EncTf_psycho_acoustic(
 
 	{
 		ch = 0;
-		if (no_of_chan < 2)
-			psy_step1(p_time_signal,sample, no_of_chan);
-		psy_step2(sample, part_tbl_long, part_tbl_short, psy_stvar_long,
-			psy_stvar_short, no_of_chan);
-		if (no_of_chan < 2) {
-			psy_step4(&psy_stvar_long[no_of_chan], &psy_stvar_short[no_of_chan], &psy_var_long, &psy_var_short, no_of_chan);
-		}
+		psy_step1(p_time_signal,sample, no_of_chan);
+		psy_step2(&sample[no_of_chan], &psy_stvar_long[no_of_chan], &psy_stvar_short[no_of_chan], &fft_tbl_long, 
+			&fft_tbl_short, ch);
+		psy_step3(&psy_stvar_long[no_of_chan], &psy_stvar_short[no_of_chan], &psy_var_long, &psy_var_short, ch);
+		psy_step4(&psy_stvar_long[no_of_chan], &psy_stvar_short[no_of_chan], &psy_var_long, &psy_var_short, ch);
 
 		if (no_of_chan == 0) {
 			for (b = 0; b < 70; b++)
@@ -619,204 +721,235 @@ void psy_step1(double* p_time_signal[],
 	}
 }
 
-void psy_step2(double sample[][BLOCK_LEN_LONG*2],
-               PARTITION_TABLE_LONG *part_tbl_long,
-			   PARTITION_TABLE_SHORT *part_tbl_short,
-			   PSY_STATVARIABLE_LONG *psy_stvar_long,
+void psy_step2(double sample[][BLOCK_LEN_LONG*2], 
+               PSY_STATVARIABLE_LONG *psy_stvar_long, 
                PSY_STATVARIABLE_SHORT *psy_stvar_short,
-			   int ch
+	       FFT_TABLE_LONG *fft_tbl_long,
+	       FFT_TABLE_SHORT *fft_tbl_short,
+	       int ch
 	       )
 {
-    int i,l,n;
+    int w,i,j,k,l,h,n,d,ik,k2,n4;
+    double t,s,c,dx,dy;
+	double *xl,*yl;
 
-	if (ch < 2) {
-		for(i = 0; i < BLOCK_LEN_LONG*2; i++){
-			psy_stvar_long[ch].xreal[i] = part_tbl_long->dyn->hw[i] * sample[ch][i];
+    /* FFT for long */
+	xl = (double *)malloc( sizeof(double) * BLOCK_LEN_LONG * 2 );
+	yl = (double *)malloc( sizeof(double) * BLOCK_LEN_LONG * 2 );
+
+    psy_stvar_long->p_fft += BLOCK_LEN_LONG;
+
+    if(psy_stvar_long->p_fft == BLOCK_LEN_LONG * 3)
+		psy_stvar_long->p_fft = 0;
+
+    /* window *//* static int it = 0; */
+    for(i = 0; i < BLOCK_LEN_LONG*2; i++){
+		xl[i] = fft_tbl_long->hw[i] * sample[ch][i];
+		yl[i] = 0.0;
+    }
+
+    n = BLOCK_LEN_LONG*2;
+    n4 = n/4;
+
+    for (i = 0; i < n; i++) {    /* bit inverse */
+		j = fft_tbl_long->brt[i];
+		if (i < j) {
+			t = xl[i];  xl[i] = xl[j];  xl[j] = t;
+			t = yl[i];  yl[i] = yl[j];  yl[j] = t;
 		}
-
-		n = BLOCK_LEN_LONG*2;
-
-		fft(psy_stvar_long[ch].xreal, psy_stvar_long[ch].fft_energy, n);
-
-		for(l = 0; l < MAX_SHORT_WINDOWS; l++){
-
-			/* window */        
-			for(i = 0; i < BLOCK_LEN_SHORT*2; i++){
-				psy_stvar_short[ch].xreal[l][i] = part_tbl_short->dyn->hw[i] * sample[ch][/*OFFSET_FOR_SHORT +*/ BLOCK_LEN_SHORT * l + i];
+    }
+    for (k = 1; k < n; k = k2) {    /* translation */
+		h = 0;  k2 = k + k;  d = n / k2;
+		for (j = 0; j < k; j++) {
+			c = fft_tbl_long->st[h + n4];
+			s = fft_tbl_long->st[h];
+			for (i = j; i < n; i += k2) {
+				ik = i + k;
+				dx = s * yl[ik] + c * xl[ik];
+				dy = c * yl[ik] - s * xl[ik];
+				xl[ik] = xl[i] - dx;  xl[i] += dx;
+				yl[ik] = yl[i] - dy;  yl[i] += dy;
 			}
-
-			n = BLOCK_LEN_SHORT*2;
-
-			fft(psy_stvar_short[ch].xreal[l], psy_stvar_short[ch].fft_energy[l], n);
+			h += d;
 		}
-	} else {
+    }
 
-		n = BLOCK_LEN_LONG*2;
+    for(w = 0; w < BLOCK_LEN_LONG; w++){
+		psy_stvar_long->fft_r[w+psy_stvar_long->p_fft] 
+			= sqrt(xl[w]*xl[w] + yl[w]*yl[w]);
 
-		fft_side(psy_stvar_long[0].xreal, psy_stvar_long[1].xreal, psy_stvar_long[ch].xreal,
-			psy_stvar_long[ch].fft_energy, n, (ch==2)?(1):(-1));
-
-		for(l = 0; l < MAX_SHORT_WINDOWS; l++){
-
-			n = BLOCK_LEN_SHORT*2;
-			
-			fft_side(psy_stvar_short[0].xreal[l], psy_stvar_short[1].xreal[l], psy_stvar_short[ch].xreal[l],
-				psy_stvar_short[ch].fft_energy[l], n, (ch==2)?(1):(-1));
+		if( xl[w] > 0.0 ){
+			if( yl[w] >= 0.0 )
+				psy_stvar_long->fft_f[w+psy_stvar_long->p_fft] = atan( yl[w] / xl[w] );
+			else
+				psy_stvar_long->fft_f[w+psy_stvar_long->p_fft] = atan( yl[w] / xl[w] )+ M_PI * 2.0;
+		} else if( xl[w] < 0.0 ) {
+			psy_stvar_long->fft_f[w+psy_stvar_long->p_fft] = atan( yl[w] / xl[w] ) + M_PI;
+		} else {
+			if( yl[w] > 0.0 )
+				psy_stvar_long->fft_f[w+psy_stvar_long->p_fft] = M_PI * 0.5;
+			else if( yl[w] < 0.0 )
+				psy_stvar_long->fft_f[w+psy_stvar_long->p_fft] = M_PI * 1.5;
+			else
+				psy_stvar_long->fft_f[w+psy_stvar_long->p_fft] = 0.0; /* tmp */
 		}
-	}
-}
+    }
 
-void psy_step4(PSY_STATVARIABLE_LONG *psy_stvar_long,
-               PSY_STATVARIABLE_SHORT *psy_stvar_short,
-			   PSY_VARIABLE_LONG *psy_var_long, 
-			   PSY_VARIABLE_SHORT *psy_var_short,
-			   int ch
-			   )
-{
-    int j,i;
-	static double ax_sav[4][2][8], bx_sav[4][2][8], rx_sav[4][2][8];
-	static double ax_sav_s[4][8][2][128], bx_sav_s[4][8][2][128], rx_sav_s[4][8][2][128];
-	static int init = 1;
+	if (xl) free(xl);
+	if (yl) free(yl);
 
-	if (init) {
-		memset(rx_sav,0, sizeof(rx_sav));
-		memset(ax_sav,0, sizeof(ax_sav));
-		memset(bx_sav,0, sizeof(bx_sav));
-		memset(rx_sav_s,0, sizeof(rx_sav_s));
-		memset(ax_sav_s,0, sizeof(ax_sav_s));
-		memset(bx_sav_s,0, sizeof(bx_sav_s));
-		init = 0;
-	}
 
-	for(i = 0; i < MAX_SHORT_WINDOWS; i++){
-        for(j = 0; j < BLOCK_LEN_SHORT; j++){
-			double an, a1, a2;
-			double bn, b1, b2;
-			double rn, r1, r2;
-			double numre, numim, den;
-			
-			a2 = ax_sav_s[ch][i][1][j];
-			b2 = bx_sav_s[ch][i][1][j];
-			r2 = rx_sav_s[ch][i][1][j];
-			a1 = ax_sav_s[ch][i][1][j] = ax_sav_s[ch][i][0][j];
-			b1 = bx_sav_s[ch][i][1][j] = bx_sav_s[ch][i][0][j];
-			r1 = rx_sav_s[ch][i][1][j] = rx_sav_s[ch][i][0][j];
-			an = ax_sav_s[ch][i][0][j] = psy_stvar_short->xreal[i][j];
-			bn = bx_sav_s[ch][i][0][j] = j==0 ? psy_stvar_short->xreal[i][0] : psy_stvar_short->xreal[i][BLOCK_LEN_SHORT-j];
-			rn = rx_sav_s[ch][i][0][j] = sqrt(psy_stvar_short->fft_energy[i][j]);
-			
-			{ /* square (x1,y1) */
-				if( r1 != 0.0 ) {
-					numre = (a1*b1);
-					numim = (a1*a1-b1*b1)*0.5;
-					den = r1*r1;
-				} else {
-					numre = 1.0;
-					numim = 0.0;
-					den = 1.0;
+	/* added by T. Araki (1997.10.16) */
+	/* FFT for short */
+	xl = (double *)malloc( sizeof(double) * BLOCK_LEN_SHORT * 2 );
+	yl = (double *)malloc( sizeof(double) * BLOCK_LEN_SHORT * 2 );
+
+	for(l = 0; l < MAX_SHORT_WINDOWS; l++){
+
+        /* window */        
+        for(i = 0; i < BLOCK_LEN_SHORT*2; i++){
+			xl[i] = fft_tbl_short->hw[i] * sample[ch][/*OFFSET_FOR_SHORT +*/ BLOCK_LEN_SHORT * l + i];
+			yl[i] = 0.0;
+		}
+
+		n = BLOCK_LEN_SHORT*2;
+		n4 = n/4;
+
+		for (i = 0; i < n; i++) {    /* bit inverse */
+			j = fft_tbl_short->brt[i];
+			if (i < j) {
+				t = xl[i];  xl[i] = xl[j];  xl[j] = t;
+				t = yl[i];  yl[i] = yl[j];  yl[j] = t;
+			}
+		}
+		for (k = 1; k < n; k = k2) {    /* translation */
+			h = 0;  k2 = k + k;  d = n / k2;
+			for (j = 0; j < k; j++) {
+				c = fft_tbl_short->st[h + n4];
+				s = fft_tbl_short->st[h];
+				for (i = j; i < n; i += k2) {
+					ik = i + k;
+					dx = s * yl[ik] + c * xl[ik];
+					dy = c * yl[ik] - s * xl[ik];
+					xl[ik] = xl[i] - dx;  xl[i] += dx;
+					yl[ik] = yl[i] - dy;  yl[i] += dy;
 				}
+				h += d;
 			}
+		}
 
-			{ /* multiply by (x2,-y2) */
-				if( r2 != 0.0 ) {
-					double tmp2 = (numim+numre)*(a2+b2)*0.5;
-					double tmp1 = -a2*numre+tmp2;
-					numre =       -b2*numim+tmp2;
-					numim = tmp1;
-					den *= r2;
-				} else {
-					/* do nothing */
-				}
-			}
+		for(w = 0; w < BLOCK_LEN_SHORT; w++){
+			psy_stvar_short->fft_r[l][w] 
+				= sqrt(xl[w]*xl[w] + yl[w]*yl[w]);
 
-			{ /* r-prime factor */
-				double tmp = (2.0*r1-r2)/den;
-				numre *= tmp;
-				numim *= tmp;
-			}
-
-			if( (den=rn+fabs(2.0*r1-r2)) != 0.0 ) {
-				numre = (an+bn)/2.0-numre;
-				numim = (an-bn)/2.0-numim;
-				psy_var_short->c[i][j] = sqrt(numre*numre+numim*numim)/den;
+			if( xl[w] > 0.0 ){
+				if( yl[w] >= 0.0 )
+					psy_stvar_short->fft_f[l][w] = atan( yl[w] / xl[w] );
+				else
+					psy_stvar_short->fft_f[l][w] = atan( yl[w] / xl[w] )+ M_PI * 2.0;
+			} else if( xl[w] < 0.0 ) {
+				psy_stvar_short->fft_f[l][w] = atan( yl[w] / xl[w] ) + M_PI;
 			} else {
-				psy_var_short->c[i][j] = 0.0;
+				if( yl[w] > 0.0 )
+					psy_stvar_short->fft_f[l][w] = M_PI * 0.5;
+				else if( yl[w] < 0.0 )
+					psy_stvar_short->fft_f[l][w] = M_PI * 1.5;
+				else
+					psy_stvar_short->fft_f[l][w] = 0.0; /* tmp */
 			}
 		}
     }
 
-	for(j = 0; j < 8; j++){
-		double an, a1, a2;
-		double bn, b1, b2;
-		double rn, r1, r2;
-		double numre, numim, den;
+	if (xl) free(xl);
+	if (yl) free(yl);
+	/* added by T. Araki (1997.10.16) end */
+}
+
+void psy_step3(PSY_STATVARIABLE_LONG *psy_stvar_long, 
+               PSY_STATVARIABLE_SHORT *psy_stvar_short, 
+               PSY_VARIABLE_LONG *psy_var_long, 
+               PSY_VARIABLE_SHORT *psy_var_short, 
+               int ch
+	       )
+{
+    int w,i;
+    int p1_l,p2_l;
+
+	p1_l = psy_stvar_long->p_fft - BLOCK_LEN_LONG;
+    if( p1_l < 0 )
+		p1_l = BLOCK_LEN_LONG * 2;
+    p2_l = p1_l - BLOCK_LEN_LONG;
+    if( p2_l < 0 )
+		p2_l = BLOCK_LEN_LONG * 2;
+
+    for(w = 0; w < BLOCK_LEN_LONG; w++){
+		psy_var_long->r_pred[w] = 2.0 * psy_stvar_long->fft_r[p1_l + w] - psy_stvar_long->fft_r[p2_l + w];
+		psy_var_long->f_pred[w] = 2.0 * psy_stvar_long->fft_f[p1_l + w] - psy_stvar_long->fft_f[p2_l + w];
+    }
+
+	/* added by T. Araki (1997.10.16) */
+    for(w = 0; w < BLOCK_LEN_SHORT; w++){
+        psy_var_short->r_pred[0][w] = 2.0 * psy_stvar_short->last7_fft_r[w] - psy_stvar_short->last6_fft_r[w];
+        psy_var_short->f_pred[0][w] = 2.0 * psy_stvar_short->last7_fft_f[w] - psy_stvar_short->last6_fft_f[w];
+        psy_var_short->r_pred[1][w] = 2.0 * psy_stvar_short->fft_r[0][w] - psy_stvar_short->last7_fft_r[w];
+        psy_var_short->f_pred[1][w] = 2.0 * psy_stvar_short->fft_f[0][w] - psy_stvar_short->last7_fft_f[w];
+    }
+
+    for(i = 2; i < MAX_SHORT_WINDOWS; i++){
+        for(w = 0; w < BLOCK_LEN_SHORT; w++){
+			psy_var_short->r_pred[i][w] = 2.0 * psy_stvar_short->fft_r[i - 1][w] - psy_stvar_short->fft_r[i - 2][w];
+			psy_var_short->f_pred[i][w] = 2.0 * psy_stvar_short->fft_f[i - 1][w] - psy_stvar_short->fft_f[i - 2][w];
+		}
+    }
+
+    for(w = 0; w < BLOCK_LEN_SHORT; w++){
+        psy_stvar_short->last6_fft_r[w] = psy_stvar_short->fft_r[6][w];
+		psy_stvar_short->last6_fft_f[w] = psy_stvar_short->fft_f[6][w];
+        psy_stvar_short->last7_fft_r[w] = psy_stvar_short->fft_r[7][w];
+		psy_stvar_short->last7_fft_f[w] = psy_stvar_short->fft_f[7][w];
+    }
+	/* added by T. Araki (1997.10.16) end */
+}
+
+void psy_step4(PSY_STATVARIABLE_LONG *psy_stvar_long,
+               PSY_STATVARIABLE_SHORT *psy_stvar_short,
+	       PSY_VARIABLE_LONG *psy_var_long, 
+	       PSY_VARIABLE_SHORT *psy_var_short,
+	       int ch
+	       )
+{
+    int w,i;
+    double r,f,rp,fp;
+
+    for(w = 0; w < BLOCK_LEN_LONG; w++){
+		r = psy_stvar_long->fft_r[psy_stvar_long->p_fft+w];
+		f = psy_stvar_long->fft_f[psy_stvar_long->p_fft+w];
+		rp = psy_var_long->r_pred[w];
+		fp = psy_var_long->f_pred[w];
 		
-		a2 = ax_sav[ch][1][j];
-		b2 = bx_sav[ch][1][j];
-		r2 = rx_sav[ch][1][j];
-		a1 = ax_sav[ch][1][j] = ax_sav[ch][0][j];
-		b1 = bx_sav[ch][1][j] = bx_sav[ch][0][j];
-		r1 = rx_sav[ch][1][j] = rx_sav[ch][0][j];
-		an = ax_sav[ch][0][j] = psy_stvar_long->xreal[j];
-		bn = bx_sav[ch][0][j] = j==0 ? psy_stvar_long->xreal[0] : psy_stvar_long->xreal[BLOCK_LEN_LONG-j];
-		rn = rx_sav[ch][0][j] = sqrt(psy_stvar_long->fft_energy[j]);
-		
-		{ /* square (x1,y1) */
-			if( r1 != 0.0 ) {
-				numre = (a1*b1);
-				numim = (a1*a1-b1*b1)*0.5;
-				den = r1*r1;
-			} else {
-				numre = 1.0;
-				numim = 0.0;
-				den = 1.0;
-			}
-		}
+		if( r + fabs(rp) != 0.0 )
+			psy_var_long->c[w] = sqrt( psy_sqr(r*cos(f) - rp*cos(fp))
+				+psy_sqr(r*sin(f) - rp*sin(fp)) )/ ( r + fabs(rp) ) ;
+		else
+			psy_var_long->c[w] = 0.0; /* tmp */
+    }
 
-		{ /* multiply by (x2,-y2) */
-			if( r2 != 0.0 ) {
-				double tmp2 = (numim+numre)*(a2+b2)*0.5;
-				double tmp1 = -a2*numre+tmp2;
-				numre =       -b2*numim+tmp2;
-				numim = tmp1;
-				den *= r2;
-			} else {
-				/* do nothing */
-			}
+	/* added by T. Araki (1997.10.16) */
+    for(i = 0; i < MAX_SHORT_WINDOWS; i++){
+        for(w = 0; w < BLOCK_LEN_SHORT; w++){
+			r = psy_stvar_short->fft_r[i][w];
+			f = psy_stvar_short->fft_f[i][w];
+			rp = psy_var_short->r_pred[i][w];
+			fp = psy_var_short->f_pred[i][w];
+			
+			if( r + fabs(rp) != 0.0 )
+				psy_var_short->c[i][w] = sqrt( psy_sqr(r*cos(f) - rp*cos(fp))
+					+psy_sqr(r*sin(f) - rp*sin(fp)) )/ ( r + fabs(rp) ) ;
+			else
+				psy_var_short->c[i][w] = 0.0; /* tmp */
 		}
-
-		{ /* r-prime factor */
-			double tmp = (2.0*r1-r2)/den;
-			numre *= tmp;
-			numim *= tmp;
-		}
-
-		if( (den=rn+fabs(2.0*r1-r2)) != 0.0 ) {
-			numre = (an+bn)/2.0-numre;
-			numim = (an-bn)/2.0-numim;
-			psy_var_long->c[j] = sqrt(numre*numre+numim*numim)/den;
-		} else {
-			psy_var_long->c[j] = 0.0;
-		}
-	}
-	for(j = 8; j < BLOCK_LEN_LONG; j+=8){
-		double tmp;
-		tmp = min(psy_var_short->c[0][j/8],psy_var_short->c[1][j/8]);
-		tmp = min(psy_var_short->c[2][j/8],tmp);
-		tmp = min(psy_var_short->c[3][j/8],tmp);
-		tmp = min(psy_var_short->c[4][j/8],tmp);
-		tmp = min(psy_var_short->c[5][j/8],tmp);
-		tmp = min(psy_var_short->c[6][j/8],tmp);
-		tmp = min(psy_var_short->c[7][j/8],tmp);
-		psy_var_long->c[j] = tmp;
-		psy_var_long->c[j+1] = tmp;
-		psy_var_long->c[j+2] = tmp;
-		psy_var_long->c[j+3] = tmp;
-		psy_var_long->c[j+4] = tmp;
-		psy_var_long->c[j+5] = tmp;
-		psy_var_long->c[j+6] = tmp;
-		psy_var_long->c[j+7] = tmp;
-	}
+    }
+	/* added by T. Araki (1997.10.16) end */
 }
 
 void psy_step5(PARTITION_TABLE_LONG *part_tbl_long, 
@@ -837,10 +970,8 @@ void psy_step5(PARTITION_TABLE_LONG *part_tbl_long,
 
 		/* added by T. Araki (1997.10.16) */
 		for(w = part_tbl_long->w_low[b]; w <= part_tbl_long->w_high[b]; w++){
-			//psy_var_long->e[b] += psy_sqr(psy_stvar_long->fft_r[psy_stvar_long->p_fft+w]);
-			psy_var_long->e[b] += psy_stvar_long->fft_energy[w];
-			//tmp_cb += psy_sqr(psy_stvar_long->fft_r[psy_stvar_long->p_fft+w]) * psy_var_long->c[w];
-			tmp_cb += psy_stvar_long->fft_energy[w] * psy_var_long->c[w];
+			psy_var_long->e[b] += psy_sqr(psy_stvar_long->fft_r[psy_stvar_long->p_fft+w]);
+			tmp_cb += psy_sqr(psy_stvar_long->fft_r[psy_stvar_long->p_fft+w]) * psy_var_long->c[w];
 		}
 		/* added by T. Araki (1997.10.16) end */
 
@@ -853,11 +984,9 @@ void psy_step5(PARTITION_TABLE_LONG *part_tbl_long,
 			psy_var_short->e[i][b] = 0.0;
 			tmp_cb = 0.0;
 
-			for(w = part_tbl_short->w_low[b]; w <= part_tbl_short->w_high[b]; w++) {
-				//psy_var_short->e[i][b] += psy_sqr(psy_stvar_short->fft_r[i][w]);
-				psy_var_short->e[i][b] += psy_stvar_short->fft_energy[i][w];
-				//tmp_cb += psy_sqr(psy_stvar_short->fft_r[i][w]) * psy_var_short->c[i][w];
-				tmp_cb += psy_stvar_short->fft_energy[i][w] * psy_var_short->c[i][w];
+			for(w = part_tbl_short->w_low[b]; w <= part_tbl_short->w_high[b]; w++){
+				psy_var_short->e[i][b] += psy_sqr(psy_stvar_short->fft_r[i][w]);
+				tmp_cb += psy_sqr(psy_stvar_short->fft_r[i][w]) * psy_var_short->c[i][w]; 
 			}
 
 			psy_var_short->c[i][b] = tmp_cb;
@@ -883,7 +1012,7 @@ void psy_step6(PARTITION_TABLE_LONG *part_tbl_long,
 		ct = 0.0;
 		for(bb = 0; bb < part_tbl_long->len; bb++){
 			//sprd = sprdngf(part_tbl_long, part_tbl_short, bb, b, 0);
-			sprd = part_tbl_long->dyn->spreading[bb][b];
+			sprd = part_tbl_long->spreading[bb][b];
 			ecb += psy_var_long->e[bb] * sprd;
 			ct += psy_var_long->c[bb] * sprd;
 		}
@@ -892,7 +1021,7 @@ void psy_step6(PARTITION_TABLE_LONG *part_tbl_long,
 		} else {
 			psy_var_long->cb[b] = 0.0;
 		}
-		psy_stvar_long->en[b] = psy_var_long->en[b] = ecb * part_tbl_long->dyn->rnorm[b];
+		psy_stvar_long->en[b] = psy_var_long->en[b] = ecb * part_tbl_long->rnorm[b];
     }
 
 	/* added by T. Araki (1997.10.16) */
@@ -902,7 +1031,7 @@ void psy_step6(PARTITION_TABLE_LONG *part_tbl_long,
 			ct = 0.0;
 			for(bb = 0; bb < part_tbl_short->len; bb++){
 				//sprd = sprdngf(part_tbl_long, part_tbl_short, bb, b, 1);
-				sprd = part_tbl_short->dyn->spreading[bb][b];
+				sprd = part_tbl_short->spreading[bb][b];
 				ecb += psy_var_short->e[i][bb] * sprd;
 				ct += psy_var_short->c[i][bb] * sprd;
 			}
@@ -911,7 +1040,7 @@ void psy_step6(PARTITION_TABLE_LONG *part_tbl_long,
 			} else {
 				psy_var_short->cb[i][b] = 0.0;
 			}
-			psy_stvar_short->en[i][b] = psy_var_short->en[i][b] = ecb * part_tbl_short->dyn->rnorm[b];
+			psy_stvar_short->en[i][b] = psy_var_short->en[i][b] = ecb * part_tbl_short->rnorm[b];
 		}
     }
 	/* added by T. Araki (1997.10.16) end */
@@ -1089,14 +1218,14 @@ void psy_step11andahalf(PARTITION_TABLE_LONG *part_tbl_long,
 				t = 0;
 			if (t>1)
 				t = 1/t;
-			tempL = max(psy_stvar_long[0].nb[p1+b]*t, min(psy_stvar_long[0].nb[p1+b], part_tbl_long->dyn->bmax[b]*psy_stvar_long[0].en[b]));
-			tempR = max(psy_stvar_long[1].nb[p1+b]*t, min(psy_stvar_long[1].nb[p1+b], part_tbl_long->dyn->bmax[b]*psy_stvar_long[1].en[b]));
+			tempL = max(psy_stvar_long[0].nb[p1+b]*t, min(psy_stvar_long[0].nb[p1+b], part_tbl_long->bmax[b]*psy_stvar_long[0].en[b]));
+			tempR = max(psy_stvar_long[1].nb[p1+b]*t, min(psy_stvar_long[1].nb[p1+b], part_tbl_long->bmax[b]*psy_stvar_long[1].en[b]));
 
 			t = min(tempL,tempR);
-			tempM = min(t, max(psy_stvar_long[2].nb[p1+b], min(part_tbl_long->dyn->bmax[b]*psy_stvar_long[3].en[b], psy_stvar_long[3].nb[p1+b])));
-			tempS = min(t, max(psy_stvar_long[3].nb[p1+b], min(part_tbl_long->dyn->bmax[b]*psy_stvar_long[2].en[b], psy_stvar_long[2].nb[p1+b])));
+			tempM = min(t, max(psy_stvar_long[2].nb[p1+b], min(part_tbl_long->bmax[b]*psy_stvar_long[3].en[b], psy_stvar_long[3].nb[p1+b])));
+			tempS = min(t, max(psy_stvar_long[3].nb[p1+b], min(part_tbl_long->bmax[b]*psy_stvar_long[2].en[b], psy_stvar_long[2].nb[p1+b])));
 
-			if ((psy_stvar_long[0].nb[p1+b] <= 1.58*psy_stvar_long[1].nb[p1+b])&&(psy_stvar_long[1].nb[p1+b] <= 1.58*psy_stvar_long[0].nb[p1+b])) {
+			if ((psy_stvar_long[0].nb[p1+b] >= 1.58*psy_stvar_long[1].nb[p1+b])&&(psy_stvar_long[1].nb[p1+b] >= 1.58*psy_stvar_long[0].nb[p1+b])) {
 				psy_stvar_long[2].nb[p1+b] = tempM;
 				psy_stvar_long[3].nb[p1+b] = tempS;
 				psy_stvar_long[0].nb[p1+b] = tempL;
@@ -1112,14 +1241,14 @@ void psy_step11andahalf(PARTITION_TABLE_LONG *part_tbl_long,
 					t = 0;
 				if (t>1)
 					t = 1/t;
-				tempL = max(psy_stvar_short[0].nb[i][b]*t, min(psy_stvar_short[0].nb[i][b], part_tbl_short->dyn->bmax[b]*psy_stvar_short[0].en[i][b]));
-				tempR = max(psy_stvar_short[1].nb[i][b]*t, min(psy_stvar_short[1].nb[i][b], part_tbl_short->dyn->bmax[b]*psy_stvar_short[1].en[i][b]));
+				tempL = max(psy_stvar_short[0].nb[i][b]*t, min(psy_stvar_short[0].nb[i][b], part_tbl_short->bmax[b]*psy_stvar_short[0].en[i][b]));
+				tempR = max(psy_stvar_short[1].nb[i][b]*t, min(psy_stvar_short[1].nb[i][b], part_tbl_short->bmax[b]*psy_stvar_short[1].en[i][b]));
 
 				t = min(tempL,tempR);
-				tempM = min(t, max(psy_stvar_short[2].nb[i][b], min(part_tbl_short->dyn->bmax[b]*psy_stvar_short[3].en[i][b], psy_stvar_short[3].nb[i][b])));
-				tempS = min(t, max(psy_stvar_short[3].nb[i][b], min(part_tbl_short->dyn->bmax[b]*psy_stvar_short[2].en[i][b], psy_stvar_short[2].nb[i][b])));
+				tempM = min(t, max(psy_stvar_short[2].nb[i][b], min(part_tbl_short->bmax[b]*psy_stvar_short[3].en[i][b], psy_stvar_short[3].nb[i][b])));
+				tempS = min(t, max(psy_stvar_short[3].nb[i][b], min(part_tbl_short->bmax[b]*psy_stvar_short[2].en[i][b], psy_stvar_short[2].nb[i][b])));
 
-				if ((psy_stvar_short[0].nb[i][b] <= 1.58*psy_stvar_short[1].nb[i][b])&&(psy_stvar_short[1].nb[i][b] <= 1.58*psy_stvar_short[0].nb[i][b])) {
+				if ((psy_stvar_short[0].nb[i][b] >= 1.58*psy_stvar_short[1].nb[i][b])&&(psy_stvar_short[1].nb[i][b] >= 1.58*psy_stvar_short[0].nb[i][b])) {
 					psy_stvar_short[2].nb[i][b] = tempM;
 					psy_stvar_short[3].nb[i][b] = tempS;
 					psy_stvar_short[0].nb[i][b] = tempL;
@@ -1188,8 +1317,7 @@ void psy_step14(SR_INFO *p_sri,
 
         psy_var_long->epart[n] = 0.0;
 		for(w = w_low; w < w_high; w++){
-			//psy_var_long->epart[n] += psy_sqr(psy_stvar_long->fft_r[psy_stvar_long->p_fft + w]);
-			psy_var_long->epart[n] += psy_stvar_long->fft_energy[w];
+			psy_var_long->epart[n] += psy_sqr(psy_stvar_long->fft_r[psy_stvar_long->p_fft + w]);
 		}
     }
 
@@ -1233,8 +1361,7 @@ void psy_step14(SR_INFO *p_sri,
 
 			psy_var_short->epart[i][n] = 0.0;
 			for(w = w_low; w < w_high; w++){
-				//psy_var_short->epart[i][n] += psy_sqr(psy_stvar_short->fft_r[i][w]);
-				psy_var_short->epart[i][n] += psy_stvar_short->fft_energy[i][w];
+				psy_var_short->epart[i][n] += psy_sqr(psy_stvar_short->fft_r[i][w]);
 			}
 		}
 
