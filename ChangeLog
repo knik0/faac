@@ -1,4 +1,29 @@
+2001-10-26  menno
+	* plugins/cooledit/faad.c:
+		Fixed FAAD decoding first 2 silent frames
+
+	* mingw32/Makefile:
+		Added makefile for MingW32
+
+	* frontend/faac.dsp:
+	* frontend/faacgui.dsp:
+	* frontend/faacgui.rc:
+	* frontend/main.c:
+	* frontend/maingui.c:
+	* frontend/resource.h:
+		Enable RAW aac output in the frontends
+
+2001-10-22  menno
+	* .cvsignore:
+	* faac.dsw:
+	* plugins/cooledit/FAAD.DSP:
+	* plugins/winamp/out_FAAC.dsp:
+		Added system wide workspace file
+
 2001-10-16  menno
+	* faac_wingui.nsi:
+		Removed wingui
+
 	* plugins/cooledit/aacinfo.c:
 	* plugins/cooledit/aacinfo.h:
 	* plugins/cooledit/faac.c:
