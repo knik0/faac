@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: huffman.c,v 1.1 2001/01/17 11:21:40 menno Exp $
+ * $Id: huffman.c,v 1.2 2001/01/19 14:59:23 menno Exp $
  */
 
 #include <math.h>
@@ -84,7 +84,6 @@ int BitSearch(CoderInfo *coderInfo,
 	int hop;
 	int min_book_choice[112][3];
 	int bit_stats[240][3];
-//	int total_bits;
 	int total_bit_count;
 	int levels;
 	double fraction;
@@ -107,7 +106,6 @@ int BitSearch(CoderInfo *coderInfo,
 
 		/* load up the (not-full) binary search tree with the min_book_choice values */
 		k=0;
-//		m=0;
 		total_bit_count = 0;
 
 		for (j=(int)(pow(2,levels-i)); j<(int)(fraction*pow(2,levels-i)); j++)
@@ -134,7 +132,6 @@ int BitSearch(CoderInfo *coderInfo,
 			}
 			total_bit_count = total_bit_count +  bit_stats[j][0];
 			k=k+hop;
-//			m++;
 		}
 #ifdef SLOW
 	}
@@ -153,7 +150,7 @@ int NoiselessBitCount(CoderInfo *coderInfo,
 
   /*
      This function inputs:
-     - the quantized spectral data, 'quant[][]';
+     - the quantized spectral data, 'quant[]';
      - all of the huffman codebooks, 'huff[][]';
      - the size of the sections, in scalefactor bands (SFB's), 'hop';
      - an empty matrix, min_book_choice[][] passed to it;
@@ -180,10 +177,9 @@ int NoiselessBitCount(CoderInfo *coderInfo,
 	int total_bits_cost = 0;
 	int offset, length, end;
 	int q;
-	int write_flag = 0;
 
 	/* set local pointer to sfb_offset */
-	int* sfb_offset = coderInfo->sfb_offset;
+	int *sfb_offset = coderInfo->sfb_offset;
 	int nr_of_sfb = coderInfo->nr_of_sfb;
 
 	/* each section is 'hop' scalefactor bands wide */
@@ -206,80 +202,65 @@ int NoiselessBitCount(CoderInfo *coderInfo,
 			offset = sfb_offset[i];
 			if ((i+hop) > nr_of_sfb){
 				end = sfb_offset[nr_of_sfb];
-			}
-			else
+			} else
 				end = sfb_offset[q];
 			length = end - offset;
 
 			/* all spectral coefficients in this section are zero */
 			if (max_sb_coeff == 0) { 
-				book_choice[j][0] = OutputBits(coderInfo,0,quant,offset,length,write_flag);
+				book_choice[j][0] = CalcBits(coderInfo,0,quant,offset,length);
 				book_choice[j++][1] = 0;
 
 			}
 			else {  /* if the section does have non-zero coefficients */
 				if(max_sb_coeff < 2){
-					coderInfo->spectral_count = 0; /* just for debugging : using data and len vectors */
-					book_choice[j][0] = OutputBits(coderInfo,1,quant,offset,length,write_flag);
+					book_choice[j][0] = CalcBits(coderInfo,1,quant,offset,length);
 					book_choice[j++][1] = 1;
-					coderInfo->spectral_count = 0; /* just for debugging : using data and len vectors */
-					book_choice[j][0] = OutputBits(coderInfo,2,quant,offset,length,write_flag);
+					book_choice[j][0] = CalcBits(coderInfo,2,quant,offset,length);
 					book_choice[j++][1] = 2;
-					coderInfo->spectral_count = 0; /* just for debugging : using data and len vectors */
-					book_choice[j][0] = OutputBits(coderInfo,3,quant,offset,length,write_flag);
+					book_choice[j][0] = CalcBits(coderInfo,3,quant,offset,length);
 					book_choice[j++][1] = 3;
 				}
 				else if (max_sb_coeff < 3){
-					coderInfo->spectral_count = 0; /* just for debugging : using data and len vectors */
-					book_choice[j][0] = OutputBits(coderInfo,3,quant,offset,length,write_flag);
+					book_choice[j][0] = CalcBits(coderInfo,3,quant,offset,length);
 					book_choice[j++][1] = 3;
-					coderInfo->spectral_count = 0; /* just for debugging : using data and len vectors */
-					book_choice[j][0] = OutputBits(coderInfo,4,quant,offset,length,write_flag);
+					book_choice[j][0] = CalcBits(coderInfo,4,quant,offset,length);
 					book_choice[j++][1] = 4;
-					coderInfo->spectral_count = 0; /* just for debugging : using data and len vectors */
-					book_choice[j][0] = OutputBits(coderInfo,5,quant,offset,length,write_flag);
+					book_choice[j][0] = CalcBits(coderInfo,5,quant,offset,length);
 					book_choice[j++][1] = 5;
 				}
 				else if (max_sb_coeff < 5){
-					coderInfo->spectral_count = 0; /* just for debugging : using data and len vectors */
-					book_choice[j][0] = OutputBits(coderInfo,5,quant,offset,length,write_flag);
+					book_choice[j][0] = CalcBits(coderInfo,5,quant,offset,length);
 					book_choice[j++][1] = 5;
-					coderInfo->spectral_count = 0; /* just for debugging : using data and len vectors */
-					book_choice[j][0] = OutputBits(coderInfo,6,quant,offset,length,write_flag);
+					book_choice[j][0] = CalcBits(coderInfo,6,quant,offset,length);
 					book_choice[j++][1] = 6;
-					coderInfo->spectral_count = 0; /* just for debugging : using data and len vectors */
-					book_choice[j][0] = OutputBits(coderInfo,7,quant,offset,length,write_flag);
+					book_choice[j][0] = CalcBits(coderInfo,7,quant,offset,length);
 					book_choice[j++][1] = 7;
 				}
 				else if (max_sb_coeff < 8){
-					coderInfo->spectral_count = 0; /* just for debugging : using data and len vectors */
-					book_choice[j][0] = OutputBits(coderInfo,7,quant,offset,length,write_flag);
+					book_choice[j][0] = CalcBits(coderInfo,7,quant,offset,length);
 					book_choice[j++][1] = 7;
-					coderInfo->spectral_count = 0; /* just for debugging : using data and len vectors */
-					book_choice[j][0] = OutputBits(coderInfo,8,quant,offset,length,write_flag);
+					book_choice[j][0] = CalcBits(coderInfo,8,quant,offset,length);
 					book_choice[j++][1] = 8;
-					coderInfo->spectral_count = 0; /* just for debugging : using data and len vectors */
-					book_choice[j][0] = OutputBits(coderInfo,9,quant,offset,length,write_flag);
+					book_choice[j][0] = CalcBits(coderInfo,9,quant,offset,length);
 					book_choice[j++][1] = 9;
 				}
 				else if (max_sb_coeff < 13){
-					coderInfo->spectral_count = 0; /* just for debugging : using data and len vectors */
-					book_choice[j][0] = OutputBits(coderInfo,9,quant,offset,length,write_flag);
+					book_choice[j][0] = CalcBits(coderInfo,9,quant,offset,length);
 					book_choice[j++][1] = 9;
-					coderInfo->spectral_count = 0; /* just for debugging : using data and len vectors */
-					book_choice[j][0] = OutputBits(coderInfo,10,quant,offset,length,write_flag);
+					book_choice[j][0] = CalcBits(coderInfo,10,quant,offset,length);
 					book_choice[j++][1] = 10;
 				}
 				/* (max_sb_coeff >= 13), choose table 11 */
 				else {
-					coderInfo->spectral_count = 0; /* just for debugging : using data and len vectors */
-					book_choice[j][0] = OutputBits(coderInfo,11,quant,offset,length,write_flag);
+					book_choice[j][0] = CalcBits(coderInfo,11,quant,offset,length);
 					book_choice[j++][1] = 11;
 				}
 			}
 
 			/* find the minimum bit cost and table number for huffman coding this scalefactor section */
-			min_book_choice[i][0] = 100000;  
+			min_book_choice[i][0] = 100000;
+
 			for(k=0;k<j;k++){
 				if (book_choice[k][0] < min_book_choice[i][0]){
 					min_book_choice[i][1] = book_choice[k][1];
@@ -325,23 +306,16 @@ int OutputBits(CoderInfo *coderInfo,
 			   int book,
 			   int *quant,
 			   int offset,
-			   int length,
-			   int write_flag)
+			   int length)
 {
   /* 
      This function inputs 
-     - all the huffman codebooks, 'huff[]' 
      - a specific codebook number, 'book'
      - the quantized spectral data, 'quant[][]'
      - the offset into the spectral data to begin scanning, 'offset'
      - the 'length' of the segment to huffman code
-     -> therefore, the segment quant[CHANNEL][offset] to quant[CHANNEL][offset+length-1]
+     -> therefore, the segment quant[offset] to quant[offset+length-1]
      is huffman coded.
-     - a flag, 'write_flag' to determine whether the codebooks and lengths need to be written
-     to file.  If write_flag=0, then this function is being used only in the quantization
-     rate loop, and does not need to spend time writing the codebooks and lengths to file.
-     If write_flag=1, then it is being called by the function OutputBits(), which is 
-     sending the bitsteam out of the encoder.  
 
      This function outputs 
      - the number of bits required, 'bits'  using the prescribed codebook, book applied to 
@@ -365,156 +339,206 @@ int OutputBits(CoderInfo *coderInfo,
 	int counter;
 
 	/* Set up local pointers to coderInfo elements data and len */
-	int* data= coderInfo -> data;
-	int* len=  coderInfo -> len;
+	int* data= coderInfo->data;
+	int* len=  coderInfo->len;
 
 	counter = coderInfo->spectral_count;
 
-	/* This case also applies to intensity stereo encoding */
-	/*if (book == 0) { */ /* if using the zero codebook, data of zero length is sent */
-	if ((book == 0)||(book==INTENSITY_HCB2)||(book==INTENSITY_HCB)) {  /* if using the zero codebook, 
-		data of zero length is sent */
-		
-		if (write_flag) {
-			coderInfo->data[counter] = 0;
-			coderInfo->len[counter++] = 0;
-		}
-	}
-
-	if ((book == 1) || (book == 2)) {
+	switch (book) {
+	case 0:
+	case INTENSITY_HCB2:
+	case INTENSITY_HCB:
+		/* This case also applies to intensity stereo encoding */		
+		coderInfo->data[counter] = 0;
+		coderInfo->len[counter++] = 0;
+		coderInfo->spectral_count = counter;  /* send the current count back to the outside world */
+		return(bits);
+	case 1:
 		for(i=offset;i<offset+length;i=i+4){
 			index = 27*quant[i] + 9*quant[i+1] + 3*quant[i+2] + quant[i+3] + 40;
-			if (book == 1) {
-				codebook = huff1[index][LASTINTAB];
-				tmp = huff1[index][FIRSTINTAB];
-			} else {
-				codebook = huff2[index][LASTINTAB];
-				tmp = huff2[index][FIRSTINTAB];
-			}
+			codebook = huff1[index][LASTINTAB];
+			tmp = huff1[index][FIRSTINTAB];
 			bits += tmp;
-			if (write_flag) {
-				data[counter] = codebook;
-				len[counter++] = tmp;
-			}
+			data[counter] = codebook;
+			len[counter++] = tmp;
 		}
-	}
-
-	if ((book == 3) || (book == 4)) {
+		coderInfo->spectral_count = counter;  /* send the current count back to the outside world */
+		return(bits);
+	case 2:
+		for(i=offset;i<offset+length;i=i+4){
+			index = 27*quant[i] + 9*quant[i+1] + 3*quant[i+2] + quant[i+3] + 40;
+			codebook = huff2[index][LASTINTAB];
+			tmp = huff2[index][FIRSTINTAB];
+			bits += tmp;
+			data[counter] = codebook;
+			len[counter++] = tmp;
+		}
+		coderInfo->spectral_count = counter;  /* send the current count back to the outside world */
+		return(bits);
+	case 3:
 		for(i=offset;i<offset+length;i=i+4){
 			index = 27*ABS(quant[i]) + 9*ABS(quant[i+1]) + 3*ABS(quant[i+2]) + ABS(quant[i+3]);
-			if (book == 3) {
-				codebook = huff3[index][LASTINTAB];
-				tmp = huff3[index][FIRSTINTAB];
-			} else {
-				codebook = huff4[index][LASTINTAB];
-				tmp = huff4[index][FIRSTINTAB];
-			}
+			codebook = huff3[index][LASTINTAB];
+			tmp = huff3[index][FIRSTINTAB];
 			bits = bits + tmp;
+			data[counter] = codebook;
+			len[counter++] = tmp;
 			for(j=0;j<4;j++){
-				if(ABS(quant[i+j]) > 0) bits += 1; /* only for non-zero spectral coefficients */
-			}
-			if (write_flag) {
-				data[counter] = codebook;
-				len[counter++] = tmp;
-				for(j=0;j<4;j++){
-					if(quant[i+j] > 0) {  /* send out '0' if a positive value */
-						data[counter] = 0;
-						len[counter++] = 1;
-					}
-					if(quant[i+j] < 0) {  /* send out '1' if a negative value */
-						data[counter] = 1;
-						len[counter++] = 1;
-					}
+				if(quant[i+j] > 0) {  /* send out '0' if a positive value */
+					data[counter] = 0;
+					len[counter++] = 1;
+					bits += 1;
+				} else
+				if(quant[i+j] < 0) {  /* send out '1' if a negative value */
+					data[counter] = 1;
+					len[counter++] = 1;
+					bits += 1;
 				}
 			}
 		}
-	}
-
-	if ((book == 5) || (book == 6)) {
+		coderInfo->spectral_count = counter;  /* send the current count back to the outside world */
+		return(bits);
+	case 4:
+		for(i=offset;i<offset+length;i=i+4){
+			index = 27*ABS(quant[i]) + 9*ABS(quant[i+1]) + 3*ABS(quant[i+2]) + ABS(quant[i+3]);
+			codebook = huff4[index][LASTINTAB];
+			tmp = huff4[index][FIRSTINTAB];
+			bits = bits + tmp;
+			data[counter] = codebook;
+			len[counter++] = tmp;
+			for(j=0;j<4;j++){
+				if(quant[i+j] > 0) {  /* send out '0' if a positive value */
+					data[counter] = 0;
+					len[counter++] = 1;
+					bits += 1;
+				} else
+				if(quant[i+j] < 0) {  /* send out '1' if a negative value */
+					data[counter] = 1;
+					len[counter++] = 1;
+					bits += 1;
+				}
+			}
+		}
+		coderInfo->spectral_count = counter;  /* send the current count back to the outside world */
+		return(bits);
+	case 5:
 		for(i=offset;i<offset+length;i=i+2){
 			index = 9*(quant[i]) + (quant[i+1]) + 40;
-			if (book == 5) {
-				codebook = huff5[index][LASTINTAB];
-				tmp = huff5[index][FIRSTINTAB];
-			} else {
-				codebook = huff6[index][LASTINTAB];
-				tmp = huff6[index][FIRSTINTAB];
-			}
+			codebook = huff5[index][LASTINTAB];
+			tmp = huff5[index][FIRSTINTAB];
 			bits = bits + tmp;
-			if (write_flag) {
-				data[counter] = codebook;
-				len[counter++] = tmp;
-			}
+			data[counter] = codebook;
+			len[counter++] = tmp;
 		}
-	}
-
-	if ((book == 7) || (book == 8)) {
+		coderInfo->spectral_count = counter;  /* send the current count back to the outside world */
+		return(bits);
+	case 6:
+		for(i=offset;i<offset+length;i=i+2){
+			index = 9*(quant[i]) + (quant[i+1]) + 40;
+			codebook = huff6[index][LASTINTAB];
+			tmp = huff6[index][FIRSTINTAB];
+			bits = bits + tmp;
+			data[counter] = codebook;
+			len[counter++] = tmp;
+		}
+		coderInfo->spectral_count = counter;  /* send the current count back to the outside world */
+		return(bits);
+	case 7:
 		for(i=offset;i<offset+length;i=i+2){
 			index = 8*ABS(quant[i]) + ABS(quant[i+1]);
-			if (book == 7) {
-				codebook = huff7[index][LASTINTAB];
-				tmp = huff7[index][FIRSTINTAB];
-			} else {
-				codebook = huff8[index][LASTINTAB];
-				tmp = huff8[index][FIRSTINTAB];
-			}
+			codebook = huff7[index][LASTINTAB];
+			tmp = huff7[index][FIRSTINTAB];
 			bits = bits + tmp;
+			data[counter] = codebook;
+			len[counter++] = tmp;
 			for(j=0;j<2;j++){
-				if(ABS(quant[i+j]) > 0) bits += 1; /* only for non-zero spectral coefficients */
-			}
-			if (write_flag) {
-				data[counter] = codebook;
-				len[counter++] = tmp;
-				for(j=0;j<2;j++){
-					if(quant[i+j] > 0) {  /* send out '0' if a positive value */
-						data[counter] = 0;
-						len[counter++] = 1;
-					}
-					if(quant[i+j] < 0) {  /* send out '1' if a negative value */
-						data[counter] = 1;
-						len[counter++] = 1;
-					}
+				if(quant[i+j] > 0) {  /* send out '0' if a positive value */
+					data[counter] = 0;
+					len[counter++] = 1;
+					bits += 1;
+				} else
+				if(quant[i+j] < 0) {  /* send out '1' if a negative value */
+					data[counter] = 1;
+					len[counter++] = 1;
+					bits += 1;
 				}
 			}
 		}
-	}
-
-	if ((book == 9) || (book == 10)) {
+		coderInfo->spectral_count = counter;  /* send the current count back to the outside world */
+		return(bits);
+	case 8:
+		for(i=offset;i<offset+length;i=i+2){
+			index = 8*ABS(quant[i]) + ABS(quant[i+1]);
+			codebook = huff8[index][LASTINTAB];
+			tmp = huff8[index][FIRSTINTAB];
+			bits = bits + tmp;
+			data[counter] = codebook;
+			len[counter++] = tmp;
+			for(j=0;j<2;j++){
+				if(quant[i+j] > 0) {  /* send out '0' if a positive value */
+					data[counter] = 0;
+					len[counter++] = 1;
+					bits += 1;
+				} else
+				if(quant[i+j] < 0) {  /* send out '1' if a negative value */
+					data[counter] = 1;
+					len[counter++] = 1;
+					bits += 1;
+				}
+			}
+		}
+		coderInfo->spectral_count = counter;  /* send the current count back to the outside world */
+		return(bits);
+	case 9:
 		for(i=offset;i<offset+length;i=i+2){
 			index = 13*ABS(quant[i]) + ABS(quant[i+1]);
-			if (book == 9) {
-				codebook = huff9[index][LASTINTAB];
-				tmp = huff9[index][FIRSTINTAB];
-			} else {
-				codebook = huff10[index][LASTINTAB];
-				tmp = huff10[index][FIRSTINTAB];
-			}
+			codebook = huff9[index][LASTINTAB];
+			tmp = huff9[index][FIRSTINTAB];
 			bits = bits + tmp;
-			for(j=0;j<2;j++){
-				if(ABS(quant[i+j]) > 0) bits += 1; /* only for non-zero spectral coefficients */
-			}
-			if (write_flag) {
-				
-				data[counter] = codebook;
-				len[counter++] = tmp;
+			data[counter] = codebook;
+			len[counter++] = tmp;
 
-				for(j=0;j<2;j++){
-					if(quant[i+j] > 0) {  /* send out '0' if a positive value */
-						data[counter] = 0;
-						len[counter++] = 1;
-					}
-					if(quant[i+j] < 0) {  /* send out '1' if a negative value */
-						data[counter] = 1;
-						len[counter++] = 1;
-					}
+			for(j=0;j<2;j++){
+				if(quant[i+j] > 0) {  /* send out '0' if a positive value */
+					data[counter] = 0;
+					len[counter++] = 1;
+					bits += 1;
+				} else
+				if(quant[i+j] < 0) {  /* send out '1' if a negative value */
+					data[counter] = 1;
+					len[counter++] = 1;
+					bits += 1;
 				}
 			}
 		}
-	}
+		coderInfo->spectral_count = counter;  /* send the current count back to the outside world */
+		return(bits);
+	case 10:
+		for(i=offset;i<offset+length;i=i+2){
+			index = 13*ABS(quant[i]) + ABS(quant[i+1]);
+			codebook = huff10[index][LASTINTAB];
+			tmp = huff10[index][FIRSTINTAB];
+			bits = bits + tmp;
+			data[counter] = codebook;
+			len[counter++] = tmp;
 
-	if ((book == 11)){
+			for(j=0;j<2;j++){
+				if(quant[i+j] > 0) {  /* send out '0' if a positive value */
+					data[counter] = 0;
+					len[counter++] = 1;
+					bits += 1;
+				} else
+				if(quant[i+j] < 0) {  /* send out '1' if a negative value */
+					data[counter] = 1;
+					len[counter++] = 1;
+					bits += 1;
+				}
+			}
+		}
+		coderInfo->spectral_count = counter;  /* send the current count back to the outside world */
+		return(bits);
+	case 11:
 		/* First, calculate the indecies into the huffman tables */
-
 		for(i=offset;i<offset+length;i=i+2){
 			if ((ABS(quant[i]) >= 16) && (ABS(quant[i+1]) >= 16)) {  /* both codewords were above 16 */
 				/* first, code the orignal pair, with the larger value saturated to +/- 16 */
@@ -532,78 +556,211 @@ int OutputBits(CoderInfo *coderInfo,
 			}
 
 			/* write out the codewords */
-
 			tmp = huff11[index][FIRSTINTAB];
 			codebook = huff11[index][LASTINTAB];
 			bits += tmp;
-			if (write_flag) {
-				data[counter] = codebook;
-				len[counter++] = tmp;
-			}
+			data[counter] = codebook;
+			len[counter++] = tmp;
 			
 			/* Take care of the sign bits */
-
 			for(j=0;j<2;j++){
-				if(ABS(quant[i+j]) > 0) bits += 1; /* only for non-zero spectral coefficients */
-			}
-			if (write_flag) {
-				for(j=0;j<2;j++){
-					if(quant[i+j] > 0) {  /* send out '0' if a positive value */
-						data[counter] = 0;
-						len[counter++] = 1;
-					}
-					if(quant[i+j] < 0) {  /* send out '1' if a negative value */
-						data[counter] = 1;
-						len[counter++] = 1;
-					}
+				if(quant[i+j] > 0) {  /* send out '0' if a positive value */
+					data[counter] = 0;
+					len[counter++] = 1;
+					bits += 1;
+				} else
+				if(quant[i+j] < 0) {  /* send out '1' if a negative value */
+					data[counter] = 1;
+					len[counter++] = 1;
+					bits += 1;
 				}
 			}
 
 			/* write out the escape sequences */
-
 			if ((ABS(quant[i]) >= 16) && (ABS(quant[i+1]) >= 16)) {  /* both codewords were above 16 */
 				/* code and transmit the first escape_sequence */
 				esc_sequence = CalculateEscSequence(quant[i],&len_esc); 
 				bits += len_esc;
-				if (write_flag) {
-					data[counter] = esc_sequence;
-					len[counter++] = len_esc;
-				}
+				data[counter] = esc_sequence;
+				len[counter++] = len_esc;
 
 				/* then code and transmit the second escape_sequence */
 				esc_sequence = CalculateEscSequence(quant[i+1],&len_esc);
 				bits += len_esc;
-				if (write_flag) {
-					data[counter] = esc_sequence;
-					len[counter++] = len_esc;
-				}
+				data[counter] = esc_sequence;
+				len[counter++] = len_esc;
 			}
-
 			else if (ABS(quant[i]) >= 16) {  /* the first codeword was above 16, not the second one */
 				/* code and transmit the escape_sequence */
 				esc_sequence = CalculateEscSequence(quant[i],&len_esc); 
 				bits += len_esc;
-				if (write_flag) {
-					data[counter] = esc_sequence;
-					len[counter++] = len_esc;
-				}
+				data[counter] = esc_sequence;
+				len[counter++] = len_esc;
 			}
-
 			else if (ABS(quant[i+1]) >= 16) { /* the second codeword was above 16, not the first one */
 				/* code and transmit the escape_sequence */
 				esc_sequence = CalculateEscSequence(quant[i+1],&len_esc); 
 				bits += len_esc;
-				if (write_flag) {
-					data[counter] = esc_sequence;
-					len[counter++] = len_esc;
-				}
+				data[counter] = esc_sequence;
+				len[counter++] = len_esc;
 			} 
 		}
+		coderInfo -> spectral_count = counter;  /* send the current count back to the outside world */
+		return(bits);
 	}
+	return 0;
+}
 
-	coderInfo -> spectral_count = counter;  /* send the current count back to the outside world */
+int CalcBits(CoderInfo *coderInfo,
+			 int book,
+			 int *quant,
+			 int offset,
+			 int length)
+{
+  /* 
+     This function inputs 
+     - a specific codebook number, 'book'
+     - the quantized spectral data, 'quant[]'
+     - the offset into the spectral data to begin scanning, 'offset'
+     - the 'length' of the segment to huffman code
+     -> therefore, the segment quant[offset] to quant[offset+length-1]
+     is huffman coded.
 
-	return(bits);
+     This function outputs 
+     - the number of bits required, 'bits'  using the prescribed codebook, book applied to 
+     the given segment of spectral data.
+
+   */
+ 
+	int len_esc;
+	int index;
+	int bits = 0;
+	int i, j;
+
+	switch (book) {
+	case 1:
+		for(i=offset;i<offset+length;i=i+4){
+			index = 27*quant[i] + 9*quant[i+1] + 3*quant[i+2] + quant[i+3] + 40;
+			bits += huff1[index][FIRSTINTAB];
+		}
+		return (bits);
+	case 2:
+		for(i=offset;i<offset+length;i=i+4){
+			index = 27*quant[i] + 9*quant[i+1] + 3*quant[i+2] + quant[i+3] + 40;
+			bits += huff2[index][FIRSTINTAB];
+		}
+		return (bits);
+	case 3:
+		for(i=offset;i<offset+length;i=i+4){
+			index = 27*ABS(quant[i]) + 9*ABS(quant[i+1]) + 3*ABS(quant[i+2]) + ABS(quant[i+3]);
+			bits += huff3[index][FIRSTINTAB];
+			for(j=0;j<4;j++){
+				if(quant[i+j] != 0) bits += 1; /* only for non-zero spectral coefficients */
+			}
+		}
+		return (bits);
+	case 4:
+		for(i=offset;i<offset+length;i=i+4){
+			index = 27*ABS(quant[i]) + 9*ABS(quant[i+1]) + 3*ABS(quant[i+2]) + ABS(quant[i+3]);
+			bits += huff4[index][FIRSTINTAB];
+			for(j=0;j<4;j++){
+				if(quant[i+j] != 0) bits += 1; /* only for non-zero spectral coefficients */
+			}
+		}
+		return (bits);
+	case 5:
+		for(i=offset;i<offset+length;i=i+2){
+			index = 9*(quant[i]) + (quant[i+1]) + 40;
+			bits += huff5[index][FIRSTINTAB];
+		}
+		return (bits);
+	case 6:
+		for(i=offset;i<offset+length;i=i+2){
+			index = 9*(quant[i]) + (quant[i+1]) + 40;
+			bits += huff6[index][FIRSTINTAB];
+		}
+		return (bits);
+	case 7:
+		for(i=offset;i<offset+length;i=i+2){
+			index = 8*ABS(quant[i]) + ABS(quant[i+1]);
+			bits += huff7[index][FIRSTINTAB];
+			for(j=0;j<2;j++){
+				if(quant[i+j] != 0) bits += 1; /* only for non-zero spectral coefficients */
+			}
+		}
+		return (bits);
+	case 8:
+		for(i=offset;i<offset+length;i=i+2){
+			index = 8*ABS(quant[i]) + ABS(quant[i+1]);
+			bits += huff8[index][FIRSTINTAB];
+			for(j=0;j<2;j++){
+				if(quant[i+j] != 0) bits += 1; /* only for non-zero spectral coefficients */
+			}
+		}
+		return (bits);
+	case 9:
+		for(i=offset;i<offset+length;i=i+2){
+			index = 13*ABS(quant[i]) + ABS(quant[i+1]);
+			bits += huff9[index][FIRSTINTAB];
+			for(j=0;j<2;j++){
+				if(quant[i+j] != 0) bits += 1; /* only for non-zero spectral coefficients */
+			}
+		}
+		return (bits);
+	case 10:
+		for(i=offset;i<offset+length;i=i+2){
+			index = 13*ABS(quant[i]) + ABS(quant[i+1]);
+			bits += huff10[index][FIRSTINTAB];
+			for(j=0;j<2;j++){
+				if(quant[i+j] != 0) bits += 1; /* only for non-zero spectral coefficients */
+			}
+		}
+		return (bits);
+	case 11:
+		/* First, calculate the indecies into the huffman tables */
+		for(i=offset;i<offset+length;i=i+2){
+			if ((ABS(quant[i]) >= 16) && (ABS(quant[i+1]) >= 16)) {  /* both codewords were above 16 */
+				/* first, code the orignal pair, with the larger value saturated to +/- 16 */
+				index = 17*16 + 16;
+			} else if (ABS(quant[i]) >= 16) {  /* the first codeword was above 16, not the second one */
+				/* first, code the orignal pair, with the larger value saturated to +/- 16 */
+				index = 17*16 + ABS(quant[i+1]);
+			} else if (ABS(quant[i+1]) >= 16) { /* the second codeword was above 16, not the first one */
+				index = 17*ABS(quant[i]) + 16;
+			} else {  /* there were no values above 16, so no escape sequences */
+				index = 17*ABS(quant[i]) + ABS(quant[i+1]);
+			}
+
+			/* write out the codewords */
+			bits += huff11[index][FIRSTINTAB];
+			
+			/* Take care of the sign bits */
+			for(j=0;j<2;j++){
+				if(quant[i+j] != 0) bits += 1; /* only for non-zero spectral coefficients */
+			}
+
+			/* write out the escape sequences */
+			if ((ABS(quant[i]) >= 16) && (ABS(quant[i+1]) >= 16)) {  /* both codewords were above 16 */
+				/* code and transmit the first escape_sequence */
+				CalculateEscSequence(quant[i],&len_esc); 
+				bits += len_esc;
+
+				/* then code and transmit the second escape_sequence */
+				CalculateEscSequence(quant[i+1],&len_esc);
+				bits += len_esc;
+			} else if (ABS(quant[i]) >= 16) {  /* the first codeword was above 16, not the second one */
+				/* code and transmit the escape_sequence */
+				CalculateEscSequence(quant[i],&len_esc); 
+				bits += len_esc;
+			} else if (ABS(quant[i+1]) >= 16) { /* the second codeword was above 16, not the first one */
+				/* code and transmit the escape_sequence */
+				CalculateEscSequence(quant[i+1],&len_esc); 
+				bits += len_esc;
+			} 
+		}
+		return (bits);
+	}
+	return 0;
 }
 
 int SortBookNumbers(CoderInfo *coderInfo,

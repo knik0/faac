@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: aacquant.c,v 1.1 2001/01/17 11:21:40 menno Exp $
+ * $Id: aacquant.c,v 1.2 2001/01/19 14:59:23 menno Exp $
  */
 
 #include <math.h>
@@ -153,8 +153,7 @@ int AACQuantize(CoderInfo *coderInfo,
 			coderInfo->book_vector[i],
 			xi,
 			coderInfo->sfb_offset[i],
-			coderInfo->sfb_offset[i+1]-coderInfo->sfb_offset[i],
-			1);
+			coderInfo->sfb_offset[i+1]-coderInfo->sfb_offset[i]);
 	}
 
 
@@ -312,12 +311,11 @@ static int CountBitsLong(CoderInfo *coderInfo, int *xi)
 	/* calculate the amount of bits needed for the spectral values */
 	coderInfo->spectral_count = 0;
 	for(i = 0; i < coderInfo->nr_of_sfb; i++) {  
-		bits += OutputBits(coderInfo,
+		bits += CalcBits(coderInfo,
 			coderInfo->book_vector[i],
 			xi,
 			coderInfo->sfb_offset[i], 
-			coderInfo->sfb_offset[i+1] - coderInfo->sfb_offset[i],
-			0);
+			coderInfo->sfb_offset[i+1] - coderInfo->sfb_offset[i]);
 	}
 
 	/* the number of bits for the scalefactors */
@@ -396,7 +394,7 @@ static int OuterLoop(CoderInfo *coderInfo,
 					 double *xmin,
 					 int target_bits)
 {
-	int sb, i;
+	int sb;
 	int notdone, over, better;
 	int store_global_gain, outer_loop_count;
 	int best_global_gain, age;
@@ -449,7 +447,7 @@ static int OuterLoop(CoderInfo *coderInfo,
 		} else
 			age++;
 
-        if (age > 3 && bestNoiseInfo.over_count == 0) 
+        if (age > 3 && bestNoiseInfo.over_count == 0)
             break;
 
         notdone = BalanceNoise(coderInfo, distort, xr_pow);
@@ -467,9 +465,7 @@ static int OuterLoop(CoderInfo *coderInfo,
 	for (sb = 0; sb < coderInfo->nr_of_sfb; sb++) {
 		scale_factor[sb] = best_scale_factor[sb];
 	}
-	for (i = 0; i < 1024; i++)
-		xi[i] = save_xi[i];
-
+	memcpy(xi, save_xi, sizeof(int)*BLOCK_LEN_LONG);
 
 	if (requant_xr) free(requant_xr);
 	if (best_scale_factor) free(best_scale_factor);
@@ -506,12 +502,11 @@ static int CalcNoise(CoderInfo *coderInfo,
 		error_energy[sb] = 0.0;
 
 		for (i = coderInfo->sfb_offset[sb]; i < coderInfo->sfb_offset[sb+1]; i++){
-			requant_xr[i] =  pow43[min(ABS(xi[i]),8999)] * invQuantFac; 
+			requant_xr[i] =  pow43[xi[i]] * invQuantFac; 
 
 			/* measure the distortion in each scalefactor band */
-			linediff = (double)(ABS(xr[i]) - ABS(requant_xr[i]));
-			linediff *= linediff;
-			error_energy[sb] += linediff;
+			linediff = fabs(xr[i]) - requant_xr[i];
+			error_energy[sb] += linediff * linediff;
 		}
 		error_energy[sb] = error_energy[sb] / sbw;		
 		
