@@ -16,7 +16,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: main.c,v 1.38 2003/07/13 08:34:43 knik Exp $
+ * $Id: main.c,v 1.39 2003/07/21 16:33:49 knik Exp $
  */
 
 #ifdef HAVE_CONFIG_H
@@ -88,7 +88,7 @@ static int *mkChanMap(int channels, int center, int lf)
     map[outpos++] = center;
 
   inpos = 0;
-  for (; outpos < (channels & 0xfe); inpos++)
+  for (; outpos < (channels - 1); inpos++)
   {
     if (inpos == center)
       continue;
@@ -544,6 +544,9 @@ int main(int argc, char *argv[])
 
 /*
 $Log: main.c,v $
+Revision 1.39  2003/07/21 16:33:49  knik
+Fixed LFE channel mapping.
+
 Revision 1.38  2003/07/13 08:34:43  knik
 Fixed -o, -m and -I option.
 Print object type setting.
