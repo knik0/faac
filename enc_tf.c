@@ -11,7 +11,7 @@
 #include "mc_enc.h"
 #include "ms.h"
 #include "is.h"
-#include "aac_qc.h"
+#include "quant.h"
 #include "all.h"
 #include "aac_se_enc.h"
 #include "nok_ltp_enc.h"

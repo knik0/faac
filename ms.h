@@ -37,7 +37,7 @@ Copyright(c)1996.
 
 #include "all.h"
 #include "tf_main.h"
-#include "aac_qc.h"
+#include "quant.h"
 
 
 void MSPreprocess(double p_ratio_long[][MAX_SCFAC_BANDS],

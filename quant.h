@@ -1,6 +1,5 @@
-
-#ifndef AAC_QC_H
-#define AAC_QC_H
+#ifndef QUANT_H
+#define QUANT_H
 
 #include "pulse.h"
 #include "interface.h"
@@ -26,18 +25,9 @@ extern "C" {
 #define sgn(A) ((A) > 0 ? (1) : (-1))
 #define SFB_NUM_MAX MAX_SCFAC_BANDS     /* now using MAX_SCFAC_BANDS of tf_main.h */
 
-#define PNS_HCB 13                               /* reserved codebook for flagging PNS */
-#define PNS_PCM_BITS 9                           /* size of first (PCM) PNS energy */
-#define PNS_PCM_OFFSET (1 << (PNS_PCM_BITS-1))   /* corresponding PCM transmission offset */
-#define PNS_SF_OFFSET 90                         /* transmission offset for PNS energies */
 
 extern int pns_sfb_start;                        /* lower border for PNS */
 
-// Huffman tables
-#define MAXINDEX 289
-#define NUMINTAB 2
-#define FIRSTINTAB 0
-#define LASTINTAB 1
 
 /*********************************************************/
 /* AACQuantInfo, info for AAC quantization and coding.   */
@@ -72,8 +62,6 @@ typedef struct {
 } AACQuantInfo;
 
 
-void PulseCoder(AACQuantInfo *quantInfo, int *quant);
-void PulseDecoder(AACQuantInfo *quantInfo, int *quant);
 void quantize(AACQuantInfo *quantInfo,
 			  double *pow_spectrum,
 			  int quant[NUM_COEFF]
@@ -122,82 +110,6 @@ int tf_encode_spectrum_aac(
 //			   ,int bitRate
                            );
 
-
-/*********************************************************/
-/* sort_book_numbers                                     */
-/*********************************************************/
-int sort_book_numbers(AACQuantInfo* quantInfo,     /* Quantization information */
-//		  int output_book_vector[],    /* Output codebook vector, formatted for bitstream */
-		  BsBitStream* fixed_stream,   /* Bitstream */
-		  int write_flag);             /* Write flag: 0 count, 1 write */
-
-
-/*********************************************************/
-/* sort_book_numbers                                     */
-/*********************************************************/
-int sort_for_grouping(AACQuantInfo* quantInfo,        /* ptr to quantization information */
-		      int sfb_width_table[],          /* Widths of single window */
-		      double *p_spectrum[],           /* Spectral values, noninterleaved */
-		      double *SigMaskRatio,
-		      double *PsySigMaskRatio);
-
-/*********************************************************/
-/* bit_search                                            */
-/*********************************************************/
-int bit_search(int quant[NUM_COEFF],  /* Quantized spectral values */
-               AACQuantInfo* quantInfo);       /* Quantization information */
-
-/*********************************************************/
-/* noiseless_bit_count                                   */
-/*********************************************************/
-int noiseless_bit_count(int quant[NUM_COEFF],
-			int hop,
-			int min_book_choice[112][3],
-			AACQuantInfo* quantInfo);         /* Quantization information */
-
-/*********************************************************/
-/* output_bits                                           */
-/*********************************************************/
-int output_bits(AACQuantInfo* quantInfo,
-		/*int huff[13][MAXINDEX][NUMINTAB],*/
-                int book,                /* codebook */
-		int quant[NUM_COEFF],		
-		int offset,
-		int length,
-		int write_flag);
-
-
-/*********************************************************/
-/* tf_init_decode_spectrum_aac                           */
-/*********************************************************/
-void tf_init_decode_spectrum_aac( long sampling_rate );
-
-/*********************************************************/
-/* tf_decode_spectrum_aac                                */
-/*********************************************************/
-int tf_decode_spectrum_aac(
-   double      *p_spectrum[MAX_TIME_CHANNELS],
-   int         block_type,
-   BsBitStream *fixed_stream,
-   BsBitStream *var_stream,
-   int         nr_of_chan,
-   int         bits_avail
-);
-
-
-/*********************************************************/
-/* find_grouping_bits                                    */
-/*********************************************************/
-int find_grouping_bits(int window_group_length[],
-		       int num_window_groups
-		       );
-
-/*********************************************************/
-/* write_scalefactor_bitstream                           */
-/*********************************************************/
-int write_scalefactor_bitstream(BsBitStream* fixed_stream,             /* Bitstream */  
-				int write_flag,                        /* Write flag */
-				AACQuantInfo* quantInfo);              /* Quantization information */
 
 
 #ifdef __cplusplus

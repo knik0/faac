@@ -92,10 +92,6 @@ LINK32=link.exe
 # PROP Default_Filter "cpp;c;cxx;rc;def;r;odl;idl;hpj;bat"
 # Begin Source File
 
-SOURCE=.\aac_qc.c
-# End Source File
-# Begin Source File
-
 SOURCE=.\aac_se_enc.c
 # End Source File
 # Begin Source File
@@ -117,6 +113,10 @@ SOURCE=.\faac.c
 # Begin Source File
 
 SOURCE=.\fastfft.c
+# End Source File
+# Begin Source File
+
+SOURCE=.\huffman.c
 # End Source File
 # Begin Source File
 
@@ -145,6 +145,10 @@ SOURCE=.\psych.c
 # Begin Source File
 
 SOURCE=.\pulse.c
+# End Source File
+# Begin Source File
+
+SOURCE=.\quant.c
 # End Source File
 # Begin Source File
 

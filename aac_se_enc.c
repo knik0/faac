@@ -19,7 +19,8 @@
 
 #include <stdlib.h>
 #include "aac_se_enc.h"
-#include "aac_qc.h"
+#include "quant.h"
+#include "huffman.h"
 
 int max_pred_sfb;
 

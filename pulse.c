@@ -1,6 +1,6 @@
 
-#include "aac_qc.h"
-#include "pulse.h"
+#include "quant.h"
+#include "huffman.h"
 
 #define STARTSFB 16 // approx. 2kHz
 

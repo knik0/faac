@@ -45,7 +45,7 @@ must be included in all copies or derivative works. Copyright 1996.
 #include "interface.h"
 #include "bitstream.h"
 #include "all.h"
-#include "aac_qc.h"
+#include "quant.h"
 #include "nok_ltp_enc.h"
 
 extern int max_pred_sfb;
