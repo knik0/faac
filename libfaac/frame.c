@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: frame.c,v 1.4 2001/01/31 23:40:05 menno Exp $
+ * $Id: frame.c,v 1.5 2001/02/01 20:22:47 menno Exp $
  */
 
 /*
@@ -111,6 +111,8 @@ faacEncHandle FAACAPI faacEncOpen(unsigned long sampleRate,
 
 int FAACAPI faacEncClose(faacEncHandle hEncoder)
 {
+	unsigned int channel;
+
 	/* Deinitialize coder functions */
 	PsyEnd(&hEncoder->gpsyInfo, hEncoder->psyInfo, hEncoder->numChannels);
 
@@ -119,6 +121,12 @@ int FAACAPI faacEncClose(faacEncHandle hEncoder)
 	AACQuantizeEnd();
 
 	HuffmanEnd(hEncoder->coderInfo, hEncoder->numChannels);
+
+	/* Free remaining buffer memory */
+	for (channel = 0; channel < hEncoder->numChannels; channel++) {
+		if (hEncoder->sampleBuff[channel]) free(hEncoder->sampleBuff[channel]);
+		if (hEncoder->nextSampleBuff[channel]) free(hEncoder->nextSampleBuff[channel]);
+	}
 
 	/* Free handle */
 	if (hEncoder) free(hEncoder);

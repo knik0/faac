@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: psych.c,v 1.3 2001/01/31 23:40:05 menno Exp $
+ * $Id: psych.c,v 1.4 2001/02/01 20:22:47 menno Exp $
  */
 
 #include <stdlib.h>
@@ -281,6 +281,7 @@ void PsyEnd(GlobalPsyInfo *gpsyInfo, PsyInfo *psyInfo, unsigned int numChannels)
 	if (gpsyInfo->windowS) free(gpsyInfo->windowS);
 
 	for (channel = 0; channel < numChannels; channel++) {
+		if (psyInfo[channel].nb) free(psyInfo[channel].nb);
 		if (psyInfo[channel].tonality) free(psyInfo[channel].tonality);
 		if (psyInfo[channel].prevSamples) free(psyInfo[channel].prevSamples);
 		if (psyInfo[channel].maskThr) free(psyInfo[channel].maskThr);
@@ -303,6 +304,7 @@ void PsyEnd(GlobalPsyInfo *gpsyInfo, PsyInfo *psyInfo, unsigned int numChannels)
 	for (channel = 0; channel < numChannels; channel++) {
 		if(psyInfo[channel].prevSamplesS) free(psyInfo[channel].prevSamplesS);
 		for (j = 0; j < 8; j++) {
+			if (psyInfo[channel].nbS[j]) free(psyInfo[channel].nbS[j]);
 			if (psyInfo[channel].maskThrS[j]) free(psyInfo[channel].maskThrS[j]);
 			if (psyInfo[channel].maskEnS[j]) free(psyInfo[channel].maskEnS[j]);
 			if (psyInfo[channel].maskThrNextS[j]) free(psyInfo[channel].maskThrNextS[j]);
