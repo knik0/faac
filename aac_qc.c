@@ -779,6 +779,8 @@ int tf_encode_spectrum_aac(
 		for (sb = 0; sb < quantInfo->nr_of_sfb; sb++) {
 			scale_factor[sb] = 0;
 		}
+		for (i = 0; i < 1024; i++)
+			quant[i] = 0;
 	}
 
 	calc_noise(quantInfo, p_spectrum[0], quant, requant, noise, allowed_dist[0],
