@@ -109,7 +109,7 @@ SOURCE=.\resource.h
 # End Source File
 # Begin Source File
 
-SOURCE="E:\Program Files\Microsoft Visual Studio\VC98\Include\sndfile.h"
+SOURCE=..\common\libsndfile\src\sndfile.h
 # End Source File
 # End Group
 # Begin Group "Resource Files"
