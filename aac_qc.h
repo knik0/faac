@@ -58,6 +58,7 @@ typedef struct {
     [MAX_SHORT_IN_LONG_BLOCK];          /* Length (in windows) of each window group */
   int common_scalefac;                  /* Global gain */
   Window_shape window_shape;            /* Window shape parameter */
+  Window_shape prev_window_shape;       /* Previous window shape parameter */
   short pred_global_flag;               /* Global prediction enable flag */
   int pred_sfb_flag[SFB_NUM_MAX];       /* Prediction enable flag for each scalefactor band */
   int reset_group_number;               /* Prediction reset group number */

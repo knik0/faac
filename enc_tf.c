@@ -172,7 +172,7 @@ void EncTfInit (faacAACConfig *ac, int VBR_setting)
 	/* initialize psychoacoustic module */
 	EncTf_psycho_acoustic_init();
 
-	winSwitchInit(max_ch);
+//	winSwitchInit(max_ch);
 
 	/* initialize spectrum processing */
 	/* initialize quantization and coding */
@@ -188,8 +188,10 @@ void EncTfInit (faacAACConfig *ac, int VBR_setting)
 	for (chanNum=0;chanNum<MAX_TIME_CHANNELS;chanNum++) {
 		nok_init_lt_pred (&nok_lt_status[chanNum]);
 		quantInfo[chanNum].ltpInfo = &nok_lt_status[chanNum];  /* Set pointer to LTP data */
+		quantInfo[chanNum].prev_window_shape = WS_SIN;
 	}
-        make_MDCT_windows();
+
+	make_MDCT_windows();
 }
 
 /*****************************************************************************************
@@ -403,6 +405,7 @@ int EncTfFrame (faacAACStream *as, BsBitStream  *fixed_stream)
 		for (chanNum=0;chanNum<max_ch;chanNum++) {
 
 			/* Set window shape paremeter in quantInfo */
+			quantInfo[chanNum].prev_window_shape = quantInfo[chanNum].window_shape;
 //			quantInfo[chanNum].window_shape = WS_KBD;
 			quantInfo[chanNum].window_shape = WS_SIN;
 
@@ -468,9 +471,8 @@ int EncTfFrame (faacAACStream *as, BsBitStream  *fixed_stream)
 				spectral_line_vector[chanNum],
 				overlap_buffer[chanNum],
 				block_type[chanNum],
-//				quantInfo[chanNum].window_shape,
-                                WS_SIN,
-                                WS_SIN,
+				quantInfo[chanNum].window_shape,
+				quantInfo[chanNum].prev_window_shape,
 				MOVERLAPPED
 				);
 
