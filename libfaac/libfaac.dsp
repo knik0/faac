@@ -125,7 +125,11 @@ SOURCE=.\ltp.c
 # End Source File
 # Begin Source File
 
-SOURCE=.\psych.c
+SOURCE=.\psychiso.c
+# End Source File
+# Begin Source File
+
+SOURCE=.\psychkni.c
 # End Source File
 # Begin Source File
 
