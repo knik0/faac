@@ -16,7 +16,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: main.c,v 1.49 2003/11/13 18:30:19 knik Exp $
+ * $Id: main.c,v 1.50 2003/11/24 18:11:14 knik Exp $
  */
 
 #ifdef _MSC_VER
@@ -166,21 +166,20 @@ int main(int argc, char *argv[])
     unsigned int delay_samples;
     unsigned int frameSize;
 #endif
+    char *faac_id_string;
+    char *faac_copyright_string;
+
 
     // get faac version
-    hEncoder = faacEncOpen(44100, 2, &samplesInput, &maxBytesOutput);
-    myFormat = faacEncGetCurrentConfiguration(hEncoder);
-    if (myFormat->version == FAAC_CFG_VERSION)
+    if (faacEncGetVersion(&faac_id_string, &faac_copyright_string) == FAAC_CFG_VERSION)
     {
         fprintf(stderr, "%s(see the faac.html file for more details)\n\n",
-            myFormat->copyright);
-        fprintf(stderr, "libfaac version %s\n", myFormat->name);
-        faacEncClose(hEncoder);
+	      faac_copyright_string);
+      fprintf(stderr, "libfaac version %s\n", faac_id_string);
     }
     else
     {
         fprintf(stderr, __FILE__ "(%d): wrong libfaac version\n", __LINE__);
-        faacEncClose(hEncoder);
         return 1;
     }
 
@@ -687,6 +686,9 @@ int main(int argc, char *argv[])
 
 /*
 $Log: main.c,v $
+Revision 1.50  2003/11/24 18:11:14  knik
+using new version info interface
+
 Revision 1.49  2003/11/13 18:30:19  knik
 raw input bugfix
 
