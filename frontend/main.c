@@ -16,7 +16,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: main.c,v 1.42 2003/08/16 15:06:07 menno Exp $
+ * $Id: main.c,v 1.43 2003/08/17 19:38:15 menno Exp $
  */
 
 #include <mp4.h>
@@ -155,6 +155,8 @@ int main(int argc, char *argv[])
     int mp4 = 0;
     u_int64_t total_samples = 0;
     u_int64_t encoded_samples = 0;
+    unsigned int delay_samples;
+    unsigned int frameSize;
 
     // get faac version
     hEncoder = faacEncOpen(44100, 2, &samplesInput, &maxBytesOutput);
@@ -342,8 +344,7 @@ int main(int argc, char *argv[])
 	printf("  -C     Raw PCM input channels.\n");
 	printf("  -I <C,LF> Input channel config, default is 3,4 (Center third, LF fourth)\n");
     printf("  -w     Wrap AAC data in MP4 container\n");
-	printf("  --addsilent <n> Add n silent frames at the end of output (default=%d)\n",
-	       addsilent);
+	//printf("  --addsilent <n> Add n silent frames at the end of output (default=%d)\n", addsilent);
 	//printf("More details on FAAC usage can be found in the faac.html file.\n");
 	printf("More tips on FAAC usage can be found in Knowledge base at www.audiocoding.com\n");
 
@@ -384,6 +385,8 @@ int main(int argc, char *argv[])
     hEncoder = faacEncOpen(infile->samplerate, infile->channels,
 			   &samplesInput, &maxBytesOutput);
 
+    frameSize = samplesInput/infile->channels;
+    delay_samples = frameSize; // encoder delay 1024 samples
     //pcmbuf = (int32_t *)malloc(samplesInput*sizeof(int32_t));
     floatbuf = (float *)malloc(samplesInput*sizeof(float));
     bitbuf = (unsigned char*)malloc(maxBytesOutput*sizeof(unsigned char));
@@ -511,9 +514,9 @@ int main(int argc, char *argv[])
 
 	    if (!samplesRead)
 	    {
-	      if (addsilent)
+	      if (encoded_samples < total_samples/*addsilent*/) // make sure we output as many samples as we read from input
 	      {
-		addsilent--;
+		//addsilent--;
 		//memset(pcmbuf, 0, samplesInput * sizeof(*pcmbuf));
 		memset(floatbuf, 0, samplesInput * sizeof(*floatbuf));
 		samplesRead = samplesInput;
@@ -523,7 +526,7 @@ int main(int argc, char *argv[])
             /* call the actual encoding routine */
             bytesWritten = faacEncEncode(hEncoder,
                 //pcmbuf,
-                floatbuf,
+                (int32_t *)floatbuf,
                 samplesRead,
                 bitbuf,
                 maxBytesOutput);
@@ -598,9 +601,14 @@ int main(int argc, char *argv[])
 
             if (bytesWritten > 0)
             {
-                unsigned int samples = ((total_samples - encoded_samples) < (samplesInput/infile->channels))
-                    ? (total_samples - encoded_samples)
-                    : (samplesInput/infile->channels);
+                u_int64_t samples = (total_samples - encoded_samples) < frameSize
+                    ? (total_samples - encoded_samples) : frameSize;
+
+                if (delay_samples > 0)
+                {
+                    samples = 0;
+                    delay_samples -= frameSize;
+                }
 
                 if (mp4)
                 {
@@ -638,10 +646,8 @@ int main(int argc, char *argv[])
 
 /*
 $Log: main.c,v $
-Revision 1.42  2003/08/16 15:06:07  menno
-Case:
-- More input options
-- MP4 output
+Revision 1.43  2003/08/17 19:38:15  menno
+fixes to MP4 files by Case
 
 Revision 1.41  2003/08/15 11:43:14  knik
 Option to add a number of silent frames at the end of output.
