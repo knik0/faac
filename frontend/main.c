@@ -18,7 +18,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: main.c,v 1.73 2004/08/02 20:53:23 danchr Exp $
+ * $Id: main.c,v 1.74 2004/08/03 00:08:51 danchr Exp $
  */
 
 #ifdef _MSC_VER
@@ -200,8 +200,8 @@ const char *long_help =
   "  --mpeg-vers X\tForce AAC MPEG version, X can be 2 or 4\n"
   "  --obj-type X\tAAC object type. (LC (Low Complexity, default), Main or LTP\n"
   "\t\t(Long Term Prediction)\n"
-  "  --shortctl X\tEnforce block type (default: both; 1 = long only; 2 = short\n"
-  "\t\tonly).\n"
+  "  --shortctl X\tEnforce block type (0 = both (default); 1 = no short; 2 = no\n"
+  "\t\tlong).\n"
   "  -r\t\tGenerate raw AAC bitstream (i.e. without any headers, needed\n"
   "\t\twhen directly using the AAC bitstream in a MP4 container like\n"
   "\t\te.g. mp4live does; used automatically for MP4).\n"
@@ -1142,6 +1142,9 @@ int main(int argc, char *argv[])
 
 /*
 $Log: main.c,v $
+Revision 1.74  2004/08/03 00:08:51  danchr
+fix --shortctl documentation
+
 Revision 1.73  2004/08/02 20:53:23  danchr
 *BSD portability fix
 
