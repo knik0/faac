@@ -91,12 +91,15 @@ int GetAACTrack(MP4FileHandle infile)
         {
             unsigned char *buff = NULL;
             unsigned __int32 buff_size = 0;
-			DWORD dummy;
+			DWORD dummy1_32;
+			BYTE dummy2_8, dummy3_8, dummy4_8, dummy5_8, dummy6_8,
+                dummy7_8, dummy8_8;
             MP4GetTrackESConfiguration(infile, trackId, &buff, &buff_size);
 
             if (buff)
             {
-                rc = AudioSpecificConfig(buff, &dummy, &dummy, &dummy, &dummy);
+                rc = AudioSpecificConfig(buff, &dummy1_32, &dummy2_8, &dummy3_8,
+                    &dummy4_8, &dummy5_8, &dummy6_8, &dummy7_8, &dummy8_8);
                 free(buff);
 
                 if (rc < 0)
@@ -281,6 +284,7 @@ BYTE					BitsPerSample=16;
 	int					track;
 	unsigned __int32	buffer_size;
 	unsigned long		timeScale, sf;
+    BYTE dummy1, dummy2, dummy3, dummy4;
 
 		if(!(mi->mp4File = MP4Read(lpstrFilename, 0)))
 		    ERROR_OFI("Error opening file");
@@ -297,7 +301,8 @@ BYTE					BitsPerSample=16;
 	    if(!mi->buffer)
 			ERROR_OFI("MP4GetTrackESConfiguration");
 
-		AudioSpecificConfig(mi->buffer, &timeScale, &channels, &sf, &mi->type);
+		AudioSpecificConfig(mi->buffer, &timeScale, &channels, &sf, &mi->type, &dummy1,
+            &dummy2, &dummy3, &dummy4);
 		if(memcmp(mpeg4AudioNames[mi->type],"AAC",3))
 			ERROR_OFI(0);
 		if(faacDecInit2(mi->hDecoder, mi->buffer, buffer_size, &samplerate, &channels) < 0)
