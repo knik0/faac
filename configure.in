@@ -15,4 +15,4 @@ AC_CHECK_TYPES(int16_t)
 
 AC_C_BIGENDIAN
 
-AC_OUTPUT(libfaac/Makefile frontend/Makefile Makefile)
+AC_OUTPUT(libfaac/Makefile frontend/Makefile include/Makefile Makefile)
