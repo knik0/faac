@@ -54,6 +54,9 @@ int noiseless_bit_count(int quant[NUM_COEFF],
 /*********************************************************/
 /* output_bits                                           */
 /*********************************************************/
+#ifndef __BORLANDC__
+__inline
+#endif
 int output_bits(AACQuantInfo* quantInfo,
 		/*int huff[13][MAXINDEX][NUMINTAB],*/
                 int book,                /* codebook */

@@ -312,11 +312,11 @@ void psy_step11andahalf(PARTITION_TABLE_LONG *part_tbl_long,
 
 void psy_step12(
                 PARTITION_TABLE_LONG *part_tbl_long,
-//		PARTITION_TABLE_SHORT *part_tbl_short,
+		PARTITION_TABLE_SHORT *part_tbl_short,
 		PSY_STATVARIABLE_LONG *psy_stvar_long,
-//		PSY_STATVARIABLE_SHORT *psy_stvar_short,
+		PSY_STATVARIABLE_SHORT *psy_stvar_short,
 		PSY_VARIABLE_LONG *psy_var_long
-//		,PSY_VARIABLE_SHORT *psy_var_short
+		,PSY_VARIABLE_SHORT *psy_var_short
 //		,int ch
 		);
 
