@@ -16,7 +16,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: frame.c,v 1.28 2002/08/09 16:27:20 knik Exp $
+ * $Id: frame.c,v 1.29 2002/08/19 16:34:43 knik Exp $
  */
 
 /*
@@ -302,7 +302,7 @@ int FAACAPI faacEncEncode(faacEncHandle hEncoder,
 
     /* After 4 flush frames all samples have been encoded,
        return 0 bytes written */
-    if (hEncoder->flushFrame == 4)
+    if (hEncoder->flushFrame > 4)
         return 0;
 
     /* Determine the channel configuration */
@@ -310,6 +310,8 @@ int FAACAPI faacEncEncode(faacEncHandle hEncoder,
 
     /* Update current sample buffers */
     for (channel = 0; channel < numChannels; channel++) {
+	double *tmp;
+
         if (hEncoder->sampleBuff[channel]) {
             for(i = 0; i < FRAME_LEN; i++) {
                 hEncoder->ltpTimeBuff[channel][i] = hEncoder->sampleBuff[channel][i];
@@ -322,12 +324,13 @@ int FAACAPI faacEncEncode(faacEncHandle hEncoder,
             }
         }
 
-        if (hEncoder->sampleBuff[channel])
-            FreeMemory(hEncoder->sampleBuff[channel]);
+	if (!hEncoder->sampleBuff[channel])
+	  hEncoder->sampleBuff[channel] = (double*)AllocMemory(FRAME_LEN*sizeof(double));
+	tmp = hEncoder->sampleBuff[channel];
         hEncoder->sampleBuff[channel] = hEncoder->nextSampleBuff[channel];
         hEncoder->nextSampleBuff[channel] = hEncoder->next2SampleBuff[channel];
         hEncoder->next2SampleBuff[channel] = hEncoder->next3SampleBuff[channel];
-        hEncoder->next3SampleBuff[channel] = (double*)AllocMemory(FRAME_LEN*sizeof(double));
+	hEncoder->next3SampleBuff[channel] = tmp;
 
         if (samplesInput == 0) { /* start flushing*/
             for (i = 0; i < FRAME_LEN; i++)
@@ -650,3 +653,11 @@ static SR_INFO srInfo[12+1] =
     },
     { -1 }
 };
+
+/*
+$Log: frame.c,v $
+Revision 1.29  2002/08/19 16:34:43  knik
+added one additional flush frame
+fixed sample buffer memory allocation
+
+*/
