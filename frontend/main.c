@@ -16,7 +16,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: main.c,v 1.48 2003/10/17 17:11:18 knik Exp $
+ * $Id: main.c,v 1.49 2003/11/13 18:30:19 knik Exp $
  */
 
 #ifdef _MSC_VER
@@ -388,7 +388,7 @@ int main(int argc, char *argv[])
             infile->channels = rawChans;
             infile->samplebytes = rawBits / 8;
             infile->samplerate = rawRate;
-	    infile->samples /= (infile->channels & infile->samplebytes);
+	    infile->samples /= (infile->channels * infile->samplebytes);
         }
     }
     else // header input
@@ -687,6 +687,9 @@ int main(int argc, char *argv[])
 
 /*
 $Log: main.c,v $
+Revision 1.49  2003/11/13 18:30:19  knik
+raw input bugfix
+
 Revision 1.48  2003/10/17 17:11:18  knik
 fixed raw input
 
