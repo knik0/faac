@@ -16,12 +16,13 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: util.c,v 1.9 2001/06/08 18:01:09 menno Exp $
+ * $Id: util.c,v 1.10 2005/02/02 07:56:33 sur Exp $
  */
 
 #include <math.h>
 
 #include "util.h"
+#include "coder.h"  // FRAME_LEN
 
 /* Returns the sample rate index */
 int GetSRIndex(unsigned int sampleRate)
@@ -47,7 +48,7 @@ unsigned int MaxBitrate(unsigned long sampleRate)
     /*
      *  Maximum of 6144 bit for a channel
      */
-    return (unsigned int)(6144.0 * (double)sampleRate/1024.0 + .5);
+    return (unsigned int)(6144.0 * (double)sampleRate/(double)FRAME_LEN + .5);
 }
 
 /* Returns the minimum bitrate per channel for that sampling frequency */
@@ -90,5 +91,5 @@ unsigned int BitAllocation(double pe, int short_block)
 /* Returns the maximum bit reservoir size */
 unsigned int MaxBitresSize(unsigned long bitRate, unsigned long sampleRate)
 {
-    return 6144 - (unsigned int)((double)bitRate/(double)sampleRate*1024.0);
+    return 6144 - (unsigned int)((double)bitRate/(double)sampleRate*(double)FRAME_LEN);
 }
