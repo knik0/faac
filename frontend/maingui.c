@@ -16,7 +16,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: maingui.c,v 1.16 2001/05/30 08:57:08 menno Exp $
+ * $Id: maingui.c,v 1.17 2001/06/08 18:01:09 menno Exp $
  */
 
 #include <windows.h>
@@ -38,343 +38,343 @@ static BOOL Encoding = FALSE;
 
 static BOOL SelectFileName(HWND hParent, char *filename, BOOL forReading)
 {
-	OPENFILENAME ofn;
+    OPENFILENAME ofn;
 
-	ofn.lStructSize = sizeof(OPENFILENAME);
-	ofn.hwndOwner = hParent;
-	ofn.hInstance = hInstance;
-	ofn.nFilterIndex = 0;
-	ofn.lpstrFileTitle = NULL;
-	ofn.nMaxFileTitle = 31;
-	filename [0] = 0x00;
-	ofn.lpstrFile = (LPSTR)filename;
-	ofn.nMaxFile = _MAX_PATH;
-	ofn.lpstrInitialDir = NULL;
-	ofn.lpstrCustomFilter = NULL;
-	ofn.nMaxCustFilter = 0;
-	ofn.nFileOffset = 0;
-	ofn.nFileExtension = 0;
-	ofn.lCustData = 0;
-	ofn.lpfnHook = NULL;
-	ofn.lpTemplateName = NULL;
+    ofn.lStructSize = sizeof(OPENFILENAME);
+    ofn.hwndOwner = hParent;
+    ofn.hInstance = hInstance;
+    ofn.nFilterIndex = 0;
+    ofn.lpstrFileTitle = NULL;
+    ofn.nMaxFileTitle = 31;
+    filename [0] = 0x00;
+    ofn.lpstrFile = (LPSTR)filename;
+    ofn.nMaxFile = _MAX_PATH;
+    ofn.lpstrInitialDir = NULL;
+    ofn.lpstrCustomFilter = NULL;
+    ofn.nMaxCustFilter = 0;
+    ofn.nFileOffset = 0;
+    ofn.nFileExtension = 0;
+    ofn.lCustData = 0;
+    ofn.lpfnHook = NULL;
+    ofn.lpTemplateName = NULL;
 
-	if (forReading)
-	{
-		char filters[] = { "Wave Files (*.wav)\0*.wav\0" \
-			"AIFF Files (*.aif;*.aiff;*.aifc)\0*.aif;*.aiff;*.aifc\0" \
-			"AU Files (*.au)\0*.au\0" \
-			"All Files (*.*)\0*.*\0\0" };
+    if (forReading)
+    {
+        char filters[] = { "Wave Files (*.wav)\0*.wav\0" \
+            "AIFF Files (*.aif;*.aiff;*.aifc)\0*.aif;*.aiff;*.aifc\0" \
+            "AU Files (*.au)\0*.au\0" \
+            "All Files (*.*)\0*.*\0\0" };
 
-		ofn.lpstrFilter = filters;
-		ofn.lpstrDefExt = "wav";
+        ofn.lpstrFilter = filters;
+        ofn.lpstrDefExt = "wav";
 
-		ofn.Flags = OFN_EXPLORER | OFN_FILEMUSTEXIST | OFN_HIDEREADONLY;
-		ofn.lpstrTitle = "Select Source File";
+        ofn.Flags = OFN_EXPLORER | OFN_FILEMUSTEXIST | OFN_HIDEREADONLY;
+        ofn.lpstrTitle = "Select Source File";
 
-		return GetOpenFileName (&ofn);
-	} else {
-		char filters [] = { "AAC Files (*.aac)\0*.aac\0" \
-			"All Files (*.*)\0*.*\0\0" };
+        return GetOpenFileName (&ofn);
+    } else {
+        char filters [] = { "AAC Files (*.aac)\0*.aac\0" \
+            "All Files (*.*)\0*.*\0\0" };
 
-		ofn.lpstrFilter = filters;
-		ofn.lpstrDefExt = "aac";
+        ofn.lpstrFilter = filters;
+        ofn.lpstrDefExt = "aac";
 
-		ofn.Flags = OFN_EXPLORER | OFN_PATHMUSTEXIST | OFN_OVERWRITEPROMPT | OFN_HIDEREADONLY;
-		ofn.lpstrTitle = "Select Output File";
+        ofn.Flags = OFN_EXPLORER | OFN_PATHMUSTEXIST | OFN_OVERWRITEPROMPT | OFN_HIDEREADONLY;
+        ofn.lpstrTitle = "Select Output File";
 
-		return GetSaveFileName(&ofn);
-	}
+        return GetSaveFileName(&ofn);
+    }
 }
 
 static void AwakeDialogControls(HWND hWnd)
 {
-	char szTemp[64];
-	SNDFILE *infile;
-	SF_INFO sfinfo;
-	unsigned int sampleRate, numChannels;
-	char *pExt;
+    char szTemp[64];
+    SNDFILE *infile;
+    SF_INFO sfinfo;
+    unsigned int sampleRate, numChannels;
+    char *pExt;
 
-	if ((infile = sf_open_read(inputFilename, &sfinfo)) == NULL)
-		return;
+    if ((infile = sf_open_read(inputFilename, &sfinfo)) == NULL)
+        return;
 
-	/* determine input file parameters */
-	sampleRate = sfinfo.samplerate;
-	numChannels = sfinfo.channels;
+    /* determine input file parameters */
+    sampleRate = sfinfo.samplerate;
+    numChannels = sfinfo.channels;
 
-	sf_close(infile);
+    sf_close(infile);
 
-	SetDlgItemText (hWnd, IDC_INPUTFILENAME, inputFilename);
+    SetDlgItemText (hWnd, IDC_INPUTFILENAME, inputFilename);
 
-	strncpy(outputFilename, inputFilename, sizeof(outputFilename) - 5);
+    strncpy(outputFilename, inputFilename, sizeof(outputFilename) - 5);
 
-	pExt = strrchr(outputFilename, '.');
+    pExt = strrchr(outputFilename, '.');
 
-	if (pExt == NULL) lstrcat(outputFilename, ".aac");
-	else lstrcpy(pExt, ".aac");
+    if (pExt == NULL) lstrcat(outputFilename, ".aac");
+    else lstrcpy(pExt, ".aac");
 
-	EnableWindow(GetDlgItem(hWnd, IDC_OUTPUTFILENAME), TRUE);
-	EnableWindow(GetDlgItem(hWnd, IDC_SELECT_OUTPUTFILE), TRUE);
+    EnableWindow(GetDlgItem(hWnd, IDC_OUTPUTFILENAME), TRUE);
+    EnableWindow(GetDlgItem(hWnd, IDC_SELECT_OUTPUTFILE), TRUE);
 
-	SetDlgItemText(hWnd, IDC_OUTPUTFILENAME, outputFilename);
+    SetDlgItemText(hWnd, IDC_OUTPUTFILENAME, outputFilename);
 
-	wsprintf(szTemp, "%iHz %ich", sampleRate, numChannels);
-	SetDlgItemText(hWnd, IDC_INPUTPARAMS, szTemp);
+    wsprintf(szTemp, "%iHz %ich", sampleRate, numChannels);
+    SetDlgItemText(hWnd, IDC_INPUTPARAMS, szTemp);
 
-	EnableWindow(GetDlgItem(hWnd, IDOK), TRUE);
+    EnableWindow(GetDlgItem(hWnd, IDOK), TRUE);
 }
 
 static DWORD WINAPI EncodeFile(LPVOID pParam)
 {
-	HWND hWnd = (HWND) pParam;
-	SNDFILE *infile;
-	SF_INFO sfinfo;
+    HWND hWnd = (HWND) pParam;
+    SNDFILE *infile;
+    SF_INFO sfinfo;
 
-	GetDlgItemText(hWnd, IDC_INPUTFILENAME, inputFilename, sizeof(inputFilename));
-	GetDlgItemText(hWnd, IDC_OUTPUTFILENAME, outputFilename, sizeof(outputFilename));
+    GetDlgItemText(hWnd, IDC_INPUTFILENAME, inputFilename, sizeof(inputFilename));
+    GetDlgItemText(hWnd, IDC_OUTPUTFILENAME, outputFilename, sizeof(outputFilename));
 
-	/* open the input file */
-	if ((infile = sf_open_read(inputFilename, &sfinfo)) != NULL)
-	{
-		/* determine input file parameters */
-		unsigned int sampleRate = sfinfo.samplerate;
-		unsigned int numChannels = sfinfo.channels;
+    /* open the input file */
+    if ((infile = sf_open_read(inputFilename, &sfinfo)) != NULL)
+    {
+        /* determine input file parameters */
+        unsigned int sampleRate = sfinfo.samplerate;
+        unsigned int numChannels = sfinfo.channels;
 
-		unsigned long inputSamples;
-		unsigned long maxOutputBytes;
+        unsigned long inputSamples;
+        unsigned long maxOutputBytes;
 
-		/* open and setup the encoder */
-		faacEncHandle hEncoder = faacEncOpen(sampleRate, numChannels,
-			&inputSamples, &maxOutputBytes);
+        /* open and setup the encoder */
+        faacEncHandle hEncoder = faacEncOpen(sampleRate, numChannels,
+            &inputSamples, &maxOutputBytes);
 
-		if (hEncoder)
-		{
-			HANDLE hOutfile;
-			char szTemp[64];
+        if (hEncoder)
+        {
+            HANDLE hOutfile;
+            char szTemp[64];
 
-			/* set encoder configuration */
-			faacEncConfigurationPtr config = faacEncGetCurrentConfiguration(hEncoder);
+            /* set encoder configuration */
+            faacEncConfigurationPtr config = faacEncGetCurrentConfiguration(hEncoder);
 
-			config->allowMidside = IsDlgButtonChecked(hWnd, IDC_ALLOWMIDSIDE) == BST_CHECKED ? 1 : 0;
-			config->useTns = IsDlgButtonChecked(hWnd, IDC_USETNS) == BST_CHECKED ? 1 : 0;
-			config->useLfe = IsDlgButtonChecked(hWnd, IDC_USELFE) == BST_CHECKED ? 1 : 0;
+            config->allowMidside = IsDlgButtonChecked(hWnd, IDC_ALLOWMIDSIDE) == BST_CHECKED ? 1 : 0;
+            config->useTns = IsDlgButtonChecked(hWnd, IDC_USETNS) == BST_CHECKED ? 1 : 0;
+            config->useLfe = IsDlgButtonChecked(hWnd, IDC_USELFE) == BST_CHECKED ? 1 : 0;
 
-			config->mpegVersion = SendMessage(GetDlgItem(hWnd, IDC_MPEGVERSION), CB_GETCURSEL, 0, 0);
-			config->aacObjectType = SendMessage(GetDlgItem(hWnd, IDC_OBJECTTYPE), CB_GETCURSEL, 0, 0);
-			if (config->aacObjectType == SSR) /* Set to LTP */
-				config->aacObjectType = LTP;
+            config->mpegVersion = SendMessage(GetDlgItem(hWnd, IDC_MPEGVERSION), CB_GETCURSEL, 0, 0);
+            config->aacObjectType = SendMessage(GetDlgItem(hWnd, IDC_OBJECTTYPE), CB_GETCURSEL, 0, 0);
+            if (config->aacObjectType == SSR) /* Set to LTP */
+                config->aacObjectType = LTP;
 
-			GetDlgItemText(hWnd, IDC_BITRATE, szTemp, sizeof(szTemp));
-			config->bitRate = atoi(szTemp);
-			GetDlgItemText(hWnd, IDC_BANDWIDTH, szTemp, sizeof(szTemp));
-			config->bandWidth = atoi(szTemp);
+            GetDlgItemText(hWnd, IDC_BITRATE, szTemp, sizeof(szTemp));
+            config->bitRate = atoi(szTemp);
+            GetDlgItemText(hWnd, IDC_BANDWIDTH, szTemp, sizeof(szTemp));
+            config->bandWidth = atoi(szTemp);
 
-			if (!faacEncSetConfiguration(hEncoder, config))
-			{
-				faacEncClose(hEncoder);
-				sf_close(infile);
+            if (!faacEncSetConfiguration(hEncoder, config))
+            {
+                faacEncClose(hEncoder);
+                sf_close(infile);
 
-				MessageBox (hWnd, "faacEncSetConfiguration failed!", "Error", MB_OK | MB_ICONSTOP);
+                MessageBox (hWnd, "faacEncSetConfiguration failed!", "Error", MB_OK | MB_ICONSTOP);
 
-				SendMessage(hWnd,WM_SETTEXT,0,(long)"FAAC GUI");
-				Encoding = FALSE;
-				SetDlgItemText(hWnd, IDOK, "Encode");
+                SendMessage(hWnd,WM_SETTEXT,0,(long)"FAAC GUI");
+                Encoding = FALSE;
+                SetDlgItemText(hWnd, IDOK, "Encode");
 
-				return 0;
-			}
+                return 0;
+            }
 
-			/* open the output file */
-			hOutfile = CreateFile(outputFilename, GENERIC_WRITE, 0, NULL,
-				CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+            /* open the output file */
+            hOutfile = CreateFile(outputFilename, GENERIC_WRITE, 0, NULL,
+                CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
 
-			if (hOutfile != INVALID_HANDLE_VALUE)
-			{
-				UINT startTime = GetTickCount(), lastUpdated = 0;
-				DWORD totalBytesRead = 0;
+            if (hOutfile != INVALID_HANDLE_VALUE)
+            {
+                UINT startTime = GetTickCount(), lastUpdated = 0;
+                DWORD totalBytesRead = 0;
 
-				unsigned int bytesInput = 0, bytesConsumed = 0;
-				DWORD numberOfBytesWritten = 0;
-				short *pcmbuf;
-				unsigned char *bitbuf;
-				char HeaderText[50];
-				char Percentage[5];
+                unsigned int bytesInput = 0, bytesConsumed = 0;
+                DWORD numberOfBytesWritten = 0;
+                short *pcmbuf;
+                unsigned char *bitbuf;
+                char HeaderText[50];
+                char Percentage[5];
 
-				pcmbuf = (short*)LocalAlloc(0, inputSamples*sizeof(short));
-				bitbuf = (unsigned char*)LocalAlloc(0, maxOutputBytes*sizeof(unsigned char));
+                pcmbuf = (short*)LocalAlloc(0, inputSamples*sizeof(short));
+                bitbuf = (unsigned char*)LocalAlloc(0, maxOutputBytes*sizeof(unsigned char));
 
-				SendDlgItemMessage(hWnd, IDC_PROGRESS, PBM_SETRANGE, 0, MAKELPARAM(0, 1024));
-				SendDlgItemMessage(hWnd, IDC_PROGRESS, PBM_SETPOS, 0, 0);
+                SendDlgItemMessage(hWnd, IDC_PROGRESS, PBM_SETRANGE, 0, MAKELPARAM(0, 1024));
+                SendDlgItemMessage(hWnd, IDC_PROGRESS, PBM_SETPOS, 0, 0);
 
-				for ( ;; )
-				{
-					int bytesWritten;
-					UINT timeElapsed, timeEncoded;
+                for ( ;; )
+                {
+                    int bytesWritten;
+                    UINT timeElapsed, timeEncoded;
 
-					bytesInput = sf_read_short(infile, pcmbuf, inputSamples) * sizeof(short);
-					
-					SendDlgItemMessage (hWnd, IDC_PROGRESS, PBM_SETPOS, (unsigned long)((float)totalBytesRead * 1024.0f / (sfinfo.samples*2*numChannels)), 0);
-					
-					/* Percentage for Dialog Output */
-					_itoa((int)((float)totalBytesRead * 100.0f / (sfinfo.samples*2*numChannels)),Percentage,10);
-					lstrcpy(HeaderText,"FAAC GUI: ");
-					lstrcat(HeaderText,Percentage);
-					lstrcat(HeaderText,"%");
-					SendMessage(hWnd,WM_SETTEXT,0,(long)HeaderText);
-					
-					totalBytesRead += bytesInput;
+                    bytesInput = sf_read_short(infile, pcmbuf, inputSamples) * sizeof(short);
 
-					timeElapsed = (GetTickCount () - startTime) / 1000;
-					timeEncoded = totalBytesRead / (sampleRate * numChannels * sizeof (short));
+                    SendDlgItemMessage (hWnd, IDC_PROGRESS, PBM_SETPOS, (unsigned long)((float)totalBytesRead * 1024.0f / (sfinfo.samples*2*numChannels)), 0);
 
-					if (timeElapsed > lastUpdated)
-					{
-						float factor;
+                    /* Percentage for Dialog Output */
+                    _itoa((int)((float)totalBytesRead * 100.0f / (sfinfo.samples*2*numChannels)),Percentage,10);
+                    lstrcpy(HeaderText,"FAAC GUI: ");
+                    lstrcat(HeaderText,Percentage);
+                    lstrcat(HeaderText,"%");
+                    SendMessage(hWnd,WM_SETTEXT,0,(long)HeaderText);
 
-						lastUpdated = timeElapsed;
+                    totalBytesRead += bytesInput;
 
-						factor = (float) timeEncoded / (float) (timeElapsed ? timeElapsed : 1);
+                    timeElapsed = (GetTickCount () - startTime) / 1000;
+                    timeEncoded = totalBytesRead / (sampleRate * numChannels * sizeof (short));
 
-						sprintf(szTemp, "Playing time: %2.2i:%2.2i:%2.2i  Encoding time: %2.2i:%2.2i:%2.2i  Factor: %.1f",
-							timeEncoded / 3600, (timeEncoded % 3600) / 60, timeEncoded % 60,
-							timeElapsed / 3600, (timeElapsed % 3600) / 60, timeElapsed % 60,
-							factor);
+                    if (timeElapsed > lastUpdated)
+                    {
+                        float factor;
 
-						SetDlgItemText(hWnd, IDC_TIME, szTemp);
-					}
+                        lastUpdated = timeElapsed;
 
-					/* call the actual encoding routine */
-					bytesWritten = faacEncEncode(hEncoder,
-						pcmbuf,
-						bytesInput/2,
-						bitbuf,
-						maxOutputBytes);
+                        factor = (float) timeEncoded / (float) (timeElapsed ? timeElapsed : 1);
 
-					/* Stop Pressed */
-					if ( !Encoding ) 
-						break;
+                        sprintf(szTemp, "Playing time: %2.2i:%2.2i:%2.2i  Encoding time: %2.2i:%2.2i:%2.2i  Factor: %.1f",
+                            timeEncoded / 3600, (timeEncoded % 3600) / 60, timeEncoded % 60,
+                            timeElapsed / 3600, (timeElapsed % 3600) / 60, timeElapsed % 60,
+                            factor);
 
-					/* all done, bail out */
-					if (!bytesInput && !bytesWritten)
-						break;
+                        SetDlgItemText(hWnd, IDC_TIME, szTemp);
+                    }
 
-					if (bytesWritten < 0)
-					{
-						MessageBox (hWnd, "faacEncEncodeFrame failed!", "Error", MB_OK | MB_ICONSTOP);
-						break;
-					}
+                    /* call the actual encoding routine */
+                    bytesWritten = faacEncEncode(hEncoder,
+                        pcmbuf,
+                        bytesInput/2,
+                        bitbuf,
+                        maxOutputBytes);
 
-					WriteFile(hOutfile, bitbuf, bytesWritten, &numberOfBytesWritten, NULL);
-				
-					}
+                    /* Stop Pressed */
+                    if ( !Encoding )
+                        break;
 
-				CloseHandle(hOutfile);
-				if (pcmbuf) LocalFree(pcmbuf);
-				if (bitbuf) LocalFree(bitbuf);
-			}
+                    /* all done, bail out */
+                    if (!bytesInput && !bytesWritten)
+                        break;
 
-			faacEncClose(hEncoder);
-		}
+                    if (bytesWritten < 0)
+                    {
+                        MessageBox (hWnd, "faacEncEncodeFrame failed!", "Error", MB_OK | MB_ICONSTOP);
+                        break;
+                    }
 
-		sf_close(infile);
-		MessageBeep(1);
+                    WriteFile(hOutfile, bitbuf, bytesWritten, &numberOfBytesWritten, NULL);
 
-		SendDlgItemMessage(hWnd, IDC_PROGRESS, PBM_SETPOS, 0, 0);
-	} else {
-		MessageBox(hWnd, "Couldn't open input file!", "Error", MB_OK | MB_ICONSTOP);
-	}
+                    }
 
-	SendMessage(hWnd,WM_SETTEXT,0,(long)"FAAC GUI");
-	Encoding = FALSE;
-	SetDlgItemText(hWnd, IDOK, "Encode");
-	return 0;
+                CloseHandle(hOutfile);
+                if (pcmbuf) LocalFree(pcmbuf);
+                if (bitbuf) LocalFree(bitbuf);
+            }
+
+            faacEncClose(hEncoder);
+        }
+
+        sf_close(infile);
+        MessageBeep(1);
+
+        SendDlgItemMessage(hWnd, IDC_PROGRESS, PBM_SETPOS, 0, 0);
+    } else {
+        MessageBox(hWnd, "Couldn't open input file!", "Error", MB_OK | MB_ICONSTOP);
+    }
+
+    SendMessage(hWnd,WM_SETTEXT,0,(long)"FAAC GUI");
+    Encoding = FALSE;
+    SetDlgItemText(hWnd, IDOK, "Encode");
+    return 0;
 }
 
 static BOOL WINAPI DialogProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
-	switch (msg)
-	{
+    switch (msg)
+    {
     case WM_INITDIALOG:
 
-		inputFilename[0] = 0x00;
+        inputFilename[0] = 0x00;
 
-		SendMessage(GetDlgItem(hWnd, IDC_MPEGVERSION), CB_ADDSTRING, 0, (LPARAM)(LPCTSTR)"MPEG4");
-		SendMessage(GetDlgItem(hWnd, IDC_MPEGVERSION), CB_ADDSTRING, 0, (LPARAM)(LPCTSTR)"MPEG2");
-		SendMessage(GetDlgItem(hWnd, IDC_MPEGVERSION), CB_SETCURSEL, 1, 0);
+        SendMessage(GetDlgItem(hWnd, IDC_MPEGVERSION), CB_ADDSTRING, 0, (LPARAM)(LPCTSTR)"MPEG4");
+        SendMessage(GetDlgItem(hWnd, IDC_MPEGVERSION), CB_ADDSTRING, 0, (LPARAM)(LPCTSTR)"MPEG2");
+        SendMessage(GetDlgItem(hWnd, IDC_MPEGVERSION), CB_SETCURSEL, 1, 0);
 
-		SendMessage(GetDlgItem(hWnd, IDC_OBJECTTYPE), CB_ADDSTRING, 0, (LPARAM)(LPCTSTR)"Main");
-		SendMessage(GetDlgItem(hWnd, IDC_OBJECTTYPE), CB_ADDSTRING, 0, (LPARAM)(LPCTSTR)"Low Complexity");
-		SendMessage(GetDlgItem(hWnd, IDC_OBJECTTYPE), CB_ADDSTRING, 0, (LPARAM)(LPCTSTR)"LTP");
-		SendMessage(GetDlgItem(hWnd, IDC_OBJECTTYPE), CB_SETCURSEL, 1, 0);
+        SendMessage(GetDlgItem(hWnd, IDC_OBJECTTYPE), CB_ADDSTRING, 0, (LPARAM)(LPCTSTR)"Main");
+        SendMessage(GetDlgItem(hWnd, IDC_OBJECTTYPE), CB_ADDSTRING, 0, (LPARAM)(LPCTSTR)"Low Complexity");
+        SendMessage(GetDlgItem(hWnd, IDC_OBJECTTYPE), CB_ADDSTRING, 0, (LPARAM)(LPCTSTR)"LTP");
+        SendMessage(GetDlgItem(hWnd, IDC_OBJECTTYPE), CB_SETCURSEL, 1, 0);
 
-		CheckDlgButton(hWnd, IDC_ALLOWMIDSIDE, TRUE);
-		CheckDlgButton(hWnd, IDC_USELFE, FALSE);
-		CheckDlgButton(hWnd, IDC_USETNS, TRUE);
-		SetDlgItemText(hWnd, IDC_BITRATE, "64000");
-		SetDlgItemText(hWnd, IDC_BANDWIDTH, "18000");
+        CheckDlgButton(hWnd, IDC_ALLOWMIDSIDE, TRUE);
+        CheckDlgButton(hWnd, IDC_USELFE, FALSE);
+        CheckDlgButton(hWnd, IDC_USETNS, TRUE);
+        SetDlgItemText(hWnd, IDC_BITRATE, "64000");
+        SetDlgItemText(hWnd, IDC_BANDWIDTH, "18000");
 
-		SetDlgItemText(hWnd, IDC_COMPILEDATE, "Ver: " __DATE__);
+        SetDlgItemText(hWnd, IDC_COMPILEDATE, "Ver: " __DATE__);
 
-		DragAcceptFiles(hWnd, TRUE);
-		return TRUE;
+        DragAcceptFiles(hWnd, TRUE);
+        return TRUE;
 
     case WM_DROPFILES:
 
-		if (DragQueryFile((HDROP) wParam, 0, (LPSTR) inputFilename, _MAX_PATH - 1))
-			AwakeDialogControls(hWnd);
-		
-		DragFinish((HDROP) wParam);
-		return FALSE;
+        if (DragQueryFile((HDROP) wParam, 0, (LPSTR) inputFilename, _MAX_PATH - 1))
+            AwakeDialogControls(hWnd);
+
+        DragFinish((HDROP) wParam);
+        return FALSE;
 
     case WM_COMMAND:
 
-		switch (wParam)
-		{
+        switch (wParam)
+        {
         case IDOK:
-			
-			if ( !Encoding ) 
-			{
-				int retval;
-				CreateThread(NULL,0,EncodeFile,hWnd,0,&retval);
-				Encoding = TRUE;
-				SetDlgItemText(hWnd, IDOK, "Stop");
-			}
-			else
-			{
-				Encoding = FALSE;
-				SetDlgItemText(hWnd, IDOK, "Encode");
-			}
-			return TRUE;
+
+            if ( !Encoding )
+            {
+                int retval;
+                CreateThread(NULL,0,EncodeFile,hWnd,0,&retval);
+                Encoding = TRUE;
+                SetDlgItemText(hWnd, IDOK, "Stop");
+            }
+            else
+            {
+                Encoding = FALSE;
+                SetDlgItemText(hWnd, IDOK, "Encode");
+            }
+            return TRUE;
 
         case IDCANCEL:
 
-			EndDialog(hWnd, TRUE);
-			return TRUE;
+            EndDialog(hWnd, TRUE);
+            return TRUE;
 
         case IDC_SELECT_INPUTFILE:
 
-			if (SelectFileName(hWnd, inputFilename, TRUE))
-				AwakeDialogControls(hWnd);
+            if (SelectFileName(hWnd, inputFilename, TRUE))
+                AwakeDialogControls(hWnd);
 
-			break;
+            break;
 
         case IDC_SELECT_OUTPUTFILE:
 
-			if (SelectFileName(hWnd, outputFilename, FALSE))
-			{
-				SetDlgItemText(hWnd, IDC_OUTPUTFILENAME, outputFilename);
-			}
+            if (SelectFileName(hWnd, outputFilename, FALSE))
+            {
+                SetDlgItemText(hWnd, IDC_OUTPUTFILENAME, outputFilename);
+            }
 
-			break;
-		}
+            break;
+        }
 
-		break;
-	}
+        break;
+    }
 
-	return FALSE;
+    return FALSE;
 }
 
 int WINAPI WinMain (HINSTANCE hInst, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
 {
-	hInstance = hInst;
+    hInstance = hInst;
 
-	return DialogBox(hInstance, MAKEINTRESOURCE (IDD_MAINDIALOG), NULL, (DLGPROC) DialogProc);
+    return DialogBox(hInstance, MAKEINTRESOURCE (IDD_MAINDIALOG), NULL, (DLGPROC) DialogProc);
 }

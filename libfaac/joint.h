@@ -16,7 +16,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: joint.h,v 1.4 2001/05/30 08:57:09 menno Exp $
+ * $Id: joint.h,v 1.5 2001/06/08 18:01:09 menno Exp $
  */
 
 #ifndef JOINT_H
@@ -30,7 +30,7 @@ extern "C" {
 
 
 void MSEncode(CoderInfo *coderInfo, ChannelInfo *channelInfo, double *spectrum[MAX_CHANNELS],
-			  unsigned int numberOfChannels, unsigned int msenable);
+              unsigned int numberOfChannels, unsigned int msenable);
 void MSReconstruct(CoderInfo *coderInfo, ChannelInfo *channelInfo, int numberOfChannels);
 
 #ifdef __cplusplus

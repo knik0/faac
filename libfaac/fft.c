@@ -16,7 +16,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: fft.c,v 1.4 2001/05/30 08:57:08 menno Exp $
+ * $Id: fft.c,v 1.5 2001/06/08 18:01:09 menno Exp $
  */
 
 #include <math.h>
@@ -36,10 +36,10 @@ static void build_table(int logm)
    static   int      m, m2, m4, m8, nel, n;
    static   double    *cn, *spcn, *smcn;
    static   double    ang, c, s;
- 
+
    /* Compute a few constants */
    m = 1 << logm; m2 = m / 2; m4 = m2 / 2; m8 = m4 /2;
- 
+
    /* Allocate memory for tables */
    nel = m4 - 2;
    tabr[logm-4] = (double *)AllocMemory(3 * nel * sizeof(double));
@@ -49,10 +49,10 @@ static void build_table(int logm)
       error_exit();
    }
 */
- 
+
    /* Initialize pointers */
    cn  = tabr[logm-4]; spcn  = cn + nel;  smcn  = spcn + nel;
- 
+
    /* Compute tables */
    for (n = 1; n < m4; n++) {
       if (n == m8) continue;
@@ -61,19 +61,19 @@ static void build_table(int logm)
       *cn++ = c; *spcn++ = - (s + c); *smcn++ = s - c;
    }
 }
- 
+
 /*--------------------------------------------------------------------*
  *    Recursive part of the RSFFT algorithm.  Not externally          *
  *    callable.                                                       *
  *--------------------------------------------------------------------*/
- 
+
 static void rsrec(double *x, int logm)
 {
    static   int      m, m2, m4, m8, nel, n;
    static   double    *xr1, *xr2, *xi1;
    static   double    *cn, *spcn, *smcn;
    static   double    tmp1, tmp2;
- 
+
    /* Compute trivial cases */
    if (logm < 2) {
       if (logm == 1) {   /* length m = 2 */
@@ -85,14 +85,14 @@ static void rsrec(double *x, int logm)
       }
       else if (logm == 0) return;   /* length m = 1 */
    }
- 
+
    /* Compute a few constants */
    m = 1 << logm; m2 = m / 2; m4 = m2 / 2; m8 = m4 /2;
- 
+
    /* Build tables of butterfly coefficients, if necessary */
    if ((logm >= 4) && (tabr[logm-4] == NULL))
       build_table(logm);
- 
+
    /* Step 1 */
    xr1 = x; xr2 = xr1 + m2;
    for (n = 0; n < m2; n++) {
@@ -101,14 +101,14 @@ static void rsrec(double *x, int logm)
       *xr1 = tmp1;
       xr1++; xr2++;
    }
- 
+
    /* Step 2 */
    xr1 = x + m2 + m4;
    for (n = 0; n < m4; n++) {
       *xr1 = - *xr1;
       xr1++;
    }
- 
+
    /* Step 3: multiplication by W_M^n */
    xr1 = x + m2; xi1 = xr1 + m4;
    if (logm >= 4) {
@@ -129,15 +129,15 @@ static void rsrec(double *x, int logm)
       }
       xr1++; xi1++;
    }
- 
+
    /* Call rsrec again with half DFT length */
    rsrec(x, logm-1);
- 
+
    /* Step 4: Call complex DFT routine, with quarter DFT length.
       Constants have to be recomputed, because they are static! */
    m = 1 << logm; m2 = m / 2; m4 = 3 * (m / 4);
    srrec(x + m2, x + m4, logm-2);
- 
+
    /* Step 5: sign change & data reordering */
    m = 1 << logm; m2 = m / 2; m4 = m2 / 2; m8 = m4 / 2;
    xr1 = x + m2 + m4;
@@ -158,11 +158,11 @@ static void rsrec(double *x, int logm)
    }
    if (logm == 2) x[3] = -x[3];
 }
- 
+
 /*--------------------------------------------------------------------*
  *    Direct transform for real inputs                                *
  *--------------------------------------------------------------------*/
- 
+
 /*--------------------------------------------------------------------*
  *    Data unshuffling according to bit-reversed indexing.            *
  *                                                                    *
@@ -172,17 +172,17 @@ static void rsrec(double *x, int logm)
  *--------------------------------------------------------------------*/
 static   int   brseed[256];   /* Evans' seed table */
 static   int   brsflg;        /* flag for table building */
- 
+
 static void BR_permute(double *x, int logm)
 {
    int      i, j, imax, lg2, n;
    int      off, fj, gno, *brp;
    double    tmp, *xp, *xq;
- 
+
    lg2 = logm >> 1;
    n = 1 << lg2;
    if (logm & 1) lg2++;
- 
+
    /* Create seed table if not yet built */
    if (brsflg != logm) {
       brsflg = logm;
@@ -196,7 +196,7 @@ static void BR_permute(double *x, int logm)
          }
       }
    }
- 
+
    /* Unshuffling loop */
    for (off = 1; off < n; off++) {
       fj = n * brseed[off]; i = off; j = fj;
@@ -211,11 +211,11 @@ static void BR_permute(double *x, int logm)
       }
    }
 }
- 
+
 /*--------------------------------------------------------------------*
  *    Recursive part of the SRFFT algorithm.                          *
  *--------------------------------------------------------------------*/
- 
+
 static void srrec(double *xr, double *xi, int logm)
 {
    static   int      m, m2, m4, m8, nel, n;
@@ -223,7 +223,7 @@ static void srrec(double *xr, double *xi, int logm)
    static   double    *cn, *spcn, *smcn, *c3n, *spc3n, *smc3n;
    static   double    tmp1, tmp2, ang, c, s;
    static   double    *tab[MAXLOGM];
- 
+
    /* Compute trivial cases */
    if (logm < 3) {
       if (logm == 2) {  /* length m = 4 */
@@ -278,26 +278,26 @@ static void srrec(double *xr, double *xi, int logm)
       }
       else if (logm == 0) return;   /* length m = 1 */
    }
- 
+
    /* Compute a few constants */
    m = 1 << logm; m2 = m / 2; m4 = m2 / 2; m8 = m4 /2;
- 
+
    /* Build tables of butterfly coefficients, if necessary */
    if ((logm >= 4) && (tab[logm-4] == NULL)) {
- 
+
       /* Allocate memory for tables */
       nel = m4 - 2;
-	  tab[logm-4] = (double *)AllocMemory(6 * nel * sizeof(double));
+      tab[logm-4] = (double *)AllocMemory(6 * nel * sizeof(double));
 /*
       if ((tab[logm-4] = (double *)AllocMemory(6 * nel * sizeof(double))) == NULL) {
          error_exit();
       }
 */
- 
+
       /* Initialize pointers */
       cn  = tab[logm-4]; spcn  = cn + nel;  smcn  = spcn + nel;
       c3n = smcn + nel;  spc3n = c3n + nel; smc3n = spc3n + nel;
- 
+
       /* Compute tables */
       for (n = 1; n < m4; n++) {
          if (n == m8) continue;
@@ -309,7 +309,7 @@ static void srrec(double *xr, double *xi, int logm)
          *c3n++ = c; *spc3n++ = - (s + c); *smc3n++ = s - c;
       }
    }
- 
+
    /* Step 1 */
    xr1 = xr; xr2 = xr1 + m2;
    xi1 = xi; xi2 = xi1 + m2;
@@ -322,7 +322,7 @@ static void srrec(double *xr, double *xi, int logm)
       *xi1 = tmp2;
       xr1++; xr2++; xi1++; xi2++;
    }
- 
+
    /* Step 2 */
    xr1 = xr + m2; xr2 = xr1 + m4;
    xi1 = xi + m2; xi2 = xi1 + m4;
@@ -335,7 +335,7 @@ static void srrec(double *xr, double *xi, int logm)
       *xi2 = tmp2;
       xr1++; xr2++; xi1++; xi2++;
    }
- 
+
    /* Steps 3 & 4 */
    xr1 = xr + m2; xr2 = xr1 + m4;
    xi1 = xi + m2; xi2 = xi1 + m4;
@@ -365,10 +365,10 @@ static void srrec(double *xr, double *xi, int logm)
       }
       xr1++; xr2++; xi1++; xi2++;
    }
- 
+
    /* Call ssrec again with half DFT length */
    srrec(xr, xi, logm-1);
- 
+
    /* Call ssrec again twice with one quarter DFT length.
       Constants have to be recomputed, because they are static! */
    m = 1 << logm; m2 = m / 2;
@@ -376,7 +376,7 @@ static void srrec(double *xr, double *xi, int logm)
    m = 1 << logm; m4 = 3 * (m / 4);
    srrec(xr + m4, xi + m4, logm-2);
 }
- 
+
 /*--------------------------------------------------------------------*
  *    Direct transform                                                *
  *--------------------------------------------------------------------*/
@@ -384,14 +384,14 @@ void  srfft(double *xr, double *xi, int logm)
 {
    /* Call recursive routine */
    srrec(xr, xi, logm);
- 
+
    /* Output array unshuffling using bit-reversed indices */
    if (logm > 1) {
       BR_permute(xr, logm);
       BR_permute(xi, logm);
    }
 }
- 
+
 /*--------------------------------------------------------------------*
  *    Inverse transform.  Uses Duhamel's trick (Ref: P. Duhamel       *
  *    et. al., "On computing the inverse DFT", IEEE Trans. ASSP,      *
@@ -401,10 +401,10 @@ void srifft(double *xr, double *xi, int logm)
 {
    int      i, m;
    double    fac, *xrp, *xip;
- 
+
    /* Call direct FFT, swapping real & imaginary addresses */
    srfft(xi, xr, logm);
- 
+
    /* Normalization */
    m = 1 << logm;
    fac = 1.0 / m;
@@ -419,7 +419,7 @@ void rsfft(double *x, int logm)
 {
    /* Call recursive routine */
    rsrec(x, logm);
- 
+
    /* Output array unshuffling using bit-reversed indices */
    if (logm > 1) {
       BR_permute(x, logm);

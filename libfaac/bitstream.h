@@ -16,7 +16,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: bitstream.h,v 1.9 2001/06/06 15:17:57 menno Exp $
+ * $Id: bitstream.h,v 1.10 2001/06/08 18:01:09 menno Exp $
  */
 
 #ifndef BITSTREAM_H
@@ -30,7 +30,7 @@ extern "C" {
 #include "coder.h"
 #include "channels.h"
 
-/* 
+/*
  * Raw bitstream constants
  */
 #define LEN_SE_ID 3
@@ -40,8 +40,8 @@ extern "C" {
 #define LEN_ICS_RESERV 1
 #define LEN_WIN_SEQ 2
 #define LEN_WIN_SH 1
-#define LEN_MAX_SFBL 6 
-#define LEN_MAX_SFBS 4 
+#define LEN_MAX_SFBL 6
+#define LEN_MAX_SFBS 4
 #define LEN_CB 4
 #define LEN_SCL_PCM 8
 #define LEN_PRED_PRES 1
@@ -64,12 +64,12 @@ extern "C" {
 #define LEN_TNS_COMPRESS 1
 #define LEN_GAIN_PRES 1
 
-#define LEN_NEC_NPULSE 2 
-#define LEN_NEC_ST_SFB 6 
-#define LEN_NEC_POFF 5 
-#define LEN_NEC_PAMP 4 
-#define NUM_NEC_LINES 4 
-#define NEC_OFFSET_AMP 4 
+#define LEN_NEC_NPULSE 2
+#define LEN_NEC_ST_SFB 6
+#define LEN_NEC_POFF 5
+#define LEN_NEC_PAMP 4
+#define NUM_NEC_LINES 4
+#define NEC_OFFSET_AMP 4
 
 #define LEN_NCC 3
 #define LEN_IS_CPE 1
@@ -85,7 +85,7 @@ extern "C" {
 #define LEN_BYTE 8
 #define LEN_PAD_DATA 8
 
-#define LEN_PC_COMM 8 
+#define LEN_PC_COMM 8
 
 #define ID_SCE 0
 #define ID_CPE 1
@@ -108,95 +108,95 @@ extern "C" {
 #define LTP  3
 
 
-#define BYTE_NUMBIT 8		/* bits in byte (char) */
-#define LONG_NUMBIT 32		/* bits in unsigned long */
+#define BYTE_NUMBIT 8       /* bits in byte (char) */
+#define LONG_NUMBIT 32      /* bits in unsigned long */
 #define bit2byte(a) (((a)+BYTE_NUMBIT-1)/BYTE_NUMBIT)
 
 
 typedef struct
 {
-  unsigned char *data;		/* data bits */
-  long numBit;			/* number of bits in buffer */
-  long size;			/* buffer size in bytes */
-  long currentBit;		/* current bit position in bit stream */
-  long numByte;			/* number of bytes read/written (only file) */
+  unsigned char *data;      /* data bits */
+  long numBit;          /* number of bits in buffer */
+  long size;            /* buffer size in bytes */
+  long currentBit;      /* current bit position in bit stream */
+  long numByte;         /* number of bytes read/written (only file) */
 } BitStream;
 
 
 
 int WriteBitstream(faacEncHandle hEncoder,
-				   CoderInfo *coderInfo,
-				   ChannelInfo *channelInfo,
-				   BitStream *bitStream,
-				   int numChannels);
+                   CoderInfo *coderInfo,
+                   ChannelInfo *channelInfo,
+                   BitStream *bitStream,
+                   int numChannels);
 
 static int CountBitstream(faacEncHandle hEncoder,
-						  CoderInfo *coderInfo,
-						  ChannelInfo *channelInfo,
-						  BitStream *bitStream,
-						  int numChannels);
+                          CoderInfo *coderInfo,
+                          ChannelInfo *channelInfo,
+                          BitStream *bitStream,
+                          int numChannels);
 
 static int WriteADTSHeader(faacEncHandle hEncoder,
-						   BitStream *bitStream,
-						   int writeFlag);
+                           BitStream *bitStream,
+                           int writeFlag);
 
 static int WriteCPE(CoderInfo *coderInfoL,
-					CoderInfo *coderInfoR,
-					ChannelInfo *channelInfo,
-					BitStream* bitStream,
-					int objectType,
-					int writeFlag);
+                    CoderInfo *coderInfoR,
+                    ChannelInfo *channelInfo,
+                    BitStream* bitStream,
+                    int objectType,
+                    int writeFlag);
 
 static int WriteSCE(CoderInfo *coderInfo,
-					ChannelInfo *channelInfo,
-					BitStream *bitStream,
-					int objectType,
-					int writeFlag);
+                    ChannelInfo *channelInfo,
+                    BitStream *bitStream,
+                    int objectType,
+                    int writeFlag);
 
 static int WriteLFE(CoderInfo *coderInfo,
-					ChannelInfo *channelInfo,
-					BitStream *bitStream,
-					int objectType,
-					int writeFlag);
+                    ChannelInfo *channelInfo,
+                    BitStream *bitStream,
+                    int objectType,
+                    int writeFlag);
 
 static int WriteICSInfo(CoderInfo *coderInfo,
-						BitStream *bitStream,
-						int objectType,
-						int writeFlag);
+                        BitStream *bitStream,
+                        int objectType,
+                        int writeFlag);
 
 static int WriteICS(CoderInfo *coderInfo,
-					BitStream *bitStream,
-					int commonWindow,
-					int objectType,
-					int writeFlag);
+                    BitStream *bitStream,
+                    int commonWindow,
+                    int objectType,
+                    int writeFlag);
 
 static int WriteLTPPredictorData(CoderInfo *coderInfo,
-								 BitStream *bitStream,
-								 int writeFlag);
+                                 BitStream *bitStream,
+                                 int writeFlag);
 
 static int WritePredictorData(CoderInfo *coderInfo,
-							  BitStream *bitStream,
-							  int writeFlag);
+                              BitStream *bitStream,
+                              int writeFlag);
 
 static int WritePulseData(CoderInfo *coderInfo,
-						  BitStream *bitStream,
-						  int writeFlag);
+                          BitStream *bitStream,
+                          int writeFlag);
 
 static int WriteTNSData(CoderInfo *coderInfo,
-						BitStream *bitStream,
-						int writeFlag);
+                        BitStream *bitStream,
+                        int writeFlag);
 
 static int WriteGainControlData(CoderInfo *coderInfo,
-								BitStream *bitStream,
-								int writeFlag);
+                                BitStream *bitStream,
+                                int writeFlag);
 
 static int WriteSpectralData(CoderInfo *coderInfo,
-							 BitStream *bitStream,
-							 int writeFlag);
+                             BitStream *bitStream,
+                             int writeFlag);
 
 static int WriteAACFillBits(BitStream* bitStream,
-							int numBits,
-							int writeFlag);
+                            int numBits,
+                            int writeFlag);
 
 static int FindGroupingBits(CoderInfo *coderInfo);
 
@@ -207,15 +207,15 @@ int CloseBitStream(BitStream *bitStream);
 static long BufferNumBit(BitStream *bitStream);
 
 static int WriteByte(BitStream *bitStream,
-					 unsigned long data,
-					 int numBit);
+                     unsigned long data,
+                     int numBit);
 
 int PutBit(BitStream *bitStream,
-		   unsigned long data,
-		   int numBit);
+           unsigned long data,
+           int numBit);
 
 static int ByteAlign(BitStream* bitStream,
-					 int writeFlag);
+                     int writeFlag);
 
 #ifdef __cplusplus
 }

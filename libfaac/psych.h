@@ -16,7 +16,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: psych.h,v 1.7 2001/05/30 08:57:09 menno Exp $
+ * $Id: psych.h,v 1.8 2001/06/08 18:01:09 menno Exp $
  */
 
 #ifndef PSYCH_H
@@ -34,97 +34,97 @@ extern "C" {
 #define MAX_NPART   NPART_LONG
 
 typedef struct {
-	int sampling_rate;
-	int len;
-	unsigned char width[MAX_NPART];
+    int sampling_rate;
+    int len;
+    unsigned char width[MAX_NPART];
 } PsyPartTable;
 
 static PsyPartTable psyPartTableLong[12+1];
 static PsyPartTable psyPartTableShort[12+1];
 
 typedef struct {
-	int size;
-	int sizeS;
+    int size;
+    int sizeS;
 
-	/* Previous input samples */
-	double *prevSamples;
-	double *prevSamplesS;
+    /* Previous input samples */
+    double *prevSamples;
+    double *prevSamplesS;
 
-	/* FFT data */
+    /* FFT data */
 
-	/* Magnitude */
-	double *energy;
-	double *energyS[8];
-	double *energyMS;
-	double *energySMS[8];
-	double *transBuff;
-	double *transBuffS[8];
+    /* Magnitude */
+    double *energy;
+    double *energyS[8];
+    double *energyMS;
+    double *energySMS[8];
+    double *transBuff;
+    double *transBuffS[8];
 
-	/* Tonality */
-	double *tonality;
+    /* Tonality */
+    double *tonality;
 
-	double lastPe;
-	double lastEnr;
-	int threeInARow;
-	int block_type;
+    double lastPe;
+    double lastEnr;
+    int threeInARow;
+    int block_type;
 
-	/* Final threshold values */
-	double pe;
-	double *nb;
-	double *nbS[8];
-	double *maskThr;
-	double *maskEn;
-	double *maskThrS[8];
-	double *maskEnS[8];
-	double *maskThrNext;
-	double *maskEnNext;
-	double *maskThrNextS[8];
-	double *maskEnNextS[8];
+    /* Final threshold values */
+    double pe;
+    double *nb;
+    double *nbS[8];
+    double *maskThr;
+    double *maskEn;
+    double *maskThrS[8];
+    double *maskEnS[8];
+    double *maskThrNext;
+    double *maskEnNext;
+    double *maskThrNextS[8];
+    double *maskEnNextS[8];
 
-	double *lastNb;
-	double *lastNbMS;
+    double *lastNb;
+    double *lastNbMS;
 
-	double *maskThrMS;
-	double *maskEnMS;
-	double *maskThrSMS[8];
-	double *maskEnSMS[8];
-	double *maskThrNextMS;
-	double *maskEnNextMS;
-	double *maskThrNextSMS[8];
-	double *maskEnNextSMS[8];
+    double *maskThrMS;
+    double *maskEnMS;
+    double *maskThrSMS[8];
+    double *maskEnSMS[8];
+    double *maskThrNextMS;
+    double *maskEnNextMS;
+    double *maskThrNextSMS[8];
+    double *maskEnNextSMS[8];
 } PsyInfo;
 
 typedef struct {
-	double sampleRate;
+    double sampleRate;
 
-	/* Hann window */
-	double *window;
-	double *windowS;
+    /* Hann window */
+    double *window;
+    double *windowS;
 
-	/* Stereo demasking thresholds */
-	double *mld;
-	double *mldS;
+    /* Stereo demasking thresholds */
+    double *mld;
+    double *mldS;
 
-	PsyPartTable *psyPart;
-	PsyPartTable *psyPartS;
+    PsyPartTable *psyPart;
+    PsyPartTable *psyPartS;
 
-	/* Spreading functions */
-	double spreading[NPART_LONG][NPART_LONG];
-	double spreadingS[NPART_SHORT][NPART_SHORT];
-	int sprInd[NPART_LONG][2];
-	int sprIndS[NPART_SHORT][2];
+    /* Spreading functions */
+    double spreading[NPART_LONG][NPART_LONG];
+    double spreadingS[NPART_SHORT][NPART_SHORT];
+    int sprInd[NPART_LONG][2];
+    int sprIndS[NPART_SHORT][2];
 
-	/* Absolute threshold of hearing */
-	double *ath;
-	double *athS;
+    /* Absolute threshold of hearing */
+    double *ath;
+    double *athS;
 } GlobalPsyInfo;
 
 void PsyInit(GlobalPsyInfo *gpsyInfo, PsyInfo *psyInfo, unsigned int numChannels,
-			 unsigned int sampleRate, unsigned int sampleRateIdx);
+             unsigned int sampleRate, unsigned int sampleRateIdx);
 void PsyEnd(GlobalPsyInfo *gpsyInfo, PsyInfo *psyInfo, unsigned int numChannels);
 void PsyCalculate(ChannelInfo *channelInfo, GlobalPsyInfo *gpsyInfo, PsyInfo *psyInfo,
-				  int *cb_width_long, int num_cb_long, int *cb_width_short,
-				  int num_cb_short, unsigned int numChannels);
+                  int *cb_width_long, int num_cb_long, int *cb_width_short,
+                  int num_cb_short, unsigned int numChannels);
 void PsyBufferUpdate(GlobalPsyInfo *gpsyInfo, PsyInfo *psyInfo, double *newSamples);
 void PsyBufferUpdateMS(GlobalPsyInfo *gpsyInfo, PsyInfo *psyInfoL, PsyInfo *psyInfoR);
 void BlockSwitch(CoderInfo *coderInfo, PsyInfo *psyInfo, unsigned int numChannels);
@@ -132,10 +132,10 @@ void BlockSwitch(CoderInfo *coderInfo, PsyInfo *psyInfo, unsigned int numChannel
 static void Hann(GlobalPsyInfo *gpsyInfo, double *inSamples, int N);
 __inline double mask_add(double m1, double m2, int k, int b, double *ath);
 static void PsyThreshold(GlobalPsyInfo *gpsyInfo, PsyInfo *psyInfo, int *cb_width_long,
-						 int num_cb_long, int *cb_width_short, int num_cb_short);
+                         int num_cb_long, int *cb_width_short, int num_cb_short);
 static void PsyThresholdMS(ChannelInfo *channelInfoL, GlobalPsyInfo *gpsyInfo,
-						   PsyInfo *psyInfoL, PsyInfo *psyInfoR, int *cb_width_long,
-						   int num_cb_long, int *cb_width_short, int num_cb_short);
+                           PsyInfo *psyInfoL, PsyInfo *psyInfoR, int *cb_width_long,
+                           int num_cb_long, int *cb_width_short, int num_cb_short);
 static double freq2bark(double freq);
 static double ATHformula(double f);
 

@@ -16,7 +16,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: channels.h,v 1.5 2001/05/30 08:57:08 menno Exp $
+ * $Id: channels.h,v 1.6 2001/06/08 18:01:09 menno Exp $
  */
 
 #ifndef CHANNEL_H
@@ -29,21 +29,21 @@ extern "C" {
 #include "coder.h"
 
 typedef struct {
-    int is_present;  
+    int is_present;
     int ms_used[MAX_SCFAC_BANDS];
     int ms_usedS[8][MAX_SCFAC_BANDS];
 } MSInfo;
 
 typedef struct {
-	int tag;
-	int present;
-	int ch_is_left;
-	int paired_ch;
-	int common_window;
-	int cpe;
-	int sce;
-	int lfe;
-	MSInfo msInfo;
+    int tag;
+    int present;
+    int ch_is_left;
+    int paired_ch;
+    int common_window;
+    int cpe;
+    int sce;
+    int lfe;
+    MSInfo msInfo;
 } ChannelInfo;
 
 void GetChannelInfo(ChannelInfo *channelInfo, int numChannels, int useLfe);

@@ -16,7 +16,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: huffman.h,v 1.3 2001/05/30 08:57:09 menno Exp $
+ * $Id: huffman.h,v 1.4 2001/06/08 18:01:09 menno Exp $
  */
 
 #ifndef HUFFMAN_H
@@ -47,34 +47,34 @@ void HuffmanInit(CoderInfo *coderInfo, unsigned int numChannels);
 void HuffmanEnd(CoderInfo *coderInfo, unsigned int numChannels);
 
 int BitSearch(CoderInfo *coderInfo,
-			  int *quant);
+              int *quant);
 
 int NoiselessBitCount(CoderInfo *coderInfo,
-					  int *quant,
-					  int hop,
-					  int min_book_choice[112][3]);
+                      int *quant,
+                      int hop,
+                      int min_book_choice[112][3]);
 
 static int CalculateEscSequence(int input, int *len_esc_sequence);
 
 int CalcBits(CoderInfo *coderInfo,
-			 int book,
-			 int *quant,
-			 int offset,
-			 int length);
+             int book,
+             int *quant,
+             int offset,
+             int length);
 
 int OutputBits(CoderInfo *coderInfo,
-			   int book,
-			   int *quant,
-			   int offset,
-			   int length);
+               int book,
+               int *quant,
+               int offset,
+               int length);
 
 int SortBookNumbers(CoderInfo *coderInfo,
-					BitStream *bitStream,
-					int writeFlag);
+                    BitStream *bitStream,
+                    int writeFlag);
 
 int WriteScalefactors(CoderInfo *coderInfo,
-					  BitStream *bitStream,
-					  int writeFlag);
+                      BitStream *bitStream,
+                      int writeFlag);
 
 #ifdef __cplusplus
 }

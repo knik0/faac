@@ -16,7 +16,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: ltp.h,v 1.2 2001/05/30 08:57:09 menno Exp $
+ * $Id: ltp.h,v 1.3 2001/06/08 18:01:09 menno Exp $
  */
 
 #ifndef LTP_H
@@ -29,14 +29,14 @@
 void LtpInit(faacEncHandle hEncoder);
 void LtpEnd(faacEncHandle hEncoder);
 int LtpEncode(faacEncHandle hEncoder,
-				CoderInfo *coderInfo,
-				LtpInfo *ltpInfo,
-				TnsInfo *tnsInfo,
-				double *p_spectrum,
-				double *p_time_signal);
+                CoderInfo *coderInfo,
+                LtpInfo *ltpInfo,
+                TnsInfo *tnsInfo,
+                double *p_spectrum,
+                double *p_time_signal);
 void LtpReconstruct(CoderInfo *coderInfo, LtpInfo *ltpInfo, double *p_spectrum);
 void  LtpUpdate(LtpInfo *ltpInfo, double *time_signal,
-					 double *overlap_signal, int block_size_long);
+                     double *overlap_signal, int block_size_long);
 
 #endif /* not defined LTP_H */
 

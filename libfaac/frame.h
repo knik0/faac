@@ -16,7 +16,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: frame.h,v 1.11 2001/05/30 08:57:08 menno Exp $
+ * $Id: frame.h,v 1.12 2001/06/08 18:01:09 menno Exp $
  */
 
 #ifndef FRAME_H
@@ -46,72 +46,72 @@ static SR_INFO srInfo[12+1];
 
 typedef struct faacEncConfiguration
 {
-	/* MPEG version, 2 or 4 */
-	unsigned int mpegVersion;
+    /* MPEG version, 2 or 4 */
+    unsigned int mpegVersion;
 
-	/* AAC object type */
-	unsigned int aacObjectType;
+    /* AAC object type */
+    unsigned int aacObjectType;
 
-	/* Allow mid/side coding */
-	unsigned int allowMidside;
+    /* Allow mid/side coding */
+    unsigned int allowMidside;
 
-	/* Use one of the channels as LFE channel */
-	unsigned int useLfe;
+    /* Use one of the channels as LFE channel */
+    unsigned int useLfe;
 
-	/* Use Temporal Noise Shaping */
-	unsigned int useTns;
+    /* Use Temporal Noise Shaping */
+    unsigned int useTns;
 
-	/* bitrate / channel of AAC file */
-	unsigned long bitRate;
+    /* bitrate / channel of AAC file */
+    unsigned long bitRate;
 
-	/* AAC file frequency bandwidth */
-	unsigned int bandWidth;
+    /* AAC file frequency bandwidth */
+    unsigned int bandWidth;
 
 } faacEncConfiguration, *faacEncConfigurationPtr;
 
 typedef struct {
-	/* number of channels in AAC file */
-	unsigned int numChannels;
+    /* number of channels in AAC file */
+    unsigned int numChannels;
 
-	/* samplerate of AAC file */
-	unsigned long sampleRate;
-	unsigned int sampleRateIdx;
+    /* samplerate of AAC file */
+    unsigned long sampleRate;
+    unsigned int sampleRateIdx;
 
-	unsigned int usedBytes;
+    unsigned int usedBytes;
 
-	/* frame number */
-	unsigned int frameNum;
-	unsigned int flushFrame;
+    /* frame number */
+    unsigned int frameNum;
+    unsigned int flushFrame;
 
-	/* Scalefactorband data */
-	SR_INFO *srInfo;
+    /* Scalefactorband data */
+    SR_INFO *srInfo;
 
-	/* sample buffers of current next and next next frame*/
-	double *sampleBuff[MAX_CHANNELS];
-	double *nextSampleBuff[MAX_CHANNELS];
-	double *next2SampleBuff[MAX_CHANNELS];
-	double *ltpTimeBuff[MAX_CHANNELS];
+    /* sample buffers of current next and next next frame*/
+    double *sampleBuff[MAX_CHANNELS];
+    double *nextSampleBuff[MAX_CHANNELS];
+    double *next2SampleBuff[MAX_CHANNELS];
+    double *ltpTimeBuff[MAX_CHANNELS];
 
-	/* Filterbank buffers */
-	double *sin_window_long;
-	double *sin_window_short;
-	double *kbd_window_long;
-	double *kbd_window_short;
-	double *freqBuff[MAX_CHANNELS];
-	double *overlapBuff[MAX_CHANNELS];
+    /* Filterbank buffers */
+    double *sin_window_long;
+    double *sin_window_short;
+    double *kbd_window_long;
+    double *kbd_window_short;
+    double *freqBuff[MAX_CHANNELS];
+    double *overlapBuff[MAX_CHANNELS];
 
-	double *msSpectrum[MAX_CHANNELS];
+    double *msSpectrum[MAX_CHANNELS];
 
-	/* Channel and Coder data for all channels */
-	CoderInfo coderInfo[MAX_CHANNELS];
-	ChannelInfo channelInfo[MAX_CHANNELS];
+    /* Channel and Coder data for all channels */
+    CoderInfo coderInfo[MAX_CHANNELS];
+    ChannelInfo channelInfo[MAX_CHANNELS];
 
-	/* Psychoacoustics data */
-	PsyInfo psyInfo[MAX_CHANNELS];
-	GlobalPsyInfo gpsyInfo;
+    /* Psychoacoustics data */
+    PsyInfo psyInfo[MAX_CHANNELS];
+    GlobalPsyInfo gpsyInfo;
 
-	/* Configuration data */
-	faacEncConfiguration config;
+    /* Configuration data */
+    faacEncConfiguration config;
 
 } faacEncStruct, *faacEncHandle;
 
@@ -119,16 +119,16 @@ faacEncConfigurationPtr FAACAPI faacEncGetCurrentConfiguration(faacEncHandle hEn
 int FAACAPI faacEncSetConfiguration (faacEncHandle hEncoder, faacEncConfigurationPtr config);
 
 faacEncHandle FAACAPI faacEncOpen(unsigned long sampleRate,
-								  unsigned int numChannels,
-								  unsigned long *inputSamples,
-								  unsigned long *maxOutputBytes);
+                                  unsigned int numChannels,
+                                  unsigned long *inputSamples,
+                                  unsigned long *maxOutputBytes);
 
 int FAACAPI faacEncEncode(faacEncHandle hEncoder,
-						  short *inputBuffer,
-						  unsigned int samplesInput,
-						  unsigned char *outputBuffer,
-						  unsigned int bufferSize
-						  );
+                          short *inputBuffer,
+                          unsigned int samplesInput,
+                          unsigned char *outputBuffer,
+                          unsigned int bufferSize
+                          );
 
 int FAACAPI faacEncClose(faacEncHandle hEncoder);
 

@@ -16,7 +16,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: filtbank.h,v 1.7 2001/05/30 08:57:08 menno Exp $
+ * $Id: filtbank.h,v 1.8 2001/06/08 18:01:09 menno Exp $
  */
 
 #ifndef FILTBANK_H
@@ -43,24 +43,24 @@ void FilterBankInit(faacEncHandle hEncoder);
 void FilterBankEnd(faacEncHandle hEncoder);
 
 void FilterBank(faacEncHandle hEncoder,
-				CoderInfo *coderInfo,
-				double *p_in_data,
-				double *p_out_mdct,
-				double *p_overlap,
-				int overlap_select);
+                CoderInfo *coderInfo,
+                double *p_in_data,
+                double *p_out_mdct,
+                double *p_overlap,
+                int overlap_select);
 
 void IFilterBank(faacEncHandle hEncoder,
-				 CoderInfo *coderInfo,
-				 double *p_in_data,
-				 double *p_out_mdct,
-				 double *p_overlap,
-				 int overlap_select);
+                 CoderInfo *coderInfo,
+                 double *p_in_data,
+                 double *p_out_mdct,
+                 double *p_overlap,
+                 int overlap_select);
 
 void specFilter(double *freqBuff,
-				int sampleRate,
-				int lowpassFreq,
-				int specLen
-				);
+                int sampleRate,
+                int lowpassFreq,
+                int specLen
+                );
 
 static void CalculateKBDWindow(double* win, double alpha, int length);
 static double Izero(double x);

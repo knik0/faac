@@ -16,7 +16,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: tns.h,v 1.2 2001/05/30 08:57:09 menno Exp $
+ * $Id: tns.h,v 1.3 2001/06/08 18:01:09 menno Exp $
  */
 
 #ifndef TNS_H
@@ -31,14 +31,14 @@ extern "C" {
 /* Function prototypes   */
 /*************************/
 static void Autocorrelation(int maxOrder,        /* Maximum autocorr order */
-					 int dataSize,		  /* Size of the data array */
-					 double* data,		  /* Data array */
-					 double* rArray);	  /* Autocorrelation array */
+                     int dataSize,        /* Size of the data array */
+                     double* data,        /* Data array */
+                     double* rArray);     /* Autocorrelation array */
 
 static double LevinsonDurbin(int maxOrder,        /* Maximum filter order */
-					  int dataSize,		   /* Size of the data array */
-					  double* data,		   /* Data array */
-					  double* kArray);	   /* Reflection coeff array */
+                      int dataSize,        /* Size of the data array */
+                      double* data,        /* Data array */
+                      double* kArray);     /* Reflection coeff array */
 
 static void StepUp(int fOrder, double* kArray, double* aArray);
 
@@ -48,11 +48,11 @@ static void TnsFilter(int length,double* spec,TnsFilterData* filter);
 static void TnsInvFilter(int length,double* spec,TnsFilterData* filter);
 void TnsInit(faacEncHandle hEncoder);
 void TnsEncode(TnsInfo* tnsInfo, int numberOfBands,int maxSfb,enum WINDOW_TYPE blockType,
-			   int* sfbOffsetTable,double* spec);
+               int* sfbOffsetTable,double* spec);
 void TnsEncodeFilterOnly(TnsInfo* tnsInfo, int numberOfBands, int maxSfb,
-						 enum WINDOW_TYPE blockType, int *sfbOffsetTable, double *spec);
+                         enum WINDOW_TYPE blockType, int *sfbOffsetTable, double *spec);
 void TnsDecodeFilterOnly(TnsInfo* tnsInfo, int numberOfBands, int maxSfb,
-						 enum WINDOW_TYPE blockType, int *sfbOffsetTable, double *spec);
+                         enum WINDOW_TYPE blockType, int *sfbOffsetTable, double *spec);
 
 #ifdef __cplusplus
 }

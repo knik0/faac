@@ -16,15 +16,15 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: backpred.h,v 1.4 2001/05/30 08:57:08 menno Exp $
+ * $Id: backpred.h,v 1.5 2001/06/08 18:01:09 menno Exp $
  */
 
 #ifndef _AAC_BACK_H_INCLUDED
 #define _AAC_BACK_H_INCLUDED
 
-#define PRED_ALPHA	0.90625
-#define PRED_A		0.953125
-#define PRED_B		0.953125
+#define PRED_ALPHA  0.90625
+#define PRED_A      0.953125
+#define PRED_B      0.953125
 
 #define ALPHA PRED_ALPHA
 #define A PRED_A
@@ -33,15 +33,15 @@
 
 /* Reset every RESET_FRAME frames. */
 #define RESET_FRAME 8
- 
+
 void PredCalcPrediction(double *act_spec,
-						double *last_spec,
-						int btype,
-						int nsfb,
-						int *isfb_width,
-						CoderInfo *coderInfo,
-						ChannelInfo *channelInfo,
-						int chanNum); 
+                        double *last_spec,
+                        int btype,
+                        int nsfb,
+                        int *isfb_width,
+                        CoderInfo *coderInfo,
+                        ChannelInfo *channelInfo,
+                        int chanNum);
 
 void PredInit(faacEncHandle hEncoder);
 
