@@ -14,7 +14,7 @@ typedef	struct
 	unsigned short	bitwidth ;
 } MIN_WAV_FMT ;
 
-typedef	struct 
+typedef	struct
 {	unsigned short	format ;
 	unsigned short	channels ;
 	unsigned int	samplerate ;
@@ -98,13 +98,13 @@ typedef struct
 {	unsigned int samples ;
 } FACT_CHUNK ;
 
-/*------------------------------------------------------------------------------------ 
+/*------------------------------------------------------------------------------------
 **	Functions defined in wav.c
 */
 
 int		wav_close	(SF_PRIVATE  *psf) ;
 
-/*------------------------------------------------------------------------------------ 
+/*------------------------------------------------------------------------------------
 **	Functions defined in wav_float.c
 */
 
@@ -116,7 +116,7 @@ int		wav_write_s2x86f (SF_PRIVATE *psf, short *ptr, int len) ;
 int		wav_write_i2x86f (SF_PRIVATE *psf, int *ptr, int len) ;
 int		wav_write_d2x86f (SF_PRIVATE *psf, double *ptr, int len, int normalize) ;
 
-/*------------------------------------------------------------------------------------ 
+/*------------------------------------------------------------------------------------
 **	Functions defined in wav_ima_adpcm.c
 */
 
@@ -133,7 +133,7 @@ int		ima_write_s (SF_PRIVATE *psf, short *ptr, int len) ;
 int		ima_write_i (SF_PRIVATE *psf, int *ptr, int len) ;
 int		ima_write_d (SF_PRIVATE *psf, double *ptr, int len, int normalize) ;
 
-/*------------------------------------------------------------------------------------ 
+/*------------------------------------------------------------------------------------
 **	Functions defined in wav_ms_adpcm.c
 */
 
@@ -151,7 +151,7 @@ int		msadpcm_write_i (SF_PRIVATE *psf, int *ptr, int len) ;
 int		msadpcm_write_d (SF_PRIVATE *psf, double *ptr, int len, int normalize) ;
 
 
-/*------------------------------------------------------------------------------------ 
+/*------------------------------------------------------------------------------------
 **	Functions defined in wav_gsm610.c
 */
 
@@ -172,7 +172,7 @@ int		wav_gsm610_write_d (SF_PRIVATE *psf, double *ptr, int len, int normalize) ;
 
 
 #ifdef _WIN32
-	#pragma pack(pop,1)
+//	#pragma pack(pop,1)
 #endif
 
 #endif
