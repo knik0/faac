@@ -188,6 +188,67 @@ loop1:
 			fstp st(0)
 		}
 	}
+#elif defined (USE_GNUC_ASM)
+  {
+      int rx[4];
+      __asm__ __volatile__(
+        "\n\nloop1:\n\t"
+
+        "fldl (%1)\n\t"
+        "fldl 8(%1)\n\t"
+        "fldl 16(%1)\n\t"
+        "fldl 24(%1)\n\t"
+
+        "fxch %%st(3)\n\t"
+        "fmul %%st(4)\n\t"
+        "fxch %%st(2)\n\t"
+        "fmul %%st(4)\n\t"
+        "fxch %%st(1)\n\t"
+        "fmul %%st(4)\n\t"
+        "fxch %%st(3)\n\t"
+        "fmul %%st(4)\n\t"
+
+        "addl $32, %1\n\t"
+        "addl $16, %3\n\t"
+
+        "fxch %%st(2)\n\t"
+        "fistl %5\n\t"
+        "fxch %%st(1)\n\t"
+        "fistl 4+%5\n\t"
+        "fxch %%st(3)\n\t"
+        "fistl 8+%5\n\t"
+        "fxch %%st(2)\n\t"
+        "fistl 12+%5\n\t"
+
+        "dec %4\n\t"
+
+        "movl %5, %%eax\n\t"
+        "movl 4+%5, %%ebx\n\t"
+        "fxch %%st(1)\n\t"
+        "faddl (%2,%%eax,8)\n\t"
+        "fxch %%st(3)\n\t"
+        "faddl (%2,%%ebx,8)\n\t"
+
+        "movl 8+%5, %%eax\n\t"
+        "movl 12+%5, %%ebx\n\t"
+        "fxch %%st(2)\n\t"
+        "faddl (%2,%%eax,8)\n\t"
+        "fxch %%st(1)\n\t"
+        "faddl (%2,%%ebx,8)\n\t"
+
+        "fxch %%st(3)\n\t"
+        "fistpl -16(%3)\n\t"
+        "fxch %%st(1)\n\t"
+        "fistpl -12(%3)\n\t"
+        "fistpl -8(%3)\n\t"
+        "fistpl -4(%3)\n\t"
+
+        "jnz loop1\n\n"
+        : /* no outputs */
+        : "t" (istep), "r" (pow_spectrum), "r" (adj_quant_asm), "r" (quant), "r" (1024 / 4), "m" (rx)
+        : "%eax", "%ebx", "memory", "cc"
+      );
+  }
 #elif 0
 	{
 		double x;
