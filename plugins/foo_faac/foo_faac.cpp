@@ -2,6 +2,7 @@
 // Copyright (C) 2003 Janne Hyvärinen
 //
 // Changes:
+//  0.3.4 (2003-10-14): Fixed AAC object type selecting
 //  0.3.3 (2003-10-02): Removed gapless support for raw AAC files, it was hacky and recent libfaad changes broke it
 //  0.3.2 (2003-09-17): Last fix wasn't perfect and very small input chunks wouldn't have been encoded
 //  0.3.1 (2003-09-14): Fixed possible memory access problems
@@ -32,7 +33,7 @@
 #include <faac.h>
 #include <version.h>
 
-#define FOO_FAAC_VERSION     "0.3.3"
+#define FOO_FAAC_VERSION     "0.3.4"
 
 #define FF_AAC  0
 #define FF_MP4  1
@@ -364,7 +365,7 @@ private:
             for ( int i = 0; i < info.meta_get_count(); i++ ) {
                 char *pName = (char *)info.meta_enum_name ( i );
                 const char *val = info.meta_enum_value ( i );
-                if ( !val ) continue;
+                if ( !val || (val && !(*val)) ) continue;
 
                 if ( !stricmp (pName, "TITLE") ) {
                     MP4SetMetadataName ( MP4hFile, val );
@@ -388,23 +389,19 @@ private:
                     MP4SetMetadataGenre ( MP4hFile, val );
                 }
                 else if ( !stricmp (pName, "TRACKNUMBER") ) {
-                    unsigned __int16 trkn = 0, tot = 0;
-                    sscanf ( val, "%d", &trkn );
+                    unsigned __int16 trkn = atoi ( val ), tot = 0;
                     MP4SetMetadataTrack ( MP4hFile, trkn, tot );
                 }
                 else if ( !stricmp (pName, "DISKNUMBER") || !stricmp (pName, "DISC") ) {
-                    unsigned __int16 disk = 0, tot = 0;
-                    sscanf ( val, "%d", &disk );
+                    unsigned __int16 disk = atoi ( val ), tot = 0;
                     MP4SetMetadataDisk ( MP4hFile, disk, tot );
                 }
                 else if ( !stricmp (pName, "COMPILATION") ) {
-                    unsigned __int8 cpil = 0;
-                    sscanf ( val, "%d", &cpil );
+                    unsigned __int8 cpil = atoi ( val );
                     MP4SetMetadataCompilation ( MP4hFile, cpil );
                 }
                 else if ( !stricmp (pName, "TEMPO") ) {
-                    unsigned __int16 tempo = 0;
-                    sscanf ( val, "%d", &tempo );
+                    unsigned __int16 tempo = atoi ( val );
                     MP4SetMetadataTempo ( MP4hFile, tempo );
                 } else {
                     MP4SetMetadataFreeForm ( MP4hFile, pName, (unsigned __int8*)val, strlen(val) );
@@ -618,7 +615,7 @@ class config_faac : public config {
 
                 update ( wnd );
             }
-            return 1;
+            return TRUE;
 
         case WM_COMMAND:
             switch ( wp ) {
@@ -627,14 +624,14 @@ class config_faac : public config {
                     int t = (int)uSendMessage ( wnd_format, CB_GETCURSEL, 0, 0 );
                     if ( t >= 0 ) cfg_mp4container = format_list[t].mp4;
                 }
-                return 0;
+                break;
 
             case IDC_PROFILE | (CBN_SELCHANGE<<16):
                 {
                     int t = (int)uSendMessage ( wnd_profile, CB_GETCURSEL, 0, 0 );
                     if ( t >= 0 ) cfg_objecttype = profile_list[t].profile;
                 }
-                return 0;
+                break;
 
             case IDC_QUANTQUAL_EDIT | (EN_KILLFOCUS<<16):
                 {
@@ -649,13 +646,14 @@ class config_faac : public config {
                     }
                     uSendDlgItemMessage ( wnd, IDC_QUANTQUAL_SLIDER, TBM_SETPOS, 1, cfg_quantqual );
                 }
-                return 0;
+                break;
 
             case IDC_CUTOFF | (CBN_SELCHANGE<<16):
                 {
                     int t = (int)uSendMessage ( wnd_cutoff, CB_GETCURSEL, 0, 0 );
                     if ( t >= 0 ) cfg_cutoff = cutoff_list[t].cutoff;
                 }
+                break;
 
             case IDC_CUTOFF | (CBN_KILLFOCUS<<16):
                 {
@@ -672,19 +670,19 @@ class config_faac : public config {
                         }
                     }
                 }
-                return 0;
+                break;
 
             case IDC_MIDSIDE:
                 {
                     cfg_midside = !cfg_midside;
                 }
-                return 0;
+                break;
 
             case IDC_TNS:
                 {
                     cfg_tns = !cfg_tns;
                 }
-                return 0;
+                break;
 
             case IDC_DEFAULTS:
                 {
@@ -696,7 +694,7 @@ class config_faac : public config {
                     cfg_cutoff = FF_DEFAULT_CUTOFF;
                     update ( wnd );
                 }
-                return 0;
+                break;
             }
             break;
 
@@ -705,10 +703,10 @@ class config_faac : public config {
                 cfg_quantqual = uSendDlgItemMessage ( wnd, IDC_QUANTQUAL_SLIDER, TBM_GETPOS, 0, 0 );
                 uSetDlgItemText ( wnd, IDC_QUANTQUAL_EDIT, string_printf ("%i", (int)cfg_quantqual) );
             }
-            return 0;
+            break;
         }
 
-        return 0;
+        return FALSE;
     }
 
     virtual HWND create ( HWND parent ) {

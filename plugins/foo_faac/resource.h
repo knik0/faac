@@ -4,15 +4,15 @@
 //
 #define IDD_CONFIG                      116
 #define IDC_COMPRESSION                 1000
-#define IDC_FORMAT                      1002
-#define IDC_BPS                         1003
-#define IDC_PROFILE                     1004
-#define IDC_QUANTQUAL_EDIT              1006
-#define IDC_CUTOFF                      1007
-#define IDC_MIDSIDE                     1008
-#define IDC_TNS                         1009
-#define IDC_QUANTQUAL_SLIDER            1014
-#define IDC_DEFAULTS                    1015
+#define IDC_FORMAT                      1001
+#define IDC_BPS                         1002
+#define IDC_PROFILE                     1003
+#define IDC_QUANTQUAL_EDIT              1004
+#define IDC_CUTOFF                      1005
+#define IDC_MIDSIDE                     1006
+#define IDC_TNS                         1007
+#define IDC_QUANTQUAL_SLIDER            1008
+#define IDC_DEFAULTS                    1009
 
 // Next default values for new objects
 // 
