@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: coder.h,v 1.3 2001/02/28 18:39:34 menno Exp $
+ * $Id: coder.h,v 1.4 2001/03/05 11:33:37 menno Exp $
  */
 
 #ifndef CODER_H
@@ -44,7 +44,6 @@ enum WINDOW_TYPE {
 	SHORT_LONG_WINDOW
 };
 
-/* Added TNS defines and structures here to get it to compile */
 #define TNS_MAX_ORDER 20
 #define DEF_TNS_GAIN_THRESH 1.4
 #define DEF_TNS_COEFF_THRESH 0.1
@@ -52,6 +51,23 @@ enum WINDOW_TYPE {
 #define DEF_TNS_RES_OFFSET 3
 #define LEN_TNS_NFILTL 2
 #define LEN_TNS_NFILTS 1
+
+#define LPC 1
+#define DELAY 2048
+#define	LEN_LTP_DATA_PRESENT 1
+#define	LEN_LTP_LAG 11
+#define	LEN_LTP_COEF 3
+#define	LEN_LTP_SHORT_USED 1
+#define	LEN_LTP_SHORT_LAG_PRESENT 1
+#define	LEN_LTP_SHORT_LAG 5
+#define	LTP_LAG_OFFSET 16
+#define	LEN_LTP_LONG_USED 1
+#define	MAX_LT_PRED_LONG_SFB 40
+#define	MAX_LT_PRED_SHORT_SFB 13
+#define SHORT_SQ_OFFSET (BLOCK_LEN_LONG-(BLOCK_LEN_SHORT*4+BLOCK_LEN_SHORT/2))
+#define CODESIZE 8
+#define NOK_LT_BLEN (3 * BLOCK_LEN_LONG)
+
 
 typedef struct {
 	int order;                           /* Filter order */
@@ -79,8 +95,22 @@ typedef struct {
 	int tnsMaxOrderShort;
 	TnsWindowData windowData[MAX_SHORT_WINDOWS]; /* TNS data per window */
 } TnsInfo;
-/* End of TNS defines and structures */
 
+typedef struct
+{
+	int weight_idx;
+	double weight;
+	int sbk_prediction_used[MAX_SHORT_WINDOWS];
+	int sfb_prediction_used[MAX_SCFAC_BANDS];
+	int delay[MAX_SHORT_WINDOWS];
+	int global_pred_flag;
+	int side_info;
+	short *buffer;
+	double *mdct_predicted;
+
+	double *time_buffer;
+	double *ltp_overlap_buffer;
+} LtpInfo;
 
 typedef struct {
 	int window_shape;
@@ -111,7 +141,11 @@ typedef struct {
 	/* Lengths of spectral bitstream elements */
 	int *len;
 
+	/* Holds the requantized spectrum */
+	double *requantFreq;
+
 	TnsInfo tnsInfo;
+	LtpInfo ltpInfo;
 
 } CoderInfo;
 

@@ -5,9 +5,9 @@ Big list, but a lot of it can be done fairly easily with some old code
 - DONE: Add frequency cutoff filter
 - DONE: Add ADTS headers
 - DONE: Write GUI
-- Add TNS
+- DONE: Add TNS
+- DONE: Add LTP
 - Add PNS
-- Add LTP
 - Add backward prediction (MPEG2-AAC)????
 - Add IS
 - Add bit reservoir control

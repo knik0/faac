@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: frame.c,v 1.10 2001/02/28 18:39:34 menno Exp $
+ * $Id: frame.c,v 1.11 2001/03/05 11:33:37 menno Exp $
  */
 
 /*
@@ -41,6 +41,7 @@
 #include "huffman.h"
 #include "psych.h"
 #include "tns.h"
+#include "ltp.h"
 
 
 faacEncConfigurationPtr FAACAPI faacEncGetCurrentConfiguration(faacEncHandle hEncoder)
@@ -56,6 +57,7 @@ int FAACAPI faacEncSetConfiguration(faacEncHandle hEncoder,
 	hEncoder->config.allowMidside = config->allowMidside;
 	hEncoder->config.useLfe = config->useLfe;
 	hEncoder->config.useTns = config->useTns;
+	hEncoder->config.useLtp = config->useLtp;
 	hEncoder->config.aacProfile = config->aacProfile;
 
 	 /* No SSR supported yet */
@@ -100,6 +102,7 @@ faacEncHandle FAACAPI faacEncOpen(unsigned long sampleRate,
 	hEncoder->config.allowMidside = 1;
 	hEncoder->config.useLfe = 0;
 	hEncoder->config.useTns = 0;
+	hEncoder->config.useLtp = 0;
 	hEncoder->config.bitRate = 64000; /* default bitrate / channel */
 	hEncoder->config.bandWidth = 18000; /* default bandwidth */
 
@@ -116,6 +119,8 @@ faacEncHandle FAACAPI faacEncOpen(unsigned long sampleRate,
 		hEncoder->sampleBuff[channel] = NULL;
 		hEncoder->nextSampleBuff[channel] = NULL;
 		hEncoder->next2SampleBuff[channel] = NULL;
+		hEncoder->ltpTimeBuff[channel] = (double*)malloc(2*BLOCK_LEN_LONG*sizeof(double));
+		memset(hEncoder->ltpTimeBuff[channel], 0, 2*BLOCK_LEN_LONG*sizeof(double));
 	}
 
 	/* Initialize coder functions */
@@ -125,6 +130,8 @@ faacEncHandle FAACAPI faacEncOpen(unsigned long sampleRate,
 	FilterBankInit(hEncoder);
 
     TnsInit(hEncoder);
+
+	LtpInit(hEncoder);
 
 	AACQuantizeInit(hEncoder->coderInfo, hEncoder->numChannels);
 
@@ -143,12 +150,15 @@ int FAACAPI faacEncClose(faacEncHandle hEncoder)
 
 	FilterBankEnd(hEncoder);
 
-	AACQuantizeEnd();
+	LtpEnd(hEncoder);
+
+	AACQuantizeEnd(hEncoder->coderInfo, hEncoder->numChannels);
 
 	HuffmanEnd(hEncoder->coderInfo, hEncoder->numChannels);
 
 	/* Free remaining buffer memory */
 	for (channel = 0; channel < hEncoder->numChannels; channel++) {
+		if (hEncoder->ltpTimeBuff[channel]) free(hEncoder->ltpTimeBuff[channel]);
 		if (hEncoder->sampleBuff[channel]) free(hEncoder->sampleBuff[channel]);
 		if (hEncoder->nextSampleBuff[channel]) free(hEncoder->nextSampleBuff[channel]);
 	}
@@ -170,6 +180,8 @@ int FAACAPI faacEncEncode(faacEncHandle hEncoder,
 	int sb, frameBytes;
 	unsigned int bitsToUse, offset;
 	BitStream *bitStream; /* bitstream used for writing the frame to */
+	TnsInfo *tnsInfo_for_LTP;
+	TnsInfo *tnsDecInfo;
 
 	/* local copy's of parameters */
 	ChannelInfo *channelInfo = hEncoder->channelInfo;
@@ -179,6 +191,7 @@ int FAACAPI faacEncEncode(faacEncHandle hEncoder,
 	unsigned int aacProfile = hEncoder->config.aacProfile;
 	unsigned int useLfe = hEncoder->config.useLfe;
 	unsigned int useTns = hEncoder->config.useTns;
+	unsigned int useLtp = hEncoder->config.useLtp;
 	unsigned int allowMidside = hEncoder->config.allowMidside;
 	unsigned int bitRate = hEncoder->config.bitRate;
 	unsigned int bandWidth = hEncoder->config.bandWidth;
@@ -189,7 +202,7 @@ int FAACAPI faacEncEncode(faacEncHandle hEncoder,
 	if (samplesInput == 0)
 		hEncoder->flushFrame++;
 
-	/* After 4 flush frames all samples have been encoded,
+	/* After 2 flush frames all samples have been encoded,
 	   return 0 bytes written */
 	if (hEncoder->flushFrame == 2)
 		return 0;
@@ -199,6 +212,18 @@ int FAACAPI faacEncEncode(faacEncHandle hEncoder,
 
 	/* Update current sample buffers */
 	for (channel = 0; channel < numChannels; channel++) {
+		if (hEncoder->sampleBuff[channel]) {
+			for(i = 0; i < FRAME_LEN; i++) {
+				hEncoder->ltpTimeBuff[channel][i] =	hEncoder->sampleBuff[channel][i];
+			}
+		}
+		if (hEncoder->nextSampleBuff[channel]) {
+			for(i = 0; i < FRAME_LEN; i++) {
+				hEncoder->ltpTimeBuff[channel][FRAME_LEN + i] =
+					hEncoder->nextSampleBuff[channel][i];
+			}
+		}
+
 		if (hEncoder->sampleBuff[channel])
 			free(hEncoder->sampleBuff[channel]);
 		hEncoder->sampleBuff[channel] = hEncoder->nextSampleBuff[channel];
@@ -240,7 +265,8 @@ int FAACAPI faacEncEncode(faacEncHandle hEncoder,
 			&coderInfo[channel],
 			hEncoder->sampleBuff[channel],
 			hEncoder->freqBuff[channel],
-			hEncoder->overlapBuff[channel]);
+			hEncoder->overlapBuff[channel],
+			MOVERLAPPED);
 
 		if (coderInfo[channel].block_type == ONLY_SHORT_WINDOW) {
 			for (k = 0; k < 8; k++) {
@@ -307,6 +333,27 @@ int FAACAPI faacEncEncode(faacEncHandle hEncoder,
 		}
 	}
 
+	for(channel = 0; channel < numChannels; channel++)
+	{
+		if((coderInfo[channel].tnsInfo.tnsDataPresent != 0) && (useTns))
+			tnsInfo_for_LTP = &(coderInfo[channel].tnsInfo);
+		else
+			tnsInfo_for_LTP = NULL;
+
+		if(channelInfo[channel].present && (!channelInfo[channel].lfe) &&
+			(coderInfo[channel].block_type != ONLY_SHORT_WINDOW) && (useLtp)) 
+		{
+			LtpEncode(hEncoder,
+				&coderInfo[channel],
+				&(coderInfo[channel].ltpInfo),
+				tnsInfo_for_LTP,
+				hEncoder->freqBuff[channel],
+				hEncoder->ltpTimeBuff[channel]);
+		} else {
+			coderInfo[channel].ltpInfo.global_pred_flag = 0;
+		}
+	}
+
 	MSEncode(coderInfo, channelInfo, hEncoder->freqBuff, numChannels, allowMidside);
 
 	/* Quantize and code the signal */
@@ -320,6 +367,44 @@ int FAACAPI faacEncEncode(faacEncHandle hEncoder,
 			AACQuantize(&coderInfo[channel], &hEncoder->psyInfo[channel],
 				&channelInfo[channel], hEncoder->srInfo->cb_width_long,
 				hEncoder->srInfo->num_cb_long, hEncoder->freqBuff[channel], bitsToUse);
+		}
+	}
+
+	for (channel = 0; channel < numChannels; channel++) 
+	{
+		if((coderInfo[channel].tnsInfo.tnsDataPresent != 0) && (useTns))
+			tnsDecInfo = &(coderInfo[channel].tnsInfo);
+		else
+			tnsDecInfo = NULL;
+		
+		if ((!channelInfo[channel].lfe) && (useLtp)) {  /* no reconstruction needed for LFE channel*/
+
+			LtpReconstruct(&coderInfo[channel], &(coderInfo[channel].ltpInfo),
+				coderInfo[channel].requantFreq);
+
+			if(tnsDecInfo != NULL)
+				TnsDecodeFilterOnly(&(coderInfo[channel].tnsInfo), coderInfo[channel].nr_of_sfb,
+					coderInfo[channel].max_sfb, coderInfo[channel].block_type,
+					coderInfo[channel].sfb_offset, coderInfo[channel].requantFreq);
+
+			IFilterBank(hEncoder, &coderInfo[channel],
+				coderInfo[channel].requantFreq,
+				coderInfo[channel].ltpInfo.time_buffer,
+				coderInfo[channel].ltpInfo.ltp_overlap_buffer,
+				MOVERLAPPED);
+
+			LtpUpdate(&(coderInfo[channel].ltpInfo),
+				coderInfo[channel].ltpInfo.time_buffer,
+				coderInfo[channel].ltpInfo.ltp_overlap_buffer,
+				BLOCK_LEN_LONG);
+		}
+
+		/* If short window, reconstruction not needed for prediction */
+		if ((coderInfo[channel].block_type == ONLY_SHORT_WINDOW)) {
+			int sind;
+			for (sind = 0; sind < 1024; sind++) {
+				coderInfo[channel].requantFreq[sind] = 0.0;
+			}
 		}
 	}
 

@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: faac.h,v 1.3 2001/02/28 18:39:34 menno Exp $
+ * $Id: faac.h,v 1.4 2001/03/05 11:33:37 menno Exp $
  */
 
 #ifndef FAACLIB_H
@@ -58,6 +58,9 @@ typedef struct faacEncConfiguration
 
 	/* Use Temporal Noise Shaping */
 	unsigned int useTns;
+
+	/* Use Long Term Prediction */
+	unsigned int useLtp;
 
 	/* bitrate / channel of AAC file */
 	unsigned long bitRate;

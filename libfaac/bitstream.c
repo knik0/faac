@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: bitstream.c,v 1.4 2001/02/28 18:39:34 menno Exp $
+ * $Id: bitstream.c,v 1.5 2001/03/05 11:33:37 menno Exp $
  */
 
 #include <stdlib.h>
@@ -26,7 +26,7 @@
 #include "channels.h"
 #include "huffman.h"
 #include "bitstream.h"
-
+#include "ltp.h"
 
 int WriteBitstream(faacEncHandle hEncoder,
 				   CoderInfo *coderInfo,
@@ -377,18 +377,50 @@ static int WriteICS(CoderInfo *coderInfo,
 	return bits;
 }
 
-static int WriteLTPPredictorData(CoderInfo *coderInfo,
-								 BitStream *bitStream,
-								 int writeFlag)
+static int WriteLTPPredictorData(CoderInfo *coderInfo, BitStream *bitStream, int writeFlag)
 {
-	int bits = 0;
+	int i, last_band;
+	int bits;
+	LtpInfo *ltpInfo = &coderInfo->ltpInfo;
 
-	if(writeFlag)
-		PutBit (bitStream, 0, 1);  /* LTP not used */
+	bits = 1;
+	
+	if (ltpInfo->global_pred_flag)
+	{
+		if(writeFlag)
+			PutBit(bitStream, 1, 1); /* LTP used */
 
-	bits += 1;
+		switch(coderInfo->block_type)
+		{
+		case ONLY_LONG_WINDOW:
+		case LONG_SHORT_WINDOW:
+		case SHORT_LONG_WINDOW:
+			bits += LEN_LTP_LAG;
+			bits += LEN_LTP_COEF;
+			if(writeFlag)
+			{
+				PutBit(bitStream, ltpInfo->delay[0], LEN_LTP_LAG);
+				PutBit(bitStream, ltpInfo->weight_idx,  LEN_LTP_COEF);
+			}
 
-	return bits;
+			last_band = (coderInfo->nr_of_sfb < MAX_LT_PRED_LONG_SFB) ?
+				coderInfo->nr_of_sfb : MAX_LT_PRED_LONG_SFB;
+
+			bits += last_band;
+			if(writeFlag)
+				for (i = 0; i < last_band; i++)
+					PutBit(bitStream, ltpInfo->sfb_prediction_used[i], LEN_LTP_LONG_USED);
+				break;
+				
+		default:
+			break;
+		}
+	} else {
+		if(writeFlag)
+			PutBit(bitStream, 0, 1); /* LTP not used */
+	}
+
+	return (bits);
 }
 
 static int WritePulseData(CoderInfo *coderInfo,

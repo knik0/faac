@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: main.c,v 1.8 2001/03/02 08:48:24 menno Exp $
+ * $Id: main.c,v 1.9 2001/03/05 11:33:37 menno Exp $
  */
 
 #ifdef _WIN32
@@ -69,7 +69,7 @@ int main(int argc, char *argv[])
 	int mins;
 #endif
 
-	printf("FAAC - command line demo\n");
+	printf("FAAC - command line demo of %s\n", __DATE__);
 	printf("Uses FAACLIB version: %.1f %s\n\n", FAACENC_VERSION, (FAACENC_VERSIONB)?"beta":"");
 
 	if (argc < 3)
@@ -78,6 +78,7 @@ int main(int argc, char *argv[])
 		printf("Options:\n");
 		printf("  -nm   Don\'t use mid/side coding\n");
 		printf("  -tns  Use TNS coding\n");
+		printf("  -ltp  Use LTP coding\n");
 		printf("  -bwX  Set the bandwidth, X in Hz\n");
 		printf("  -brX  Set the bitrate per channel, X in bps\n\n");
 		return 1;
@@ -121,6 +122,10 @@ int main(int argc, char *argv[])
 				case 't': case 'T':
 					if ((argv[i][2] == 'n') || (argv[i][2] == 'N'))
 						myFormat->useTns = 1;
+				break;
+				case 'l': case 'L':
+					if ((argv[i][2] == 't') || (argv[i][2] == 'T'))
+						myFormat->useLtp = 1;
 				break;
 				case 'n': case 'N':
 					if ((argv[i][2] == 'm') || (argv[i][2] == 'M'))

@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: filtbank.h,v 1.5 2001/02/28 18:39:34 menno Exp $
+ * $Id: filtbank.h,v 1.6 2001/03/05 11:33:37 menno Exp $
  */
 
 #ifndef FILTBANK_H
@@ -31,6 +31,10 @@ extern "C" {
 #define NFLAT_LS 448
 
 
+#define MOVERLAPPED     0
+#define MNON_OVERLAPPED 1
+
+
 #define SINE_WINDOW 0
 #define KBD_WINDOW  1
 
@@ -42,7 +46,15 @@ void FilterBank(faacEncHandle hEncoder,
 				CoderInfo *coderInfo,
 				double *p_in_data,
 				double *p_out_mdct,
-				double *p_overlap);
+				double *p_overlap,
+				int overlap_select);
+
+void IFilterBank(faacEncHandle hEncoder,
+				 CoderInfo *coderInfo,
+				 double *p_in_data,
+				 double *p_out_mdct,
+				 double *p_overlap,
+				 int overlap_select);
 
 void specFilter(double *freqBuff,
 				int sampleRate,

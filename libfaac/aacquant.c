@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: aacquant.c,v 1.4 2001/02/28 18:39:34 menno Exp $
+ * $Id: aacquant.c,v 1.5 2001/03/05 11:33:37 menno Exp $
  */
 
 #include <math.h>
@@ -62,14 +62,22 @@ void AACQuantizeInit(CoderInfo *coderInfo, unsigned int numChannels)
 	for (channel = 0; channel < numChannels; channel++) {
 		coderInfo[channel].old_value = 0;
 		coderInfo[channel].CurrentStep = 4;
+
+		coderInfo[channel].requantFreq = (double*)malloc(BLOCK_LEN_LONG*sizeof(double));
 	}
 }
 
-void AACQuantizeEnd()
+void AACQuantizeEnd(CoderInfo *coderInfo, unsigned int numChannels)
 {
+	unsigned int channel;
+
 	if (pow43) free(pow43);
 	if (adj43) free(adj43);
 	if (adj43asm) free(adj43asm);
+
+	for (channel = 0; channel < numChannels; channel++) {
+		if (coderInfo[channel].requantFreq) free(coderInfo[channel].requantFreq);
+	}
 }
 
 int AACQuantize(CoderInfo *coderInfo,
@@ -406,14 +414,12 @@ static int OuterLoop(CoderInfo *coderInfo,
 	int *scale_factor = coderInfo->scale_factor;
 
 	int *best_scale_factor;
-	double *requant_xr;
 	int *save_xi;
 	double *distort;
 
 	distort = (double*)malloc(MAX_SCFAC_BANDS*sizeof(double));
 	best_scale_factor = (int*)malloc(MAX_SCFAC_BANDS*sizeof(int));
 
-	requant_xr = (double*)malloc(FRAME_LEN*sizeof(double));
 	save_xi = (int*)malloc(FRAME_LEN*sizeof(int));
 
 	notdone = 1;
@@ -428,7 +434,7 @@ static int OuterLoop(CoderInfo *coderInfo,
 
 		store_global_gain = coderInfo->global_gain;
 
-		over = CalcNoise(coderInfo, xr, xi, requant_xr, distort, xmin, &noiseInfo);
+		over = CalcNoise(coderInfo, xr, xi, coderInfo->requantFreq, distort, xmin, &noiseInfo);
 
 		if (outer_loop_count == 1)
 			better = 1;
@@ -467,7 +473,6 @@ static int OuterLoop(CoderInfo *coderInfo,
 	}
 	memcpy(xi, save_xi, sizeof(int)*BLOCK_LEN_LONG);
 
-	if (requant_xr) free(requant_xr);
 	if (best_scale_factor) free(best_scale_factor);
 	if (save_xi) free(save_xi);
 	if (distort) free(distort);

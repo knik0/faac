@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: aacquant.h,v 1.1 2001/01/17 11:21:40 menno Exp $
+ * $Id: aacquant.h,v 1.2 2001/03/05 11:33:37 menno Exp $
  */
 
 #ifndef AACQUANT_H
@@ -47,7 +47,7 @@ typedef struct {
 } calcNoiseResult;
 
 void AACQuantizeInit(CoderInfo *coderInfo, unsigned int numChannels);
-void AACQuantizeEnd();
+void AACQuantizeEnd(CoderInfo *coderInfo, unsigned int numChannels);
 
 int AACQuantize(CoderInfo *coderInfo,
 				PsyInfo *psyInfo,
