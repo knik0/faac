@@ -16,7 +16,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: main.c,v 1.29 2002/11/23 17:34:59 knik Exp $
+ * $Id: main.c,v 1.30 2002/12/15 15:16:55 menno Exp $
  */
 
 #ifdef _WIN32
@@ -71,7 +71,7 @@ int main(int argc, char *argv[])
 {
     int frames, currentFrame;
     faacEncHandle hEncoder;
-    pcmfile_t *infile;
+    pcmfile_t *infile = NULL;
 
     unsigned int sr, chan;
     unsigned long samplesInput, maxBytesOutput;
@@ -95,6 +95,8 @@ int main(int argc, char *argv[])
 
     unsigned char *bitbuf;
     int bytesInput = 0;
+    int rawInput = 0;
+    int dieUsage = 0;
 
     FILE *outfile;
 
@@ -112,10 +114,15 @@ int main(int argc, char *argv[])
             { "nomidside", 0, 0, 'n' },
             { "usetns", 0, 0, 't' },
             { "cutoff", 1, 0, 'c' },
-            { "bitrate", 1, 0, 'b' }
+            { "bitrate", 1, 0, 'b' },
+            { "acousticmodel", 1, 0, 'p'},
+            { "pcmraw", 0, 0, 'P'},
+            { "pcmsamplerate", 1, 0, 'R'},
+            { "pcmsamplebits", 1, 0, 'B'},
+            { "pcmchannels", 1, 0, 'C'}
         };
 
-	c = getopt_long(argc, argv, "m:o:rntc:b:p:",
+    c = getopt_long(argc, argv, "m:o:rntc:b:p:PR:B:C:",
             long_options, &option_index);
 
         if (c == -1)
@@ -170,28 +177,82 @@ int main(int argc, char *argv[])
         }
         case 'c': {
             unsigned int i;
-	    if (sscanf(optarg, "%u", &i) > 0) {
+        if (sscanf(optarg, "%u", &i) > 0) {
                 cutOff = i;
             }
             break;
         }
-	case 'b':
-	  {
+    case 'b':
+      {
             unsigned int i;
-	    if (sscanf(optarg, "%u", &i) > 0)
-	    {
-	      if (i > 0 && i < 1000)
-		bitRate = i * 1000;
+        if (sscanf(optarg, "%u", &i) > 0)
+        {
+          if (i > 0 && i < 1000)
+        bitRate = i * 1000;
             }
             break;
         }
-	case 'p':
-	  {
-	    unsigned int i;
-	    if (sscanf(optarg, "%u", &i) > 0)
-	      psymodelidx = i;
-	  break;
-	  }
+    case 'p':
+      {
+        unsigned int i;
+        if (sscanf(optarg, "%u", &i) > 0)
+          psymodelidx = i;
+      break;
+      }
+   case 'P':
+     {
+       rawInput = 1;
+       infile = malloc(sizeof(*infile));
+       if (infile == NULL) {
+              fprintf(stderr, "%s: unable to allocate memory\n", progName);
+         return 1;
+       }
+       infile->f = NULL;
+       infile->channels = 2;
+       infile->samplerate = 44100;
+       infile->samplebits = 16;
+       infile->samples = 0;
+       break;
+       }
+   case 'R':
+     {
+       unsigned int i;
+       if (rawInput != 1) {
+         fprintf(stderr, "%s: for raw pcm input -P needs to be specified first\n",
+         progName);
+         dieUsage = 1;
+         break;
+      }
+       if (sscanf(optarg, "%u", &i) > 0)
+         infile->samplerate = i;
+       break;
+       }
+   case 'B':
+     {
+       unsigned int i;
+       if (rawInput != 1) {
+         fprintf(stderr, "%s: for raw pcm input -P needs to be specified first\n",
+         progName);
+         dieUsage = 1;
+         break;
+       }
+       if (sscanf(optarg, "%u", &i) > 0)
+         infile->samplebits = i;
+       break;
+       }
+   case 'C':
+     {
+       unsigned int i;
+       if (rawInput != 1) {
+         fprintf(stderr, "%s: for raw pcm input -P needs to be specified first\n",
+         progName);
+         dieUsage = 1;
+         break;
+       }
+       if (sscanf(optarg, "%u", &i) > 0)
+         infile->channels = i;
+       break;
+       }
         case '?':
             break;
         default:
@@ -201,7 +262,7 @@ int main(int argc, char *argv[])
     }
 
     /* check that we have at least two non-option arguments */
-    if ((argc - optind) < 2)
+    if ((argc - optind) < 2 || dieUsage == 1)
     {
       int i;
 
@@ -213,21 +274,25 @@ int main(int argc, char *argv[])
         fprintf(stderr, "Options:\n");
         fprintf(stderr, "  -m X   AAC MPEG version, X can be 2 or 4.\n");
         fprintf(stderr, "  -o X   AAC object type, X can be LC, MAIN or LTP.\n");
-	for (i = 0; myFormat->psymodellist[i].ptr; i++)
-	{
-	  fprintf(stderr, "  -p %d   Use %s.%s\n", i,
-		  myFormat->psymodellist[i].name,
-		  (i == myFormat->psymodelidx) ? " (default)" : "");
-	}
+    for (i = 0; myFormat->psymodellist[i].ptr; i++)
+    {
+      fprintf(stderr, "  -p %d   Use %s.%s\n", i,
+          myFormat->psymodellist[i].name,
+          (i == myFormat->psymodelidx) ? " (default)" : "");
+    }
         fprintf(stderr, "  -n     Don\'t use mid/side coding.\n");
         fprintf(stderr, "  -r     RAW AAC output file.\n");
         fprintf(stderr, "  -t     Use TNS coding.\n");
-    fprintf(stderr,
-	    "  -c X   Set the bandwidth, X in Hz. (default=automatic)\n");
-    fprintf(stderr, "  -b X   Set the bitrate per channel, X in kbps."
-	    " (default is auto)\n\n");
+        fprintf(stderr,
+            "  -c X   Set the bandwidth, X in Hz. (default=automatic)\n");
+        fprintf(stderr, "  -b X   Set the bitrate per channel, X in kbps."
+            " (default is auto)\n");
+        fprintf(stderr, "  -P     Raw PCM input mode (default 44100Hz 16bit stereo).\n");
+        fprintf(stderr, "  -R     Raw PCM input rate.\n");
+        fprintf(stderr, "  -B     Raw PCM input sample size (16 default or 8bits).\n");
+        fprintf(stderr, "  -C     Raw PCM input channels.\n\n");
 
-    faacEncClose(hEncoder);
+        faacEncClose(hEncoder);
 
         return 1;
     }
@@ -237,7 +302,29 @@ int main(int argc, char *argv[])
     aacFileName = argv[optind++];
 
     /* open the audio input file */
-    infile = wav_open_read(audioFileName);
+    if (rawInput == 1) {
+      if (!strcmp(audioFileName, "-")) {
+#ifdef WIN32
+   setmode(fileno(stdin), O_BINARY);
+#endif
+   infile->f = stdin;
+   infile->samples = 0;
+      }
+      else {
+   if (!(infile->f = fopen(audioFileName, "rb")))
+        {
+          fprintf(stderr, "Couldn't open input file %s\n", audioFileName);
+     perror("Reason");
+     return 1;
+        }
+   fseek(infile->f, 0 , SEEK_END);
+   infile->samples = ftell(infile->f) /
+     (((infile->samplebits > 8) ? 2 : 1) * infile->channels);
+   rewind(infile->f);
+      }
+    } else {
+      infile = wav_open_read(audioFileName);
+    }
     if (infile == NULL)
     {
         fprintf(stderr, "Couldn't open input file %s\n", audioFileName);
@@ -267,14 +354,14 @@ int main(int argc, char *argv[])
       bitRate = pow((double)(sr / 2) / bwdefault, 1.0 / bwbrfac) * 64000;
       bitRate = ((bitRate + 500) / 500) * 500;
       if (bitRate > 64000)
-	bitRate = 64000;
+    bitRate = 64000;
     }
     if (cutOff <= 0)
     {
       if (cutOff < 0) // default
-	cutOff = pow((double)bitRate / 64000, bwbrfac) * bwdefault;
+    cutOff = pow((double)bitRate / 64000, bwbrfac) * bwdefault;
       else // disabled
-	cutOff = sr / 2;
+    cutOff = sr / 2;
     }
     if (cutOff > (sr / 2))
       cutOff = sr / 2;
@@ -303,16 +390,23 @@ int main(int argc, char *argv[])
 
     if (outfile)
     {
-	int showcnt = 0;
+    int showcnt = 0;
 #ifdef _WIN32
-	long begin = GetTickCount();
+    long begin = GetTickCount();
 #endif
-	frames = (int)infile->samples / 1024 + 2;
+   if (infile->samples)
+     frames = (int)infile->samples / 1024 + 2;
+   else
+     frames = 0;
         currentFrame = 0;
 
-	fprintf(stderr, "Encoding %s\n", audioFileName);
-	fprintf(stderr,
-		"   frame          | elapsed/estim | play/CPU | ETA\n");
+    fprintf(stderr, "Encoding %s\n", audioFileName);
+   if (frames != 0)
+     fprintf(stderr,
+        "   frame          | elapsed/estim | play/CPU | ETA\n");
+   else
+     fprintf(stderr,
+           " frame | elapsed | play/CPU\n");
         /* encoding loop */
         for ( ;; )
         {
@@ -327,52 +421,62 @@ int main(int argc, char *argv[])
                 bitbuf,
                 maxBytesOutput);
 
-	    if (bytesWritten)
+        if (bytesWritten)
       {
-	      currentFrame++;
-	      showcnt--;
-	    }
+          currentFrame++;
+          showcnt--;
+        }
 
-	    if ((showcnt <= 0) || !bytesWritten)
-	    {
-	      double timeused;
+        if ((showcnt <= 0) || !bytesWritten)
+        {
+          double timeused;
 #ifdef __unix__
-	      struct rusage usage;
+          struct rusage usage;
 #endif
 #ifdef _WIN32
-	      char percent[50];
-	      timeused = (GetTickCount() - begin) * 1e-3;
+          char percent[50];
+          timeused = (GetTickCount() - begin) * 1e-3;
 #else
 #ifdef __unix__
-	      if (getrusage(RUSAGE_SELF, &usage) == 0) {
-		timeused = (double)usage.ru_utime.tv_sec +
-		  (double)usage.ru_utime.tv_usec * 1e-6;
-	      }
-	      else
+          if (getrusage(RUSAGE_SELF, &usage) == 0) {
+        timeused = (double)usage.ru_utime.tv_sec +
+          (double)usage.ru_utime.tv_usec * 1e-6;
+          }
+          else
                 timeused = 0;
 #else
-	      timeused = (double)clock() * (1.0 / CLOCKS_PER_SEC);
+          timeused = (double)clock() * (1.0 / CLOCKS_PER_SEC);
 #endif
 #endif
-	      if (currentFrame && (timeused > 0.1))
-	      {
+          if (currentFrame && (timeused > 0.1))
+          {
 
-		showcnt += 50;
+        showcnt += 50;
 
-		fprintf(stderr,
-			"\r%5d/%-5d (%3d%%)| %6.1f/%-6.1f | %8.3f | %.1f ",
-			currentFrame, frames, currentFrame*100/frames,
-			timeused,
-			timeused * frames / currentFrame,
-			(1024.0 * currentFrame / sr) / timeused,
-			timeused  * (frames - currentFrame) / currentFrame);
-		fflush(stderr);
+       if (frames != 0)
+         fprintf(stderr,
+            "\r%5d/%-5d (%3d%%)| %6.1f/%-6.1f | %8.3f | %.1f ",
+            currentFrame, frames, currentFrame*100/frames,
+            timeused,
+            timeused * frames / currentFrame,
+            (1024.0 * currentFrame / sr) / timeused,
+            timeused  * (frames - currentFrame) / currentFrame);
+       else
+         fprintf(stderr,
+           "\r %5d |  %6.1f | %8.3f ",
+           currentFrame,
+           timeused,
+           (1024.0 * currentFrame / sr) / timeused);
+        fflush(stderr);
 #ifdef _WIN32
-		sprintf(percent, "%.2f%% encoding %s",
-			100.0 * currentFrame / frames, audioFileName);
+       if (frames != 0)
+       {
+         sprintf(percent, "%.2f%% encoding %s",
+            100.0 * currentFrame / frames, audioFileName);
             SetConsoleTitle(percent);
+       }
 #endif
-	      }
+          }
       }
 
             /* all done, bail out */
@@ -388,7 +492,7 @@ int main(int argc, char *argv[])
             /* write bitstream to aac file */
             fwrite(bitbuf, 1, bytesWritten, outfile);
         }
-	fprintf(stderr, "\n\n");
+    fprintf(stderr, "\n\n");
 
         /* clean up */
         fclose(outfile);
@@ -406,6 +510,9 @@ int main(int argc, char *argv[])
 
 /*
 $Log: main.c,v $
+Revision 1.30  2002/12/15 15:16:55  menno
+Some portability changes
+
 Revision 1.29  2002/11/23 17:34:59  knik
 replaced libsndfile with input.c
 improved bandwidth/bitrate calculation formula
