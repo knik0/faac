@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: maingui.c,v 1.3 2001/01/25 12:37:45 menno Exp $
+ * $Id: maingui.c,v 1.4 2001/01/25 15:57:55 menno Exp $
  */
 
 #include <windows.h>
@@ -63,6 +63,8 @@ static BOOL SelectFileName (HWND hParent, char *filename, BOOL forReading)
 	if (forReading)
 	{
 		char filters[] = { "Wave Files (*.wav)\0*.wav\0" \
+			"AIFF Files (*.aif;*.aiff;*.aifc)\0*.aif;*.aiff;*.aifc\0" \
+			"AU Files (*.au)\0*.au\0" \
 			"All Files (*.*)\0*.*\0\0" };
 
 		ofn.lpstrFilter = filters;
@@ -120,7 +122,7 @@ static void AwakeDialogControls(HWND hWnd)
 
 	SetDlgItemText(hWnd, IDC_OUTPUTFILENAME, outputFilename);
 
-	wsprintf(szTemp, "%iHz %s", sampleRate, (numChannels > 1) ? "Stereo" : "Mono");
+	wsprintf(szTemp, "%iHz %ich", sampleRate, numChannels);
 	SetDlgItemText(hWnd, IDC_INPUTPARAMS, szTemp);
 
 	// // //
@@ -178,6 +180,7 @@ static DWORD WINAPI EncodeFile(LPVOID pParam)
 			faacEncConfigurationPtr config = faacEncGetCurrentConfiguration(hEncoder);
 
 			config->allowMidside = IsDlgButtonChecked(hWnd, IDC_ALLOWMIDSIDE) == BST_CHECKED ? 1 : 0;
+			config->useLfe = IsDlgButtonChecked(hWnd, IDC_USELFE) == BST_CHECKED ? 1 : 0;
 			GetDlgItemText(hWnd, IDC_BITRATE, szTemp, sizeof(szTemp));
 			config->bitRate = atoi(szTemp);
 			GetDlgItemText(hWnd, IDC_BANDWIDTH, szTemp, sizeof(szTemp));
@@ -201,14 +204,15 @@ static DWORD WINAPI EncodeFile(LPVOID pParam)
 				UINT startTime = GetTickCount(), lastUpdated = 0;
 				DWORD totalBytesRead = 0;
 
-				// //
-
 				unsigned int bytesInput = 0, bytesConsumed = 0;
 				DWORD numberOfBytesWritten = 0;
-				unsigned char bitbuf[BITBUFSIZE];
-				short pcmbuf[PCMBUFSIZE];
+				short *pcmbuf;
+				unsigned char *bitbuf;
 				char HeaderText[50];
 				char Percentage[5];
+
+				pcmbuf = (short*)malloc(PCMBUFSIZE*numChannels*sizeof(short));
+				bitbuf = (unsigned char*)malloc(BITBUFSIZE*sizeof(unsigned char));
 
 				SendDlgItemMessage(hWnd, IDC_PROGRESS, PBM_SETRANGE, 0, MAKELPARAM(0, 1024));
 				SendDlgItemMessage(hWnd, IDC_PROGRESS, PBM_SETPOS, 0, 0);
@@ -277,6 +281,8 @@ static DWORD WINAPI EncodeFile(LPVOID pParam)
 					}
 
 				CloseHandle(hOutfile);
+				if (pcmbuf) free(pcmbuf);
+				if (bitbuf) free(bitbuf);
 			}
 
 			faacEncClose(hEncoder);
@@ -305,6 +311,7 @@ static BOOL WINAPI DialogProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 		inputFilename [0] = 0x00;
 
 		CheckDlgButton(hWnd, IDC_ALLOWMIDSIDE, TRUE);
+		CheckDlgButton(hWnd, IDC_USELFE, FALSE);
 		SetDlgItemText(hWnd, IDC_BITRATE, "64000");
 		SetDlgItemText(hWnd, IDC_BANDWIDTH, "18000");
 
