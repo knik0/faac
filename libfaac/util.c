@@ -16,9 +16,10 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: util.c,v 1.4 2001/02/12 14:39:14 menno Exp $
+ * $Id: util.c,v 1.5 2001/02/26 14:31:45 oxygene Exp $
  */
 
+#include <math.h>
 
 #ifndef max
 #define max(a, b) (((a) > (b)) ? (a) : (b))
