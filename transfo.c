@@ -70,7 +70,7 @@ void MDCT (double *data, int N) {
     }
     
     /* Perform in-place complex FFT of length N/4 */
-    CompFFT (FFTarray, N / 4, -1);
+    FFT (FFTarray, N / 4, -1);
 
     /* prepare for recurrence relations in post-twiddle */
     c = cos (freq * 0.125);
@@ -96,110 +96,6 @@ void MDCT (double *data, int N) {
 		s = s * cfreq + cold * sfreq;
     }
 }
-
-
-void CompFFT (Float *data, int nn, int isign) {
-
-    static int i, j, k, kk;
-    static int p1, q1;
-    static int m, n, logq1;
-    static Float **intermed = 0;
-    static Float ar, ai;
-    static Float d2pn;
-    static Float ca, sa, curcos, cursin, oldcos, oldsin;
-    static Float ca1, sa1, curcos1, cursin1, oldcos1, oldsin1;
-
-
-/* Factorize n;  n = p1*q1 where q1 is a power of 2.
-    For n = 1152, p1 = 9, q1 = 128.		*/
-
-    n = nn;
-    logq1 = 0;
-
-    for (;;) {
-		m = n >> 1;  /* shift right by one*/
-		if ((m << 1) == n) {
-		    logq1++;
-		    n = m;
-			} 
-		else {
-			break;
-			}
-		}
-
-    p1 = n;
-    q1 = 1;
-    q1 <<= logq1;
-
-    d2pn = d2PI / nn;
-
-{static int oldp1 = 0, oldq1 = 0;
-
-	if ((oldp1 < p1) || (oldq1 < q1)) {
-		if (intermed) {
-			free (intermed);
-			intermed = 0;
-			}
-		if (oldp1 < p1) oldp1 = p1;
-		if (oldq1 < q1) oldq1 = q1;;
-		}
-		
-	if (!intermed)
-		intermed = NewFloatMatrix (oldp1, 2 * oldq1);
-}
-
-/* Sort the p1 sequences */
-
-    for	(i = 0; i < p1; i++) {
-		for (j = 0; j < q1; j++){
-		    intermed [i] [2 * j] = data [2 * (p1 * j + i)];
-			intermed [i] [2 * j + 1] = data [2 * (p1 * j + i) + 1];
-			}
-		}
-
-/* compute the power of two fft of the p1 sequences of length q1 */
-
-    for (i = 0; i < p1; i++) {
-/* Forward FFT in place for n complex items */
-		FFT (intermed [i], q1, isign);
-		}
-
-/* combine the FFT results into one seqquence of length N */
-
-    ca1 = cos (d2pn);
-    sa1 = sin (d2pn);
-    curcos1 = 1.;
-    cursin1 = 0.;
-
-    for (k = 0; k < nn; k++) {
-		data [2 * k] = 0.;
-		data [2 * k + 1] = 0.;
-		kk = k % q1;
-
-		ca = curcos1;
-		sa = cursin1;
-		curcos = 1.;
-		cursin = 0.;
-
-		for (j = 0; j < p1; j++) {
-			ar = curcos;
-			ai = isign * cursin;
-			data [2 * k] += intermed [j] [2 * kk] * ar - intermed [j] [2 * kk + 1] * ai;
-			data [2 * k + 1] += intermed [j] [2 * kk] * ai + intermed [j] [2 * kk + 1] * ar;
-
-		    oldcos = curcos;
-		    oldsin = cursin;
-			curcos = oldcos * ca - oldsin * sa;
-			cursin = oldcos * sa + oldsin * ca;
-			}
-		oldcos1 = curcos1;
-		oldsin1 = cursin1;
-		curcos1 = oldcos1 * ca1 - oldsin1 * sa1;
-		cursin1 = oldcos1 * sa1 + oldsin1 * ca1;
-		}
-
-}
-
 
 void FFT (Float *data, int nn, int isign)  {
 /* Varient of Numerical Recipes code from off the internet.  It takes nn
