@@ -17,7 +17,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: aacquant.c,v 1.30 2004/07/04 12:10:52 corrados Exp $
+ * $Id: aacquant.c,v 1.31 2004/07/12 08:46:43 corrados Exp $
  */
 
 #include <math.h>
@@ -239,7 +239,11 @@ int AACQuantize(CoderInfo *coderInfo,
     for(i = 0; i < coderInfo->nr_of_sfb; i++) {
         OutputBits(
             coderInfo,
+#ifdef DRM
+            &coderInfo->book_vector[i], /* needed for VCB11 */
+#else
             coderInfo->book_vector[i],
+#endif
             xi,
             coderInfo->sfb_offset[i],
             coderInfo->sfb_offset[i+1]-coderInfo->sfb_offset[i]);

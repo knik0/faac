@@ -23,7 +23,7 @@ must be included in all copies or derivative works. Copyright 1996.
 
 ***********/
 /*
- * $Id: huffman.c,v 1.9 2004/07/04 12:10:52 corrados Exp $
+ * $Id: huffman.c,v 1.10 2004/07/12 08:46:43 corrados Exp $
  */
 
 #include <math.h>
@@ -327,7 +327,11 @@ static int CalculateEscSequence(int input, int *len_esc_sequence)
 }
 
 int OutputBits(CoderInfo *coderInfo,
+#ifdef DRM
+               int *book, /* we need to change book for VCB11 */
+#else
                int book,
+#endif
                int *quant,
                int offset,
                int length)
@@ -367,11 +371,16 @@ int OutputBits(CoderInfo *coderInfo,
 #ifdef DRM
     int* num_data = coderInfo->num_data_cw;
     int cur_cw_len;
+    int max_esc_sequ = 0;
 #endif
 
     counter = coderInfo->spectral_count;
 
+#ifdef DRM
+    switch (*book) {
+#else
     switch (book) {
+#endif
     case 0:
     case INTENSITY_HCB2:
     case INTENSITY_HCB:
@@ -769,6 +778,9 @@ int OutputBits(CoderInfo *coderInfo,
 #ifdef DRM
                 num_data[coderInfo->cur_cw]++;
                 cur_cw_len += len_esc;
+
+                if (esc_sequence > max_esc_sequ)
+                    max_esc_sequ = esc_sequence;
 #endif
 
                 /* then code and transmit the second escape_sequence */
@@ -779,6 +791,9 @@ int OutputBits(CoderInfo *coderInfo,
 #ifdef DRM
                 num_data[coderInfo->cur_cw]++;
                 cur_cw_len += len_esc;
+
+                if (esc_sequence > max_esc_sequ)
+                    max_esc_sequ = esc_sequence;
 #endif
             }
             else if (ABS(quant[i]) >= 16) {  /* the first codeword was above 16, not the second one */
@@ -790,6 +805,9 @@ int OutputBits(CoderInfo *coderInfo,
 #ifdef DRM
                 num_data[coderInfo->cur_cw]++;
                 cur_cw_len += len_esc;
+
+                if (esc_sequence > max_esc_sequ)
+                    max_esc_sequ = esc_sequence;
 #endif
             }
             else if (ABS(quant[i+1]) >= 16) { /* the second codeword was above 16, not the first one */
@@ -801,6 +819,9 @@ int OutputBits(CoderInfo *coderInfo,
 #ifdef DRM
                 num_data[coderInfo->cur_cw]++;
                 cur_cw_len += len_esc;
+
+                if (esc_sequence > max_esc_sequ)
+                    max_esc_sequ = esc_sequence;
 #endif
             }
 #ifdef DRM
@@ -812,6 +833,45 @@ int OutputBits(CoderInfo *coderInfo,
 #endif
         }
         coderInfo->spectral_count = counter;  /* send the current count back to the outside world */
+
+#ifdef DRM
+        /* VCB11: check which codebook should be used using max escape sequence */
+        /* 8.5.3.1.3, table 157 */
+        if (max_esc_sequ <= 15)
+            *book = 16;
+        else if (max_esc_sequ <= 31)
+            *book = 17;
+        else if (max_esc_sequ <= 47)
+            *book = 18;
+        else if (max_esc_sequ <= 63)
+            *book = 19;
+        else if (max_esc_sequ <= 95)
+            *book = 20;
+        else if (max_esc_sequ <= 127)
+            *book = 21;
+        else if (max_esc_sequ <= 159)
+            *book = 22;
+        else if (max_esc_sequ <= 191)
+            *book = 23;
+        else if (max_esc_sequ <= 223)
+            *book = 24;
+        else if (max_esc_sequ <= 255)
+            *book = 25;
+        else if (max_esc_sequ <= 319)
+            *book = 26;
+        else if (max_esc_sequ <= 383)
+            *book = 27;
+        else if (max_esc_sequ <= 511)
+            *book = 28;
+        else if (max_esc_sequ <= 767)
+            *book = 29;
+        else if (max_esc_sequ <= 1023)
+            *book = 30;
+        else if (max_esc_sequ <= 2047)
+            *book = 31;
+        /* else: codebook 11 -> it is already 11 */
+#endif
+
         return(bits);
     }
     return 0;

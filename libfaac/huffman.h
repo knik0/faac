@@ -22,7 +22,7 @@ must be included in all copies or derivative works. Copyright 1996.
 
 ***********/
 /*
- * $Id: huffman.h,v 1.5 2001/09/04 18:39:36 menno Exp $
+ * $Id: huffman.h,v 1.6 2004/07/12 08:46:43 corrados Exp $
  */
 
 #ifndef HUFFMAN_H
@@ -69,7 +69,11 @@ int CalcBits(CoderInfo *coderInfo,
              int length);
 
 int OutputBits(CoderInfo *coderInfo,
+#ifdef DRM
+               int *book, /* we need to change book for VCB11 */
+#else
                int book,
+#endif
                int *quant,
                int offset,
                int length);
