@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: psychkni.c,v 1.11 2003/08/07 08:17:00 knik Exp $
+ * $Id: psychkni.c,v 1.12 2003/08/18 16:22:10 knik Exp $
  */
 #include <stdio.h>
 #include <stdlib.h>
@@ -392,7 +392,7 @@ static void PsyBufferUpdate(GlobalPsyInfo * gpsyInfo, PsyInfo * psyInfo,
 
   for (j = 0; j < 8; j++)
   {
-    memcpy(transBuffS, transBuff + (j * 128) + (1024 - 128),
+    memcpy(transBuffS, transBuff + (j * 128) + (512 - 64),
 	   2 * psyInfo->sizeS * sizeof(double));
 
     Hann(gpsyInfo, transBuffS, 2 * psyInfo->sizeS);
