@@ -16,7 +16,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: frame.h,v 1.15 2001/09/21 12:40:02 eraser Exp $
+ * $Id: frame.h,v 1.16 2002/08/07 18:12:08 knik Exp $
  */
 
 #ifndef FRAME_H
@@ -40,9 +40,6 @@ extern "C" {
     #define FAACAPI
   #endif
 #endif
-
-
-static SR_INFO srInfo[12+1];
 
 typedef struct faacEncConfiguration
 {
