@@ -561,6 +561,9 @@ int EncTfFrame (faacAACStream *as, BsBitStream  *fixed_stream)
 							nok_lt_status[leftChan].sfb_prediction_used[i];
 						nok_lt_status[rightChan].weight = nok_lt_status[leftChan].weight;
 						nok_lt_status[rightChan].delay[0] = nok_lt_status[leftChan].delay[0];
+						for(i = 0; i < NOK_MAX_BLOCK_LEN_LONG; i++)
+							spectral_line_vector[rightChan][i] -=
+							nok_lt_status[rightChan].pred_mdct[i];
 
 						if(block_type[leftChan] != block_type[rightChan])
 							nok_ltp_enc(spectral_line_vector[rightChan],
