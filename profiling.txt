@@ -1,0 +1,29 @@
+PROFILING RESULTS
+-----------------
+
+This is an attempt to cronolog all the profiles done to the code, and the speed at which teh code runs after steps have been taken to optimize it. Think of it  as a diary.
+
+NOTE: After ever optmiztion and code change, md5sum MUST be run on the output   files to determine that they are exact matches of teh pre-optimized code.       PLEASE remember to do this, it'll save alot of heartache in the future.
+Also please dont include any Flat data that is less than 1% of the total time.
+
+Also NOTE: All tests are run at the DEFAULT encoder settings, ie, faac track.wav
+
+Format:
+*Person profiling
+*Version/cvs date
+*gcc flags
+*runtime
+*data track used
+*notes
+*FLAT gprof profile. We may include the Call graph at a later date if we need   to.
+
+------------------------------------------------------------------------------
+thebard
+CVS Tue Feb 22 11:04:16 CST 2000
+-O6 -march=i686 -funroll-loops -finline-functions -fomit-frame-pointer
+
+The Outfield Bangin': track 2: Bangin' On My Heart
+This is the default fully optimized non profiled compile on my box.
+NO PROFILE DATA
+
+
