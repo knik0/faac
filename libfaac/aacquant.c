@@ -16,7 +16,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: aacquant.c,v 1.11 2001/12/06 19:11:04 menno Exp $
+ * $Id: aacquant.c,v 1.12 2002/08/30 16:21:44 knik Exp $
  */
 
 #include <math.h>
@@ -454,7 +454,7 @@ static int OuterLoop(CoderInfo *coderInfo,
         } else
             age++;
 
-        if (age > 3 && bestNoiseInfo.over_count == 0)
+	if ((age > 3) || ((bestNoiseInfo.over_count == 0) && (age > 0)))
             break;
 
         notdone = BalanceNoise(coderInfo, distort, xr_pow);
