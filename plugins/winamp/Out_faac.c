@@ -2,7 +2,7 @@
 #include <shlobj.h>
 #include <stdio.h>  // FILE *
 #include "resource.h"
-#include "faac.h"
+#include <faac.h>
 #include "out.h"
 
 

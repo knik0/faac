@@ -16,7 +16,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: AACINFO.C,v 1.1 2001/08/03 11:47:03 menno Exp $
+ * $Id: AACINFO.C,v 1.1 2001/10/11 09:53:44 menno Exp $
  */
 
 #include <windows.h>
