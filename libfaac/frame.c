@@ -16,7 +16,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: frame.c,v 1.36 2003/05/12 17:53:16 knik Exp $
+ * $Id: frame.c,v 1.37 2003/06/26 19:20:09 knik Exp $
  */
 
 /*
@@ -35,7 +35,7 @@
 
 #include "frame.h"
 #include "coder.h"
-#include "joint.h"
+#include "midside.h"
 #include "channels.h"
 #include "bitstream.h"
 #include "filtbank.h"
@@ -49,6 +49,11 @@
 #include "version.h"
 
 static char *libfaacName = FAAC_VERSION " (" __DATE__ ")";
+static char *libCopyright =
+  "FAAC - Freeware Advanced Audio Coder (http://www.audiocoding.com/)\n"
+  "	Portions Copyright (C) 2001 Menno Bakker\n"
+  "	Portions Copyright (C) 2002,2003 Krzysztof Nikiel\n"
+  "This software is based on the ISO MPEG-4 reference source code.\n";
 
 static const psymodellist_t psymodellist[] = {
   {&psymodel2, "knipsycho psychoacoustic"},
@@ -109,7 +114,7 @@ faacEncConfigurationPtr FAACAPI faacEncGetCurrentConfiguration(faacEncHandle hEn
 int FAACAPI faacEncSetConfiguration(faacEncHandle hEncoder,
                                     faacEncConfigurationPtr config)
 {
-    hEncoder->config.allowMidside = 0;//config->allowMidside;
+    hEncoder->config.allowMidside = config->allowMidside;
     hEncoder->config.useLfe = config->useLfe;
     hEncoder->config.useTns = config->useTns;
     hEncoder->config.aacObjectType = config->aacObjectType;
@@ -251,6 +256,7 @@ faacEncHandle FAACAPI faacEncOpen(unsigned long sampleRate,
     /* Default configuration */
     hEncoder->config.version = FAAC_CFG_VERSION;
     hEncoder->config.name = libfaacName;
+    hEncoder->config.copyright = libCopyright;
     hEncoder->config.mpegVersion = MPEG4;
     hEncoder->config.aacObjectType = LTP;
     hEncoder->config.allowMidside = 1;
@@ -332,10 +338,16 @@ int FAACAPI faacEncClose(faacEncHandle hEncoder)
 
     /* Free remaining buffer memory */
     for (channel = 0; channel < hEncoder->numChannels; channel++) {
-        if (hEncoder->ltpTimeBuff[channel]) FreeMemory(hEncoder->ltpTimeBuff[channel]);
-        if (hEncoder->sampleBuff[channel]) FreeMemory(hEncoder->sampleBuff[channel]);
-        if (hEncoder->nextSampleBuff[channel]) FreeMemory(hEncoder->nextSampleBuff[channel]);
-		if (hEncoder->next2SampleBuff[channel]) FreeMemory (hEncoder->next2SampleBuff[channel]);
+      if (hEncoder->ltpTimeBuff[channel])
+	FreeMemory(hEncoder->ltpTimeBuff[channel]);
+      if (hEncoder->sampleBuff[channel])
+	FreeMemory(hEncoder->sampleBuff[channel]);
+      if (hEncoder->nextSampleBuff[channel])
+	FreeMemory(hEncoder->nextSampleBuff[channel]);
+      if (hEncoder->next2SampleBuff[channel])
+	FreeMemory (hEncoder->next2SampleBuff[channel]);
+      if (hEncoder->next3SampleBuff[channel])
+	FreeMemory (hEncoder->next3SampleBuff[channel]);
     }
 
     /* Free handle */
@@ -554,6 +566,17 @@ int FAACAPI faacEncEncode(faacEncHandle hEncoder,
         }
     }
 
+    for (channel = 0; channel < numChannels; channel++) {
+      if (coderInfo[channel].block_type == ONLY_SHORT_WINDOW) {
+	SortForGrouping(&coderInfo[channel],
+			&hEncoder->psyInfo[channel],
+			&channelInfo[channel],
+			hEncoder->srInfo->cb_width_short,
+			hEncoder->freqBuff[channel]);
+      }
+      CalcAvgEnrg(&coderInfo[channel], hEncoder->freqBuff[channel]);
+    }
+
     MSEncode(coderInfo, channelInfo, hEncoder->freqBuff, numChannels, allowMidside);
 
     /* Quantize and code the signal */
@@ -754,6 +777,11 @@ static SR_INFO srInfo[12+1] =
 
 /*
 $Log: frame.c,v $
+Revision 1.37  2003/06/26 19:20:09  knik
+Mid/Side support.
+Copyright info moved from frontend.
+Fixed memory leak.
+
 Revision 1.36  2003/05/12 17:53:16  knik
 updated ABR table
 
