@@ -22,7 +22,7 @@ Copyright(c)1996.
  *                                                                           *
  ****************************************************************************/
 /*
- * $Id: filtbank.c,v 1.10 2002/08/21 16:53:42 knik Exp $
+ * $Id: filtbank.c,v 1.11 2003/11/16 05:02:52 stux Exp $
  */
 
 /*
@@ -154,7 +154,7 @@ void FilterBank(faacEncHandle hEncoder,
             p_out_mdct[i] = p_o_buf[i] * first_window[i];
             p_out_mdct[i+BLOCK_LEN_LONG] = p_o_buf[i+BLOCK_LEN_LONG] * second_window[BLOCK_LEN_LONG-i-1];
         }
-        MDCT( p_out_mdct, 2*BLOCK_LEN_LONG );
+        MDCT( &hEncoder->fft_tables, p_out_mdct, 2*BLOCK_LEN_LONG );
         break;
 
     case LONG_SHORT_WINDOW :
@@ -164,7 +164,7 @@ void FilterBank(faacEncHandle hEncoder,
         for ( i = 0 ; i < BLOCK_LEN_SHORT ; i++)
             p_out_mdct[i+BLOCK_LEN_LONG+NFLAT_LS] = p_o_buf[i+BLOCK_LEN_LONG+NFLAT_LS] * second_window[BLOCK_LEN_SHORT-i-1];
         SetMemory(p_out_mdct+BLOCK_LEN_LONG+NFLAT_LS+BLOCK_LEN_SHORT,0,NFLAT_LS*sizeof(double));
-        MDCT( p_out_mdct, 2*BLOCK_LEN_LONG );
+        MDCT( &hEncoder->fft_tables, p_out_mdct, 2*BLOCK_LEN_LONG );
         break;
 
     case SHORT_LONG_WINDOW :
@@ -174,7 +174,7 @@ void FilterBank(faacEncHandle hEncoder,
         memcpy(p_out_mdct+NFLAT_LS+BLOCK_LEN_SHORT,p_o_buf+NFLAT_LS+BLOCK_LEN_SHORT,NFLAT_LS*sizeof(double));
         for ( i = 0 ; i < BLOCK_LEN_LONG ; i++)
             p_out_mdct[i+BLOCK_LEN_LONG] = p_o_buf[i+BLOCK_LEN_LONG] * second_window[BLOCK_LEN_LONG-i-1];
-        MDCT( p_out_mdct, 2*BLOCK_LEN_LONG );
+        MDCT( &hEncoder->fft_tables, p_out_mdct, 2*BLOCK_LEN_LONG );
         break;
 
     case ONLY_SHORT_WINDOW :
@@ -184,7 +184,7 @@ void FilterBank(faacEncHandle hEncoder,
                 p_out_mdct[i] = p_o_buf[i] * first_window[i];
                 p_out_mdct[i+BLOCK_LEN_SHORT] = p_o_buf[i+BLOCK_LEN_SHORT] * second_window[BLOCK_LEN_SHORT-i-1];
             }
-            MDCT( p_out_mdct, 2*BLOCK_LEN_SHORT );
+            MDCT( &hEncoder->fft_tables, p_out_mdct, 2*BLOCK_LEN_SHORT );
             p_out_mdct += BLOCK_LEN_SHORT;
             p_o_buf += BLOCK_LEN_SHORT;
             first_window = second_window;
@@ -257,7 +257,7 @@ void IFilterBank(faacEncHandle hEncoder,
     switch( block_type ) {
     case ONLY_LONG_WINDOW :
         memcpy(transf_buf, p_in_data,BLOCK_LEN_LONG*sizeof(double));
-        IMDCT( transf_buf, 2*BLOCK_LEN_LONG );
+        IMDCT( &hEncoder->fft_tables, transf_buf, 2*BLOCK_LEN_LONG );
         for ( i = 0 ; i < BLOCK_LEN_LONG ; i++)
             transf_buf[i] *= first_window[i];
         if (overlap_select != MNON_OVERLAPPED) {
@@ -273,7 +273,7 @@ void IFilterBank(faacEncHandle hEncoder,
 
     case LONG_SHORT_WINDOW :
         memcpy(transf_buf, p_in_data,BLOCK_LEN_LONG*sizeof(double));
-        IMDCT( transf_buf, 2*BLOCK_LEN_LONG );
+        IMDCT( &hEncoder->fft_tables, transf_buf, 2*BLOCK_LEN_LONG );
         for ( i = 0 ; i < BLOCK_LEN_LONG ; i++)
             transf_buf[i] *= first_window[i];
         if (overlap_select != MNON_OVERLAPPED) {
@@ -292,7 +292,7 @@ void IFilterBank(faacEncHandle hEncoder,
 
     case SHORT_LONG_WINDOW :
         memcpy(transf_buf, p_in_data,BLOCK_LEN_LONG*sizeof(double));
-        IMDCT( transf_buf, 2*BLOCK_LEN_LONG );
+        IMDCT( &hEncoder->fft_tables, transf_buf, 2*BLOCK_LEN_LONG );
         for ( i = 0 ; i < BLOCK_LEN_SHORT ; i++)
             transf_buf[i+NFLAT_LS] *= first_window[i];
         if (overlap_select != MNON_OVERLAPPED) {
@@ -316,7 +316,7 @@ void IFilterBank(faacEncHandle hEncoder,
         }
         for ( k=0; k < MAX_SHORT_WINDOWS; k++ ) {
             memcpy(transf_buf,p_in_data,BLOCK_LEN_SHORT*sizeof(double));
-            IMDCT( transf_buf, 2*BLOCK_LEN_SHORT );
+            IMDCT( &hEncoder->fft_tables, transf_buf, 2*BLOCK_LEN_SHORT );
             p_in_data += BLOCK_LEN_SHORT;
             if (overlap_select != MNON_OVERLAPPED) {
                 for ( i = 0 ; i < BLOCK_LEN_SHORT ; i++){
@@ -411,7 +411,7 @@ static void CalculateKBDWindow(double* win, double alpha, int length)
     }
 }
 
-static void MDCT(double *data, int N)
+static void MDCT( FFT_Tables *fft_tables, double *data, int N )
 {
     double *xi, *xr;
     double tempr, tempi, c, s, cold, cfreq, sfreq; /* temps for pre and post twiddle */
@@ -458,10 +458,10 @@ static void MDCT(double *data, int N)
     /* Perform in-place complex FFT of length N/4 */
     switch (N) {
     case 256:
-        fft(xr, xi, 6);
+        fft( fft_tables, xr, xi, 6);
         break;
     case 2048:
-        fft(xr, xi, 9);
+        fft( fft_tables, xr, xi, 9);
     }
 
     /* prepare for recurrence relations in post-twiddle */
@@ -490,7 +490,7 @@ static void MDCT(double *data, int N)
     if (xi) FreeMemory(xi);
 }
 
-static void IMDCT(double *data, int N)
+static void IMDCT( FFT_Tables *fft_tables, double *data, int N)
 {
     double *xi, *xr;
     double tempr, tempi, c, s, cold, cfreq, sfreq; /* temps for pre and post twiddle */
@@ -530,10 +530,10 @@ static void IMDCT(double *data, int N)
     /* Perform in-place complex IFFT of length N/4 */
     switch (N) {
     case 256:
-        ffti(xr, xi, 6);
+        ffti( fft_tables, xr, xi, 6);
         break;
     case 2048:
-        ffti(xr, xi, 9);
+        ffti( fft_tables, xr, xi, 9);
     }
 
     /* prepare for recurrence relations in post-twiddle */

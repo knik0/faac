@@ -16,7 +16,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: filtbank.h,v 1.8 2001/06/08 18:01:09 menno Exp $
+ * $Id: filtbank.h,v 1.9 2003/11/16 05:02:52 stux Exp $
  */
 
 #ifndef FILTBANK_H
@@ -38,34 +38,33 @@ extern "C" {
 #define SINE_WINDOW 0
 #define KBD_WINDOW  1
 
-void FilterBankInit(faacEncHandle hEncoder);
+void			FilterBankInit		( faacEncHandle hEncoder );
 
-void FilterBankEnd(faacEncHandle hEncoder);
+void			FilterBankEnd		( faacEncHandle hEncoder );
 
-void FilterBank(faacEncHandle hEncoder,
-                CoderInfo *coderInfo,
-                double *p_in_data,
-                double *p_out_mdct,
-                double *p_overlap,
-                int overlap_select);
+void			FilterBank( faacEncHandle hEncoder,
+						CoderInfo *coderInfo,
+						double *p_in_data,
+						double *p_out_mdct,
+						double *p_overlap,
+						int overlap_select );
 
-void IFilterBank(faacEncHandle hEncoder,
-                 CoderInfo *coderInfo,
-                 double *p_in_data,
-                 double *p_out_mdct,
-                 double *p_overlap,
-                 int overlap_select);
+void			IFilterBank( faacEncHandle hEncoder,
+						CoderInfo *coderInfo,
+						double *p_in_data,
+						double *p_out_mdct,
+						double *p_overlap,
+						int overlap_select );
 
-void specFilter(double *freqBuff,
-                int sampleRate,
-                int lowpassFreq,
-                int specLen
-                );
+void			specFilter(	double *freqBuff,
+						int sampleRate,
+						int lowpassFreq,
+						int specLen );
 
-static void CalculateKBDWindow(double* win, double alpha, int length);
-static double Izero(double x);
-static void MDCT(double *data, int N);
-static void IMDCT(double *data, int N);
+static void		CalculateKBDWindow	( double* win, double alpha, int length );
+static double	Izero				( double x);
+static void		MDCT				( FFT_Tables *fft_tables, double *data, int N );
+static void		IMDCT				( FFT_Tables *fft_tables, double *data, int N );
 
 
 #ifdef __cplusplus

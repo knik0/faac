@@ -1,6 +1,6 @@
 /*
  * FAAC - Freeware Advanced Audio Coder
- * $Id: fft.h,v 1.3 2002/08/21 16:52:52 knik Exp $
+ * $Id: fft.h,v 1.4 2003/11/16 05:02:52 stux Exp $
  * Copyright (C) 2002 Krzysztof Nikiel
  *
  * This library is free software; you can redistribute it and/or
@@ -22,8 +22,20 @@
 #ifndef _FFT_H_
 #define _FFT_H_
 
-void rfft(double *x, int logm);
-void fft(double *xr, double *xi, int logm);
-void ffti(double *xr, double *xi, int logm);
+typedef float fftfloat;
+
+typedef struct
+{
+    fftfloat **costbl;
+    fftfloat **negsintbl;
+    unsigned short **reordertbl;
+} FFT_Tables;
+
+void fft_init		( FFT_Tables *fft_tables );
+void fft_terminate	( FFT_Tables *fft_tables );
+
+void rfft			( FFT_Tables *fft_tables, double *x, int logm );
+void fft			( FFT_Tables *fft_tables, double *xr, double *xi, int logm );
+void ffti			( FFT_Tables *fft_tables, double *xr, double *xi, int logm );
 
 #endif

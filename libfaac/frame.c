@@ -16,7 +16,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: frame.c,v 1.52 2003/11/15 08:13:42 stux Exp $
+ * $Id: frame.c,v 1.53 2003/11/16 05:02:52 stux Exp $
  */
 
 /*
@@ -366,7 +366,9 @@ faacEncHandle FAACAPI faacEncOpen(unsigned long sampleRate,
     }
 
     /* Initialize coder functions */
-    hEncoder->psymodel->PsyInit(&hEncoder->gpsyInfo, hEncoder->psyInfo, hEncoder->numChannels,
+	fft_init( &hEncoder->fft_tables );
+    
+	hEncoder->psymodel->PsyInit(&hEncoder->gpsyInfo, hEncoder->psyInfo, hEncoder->numChannels,
         hEncoder->sampleRate, hEncoder->srInfo->cb_width_long,
         hEncoder->srInfo->num_cb_long, hEncoder->srInfo->cb_width_short,
         hEncoder->srInfo->num_cb_short);
@@ -381,6 +383,8 @@ faacEncHandle FAACAPI faacEncOpen(unsigned long sampleRate,
 
     AACQuantizeInit(hEncoder->coderInfo, hEncoder->numChannels,
 		    &(hEncoder->aacquantCfg));
+
+	
 
     HuffmanInit(hEncoder->coderInfo, hEncoder->numChannels);
 
@@ -403,6 +407,8 @@ int FAACAPI faacEncClose(faacEncHandle hEncoder)
 			&(hEncoder->aacquantCfg));
 
     HuffmanEnd(hEncoder->coderInfo, hEncoder->numChannels);
+
+	fft_terminate( &hEncoder->fft_tables );
 
     /* Free remaining buffer memory */
     for (channel = 0; channel < hEncoder->numChannels; channel++) 
@@ -557,8 +563,12 @@ int FAACAPI faacEncEncode(faacEncHandle hEncoder,
 		/* LFE psychoacoustic can run without it */
 		if (!channelInfo[channel].lfe || channelInfo[channel].cpe)
 		{
-			hEncoder->psymodel->PsyBufferUpdate(&hEncoder->gpsyInfo, &hEncoder->psyInfo[channel],
-					hEncoder->next3SampleBuff[channel], bandWidth,
+			hEncoder->psymodel->PsyBufferUpdate( 
+					&hEncoder->fft_tables, 
+					&hEncoder->gpsyInfo, 
+					&hEncoder->psyInfo[channel],
+					hEncoder->next3SampleBuff[channel], 
+					bandWidth,
 					hEncoder->srInfo->cb_width_short,
 					hEncoder->srInfo->num_cb_short);
 		}
@@ -943,6 +953,9 @@ static SR_INFO srInfo[12+1] =
 
 /*
 $Log: frame.c,v $
+Revision 1.53  2003/11/16 05:02:52  stux
+moved global tables from fft.c into hEncoder FFT_Tables. Add fft_init and fft_terminate, flowed through all necessary changes. This should remove at least one instance of a memory leak, and fix some thread-safety problems. Version update to 1.23.3
+
 Revision 1.52  2003/11/15 08:13:42  stux
 added FaacEncGetVersion(), version 1.23.2, added myself to faacCopyright :-P, does vanity know no bound ;)
 

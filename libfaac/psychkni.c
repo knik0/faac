@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: psychkni.c,v 1.13 2003/09/07 16:45:48 knik Exp $
+ * $Id: psychkni.c,v 1.14 2003/11/16 05:02:52 stux Exp $
  */
 #include <stdio.h>
 #include <stdlib.h>
@@ -333,7 +333,7 @@ static void PsyCalculate(ChannelInfo * channelInfo, GlobalPsyInfo * gpsyInfo,
   }
 }
 
-static void PsyBufferUpdate(GlobalPsyInfo * gpsyInfo, PsyInfo * psyInfo,
+static void PsyBufferUpdate( FFT_Tables *fft_tables, GlobalPsyInfo * gpsyInfo, PsyInfo * psyInfo,
 			    double *newSamples, unsigned int bandwidth,
 			    int *cb_width_short, int num_cb_short)
 {
@@ -358,7 +358,7 @@ static void PsyBufferUpdate(GlobalPsyInfo * gpsyInfo, PsyInfo * psyInfo,
 	   2 * psyInfo->sizeS * sizeof(double));
 
     Hann(gpsyInfo, transBuffS, 2 * psyInfo->sizeS);
-    rfft(transBuffS, 8);
+    rfft( fft_tables, transBuffS, 8);
 
     // shift bufs
     tmp = psydata->fftEnrgPrevS[win];

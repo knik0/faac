@@ -16,7 +16,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: frame.h,v 1.25 2003/11/15 08:13:42 stux Exp $
+ * $Id: frame.h,v 1.26 2003/11/16 05:02:52 stux Exp $
  */
 
 #ifndef FRAME_H
@@ -48,6 +48,7 @@ extern "C" {
 #include "channels.h"
 #include "psych.h"
 #include "aacquant.h"
+#include "fft.h"
 
 #ifdef WIN32
   #ifndef FAACAPI
@@ -117,6 +118,9 @@ typedef struct {
 
     /* quantizer specific config */
     AACQuantCfg aacquantCfg;
+
+	/* FFT Tables */
+	FFT_Tables	fft_tables;
 
     /* output bits difference in average bitrate mode */
     int bitDiff;

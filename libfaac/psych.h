@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: psych.h,v 1.12 2003/09/07 16:45:48 knik Exp $
+ * $Id: psych.h,v 1.13 2003/11/16 05:02:52 stux Exp $
  */
 
 #ifndef PSYCH_H
@@ -32,6 +32,7 @@ extern "C" {
 
 #include "coder.h"
 #include "channels.h"
+#include "fft.h"
 
 typedef struct {
 	int size;
@@ -56,22 +57,23 @@ typedef struct {
         void *data;
 } GlobalPsyInfo;
 
-typedef struct {
-  void (*PsyInit) (GlobalPsyInfo *gpsyInfo, PsyInfo *psyInfo,
-		   unsigned int numChannels, unsigned int sampleRate,
-		   int *cb_width_long, int num_cb_long,
-			 int *cb_width_short, int num_cb_short);
-  void (*PsyEnd) (GlobalPsyInfo *gpsyInfo, PsyInfo *psyInfo,
-		  unsigned int numChannels);
-  void (*PsyCalculate) (ChannelInfo *channelInfo, GlobalPsyInfo *gpsyInfo,
-			PsyInfo *psyInfo, int *cb_width_long, int num_cb_long,
-			int *cb_width_short, int num_cb_short,
-			unsigned int numChannels);
-  void (*PsyBufferUpdate) (GlobalPsyInfo * gpsyInfo, PsyInfo * psyInfo,
-			    double *newSamples, unsigned int bandwidth,
-			    int *cb_width_short, int num_cb_short);
-  void (*BlockSwitch) (CoderInfo *coderInfo, PsyInfo *psyInfo,
-		       unsigned int numChannels);
+typedef struct 
+{
+void (*PsyInit) (GlobalPsyInfo *gpsyInfo, PsyInfo *psyInfo,
+		unsigned int numChannels, unsigned int sampleRate,
+		int *cb_width_long, int num_cb_long,
+		int *cb_width_short, int num_cb_short);
+void (*PsyEnd) (GlobalPsyInfo *gpsyInfo, PsyInfo *psyInfo,
+		unsigned int numChannels);
+void (*PsyCalculate) (ChannelInfo *channelInfo, GlobalPsyInfo *gpsyInfo,
+		PsyInfo *psyInfo, int *cb_width_long, int num_cb_long,
+		int *cb_width_short, int num_cb_short,
+		unsigned int numChannels);
+void (*PsyBufferUpdate) ( FFT_Tables *fft_tables, GlobalPsyInfo * gpsyInfo, PsyInfo * psyInfo,
+		double *newSamples, unsigned int bandwidth,
+		int *cb_width_short, int num_cb_short);
+void (*BlockSwitch) (CoderInfo *coderInfo, PsyInfo *psyInfo,
+		unsigned int numChannels);
 } psymodel_t;
 
 extern psymodel_t psymodel2;
