@@ -17,7 +17,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: aacquant.c,v 1.13 2002/11/23 17:31:52 knik Exp $
+ * $Id: aacquant.c,v 1.14 2002/11/27 17:19:59 knik Exp $
  */
 
 #include <math.h>
@@ -373,12 +373,10 @@ static void Quantize(const double *xp, int *pi, double istep)
     }
 }
 
-static double QuantizeBand(const double *xp, int *pi, double istep,
+static void QuantizeBand(const double *xp, int *pi, double istep,
 			   int offset, int end)
 {
   int j;
-  double energy = 0.0;
-  double xtmp;
   fi_union *fi;
 
   fi = (fi_union *)pi;
@@ -389,12 +387,7 @@ static double QuantizeBand(const double *xp, int *pi, double istep,
     x0 += MAGIC_FLOAT; fi[j].f = x0;
     fi[j].f = x0 + (adj43asm - MAGIC_INT)[fi[j].i];
     fi[j].i -= MAGIC_INT;
-
-    xtmp = pow43[pi[j]];
-    energy += xtmp * xtmp;
   }
-
-  return energy;
 }
 #else
 static void Quantize(const double *xr, int *ix, double istep)
@@ -491,71 +484,18 @@ static void CalcAllowedDist(PsyInfo *psyInfo, int *cb_offset, int num_cb,
 {
     int sfb, start, end;
     double xmin0;
-    double amp = pow(2.0, 3.5 / 1420.0 * (double)bits) * 0.08;
 
     for (sfb = 0; sfb < num_cb; sfb++)
     {
         start = cb_offset[sfb];
         end = cb_offset[sfb + 1];
 
-        xmin0 = psyInfo->maskThr[sfb];
+        xmin0 = psyInfo->maskEn[sfb];
         if (xmin0 > 0.0)
-	  xmin0 = psyInfo->maskEn[sfb] / xmin0;
+	  xmin0 = psyInfo->maskThr[sfb] / xmin0;
 
-	xmin[sfb] = xmin0 * amp;
+	xmin[sfb] = xmin0;
     }
-}
-
-static double AmpBand(CoderInfo *coderInfo, double *xr_pow, int *xi,
-		      int sfb, double origen, double enmin)
-{
-  double ifqstep;
-  const double logstep_1 = 1.0 / log(pow(2.0, 0.25));
-  double amp0 = sqrt(origen / enmin);
-  double quanten;
-  int i;
-  int sfac, sfacadd;
-  int start = coderInfo->sfb_offset[sfb];
-  int end = coderInfo->sfb_offset[sfb + 1];
-  const int sfacmax = 30;
-
-  if (amp0 < 1e-3) // 1e-3 = -60dB
-    return 0;
-  amp0 = 1.0 / amp0;
-  sfacadd = log(amp0) * logstep_1 + 0.5;
-  sfac = coderInfo->scale_factor[sfb] + sfacadd;
-
-  if (sfac > sfacmax)
-  {
-    sfac = sfacmax;
-    sfacadd = sfac - coderInfo->scale_factor[sfb];
-    }
-  if (sfacadd < 1)
-    return 0;
-
-  ifqstep = pow(2.0, sfacadd * 0.1875);
-
-l0:
-  for (i = start; i < end; i++)
-    xr_pow[i] *= ifqstep;
-
-  ifqstep = pow(2.0, 0.1875);
-
-  if ((quanten =
-      QuantizeBand(xr_pow, xi, IPOW20(coderInfo->global_gain), start, end))
-      < enmin)
-  {
-    if (sfac < sfacmax)
-    {
-      sfac++;
-      goto l0;
-        }
-    }
-
-  sfacadd = sfac - coderInfo->scale_factor[sfb];
-  coderInfo->scale_factor[sfb] = sfac;
-
-  return quanten;
 }
 
 static int FixNoise(CoderInfo *coderInfo,
@@ -566,11 +506,12 @@ static int FixNoise(CoderInfo *coderInfo,
 {
     int i, sb;
     int start, end;
-    double quanten, origen;
+    double quantvol, diffvol;
     double quantfac;
-    double noise = 0.0;
     double tmp;
-    int notdone = 0;
+    int done = 0;
+    const double ifqstep = pow(2.0, 0.1875);
+    const int sfacmax = 30;
 
     for (sb = 0; sb < coderInfo->nr_of_sfb; sb++)
     {
@@ -580,27 +521,36 @@ static int FixNoise(CoderInfo *coderInfo,
       start = coderInfo->sfb_offset[sb];
       end = coderInfo->sfb_offset[sb+1];
 
+    calcdist:
       quantfac = pow(2.0, 0.25*(coderInfo->scale_factor[sb] - coderInfo->global_gain));
 
-      quanten = 0.0;
-      origen = 0.0;
+      quantvol = 0.0;
+      diffvol = 0.0;
       for (i = start; i < end; i++)
       {
 	tmp = pow43[xi[i]];
-	quanten += tmp * tmp;
+	quantvol += tmp;
 
-	tmp = xr[i] * quantfac;
-	origen += tmp * tmp;
+	diffvol += fabs(fabs(xr[i]) * quantfac - tmp);
     }
 
-      if (quanten < xmin[sb]) // band energy to low
-        noise += AmpBand(coderInfo, xr_pow, xi, sb, origen, xmin[sb]) - origen;
+      if (diffvol / quantvol > xmin[sb]) // distorion to high
+      {
+	if (coderInfo->scale_factor[sb] < sfacmax)
+	{
+	  for (i = start; i < end; i++)
+	    xr_pow[i] *= ifqstep;
+	  coderInfo->scale_factor[sb]++;
+	  QuantizeBand(xr_pow, xi, IPOW20(coderInfo->global_gain), start, end);
+	  goto calcdist;
+	}
+      }
     else
-	notdone++;
-      //printf("%d: %g - %g(%d)\n", sb, quanten, xmin[sb], coderInfo->scale_factor[sb]);
+	done++;
+      //printf("%d: %g\t%g - %g(%d)\n", sb, quantvol, diffvol/quantvol, xmin[sb], coderInfo->scale_factor[sb]);
             }
 
-    return notdone;
+    return done;
 }
 
 static int SortForGrouping(CoderInfo* coderInfo,
