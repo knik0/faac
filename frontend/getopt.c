@@ -157,7 +157,7 @@ static enum
   REQUIRE_ORDER, PERMUTE, RETURN_IN_ORDER
 } ordering;
 
-#ifdef  __GNU_LIBRARY__
+#if defined(__GNU_LIBRARY__) || defined(__APPLE__)
 /* We want to avoid inclusion of string.h with non-GNU libraries
    because there are many ways it can cause trouble.
    On some systems, it contains special magic macros that don't work

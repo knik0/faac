@@ -7,7 +7,6 @@ AM_CONFIG_HEADER(config.h)
 AC_DEFUN(MY_DEFINE, [ AC_DEFINE($1, 1, [define if needed]) ])
 
 CFLAGS=${CFLAGS:-"-O2 -Wall"}
-LDFLAGS=${LDFLAGS:-"-s"}
 
 AC_PROG_CC
 AM_PROG_LIBTOOL
@@ -19,6 +18,8 @@ AC_CHECK_TYPES(u_int16_t)
 AC_CHECK_TYPES(int32_t)
 AC_CHECK_TYPES(int16_t)
 
+AC_CHECK_DECL(strcasecmp, MY_DEFINE(HAVE_STRCASECMP))
+
 AC_CHECK_LIB(gnugetopt, getopt_long)
 AC_CHECK_LIB(mp4v2, MP4MetadataDelete,
 		    [AC_MSG_NOTICE([*** Building with MP4 support ***])
@@ -26,7 +27,6 @@ AC_CHECK_LIB(mp4v2, MP4MetadataDelete,
 		     LIBS="$LIBS -lstdc++ -lmp4v2"],
 		     [AC_MSG_NOTICE([*** Building without MP4 support ***])],
 		     -lstdc++)
-
 AC_C_BIGENDIAN
 
 dnl Checks for header files required for mp4.h

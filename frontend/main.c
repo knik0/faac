@@ -18,7 +18,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: main.c,v 1.66 2004/04/13 13:47:05 danchr Exp $
+ * $Id: main.c,v 1.67 2004/04/16 09:49:10 danchr Exp $
  */
 
 #ifdef _MSC_VER
@@ -61,6 +61,10 @@
 # include "getopt.c"
 #endif
 
+#if !defined(HAVE_STRCASECMP) && !defined(_WIN32)
+# define strcasecmp strcmp
+#endif
+
 #include "input.h"
 
 #include <faac.h>
@@ -79,7 +83,7 @@ const char *short_help =
   "Usage: %s [options] infiles ...\n"
   "Options:\n"
   "  -q <quality>\tSet quantizer quality.\n"
-  "  -a <bitrate>\tSet average bitrate to x kbps/channel. (lower quality mode)\n"
+  "  -b <bitrate>\tSet average bitrate to x kbps. (ABR, lower quality mode)\n"
   "  -c <freq>\tSet the bandwidth in Hz. (default=automatic)\n"
   "  -o X\t\tSet output file to X (only for one input file)\n"
   "  -r\t\tUse RAW AAC output file.\n"
@@ -125,9 +129,7 @@ const char *long_help =
   "\t\t(default: 100, averages at approx. 120 kbps VBR for a normal \n"
   "\t\tstereo input file with 16 bit and 44.1 kHz sample rate; max.\n"
   "\t\tvalue 500, min. 10).Set quantizer quality.\n"
-  "  -a <bitrate>\tSet average bitrate (ABR) to approximately X kbps PER CHANNEL\n"
-  "\t\t(default: VBR mode; using -a 64 averages at 128 kbps/stereo max.\n"
-  "\t\tvalue 76 kbps/channel = 152 kbps/stereo at a 16 kHz cutoff).\n"
+  "  -b <bitrate>\tSet average bitrate (ABR) to approximately <bitrate> kbps.\n"
   "  -c <freq>\tSet the bandwidth in Hz (default: automatic, i.e. adapts\n"
   "\t\tmaximum value to input sample rate).\n"
   "\n"
@@ -489,7 +491,7 @@ int main(int argc, char *argv[])
         int c = -1;
         int option_index = 0;
 
-        c = getopt_long(argc, argv, "Hha:m:o:rnc:q:PR:B:C:I:X"
+        c = getopt_long(argc, argv, "Hhb:m:o:rnc:q:PR:B:C:I:X"
 #ifdef HAVE_LIBMP4V2
                         "w"
 #endif
@@ -528,7 +530,7 @@ int main(int argc, char *argv[])
             }
             break;
         }
-        case 'a': {
+        case 'b': {
             unsigned int i;
             if (sscanf(optarg, "%u", &i) > 0)
             {
@@ -676,13 +678,14 @@ int main(int argc, char *argv[])
             }
             break;
 	case OBJTYPE_FLAG:
-	    if (!strcasecmp(optarg, "LC") || !strcasecmp(optarg, "lc"))
+	    if (!strcasecmp(optarg, "LC"))
                 objectType = LOW;
-	    else if (!strcmp(optarg, "Main") || !strcmp(optarg, "main"))
+	    else if (!strcasecmp(optarg, "Main"))
 	        objectType = MAIN;
-	    else if (!strcasecmp(optarg, "LTP") || !strcasecmp(optarg, "ltp"))
-	        objectType = LTP;
-	    else
+	    else if (!strcasecmp(optarg, "LTP")) {
+	        mpegVersion = MPEG4;
+		objectType = LTP;
+	    } else
 	        dieMessage = "Unrecognised object type!\n";
 	    break;
         case 'L':
@@ -831,7 +834,7 @@ int main(int argc, char *argv[])
         myFormat->useLfe = 1;
     myFormat->allowMidside = useMidSide;
     if (bitRate)
-        myFormat->bitRate = bitRate;
+        myFormat->bitRate = bitRate / infile->channels;
     myFormat->bandWidth = cutOff;
     if (quantqual > 0)
         myFormat->quantqual = quantqual;
@@ -911,8 +914,8 @@ int main(int argc, char *argv[])
     quantqual = myFormat->quantqual;
     bitRate = myFormat->bitRate;
     if (bitRate)
-      fprintf(stderr, "Average bitrate: %d kbps/channel\n",
-	      (bitRate + 500)/1000);
+      fprintf(stderr, "Average bitrate: %d kbps\n",
+	      (bitRate + 500)/1000*infile->channels);
     fprintf(stderr, "Quantization quality: %ld\n", quantqual);
     fprintf(stderr, "Bandwidth: %d Hz\n", cutOff);
     fprintf(stderr, "Object type: ");
@@ -1119,6 +1122,12 @@ int main(int argc, char *argv[])
 
 /*
 $Log: main.c,v $
+Revision 1.67  2004/04/16 09:49:10  danchr
+change -a <kbps/channel> to -b <kbps>
+Darwin portability fixes
+Make LTP imply MPEG-4 AAC
+silence a few warnings
+
 Revision 1.66  2004/04/13 13:47:05  danchr
 compilation and composer patch by Jordan Breeding
 undocumented single-letter switches removed
