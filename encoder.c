@@ -23,25 +23,24 @@ int faacEncodeInit(faacAACStream *as, int *samplesToRead, int *bitBufferSize, in
 {
 	int frameNumSample,delayNumSample;
 	int ch;
-//	faacAACStream *as;
 
 	int startupNumFrame;
 
 	if ((as->inputBuffer = (double**)malloc( as->channels*sizeof(double*)))==NULL)
-		return 0;
+		return -1;
 	for (ch=0; ch < as->channels; ch++)
 	{
 		if ((as->inputBuffer[ch]=(double*)malloc( 1024*sizeof(double)))==NULL)
-			return 0;
+			return -1;
 	}
 
 	if((as->bit_rate % 1000)||(as->bit_rate < 16000)) {
-		return 0;
+		return -1;
 	}
 	if (as->channels != 2)
-		return 0;
+		return -1;
 	if ((as->profile != MAIN_PROFILE)&&(as->profile != LOW_PROFILE))
-		return 0;
+		return -1;
 
 	as->total_bits = 0;
 	as->frames = 0;
@@ -94,7 +93,7 @@ int faacEncodeInit(faacAACStream *as, int *samplesToRead, int *bitBufferSize, in
 
 	as->savedSize = 0;
 
-	return 1;
+	return 0;
 }
 
 int faacEncodeFrame(faacAACStream *as, short *Buffer, int Samples, unsigned char *bitBuffer, int *bitBufSize)
@@ -335,7 +334,7 @@ faacVersion *faacEncodeVersion(void)
 
 #ifdef FAAC_DLL
 
-BOOL APIENTRY DllMain(HANDLE hModule, 
+BOOL APIENTRY DllMain(HANDLE hModule,
                       DWORD  ul_reason_for_call, 
                       LPVOID lpReserved)
 {
@@ -405,55 +404,23 @@ void usage(void)
 	return;
 }
 
-
-int main(int argc, char *argv[])
+int parse_arg(int argc, char *argv[],faacAACStream *as, char *FileNames[200], int *FileCount)
 {
-	int readNumSample;
+int i;
+char *argp;
 
-	short *sampleBuffer;
-	unsigned char *bitBuffer;
-	FILE *aacfile;
-	SNDFILE *sndfile;
-	SF_INFO sf_info;
-	int noSamples;
-	int error;
-	int bitBufSize;
-	int curBitBufSize;
-	int headerSize;
-	int i, frames, cfr;
-	int profile = MAIN_PROFILE;
-        int header_type = ADIF_HEADER;
-	int use_IS = 0, use_MS = 0, use_TNS = 0, use_LTP = 1, use_PNS = 0;
-	int cut_off = 0;
-	int bit_rate = 128;
-	int out_rate = 0;
-	char out_dir[255];
-	int out_dir_set = 0;
-	int raw_audio = 0;
-	char *argp;
-	char *FileNames[200];
-	int FileCount = 0;
-        int res;
+as->profile = MAIN_PROFILE;
+as->header_type = ADIF_HEADER;
+as->use_IS = 0, as->use_MS = 0, as->use_TNS = 0, as->use_LTP = 1, as->use_PNS = 0;
+as->cut_off = 0;
+as->bit_rate = 128;
+as->out_sampling_rate = 0;
+as->out_dir_set = 0;
+as->raw_audio = 0;
 
-	faacAACStream *as;
-	faacVersion *faacv;
-
-	long begin, end;
-	int nTotSecs, nSecs;
-	int nMins;
-
-        as = malloc(sizeof(faacAACStream));
-	faacv = faacEncodeVersion();
-	printf("FAAC cl (Freeware AAC Encoder)\n");
-	printf("FAAC homepage: %s\n", faacv->HomePage);
-	printf("Encoder engine version: %d.%d\n\n",
-		faacv->MajorVersion, faacv->MinorVersion);
-	if (faacv) free(faacv);
-
-	/* Process the command line */
 	if (argc == 1) {
 		usage();
-		return 1;
+		return -1;
 	}
 
 	for (i = 1; i < argc; i++)
@@ -465,9 +432,9 @@ int main(int argc, char *argv[])
 
 			if (!strchr(argp, '*') && !strchr(argp, '?'))
 			{
-				FileNames[FileCount] = malloc((strlen(argv[i])+1)*sizeof(char));
-				strcpy(FileNames[FileCount], argv[i]);
-				FileCount++;
+				FileNames[*FileCount] = malloc((strlen(argv[i])+1)*sizeof(char));
+				strcpy(FileNames[*FileCount], argv[i]);
+				(*FileCount)++;
 			} else {
 #ifdef WIN32
 				HANDLE hFindFile;
@@ -492,10 +459,10 @@ int main(int argc, char *argv[])
 				{
 					do
 					{
-						FileNames[FileCount] = malloc((strlen(fd.cFileName)
+						FileNames[*FileCount] = malloc((strlen(fd.cFileName)
 							+ strlen(path) + 2)*sizeof(char));
-						strcat(strcpy(FileNames[FileCount], path), fd.cFileName);
-						FileCount++;
+						strcat(strcpy(FileNames[*FileCount], path), fd.cFileName);
+						(*FileCount)++;
 					} while (FindNextFile(hFindFile, &fd));
 					FindClose(hFindFile);
 				}
@@ -507,44 +474,44 @@ int main(int argc, char *argv[])
 			switch(argv[i][1]) {
 			case 'p': case 'P':
 				if ((argv[i][2] == 'n') || (argv[i][2] == 'N'))
-					use_PNS = 1;
+					as->use_PNS = 1;
 				else if ((argv[i][2] == 'l') || (argv[i][2] == 'L'))
-					profile = LOW_PROFILE;
+					as->profile = LOW_PROFILE;
 				else
-					profile = MAIN_PROFILE;
+					as->profile = MAIN_PROFILE;
 				break;
 			case 'n': case 'N':
 				if ((argv[i][2] == 'm') || (argv[i][2] == 'M'))
-					use_MS = -1;
+					as->use_MS = -1;
 				else if ((argv[i][2] == 'p') || (argv[i][2] == 'P'))
-					use_LTP = 0;
+					as->use_LTP = 0;
 				else if ((argv[i][2] == 'h') || (argv[i][2] == 'H'))
-					header_type = NO_HEADER;
+					as->header_type = NO_HEADER;
 				break;
 			case 'm': case 'M':
-				use_MS = 1;
+				as->use_MS = 1;
 				break;
 			case 'i': case 'I':
-				use_IS = 1;
+				as->use_IS = 1;
 				break;
 			case 'r': case 'R':
-				raw_audio = 1;
+				as->raw_audio = 1;
 				break;
 			case 't': case 'T':
-				use_TNS = 1;
+				as->use_TNS = 1;
 				break;
 			case 'b': case 'B':
-				bit_rate = atoi(&argv[i][2]);
+				as->bit_rate = atoi(&argv[i][2]);
 				break;
 			case 's': case 'S':
-				out_rate = atoi(&argv[i][2]);
+				as->out_sampling_rate = atoi(&argv[i][2]);
 				break;
 			case 'c': case 'C':
-				cut_off = atoi(&argv[i][2]);
+				as->cut_off = atoi(&argv[i][2]);
 				break;
 			case 'o': case 'O':
-				out_dir_set = 1;
-				strcpy(out_dir, &argv[i][2]);
+				as->out_dir_set = 1;
+				strcpy(as->out_dir, &argv[i][2]);
 				break;
 			case 'h': case 'H':
 				usage();
@@ -552,26 +519,63 @@ int main(int argc, char *argv[])
 			}
 		}
 	}
-
-	if (FileCount == 0) {
-		return 1;
+        if ((*FileCount) == 0) {
+		return -1;
 	}
+        as->bit_rate*=1000;
+return 0;
+}
 
-	printf("AAC profile: %s.\n", (profile==MAIN_PROFILE)?"MAIN":"LOW");
-	printf("Bitrate: %dkbps.\n", bit_rate);
+int main(int argc, char *argv[])
+{
+	int readNumSample;
+
+	short *sampleBuffer;
+	unsigned char *bitBuffer;
+	FILE *aacfile;
+	SNDFILE *sndfile;
+	SF_INFO sf_info;
+	int noSamples;
+	int error;
+	int bitBufSize;
+	int curBitBufSize;
+	int headerSize;
+	int i, frames, cfr;
+	char *FileNames[200];
+	int FileCount = 0;
+
+	faacAACStream as;
+	faacVersion *faacv;
+
+	long begin, end;
+	int nTotSecs, nSecs;
+	int nMins;
+
+	faacv = faacEncodeVersion();
+	printf("FAAC cl (Freeware AAC Encoder)\n");
+	printf("FAAC homepage: %s\n", faacv->HomePage);
+	printf("Encoder engine version: %d.%d\n\n",
+		faacv->MajorVersion, faacv->MinorVersion);
+	if (faacv) free(faacv);
+
+	/* Process the command line */
+        if (parse_arg(argc, argv, &as, FileNames, &FileCount)) return 0;
+
+	printf("AAC profile: %s.\n", (as.profile==MAIN_PROFILE)?"MAIN":"LOW");
+	printf("Bitrate: %dkbps.\n", as.bit_rate/1000);
 	printf("Mid/Side (MS) stereo coding: %s.\n",
-		(use_MS==1)?"Full":((use_MS==0)?"Switching":"Off"));
-	printf("Intensity stereo (IS) coding: %s.\n", use_IS?"On":"Off");
-	printf("Temporal Noise Shaping: %s.\n", use_TNS?"On":"Off");
-	printf("Long Term Prediction: %s.\n", use_LTP?"On":"Off");
-	printf("Perceptual Noise Substitution: %s.\n", use_PNS?"On":"Off");
+		(as.use_MS==1)?"Full":((as.use_MS==0)?"Switching":"Off"));
+	printf("Intensity stereo (IS) coding: %s.\n", as.use_IS?"On":"Off");
+	printf("Temporal Noise Shaping: %s.\n", as.use_TNS?"On":"Off");
+	printf("Long Term Prediction: %s.\n", as.use_LTP?"On":"Off");
+	printf("Perceptual Noise Substitution: %s.\n", as.use_PNS?"On":"Off");
 //	printf("ADIF header: %s.\n", no_header?"Off":"On");
-	if (out_dir_set)
-		printf("Output directory: %s.\n", out_dir);
-	if (out_rate)
-		printf("Output sampling rate: %dHz.\n", out_rate);
-	if (cut_off)
-		printf("Cut-off frequency: %dHz.\n", cut_off);
+	if (as.out_dir_set)
+		printf("Output directory: %s.\n", as.out_dir);
+	if (as.out_sampling_rate)
+		printf("Output sampling rate: %dHz.\n", as.out_sampling_rate);
+	if (as.cut_off)
+		printf("Cut-off frequency: %dHz.\n", as.cut_off);
 	printf("\n");
 
 	for (i = 0; i < FileCount; i++) {
@@ -586,7 +590,7 @@ int main(int argc, char *argv[])
 		begin = clock();
 #endif
 
-		if (raw_audio) {
+		if (as.raw_audio) {
 			sf_info.format =  SF_FORMAT_RAW;
 			sf_info.format |= SF_FORMAT_PCM_BE;
 			sf_info.channels = 2;
@@ -602,8 +606,8 @@ int main(int argc, char *argv[])
 
 		frames = (int)(sf_info.samples/1024+0.5);
 
-		if (out_dir_set)
-			combine_path(aac_fn, out_dir, FileNames[i]);
+		if (as.out_dir_set)
+			combine_path(aac_fn, as.out_dir, FileNames[i]);
 		else
 			strcpy(aac_fn, FileNames[i]);
 		fnp = strrchr(aac_fn,'.');
@@ -616,21 +620,12 @@ int main(int argc, char *argv[])
 			continue;
 		}
 
-		as->channels = sf_info.channels;
-		as->in_sampling_rate = sf_info.samplerate;
-		as->out_sampling_rate = out_rate ? out_rate : sf_info.samplerate;
-		as->bit_rate = bit_rate * 1000;
-		as->cut_off = cut_off ? cut_off : (as->out_sampling_rate>>1);
-		as->profile = profile;
-		as->use_MS = use_MS;
-		as->use_IS = use_IS;
-		as->use_TNS = use_TNS;
-		as->use_LTP = use_LTP;
-		as->use_PNS = use_PNS;
-		as->header_type = header_type;
+		as.channels = sf_info.channels;
+		as.in_sampling_rate = sf_info.samplerate;
+		as.out_sampling_rate = as.out_sampling_rate ? as.out_sampling_rate : sf_info.samplerate;
+		as.cut_off = as.cut_off ? as.cut_off : (as.out_sampling_rate>>1);
 
-		res = faacEncodeInit(as, &readNumSample, &bitBufSize, &headerSize);
-		if (res == 0) {
+		if (faacEncodeInit(&as, &readNumSample, &bitBufSize, &headerSize) == -1) {
 			printf("Error while encoding %s.\n", FileNames[i]);
 			continue;
 		}
@@ -653,7 +648,7 @@ int main(int argc, char *argv[])
 
 			noSamples = sf_read_short(sndfile, sampleBuffer, readNumSample);
 
-			error = faacEncodeFrame(as, sampleBuffer, noSamples, bitBuffer, &curBitBufSize);
+			error = faacEncodeFrame(&as, sampleBuffer, noSamples, bitBuffer, &curBitBufSize);
 			if (error == FERROR) {
 				printf("Error while encoding %s.\n", FileNames[i]);
 				break;
@@ -669,7 +664,7 @@ int main(int argc, char *argv[])
 			continue;
 		}
 
-		error = faacEncodeFinish(as, bitBuffer, &curBitBufSize);
+		error = faacEncodeFinish(&as, bitBuffer, &curBitBufSize);
 		if (error == FERROR) {
 			printf("Error while encoding %s.\n", FileNames[i]);
 			continue;
@@ -679,7 +674,7 @@ int main(int argc, char *argv[])
 
 		sf_close(sndfile);
 
-		error = faacEncodeFree(as, bitBuffer);
+		error = faacEncodeFree(&as, bitBuffer);
 		if (error == FERROR) {
 			printf("Error while encoding %s.\n", FileNames[i]);
 			continue;
@@ -694,7 +689,6 @@ int main(int argc, char *argv[])
 		fclose(aacfile);
 		if (bitBuffer)  free(bitBuffer);
 		if (sampleBuffer)  free(sampleBuffer);
-                free(as);
 #ifdef WIN32
 		end = GetTickCount();
 #else
