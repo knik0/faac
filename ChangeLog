@@ -1,5 +1,24 @@
+2001-06-09  menno
+		version number changed
+
+		Big changes to command line encoder, now using getopt
+		NOTE: Options have changed, read usage.txt
+
+		Added getopt
+
+		Another todo done ;-)
+
+2001-06-08  menno
+		File renamed
+
+		Added README
+
+		Fixed linux compilation
+
 2001-06-06  menno
 		(I hope I have) fixed MPEG4 compatibility once and for all ;-)
+
+		version number upgraded
 
 2001-05-31  menno
 		Bugfix for linux
@@ -603,8 +622,6 @@
 		Command line parsing fixed
 
 2000-01-21  menno
-		Updated readme
-
 		Bug fix
 
 		Version upgraded
