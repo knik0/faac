@@ -430,7 +430,6 @@ int WriteTNSData(AACQuantInfo* quantInfo,    /* AACQuantInfo structure */
 	  if (numFilters) {
 		  bit_count += LEN_TNS_COEFF_RES;
 		  resInBits = windowDataPtr->coefResolution;
-		  resInBits = windowDataPtr->coefResolution;
 		  if (writeFlag) {
 			  BsPutBit(fixed_stream,resInBits-DEF_TNS_RES_OFFSET,LEN_TNS_COEFF_RES);
 		  }
