@@ -34,9 +34,9 @@ Copyright (c)1997.
 /**************************************************************************
   Version Control Information			Method: CVS
   Identifiers:
-  $Revision: 1.5 $
-  $Date: 2000/02/07 07:45:00 $ (check in)
-  $Author: lenox $
+  $Revision: 1.6 $
+  $Date: 2000/02/17 15:23:37 $ (check in)
+  $Author: menno $
   *************************************************************************/
 
 
@@ -400,6 +400,7 @@ nok_ltp_encode (BsBitStream *bs, enum WINDOW_TYPE win_type, int num_of_sfb,
 			break;
 			
 		case ONLY_SHORT_WINDOW:
+#if 0
 			for(i=0; i < MAX_SHORT_WINDOWS; i++)
 			{
 				if(lt_status->sbk_prediction_used[i])
@@ -451,7 +452,7 @@ nok_ltp_encode (BsBitStream *bs, enum WINDOW_TYPE win_type, int num_of_sfb,
 				}
 			}
 			break;
-
+#endif
 		default:
 			//        CommonExit(1, "nok_ltp_encode : unsupported window sequence %i", win_type);
 			break;

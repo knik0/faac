@@ -746,22 +746,24 @@ int EncTfFrame (faacAACStream *as, BsBitStream  *fixed_stream)
 		/* Update LTP history buffer                              */
 		/**********************************************************/
 		if(as->use_LTP)
-                  for (chanNum=0;chanNum<max_ch;chanNum++) {
-			nok_ltp_reconstruct(reconstructed_spectrum[chanNum],
-				block_type[chanNum],
-				WS_SIN, block_size_samples,
-				block_size_samples/2,
-				block_size_samples/short_win_in_long,
-				&sfb_offset_table[chanNum][0],
-				nr_of_sfb[chanNum],
-				&nok_lt_status[chanNum]);
-   		  }
+			for (chanNum=0;chanNum<max_ch;chanNum++) {
+				nok_ltp_reconstruct(reconstructed_spectrum[chanNum],
+					block_type[chanNum],
+					WS_SIN, block_size_samples,
+					block_size_samples/2,
+					block_size_samples/short_win_in_long,
+					&sfb_offset_table[chanNum][0],
+					nr_of_sfb[chanNum],
+					&nok_lt_status[chanNum]);
+			}
+
 
 		/**********************************/
 		/* Write out all encoded channels */
 		/**********************************/
-                if (as->header_type==ADTS_HEADER)
-        		used_bits = WriteADTSHeader(&quantInfo[0], fixed_stream, used_bits, 0);
+		used_bits = 0;
+		if (as->header_type==ADTS_HEADER)
+			used_bits += WriteADTSHeader(&quantInfo[0], fixed_stream, used_bits, 0);
 
 		for (chanNum=0;chanNum<max_ch;chanNum++) {
 			if (channelInfo[chanNum].present) {
@@ -796,7 +798,7 @@ int EncTfFrame (faacAACStream *as, BsBitStream  *fixed_stream)
 		} else {
 			numFillBits = 0;
 		}
-		
+
 		/* Write AAC fill_elements, smallest fill element is 7 bits. */
 		/* Function may leave up to 6 bits left after fill, so tell it to fill a few extra */
 		numFillBits += 6;
@@ -809,8 +811,8 @@ int EncTfFrame (faacAACStream *as, BsBitStream  *fixed_stream)
 		/* Now byte align the bitstream */
 		used_bits += ByteAlign(fixed_stream, 0);
 
-                if (as->header_type==ADTS_HEADER)
-        		WriteADTSHeader(&quantInfo[0], fixed_stream, used_bits, 1);
+		if (as->header_type==ADTS_HEADER)
+			WriteADTSHeader(&quantInfo[0], fixed_stream, used_bits, 1);
 
 		for (chanNum=0;chanNum<max_ch;chanNum++) {
 			if (channelInfo[chanNum].present) {

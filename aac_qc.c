@@ -1632,7 +1632,7 @@ int write_scalefactor_bitstream(BsBitStream* fixed_stream,             /* Bitstr
 	/* then the scalefactors are written out the fixed_stream output bit */
 	/* stream.  it returns k, the number of bits written to the bitstream*/
 
-	int i,j,k=0;
+	int i,j,bit_count=0;
 	int diff,length,codeword;
 	int previous_scale_factor;
 	int previous_is_factor;       /* Intensity stereo */
@@ -1669,7 +1669,7 @@ int write_scalefactor_bitstream(BsBitStream* fixed_stream,             /* Bitstr
 				if ((diff < 60)&&(diff >= -60))
 					length = huff12[diff+60][FIRSTINTAB];
 				else length = 0;
-				k+=length;
+				bit_count+=length;
 				previous_is_factor = scale_factors[index];
 				if (write_flag == 1 ) {   
 					codeword = huff12[diff+60][LASTINTAB];
@@ -1690,7 +1690,7 @@ int write_scalefactor_bitstream(BsBitStream* fixed_stream,             /* Bitstr
 						codeword = huff12[diff+60][LASTINTAB];
 					}
 				}
-				k += length;
+				bit_count += length;
 				previous_noise_nrg = quantInfo->pns_sfb_nrg[index];
 				if (write_flag == 1 ) {   
 					BsPutBit(fixed_stream,codeword,length); 
@@ -1701,7 +1701,7 @@ int write_scalefactor_bitstream(BsBitStream* fixed_stream,             /* Bitstr
 				if ((diff < 60)&&(diff >= -60))
 					length = huff12[diff+60][FIRSTINTAB];
 				else length = 0;
-				k+=length;
+				bit_count+=length;
 				previous_scale_factor = scale_factors[index];
 				if (write_flag == 1 ) {   
 					codeword = huff12[diff+60][LASTINTAB];
@@ -1711,6 +1711,6 @@ int write_scalefactor_bitstream(BsBitStream* fixed_stream,             /* Bitstr
 			index++;
 		}
 	}
-	return(k);
+	return(bit_count);
 }
 

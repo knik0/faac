@@ -105,6 +105,7 @@ int WriteADTSHeader(AACQuantInfo* quantInfo,   /* AACQuantInfo structure */
 		BsPutBit(fixedStream, 0, 1); // copyr. id. bit
 		BsPutBit(fixedStream, 0, 1); // copyr. id. start
 		BsPutBit(fixedStream, bit2byte(used_bits), 13); // number of bits
+		printf("%d\t%d\t", used_bits, bit2byte(used_bits));
 		BsPutBit(fixedStream, 0x7FF, 11); // buffer fullness (0x7FF for VBR)
 		BsPutBit(fixedStream, 0, 2); // raw data blocks (0+1=1)
 	}
@@ -199,7 +200,7 @@ int WriteCPE(AACQuantInfo* quantInfoL,   /* AACQuantInfo structure, left */
 	/* if common_window, write ics_info */
 	if (commonWindow) {
 		int numWindows,maxSfb;
-		bit_count = WriteICSInfo(quantInfoL,fixedStream,writeFlag);
+		bit_count += WriteICSInfo(quantInfoL,fixedStream,writeFlag);
 		numWindows=quantInfoL->num_window_groups;
 		maxSfb = quantInfoL->max_sfb;
 		if (writeFlag) {
@@ -215,9 +216,10 @@ int WriteCPE(AACQuantInfo* quantInfoL,   /* AACQuantInfo structure, left */
 			}
 		}
 		bit_count += LEN_MASK_PRES;
-		bit_count += (ms_info->is_present==1)*numWindows*maxSfb*LEN_MASK;
+		if (ms_info->is_present==1)
+			bit_count += (numWindows*maxSfb*LEN_MASK);
 	}
-	
+
 	/* Write individual_channel_stream elements */
 	bit_count += WriteICS(quantInfoL,commonWindow,fixedStream,writeFlag);
 	bit_count += WriteICS(quantInfoR,commonWindow,fixedStream,writeFlag);
@@ -357,14 +359,14 @@ int WritePulseData(AACQuantInfo* quantInfo,    /* AACQuantInfo structure */
 			BsPutBit(fixed_stream,quantInfo->pulseInfo.number_pulse,LEN_NEC_NPULSE);  /* no pulse_data_present */
 			BsPutBit(fixed_stream,quantInfo->pulseInfo.pulse_start_sfb,LEN_NEC_ST_SFB);  /* no pulse_data_present */
 		}
-		bit_count += LEN_NEC_NPULSE + LEN_NEC_ST_SFB;
+		bit_count += (LEN_NEC_NPULSE + LEN_NEC_ST_SFB);
 
 		for (i = 0; i < quantInfo->pulseInfo.number_pulse+1; i++) {
 			if (writeFlag) {
 				BsPutBit(fixed_stream,quantInfo->pulseInfo.pulse_offset[i],LEN_NEC_POFF);
 				BsPutBit(fixed_stream,quantInfo->pulseInfo.pulse_amp[i],LEN_NEC_PAMP);
 			}
-			bit_count += LEN_NEC_POFF + LEN_NEC_PAMP;
+			bit_count += (LEN_NEC_POFF + LEN_NEC_PAMP);
 		}
 	} else {
 		if (writeFlag) {
@@ -419,47 +421,48 @@ int WriteTNSData(AACQuantInfo* quantInfo,    /* AACQuantInfo structure */
   }
 
   /* Write TNS data */
-  bit_count += numWindows * len_tns_nfilt;
+  bit_count += (numWindows * len_tns_nfilt);
   for (w=0;w<numWindows;w++) {
-    TNS_WINDOW_DATA* windowDataPtr = &tnsInfoPtr->windowData[w];
-    int numFilters = windowDataPtr->numFilters;
-    if (writeFlag) {
-      BsPutBit(fixed_stream,numFilters,len_tns_nfilt); /* n_filt[] = 0 */
-    }
-    if (numFilters) {
-      bit_count += LEN_TNS_COEFF_RES;
-      resInBits = windowDataPtr->coefResolution;
-      resInBits = windowDataPtr->coefResolution;
-      if (writeFlag) {
-	BsPutBit(fixed_stream,resInBits-DEF_TNS_RES_OFFSET,LEN_TNS_COEFF_RES);
-      }
-      bit_count += numFilters * (len_tns_length+len_tns_order);
-      for (filtNumber=0;filtNumber<numFilters;filtNumber++) {
-	TNS_FILTER_DATA* tnsFilterPtr=&windowDataPtr->tnsFilter[filtNumber];
-	int order = tnsFilterPtr->order;
-	if (writeFlag) {
-	  BsPutBit(fixed_stream,tnsFilterPtr->length,len_tns_length);
-	  BsPutBit(fixed_stream,order,len_tns_order);
-	}
-	if (order) {
-	  bit_count += (LEN_TNS_DIRECTION + LEN_TNS_COMPRESS);
+	  TNS_WINDOW_DATA* windowDataPtr = &tnsInfoPtr->windowData[w];
+	  int numFilters = windowDataPtr->numFilters;
 	  if (writeFlag) {
-	    BsPutBit(fixed_stream,tnsFilterPtr->direction,LEN_TNS_DIRECTION);
-	    BsPutBit(fixed_stream,tnsFilterPtr->coefCompress,LEN_TNS_COMPRESS);
+		  BsPutBit(fixed_stream,numFilters,len_tns_nfilt); /* n_filt[] = 0 */
 	  }
-          bitsToTransmit = resInBits - tnsFilterPtr->coefCompress;
-	  bit_count += order * bitsToTransmit;
-	  if (writeFlag) {
-	    int i;
-	    for (i=1;i<=order;i++) {
-	      unsignedIndex = (unsigned long) (tnsFilterPtr->index[i])&(~(~0<<bitsToTransmit));
-	      BsPutBit(fixed_stream,unsignedIndex,bitsToTransmit);
-	    }
+	  if (numFilters) {
+		  bit_count += LEN_TNS_COEFF_RES;
+		  resInBits = windowDataPtr->coefResolution;
+		  resInBits = windowDataPtr->coefResolution;
+		  if (writeFlag) {
+			  BsPutBit(fixed_stream,resInBits-DEF_TNS_RES_OFFSET,LEN_TNS_COEFF_RES);
+		  }
+		  bit_count += numFilters * (len_tns_length+len_tns_order);
+		  for (filtNumber=0;filtNumber<numFilters;filtNumber++) {
+			  TNS_FILTER_DATA* tnsFilterPtr=&windowDataPtr->tnsFilter[filtNumber];
+			  int order = tnsFilterPtr->order;
+			  if (writeFlag) {
+				  BsPutBit(fixed_stream,tnsFilterPtr->length,len_tns_length);
+				  BsPutBit(fixed_stream,order,len_tns_order);
+			  }
+			  if (order) {
+				  bit_count += (LEN_TNS_DIRECTION + LEN_TNS_COMPRESS);
+				  if (writeFlag) {
+					  BsPutBit(fixed_stream,tnsFilterPtr->direction,LEN_TNS_DIRECTION);
+					  BsPutBit(fixed_stream,tnsFilterPtr->coefCompress,LEN_TNS_COMPRESS);
+				  }
+				  bitsToTransmit = resInBits - tnsFilterPtr->coefCompress;
+				  bit_count += order * bitsToTransmit;
+				  if (writeFlag) {
+					  int i;
+					  for (i=1;i<=order;i++) {
+						  unsignedIndex = (unsigned long) (tnsFilterPtr->index[i])&(~(~0<<bitsToTransmit));
+						  BsPutBit(fixed_stream,unsignedIndex,bitsToTransmit);
+					  }
+				  }
+			  }
+		  }
 	  }
-	}
-      }
-    }
   }
+
   return bit_count;
 }
 
