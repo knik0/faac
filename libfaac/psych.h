@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: psych.h,v 1.4 2001/02/12 14:39:14 menno Exp $
+ * $Id: psych.h,v 1.5 2001/02/26 14:08:34 oxygene Exp $
  */
 
 #ifndef PSYCH_H
@@ -28,6 +28,11 @@ extern "C" {
 
 #ifndef M_PI
 #define M_PI        3.14159265358979323846
+#endif
+
+#ifdef __unix__
+#define min(a,b) ( (a) < (b) ? (a) : (b) )
+#define max(a,b) ( (a) > (b) ? (a) : (b) )
 #endif
 
 #include "coder.h"
