@@ -16,7 +16,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: frame.c,v 1.64 2004/07/13 17:56:37 corrados Exp $
+ * $Id: frame.c,v 1.65 2004/07/18 09:34:24 corrados Exp $
  */
 
 /*
@@ -180,18 +180,23 @@ int FAACAPI faacEncSetConfiguration(faacEncHandle hEncoder,
 			int cutoff;
 		}	rates[] = {
 #ifdef DRM
-            /* DRM needs lower bit-rates. We've chosen higher bandwidth values and
+            /* DRM uses low bit-rates. We've chosen higher bandwidth values and
                decrease the quantizer quality at the same time to preserve the
                low bit-rate */
-            {7000,  1500},
-            {15000, 3000},
-            {23000, 4000},
-#endif
+            {4500,  1200},
+            {9180,  2500},
+            {11640, 3000},
+            {14500, 4000},
+            {17460, 5500},
+            {20960, 6250},
+            {40000, 12000},
+#else
 			{29500, 5000},
 			{37500, 7000},
 			{47000, 10000},
 			{64000, 16000},
 			{76000, 20000},
+#endif
 			{0, 0}
 		};
 
@@ -199,12 +204,12 @@ int FAACAPI faacEncSetConfiguration(faacEncHandle hEncoder,
 		int r0, r1;
 
 #ifdef DRM
-        config->quantqual = 40; /* init with a lower value for DRM */
+        double tmpbitRate = (double)config->bitRate;
 #else
-        config->quantqual = 100;
+        double tmpbitRate = (double)config->bitRate * 44100 / hEncoder->sampleRate;
 #endif
 
-		config->bitRate = (double)config->bitRate * 44100 / hEncoder->sampleRate;
+        config->quantqual = 100;
 
 		f0 = f1 = rates[0].cutoff;
 		r0 = r1 = rates[0].rate;
@@ -215,25 +220,27 @@ int FAACAPI faacEncSetConfiguration(faacEncHandle hEncoder,
 			f1 = rates[i].cutoff;
 			r0 = r1;
 			r1 = rates[i].rate;
-			if (rates[i].rate >= config->bitRate)
+			if (rates[i].rate >= tmpbitRate)
 				break;
 		}
 
-		if (config->bitRate > r1)
-			config->bitRate = r1;
-        if (config->bitRate < r0)
-            config->bitRate = r0;
+        if (tmpbitRate > r1)
+            tmpbitRate = r1;
+        if (tmpbitRate < r0)
+            tmpbitRate = r0;
 
 		if (f1 > f0)
             config->bandWidth =
-                    pow((double)config->bitRate / r1,
+                    pow((double)tmpbitRate / r1,
                     log((double)f1 / f0) / log ((double)r1 / r0)) * (double)f1;
 		else
 			config->bandWidth = f1;
 
+#ifndef DRM
 		config->bandWidth =
 				(double)config->bandWidth * hEncoder->sampleRate / 44100;
-		config->bitRate = (double)config->bitRate * hEncoder->sampleRate / 44100;
+		config->bitRate = tmpbitRate * hEncoder->sampleRate / 44100;
+#endif
 
 		if (config->bandWidth > bwbase)
 		  config->bandWidth = bwbase;
@@ -447,6 +454,10 @@ int FAACAPI faacEncEncode(faacEncHandle hEncoder,
     BitStream *bitStream; /* bitstream used for writing the frame to */
     TnsInfo *tnsInfo_for_LTP;
     TnsInfo *tnsDecInfo;
+#ifdef DRM
+    int desbits, diff;
+    double fix;
+#endif
 
     /* local copy's of parameters */
     ChannelInfo *channelInfo = hEncoder->channelInfo;
@@ -738,6 +749,12 @@ int FAACAPI faacEncEncode(faacEncHandle hEncoder,
 
     MSEncode(coderInfo, channelInfo, hEncoder->freqBuff, numChannels, allowMidside);
 
+#ifdef DRM
+    /* loop the quantization until the desired bit-rate is reached */
+    diff = 1; /* to enter while loop */
+    hEncoder->aacquantCfg.quality = 120; /* init quality setting */
+    while (diff > 0) { /* if too many bits, do it again */
+#endif
     /* Quantize and code the signal */
     for (channel = 0; channel < numChannels; channel++) {
         if (coderInfo[channel].block_type == ONLY_SHORT_WINDOW) {
@@ -752,6 +769,35 @@ int FAACAPI faacEncEncode(faacEncHandle hEncoder,
 					&(hEncoder->aacquantCfg));
         }
     }
+
+#ifdef DRM
+    /* Write the AAC bitstream */
+    bitStream = OpenBitStream(bufferSize, outputBuffer);
+    WriteBitstream(hEncoder, coderInfo, channelInfo, bitStream, numChannels);
+
+    /* Close the bitstream and return the number of bytes written */
+    frameBytes = CloseBitStream(bitStream);
+
+    /* now calculate desired bits and compare with actual encoded bits */
+    desbits = (int) ((double) numChannels * (hEncoder->config.bitRate * FRAME_LEN)
+            / hEncoder->sampleRate);
+
+    diff = ((frameBytes - 1 /* CRC */) * 8) - desbits;
+
+    /* do linear correction according to relative difference */
+    fix = (double) desbits / ((frameBytes - 1 /* CRC */) * 8);
+
+    /* speed up convergence. A value of 0.92 gives approx up to 10 iterations */
+    if (fix > 0.92)
+        fix = 0.92;
+
+    hEncoder->aacquantCfg.quality *= fix;
+
+    /* quality should not go lower than 1, set diff to exit loop */
+    if (hEncoder->aacquantCfg.quality <= 1)
+        diff = -1;
+    }
+#endif
 
     // fix max_sfb in CPE mode
     for (channel = 0; channel < numChannels; channel++)
@@ -811,6 +857,7 @@ int FAACAPI faacEncEncode(faacEncHandle hEncoder,
         }
     }
 
+#ifndef DRM
     /* Write the AAC bitstream */
     bitStream = OpenBitStream(bufferSize, outputBuffer);
 
@@ -838,17 +885,11 @@ int FAACAPI faacEncEncode(faacEncHandle hEncoder,
 			hEncoder->aacquantCfg.quality *= (1.0 - fix);
 			if (hEncoder->aacquantCfg.quality > 300)
 				hEncoder->aacquantCfg.quality = 300;
-#ifdef DRM
-            /* since we have very low bit-rates in DRM, we have to decrease the
-               bandwidth and also decrease the quality */
-            if (hEncoder->aacquantCfg.quality < 10)
-                hEncoder->aacquantCfg.quality = 10;
-#else           
             if (hEncoder->aacquantCfg.quality < 50)
                 hEncoder->aacquantCfg.quality = 50;
-#endif
 		}
     }
+#endif
 
     return frameBytes;
 }
@@ -1070,6 +1111,9 @@ static SR_INFO srInfo[12+1] =
 
 /*
 $Log: frame.c,v $
+Revision 1.65  2004/07/18 09:34:24  corrados
+New bandwidth settings for DRM, improved quantization quality adaptation (almost constant bit-rate now)
+
 Revision 1.64  2004/07/13 17:56:37  corrados
 bug fix with new object type definitions
 
