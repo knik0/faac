@@ -16,7 +16,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: faac.h,v 1.15 2001/06/09 14:33:40 menno Exp $
+ * $Id: faac.h,v 1.16 2001/09/07 11:26:04 menno Exp $
  */
 
 #ifndef FAACLIB_H
@@ -77,6 +77,10 @@ typedef struct faacEncConfiguration
 
 typedef void *faacEncHandle;
 
+
+int FAACAPI faacEncGetDecoderSpecificInfo(faacEncHandle hEncoder,
+                                          unsigned char** ppBuffer,
+                                          unsigned long* pSizeOfDecoderSpecificInfo);
 
 faacEncConfigurationPtr FAACAPI faacEncGetCurrentConfiguration(faacEncHandle hEncoder);
 int FAACAPI faacEncSetConfiguration (faacEncHandle hEncoder, faacEncConfigurationPtr config);

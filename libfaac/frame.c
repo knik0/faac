@@ -16,7 +16,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: frame.c,v 1.23 2001/07/08 09:43:51 menno Exp $
+ * $Id: frame.c,v 1.24 2001/09/07 11:26:04 menno Exp $
  */
 
 /*
@@ -44,6 +44,46 @@
 #include "tns.h"
 #include "ltp.h"
 #include "backpred.h"
+
+
+int FAACAPI faacEncGetDecoderSpecificInfo(faacEncHandle hEncoder,unsigned char** ppBuffer,unsigned long* pSizeOfDecoderSpecificInfo)
+{
+    BitStream* pBitStream = NULL;
+
+    if((hEncoder == NULL) || (ppBuffer == NULL) || (pSizeOfDecoderSpecificInfo == NULL)) {
+        return -1;
+    }
+    
+    if(hEncoder->config.mpegVersion == MPEG2){
+        return -2; /* not supported */
+    }
+
+    *pSizeOfDecoderSpecificInfo = 2;
+    *ppBuffer = malloc(2);
+
+    if(*ppBuffer != NULL){
+
+        memset(*ppBuffer,0,*pSizeOfDecoderSpecificInfo);
+        pBitStream = OpenBitStream(*pSizeOfDecoderSpecificInfo, *ppBuffer);
+        PutBit(pBitStream, hEncoder->config.aacObjectType + 1, 5);
+
+        /*
+        temporary fix,
+        when object type defines will be changed to values defined by ISO 14496-3
+        "+ 1" shall be removed
+
+        /AV
+        */
+
+        PutBit(pBitStream, hEncoder->sampleRateIdx, 4);
+        PutBit(pBitStream, hEncoder->numChannels, 4);
+        CloseBitStream(pBitStream);
+
+        return 0;
+    } else {
+        return -3;
+    }
+}
 
 
 faacEncConfigurationPtr FAACAPI faacEncGetCurrentConfiguration(faacEncHandle hEncoder)

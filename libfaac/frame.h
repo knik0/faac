@@ -16,7 +16,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: frame.h,v 1.12 2001/06/08 18:01:09 menno Exp $
+ * $Id: frame.h,v 1.13 2001/09/07 11:26:04 menno Exp $
  */
 
 #ifndef FRAME_H
@@ -114,6 +114,10 @@ typedef struct {
     faacEncConfiguration config;
 
 } faacEncStruct, *faacEncHandle;
+
+int FAACAPI faacEncGetDecoderSpecificInfo(faacEncHandle hEncoder,
+                                          unsigned char** ppBuffer,
+                                          unsigned long* pSizeOfDecoderSpecificInfo);
 
 faacEncConfigurationPtr FAACAPI faacEncGetCurrentConfiguration(faacEncHandle hEncoder);
 int FAACAPI faacEncSetConfiguration (faacEncHandle hEncoder, faacEncConfigurationPtr config);
