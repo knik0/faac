@@ -52,9 +52,9 @@ Copyright (c) 1997.
 
 Source file:
 
-$Id: psych.c,v 1.13 2000/01/03 18:51:58 lenox Exp $
-$Id: psych.c,v 1.13 2000/01/03 18:51:58 lenox Exp $
-$Id: psych.c,v 1.13 2000/01/03 18:51:58 lenox Exp $
+$Id: psych.c,v 1.15 2000/01/05 21:41:09 menno Exp $
+$Id: psych.c,v 1.15 2000/01/05 21:41:09 menno Exp $
+$Id: psych.c,v 1.15 2000/01/05 21:41:09 menno Exp $
 
 **********************************************************************/
 
@@ -603,10 +603,8 @@ void EncTf_psycho_acoustic(
 		psy_step9(part_tbl_long, part_tbl_short, &psy_var_long, &psy_var_short);
 		psy_step10(part_tbl_long, part_tbl_short, &psy_stvar_long[no_of_chan], &psy_stvar_short[no_of_chan], 
 			&psy_var_long, &psy_var_short, ch);
-		psy_step11(part_tbl_long, part_tbl_short, &psy_stvar_long[no_of_chan], &psy_stvar_short[no_of_chan], ch);
-
 		psy_step11andahalf(part_tbl_long, part_tbl_short, psy_stvar_long, psy_stvar_short, no_of_chan);
-
+		psy_step11(part_tbl_long, part_tbl_short, &psy_stvar_long[no_of_chan], &psy_stvar_short[no_of_chan], ch);
 		psy_step12(part_tbl_long, part_tbl_short, &psy_stvar_long[no_of_chan], &psy_stvar_short[no_of_chan],
 			&psy_var_long, &psy_var_short, ch);
 		psy_step13(&psy_var_long, block_type, ch);
