@@ -440,9 +440,6 @@ int EncTfFrame (faacAACStream *as, BsBitStream  *fixed_stream)
 		}
 	}
 
-		MSEnergy(spectral_line_vector, energy, chpo_long, chpo_short,
-			  sfb_width_table, channelInfo, block_type, quantInfo, max_ch);
-
 //	if (as->use_MS) {
 		MSPreprocess(p_ratio_long, p_ratio_short, chpo_long, chpo_short,
 			channelInfo, block_type, quantInfo,max_ch);
@@ -461,6 +458,9 @@ int EncTfFrame (faacAACStream *as, BsBitStream  *fixed_stream)
 //			}
 //		}
 //	}
+
+	MSEnergy(spectral_line_vector, energy, chpo_long, chpo_short,
+		sfb_width_table, channelInfo, block_type, quantInfo, max_ch);
 
 	{
 		int chanNum;   
