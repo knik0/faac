@@ -2,6 +2,7 @@
 // Copyright (C) 2003 Janne Hyvärinen
 //
 // Changes:
+//  0.3.5 (2003-10-17): Changed way gapless encoding is handled (iTunes is buggy...)
 //  0.3.4 (2003-10-14): Fixed AAC object type selecting
 //  0.3.3 (2003-10-02): Removed gapless support for raw AAC files, it was hacky and recent libfaad changes broke it
 //  0.3.2 (2003-09-17): Last fix wasn't perfect and very small input chunks wouldn't have been encoded
@@ -33,7 +34,7 @@
 #include <faac.h>
 #include <version.h>
 
-#define FOO_FAAC_VERSION     "0.3.4"
+#define FOO_FAAC_VERSION     "0.3.5"
 
 #define FF_AAC  0
 #define FF_MP4  1
@@ -280,7 +281,7 @@ public:
                         }
 
                         if ( create_mp4 ) {
-                            MP4WriteSample ( MP4hFile, MP4track, (const unsigned __int8 *)bitbuf.get_ptr(), bytesWritten, dur );
+                            MP4WriteSample ( MP4hFile, MP4track, (const unsigned __int8 *)bitbuf.get_ptr(), bytesWritten, frameSize );
                         } else {
                             m_reader->write ( bitbuf.get_ptr(), bytesWritten );
                         }
