@@ -16,11 +16,10 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: bitstream.c,v 1.17 2001/05/30 08:57:08 menno Exp $
+ * $Id: bitstream.c,v 1.18 2001/06/06 15:17:57 menno Exp $
  */
 
 #include <stdlib.h>
-#include <assert.h>
 
 #include "coder.h"
 #include "channels.h"
@@ -105,12 +104,7 @@ int WriteBitstream(faacEncHandle hEncoder,
 	 * in MPEG4 the byte_alignment() is officially done before the new frame
 	 * instead of at the end. But this is basically the same.
 	 */
-	assert(bitStream->numBit==bits);
-	bitStream->numBit=bits;
-    if (hEncoder->config.mpegVersion == 0)
-  	  bits += ByteAlign(bitStream, 1,2);
-
-	bits += ByteAlign(bitStream, 1,0);
+	bits += ByteAlign(bitStream, 1);
 
 	return bits;
 }
@@ -183,12 +177,7 @@ static int CountBitstream(faacEncHandle hEncoder,
 	bits += LEN_SE_ID;
 
 	/* Now byte align the bitstream */
-
-	bitStream->numBit=bits;
-    if (hEncoder->config.mpegVersion == 0)
-		bits += ByteAlign(bitStream, 0,2);
-
-	bits += ByteAlign(bitStream, 0,0);
+	bits += ByteAlign(bitStream, 0);
 
 	hEncoder->usedBytes = bit2byte(bits);
 
@@ -806,27 +795,20 @@ int PutBit(BitStream *bitStream,
 	return 0;
 }
 
-static int ByteAlign(BitStream *bitStream, int writeFlag, int offset)
+static int ByteAlign(BitStream *bitStream, int writeFlag)
 {
 	int len, i,j;
 
-	assert(offset<8);
-	assert(offset>=0);
-
 	len = BufferNumBit(bitStream);
+	   
+	j = (8 - (len%8))%8;
 
-	j = (16+offset - (len%8))%8;
-
-	if ((len % 8) == offset) 
-		j = 0;
-
+	if ((len % 8) == 0) j = 0;
 	if (writeFlag) {
 		for( i=0; i<j; i++ ) {
 			PutBit(bitStream, 0, 1);
 		}
 	}
-	else
-		bitStream->numBit+=j;
-
 	return j;
 }
+

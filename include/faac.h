@@ -16,7 +16,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: faac.h,v 1.11 2001/05/30 08:57:08 menno Exp $
+ * $Id: faac.h,v 1.12 2001/06/06 15:17:56 menno Exp $
  */
 
 #ifndef FAACLIB_H
@@ -37,8 +37,8 @@ extern "C" {
   #endif
 #endif
 
-#define FAACENC_VERSION 1.1
-#define FAACENC_VERSIONB 0 /* If 1 this version is still in beta */
+#define FAACENC_VERSION 1.5
+#define FAACENC_VERSIONB 1 /* If 1 this version is still in beta */
 
 /* MPEG ID's */
 #define MPEG2 1

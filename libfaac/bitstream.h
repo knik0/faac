@@ -16,7 +16,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: bitstream.h,v 1.8 2001/05/30 08:57:08 menno Exp $
+ * $Id: bitstream.h,v 1.9 2001/06/06 15:17:57 menno Exp $
  */
 
 #ifndef BITSTREAM_H
@@ -215,8 +215,7 @@ int PutBit(BitStream *bitStream,
 		   int numBit);
 
 static int ByteAlign(BitStream* bitStream,
-					 int writeFlag,
-					 int offset);
+					 int writeFlag);
 
 #ifdef __cplusplus
 }
