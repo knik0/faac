@@ -119,7 +119,7 @@ void quantize(AACQuantInfo *quantInfo,
 {
 	const double istep = pow(2.0, -0.1875*quantInfo->common_scalefac);
 
-#if ((defined _MSC_VER) || (defined __BORLAND__))
+#if ((defined _MSC_VER) || (defined __BORLANDC__))
 	{
 		/* asm from Acy Stapp <AStapp@austin.rr.com> */
 		int rx[4];
@@ -188,7 +188,7 @@ loop1:
 			fstp st(0)
 		}
 	}
-#else
+#elif 0
 	{
 		double x;
 		int j, rx;
@@ -210,6 +210,49 @@ loop1:
 			XRPOW_FTOI(x + QUANTFAC(rx), *quant++);
 		}
 	}
+#else
+  {/* from Wilfried.Behne@t-online.de.  Reported to be 2x faster than
+      the above code (when not using ASM) on PowerPC */
+     	int j;
+
+     	for ( j = 1024/8; j > 0; --j)
+     	{
+			double	x1, x2, x3, x4, x5, x6, x7, x8;
+			int rx1, rx2, rx3, rx4, rx5, rx6, rx7, rx8;
+			x1 = *pow_spectrum++ * istep;
+			x2 = *pow_spectrum++ * istep;
+			XRPOW_FTOI(x1, rx1);
+			x3 = *pow_spectrum++ * istep;
+			XRPOW_FTOI(x2, rx2);
+			x4 = *pow_spectrum++ * istep;
+			XRPOW_FTOI(x3, rx3);
+			x5 = *pow_spectrum++ * istep;
+			XRPOW_FTOI(x4, rx4);
+			x6 = *pow_spectrum++ * istep;
+			XRPOW_FTOI(x5, rx5);
+			x7 = *pow_spectrum++ * istep;
+			XRPOW_FTOI(x6, rx6);
+			x8 = *pow_spectrum++ * istep;
+			XRPOW_FTOI(x7, rx7);
+			x1 += QUANTFAC(rx1);
+			XRPOW_FTOI(x8, rx8);
+			x2 += QUANTFAC(rx2);
+			XRPOW_FTOI(x1,*quant++);
+			x3 += QUANTFAC(rx3);
+			XRPOW_FTOI(x2,*quant++);
+			x4 += QUANTFAC(rx4);
+			XRPOW_FTOI(x3,*quant++);
+			x5 += QUANTFAC(rx5);
+			XRPOW_FTOI(x4,*quant++);
+			x6 += QUANTFAC(rx6);
+			XRPOW_FTOI(x5,*quant++);
+			x7 += QUANTFAC(rx7);
+			XRPOW_FTOI(x6,*quant++);
+			x8 += QUANTFAC(rx8);
+			XRPOW_FTOI(x7,*quant++);
+			XRPOW_FTOI(x8,*quant++);
+     	}
+  }
 #endif
 }
 
