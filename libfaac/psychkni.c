@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: psychkni.c,v 1.1 2002/08/07 18:16:21 knik Exp $
+ * $Id: psychkni.c,v 1.2 2002/08/21 16:54:55 knik Exp $
  */
 #include <stdio.h>
 #include <stdlib.h>
@@ -28,6 +28,10 @@
 #include "util.h"
 #include "frame.h"
 
+#define PREPARELONGFFT 0
+
+typedef double psyfloat;
+
 typedef struct
 {
   // bandwidth
@@ -37,12 +41,14 @@ typedef struct
   /* FFT data */
 
   /* energy */
-  double *fftEnrg;
-  double *fftEnrgNext;
-  double *fftEnrgNext2;
-  double *fftEnrgS[8];
-  double *fftEnrgNextS[8];
-  double *fftEnrgNext2S[8];
+#if PREPARELONGFFT
+  psyfloat *fftEnrg;
+  psyfloat *fftEnrgNext;
+  psyfloat *fftEnrgNext2;
+#endif
+  psyfloat *fftEnrgS[8];
+  psyfloat *fftEnrgNextS[8];
+  psyfloat *fftEnrgNext2S[8];
 }
 psydata_t;
 
@@ -139,7 +145,7 @@ static void PsyThreshold(GlobalPsyInfo * gpsyInfo, PsyInfo * psyInfo, int *cb_wi
   }
   totchg = totchg / lastband;
 
-  psyInfo->block_type = (totchg > 7.0) ? ONLY_SHORT_WINDOW : ONLY_LONG_WINDOW;
+  psyInfo->block_type = (totchg > 3.0) ? ONLY_SHORT_WINDOW : ONLY_LONG_WINDOW;
 
 #if 0
   printf("totchg: %s %g\n", (psyInfo->block_type == ONLY_SHORT_WINDOW)
@@ -192,9 +198,10 @@ static void PsyInit(GlobalPsyInfo * gpsyInfo, PsyInfo * psyInfo, unsigned int nu
   unsigned int channel;
   int i, j, size;
 
-  gpsyInfo->hannWindow = (double *) AllocMemory(2 * BLOCK_LEN_LONG * sizeof(double));
-  gpsyInfo->hannWindowS = (double *) AllocMemory(2 * BLOCK_LEN_SHORT *
-						 sizeof(double));
+  gpsyInfo->hannWindow =
+    (double *) AllocMemory(2 * BLOCK_LEN_LONG * sizeof(double));
+  gpsyInfo->hannWindowS =
+    (double *) AllocMemory(2 * BLOCK_LEN_SHORT * sizeof(double));
 
   for (i = 0; i < BLOCK_LEN_LONG * 2; i++)
     gpsyInfo->hannWindow[i] = 0.5 * (1 - cos(2.0 * M_PI * (i + 0.5) /
@@ -217,23 +224,26 @@ static void PsyInit(GlobalPsyInfo * gpsyInfo, PsyInfo * psyInfo, unsigned int nu
 
     psyInfo[channel].size = size;
 
-    psyInfo[channel].maskThr = (double *) AllocMemory(MAX_SCFAC_BANDS *
-						      sizeof(double));
-    psyInfo[channel].maskEn = (double *) AllocMemory(MAX_SCFAC_BANDS *
-						     sizeof(double));
-    psyInfo[channel].maskThrMS = (double *) AllocMemory(MAX_SCFAC_BANDS *
-							sizeof(double));
-    psyInfo[channel].maskEnMS = (double *) AllocMemory(MAX_SCFAC_BANDS *
-						       sizeof(double));
-    psyInfo[channel].prevSamples = (double *) AllocMemory(size * sizeof(double));
+    psyInfo[channel].maskThr =
+      (double *) AllocMemory(MAX_SCFAC_BANDS * sizeof(double));
+    psyInfo[channel].maskEn =
+      (double *) AllocMemory(MAX_SCFAC_BANDS * sizeof(double));
+    psyInfo[channel].maskThrMS =
+      (double *) AllocMemory(MAX_SCFAC_BANDS * sizeof(double));
+    psyInfo[channel].maskEnMS =
+      (double *) AllocMemory(MAX_SCFAC_BANDS * sizeof(double));
+    psyInfo[channel].prevSamples =
+      (double *) AllocMemory(size * sizeof(double));
     memset(psyInfo[channel].prevSamples, 0, size * sizeof(double));
 
-    psydata->fftEnrg = (double *) AllocMemory(size * sizeof(double));
-    memset(psydata->fftEnrg, 0, size * sizeof(double));
-    psydata->fftEnrgNext = (double *) AllocMemory(size * sizeof(double));
-    memset(psydata->fftEnrgNext, 0, size * sizeof(double));
-    psydata->fftEnrgNext2 = (double *) AllocMemory(size * sizeof(double));
-    memset(psydata->fftEnrgNext2, 0, size * sizeof(double));
+#if PREPARELONGFFT
+    psydata->fftEnrg = (psyfloat *) AllocMemory(size * sizeof(psyfloat));
+    memset(psydata->fftEnrg, 0, size * sizeof(psyfloat));
+    psydata->fftEnrgNext = (psyfloat *) AllocMemory(size * sizeof(psyfloat));
+    memset(psydata->fftEnrgNext, 0, size * sizeof(psyfloat));
+    psydata->fftEnrgNext2 = (psyfloat *) AllocMemory(size * sizeof(psyfloat));
+    memset(psydata->fftEnrgNext2, 0, size * sizeof(psyfloat));
+#endif
   }
 
   size = BLOCK_LEN_SHORT;
@@ -243,27 +253,30 @@ static void PsyInit(GlobalPsyInfo * gpsyInfo, PsyInfo * psyInfo, unsigned int nu
 
     psyInfo[channel].sizeS = size;
 
-    psyInfo[channel].prevSamplesS = (double *) AllocMemory(size * sizeof(double));
+    psyInfo[channel].prevSamplesS =
+      (double *) AllocMemory(size * sizeof(double));
     memset(psyInfo[channel].prevSamplesS, 0, size * sizeof(double));
 
     for (j = 0; j < 8; j++)
     {
-      psyInfo[channel].maskThrS[j] = (double *) AllocMemory(MAX_SCFAC_BANDS
-							    * sizeof(double));
-      psyInfo[channel].maskEnS[j] = (double *) AllocMemory(MAX_SCFAC_BANDS *
-							   sizeof(double));
-      psyInfo[channel].maskThrSMS[j] = (double *)
-	AllocMemory(MAX_SCFAC_BANDS
-		    * sizeof(double));
-      psyInfo[channel].maskEnSMS[j] = (double *) AllocMemory(MAX_SCFAC_BANDS
-							     * sizeof(double));
+      psyInfo[channel].maskThrS[j] =
+	(double *) AllocMemory(MAX_SCFAC_BANDS * sizeof(double));
+      psyInfo[channel].maskEnS[j] =
+	(double *) AllocMemory(MAX_SCFAC_BANDS * sizeof(double));
+      psyInfo[channel].maskThrSMS[j] =
+	(double *) AllocMemory(MAX_SCFAC_BANDS * sizeof(double));
+      psyInfo[channel].maskEnSMS[j] =
+	(double *) AllocMemory(MAX_SCFAC_BANDS * sizeof(double));
 
-      psydata->fftEnrgS[j] = (double *) AllocMemory(size * sizeof(double));
-      memset(psydata->fftEnrgS[j], 0, size * sizeof(double));
-      psydata->fftEnrgNextS[j] = (double *) AllocMemory(size * sizeof(double));
-      memset(psydata->fftEnrgNextS[j], 0, size * sizeof(double));
-      psydata->fftEnrgNext2S[j] = (double *) AllocMemory(size * sizeof(double));
-      memset(psydata->fftEnrgNext2S[j], 0, size * sizeof(double));
+      psydata->fftEnrgS[j] =
+	(psyfloat *) AllocMemory(size * sizeof(psyfloat));
+      memset(psydata->fftEnrgS[j], 0, size * sizeof(psyfloat));
+      psydata->fftEnrgNextS[j] =
+	(psyfloat *) AllocMemory(size * sizeof(psyfloat));
+      memset(psydata->fftEnrgNextS[j], 0, size * sizeof(psyfloat));
+      psydata->fftEnrgNext2S[j] =
+	(psyfloat *) AllocMemory(size * sizeof(psyfloat));
+      memset(psydata->fftEnrgNext2S[j], 0, size * sizeof(psyfloat));
     }
   }
 }
@@ -293,12 +306,14 @@ static void PsyEnd(GlobalPsyInfo * gpsyInfo, PsyInfo * psyInfo, unsigned int num
     if (psyInfo[channel].maskEnMS)
       FreeMemory(psyInfo[channel].maskEnMS);
 
+#if PREPARELONGFFT
     if (psydata->fftEnrg)
       FreeMemory(psydata->fftEnrg);
     if (psydata->fftEnrgNext)
       FreeMemory(psydata->fftEnrgNext);
     if (psydata->fftEnrgNext2)
       FreeMemory(psydata->fftEnrgNext2);
+#endif
   }
 
   for (channel = 0; channel < numChannels; channel++)
@@ -383,25 +398,25 @@ static void PsyCalculate(ChannelInfo * channelInfo, GlobalPsyInfo * gpsyInfo,
   }
 }
 
-static void PsyBufferUpdate(GlobalPsyInfo * gpsyInfo, PsyInfo * psyInfo, double
-			    *newSamples, unsigned int bandwidth)
+static void PsyBufferUpdate(GlobalPsyInfo * gpsyInfo, PsyInfo * psyInfo,
+			    double *newSamples, unsigned int bandwidth)
 {
   int i, j;
   double a, b;
-  double *transBuff, *transBuffS;
+  static double transBuff[2 * BLOCK_LEN_LONG];
+  static double transBuffS[2 * BLOCK_LEN_SHORT];
   psydata_t *psydata = psyInfo->data;
-  double *tmp;
+  psyfloat *tmp;
 
   psydata->band = psyInfo->size * bandwidth * 2 / gpsyInfo->sampleRate;
   psydata->bandS = psyInfo->sizeS * bandwidth * 2 / gpsyInfo->sampleRate;
 
-  transBuff = (double *) AllocMemory(2 * psyInfo->size * sizeof(double));
-
+#if PREPARELONGFFT
   memcpy(transBuff, psyInfo->prevSamples, psyInfo->size * sizeof(double));
   memcpy(transBuff + psyInfo->size, newSamples, psyInfo->size * sizeof(double));
 
   Hann(gpsyInfo, transBuff, 2 * psyInfo->size);
-  rsfft(transBuff, 11);
+  rfft(transBuff, 11);
 
   // shift bufs
   tmp = psydata->fftEnrg;
@@ -422,8 +437,7 @@ static void PsyBufferUpdate(GlobalPsyInfo * gpsyInfo, PsyInfo * psyInfo, double
     psydata->fftEnrgNext2[i] = 0;
     //printf("psyInfo->fftEnrg[%d]: %g\n", i, psyInfo->fftEnrg[i]);
   }
-
-  transBuffS = (double *) AllocMemory(2 * psyInfo->sizeS * sizeof(double));
+#endif
 
   memcpy(transBuff, psyInfo->prevSamples, psyInfo->size * sizeof(double));
   memcpy(transBuff + psyInfo->size, newSamples, psyInfo->size * sizeof(double));
@@ -434,7 +448,7 @@ static void PsyBufferUpdate(GlobalPsyInfo * gpsyInfo, PsyInfo * psyInfo, double
 	   2 * psyInfo->sizeS * sizeof(double));
 
     Hann(gpsyInfo, transBuffS, 2 * psyInfo->sizeS);
-    rsfft(transBuffS, 8);
+    rfft(transBuffS, 8);
 
     // shift bufs
     tmp = psydata->fftEnrgS[j];
@@ -458,11 +472,6 @@ static void PsyBufferUpdate(GlobalPsyInfo * gpsyInfo, PsyInfo * psyInfo, double
   }
 
   memcpy(psyInfo->prevSamples, newSamples, psyInfo->size * sizeof(double));
-
-  if (transBuff)
-    FreeMemory(transBuff);
-  if (transBuffS)
-    FreeMemory(transBuffS);
 }
 
 static void BlockSwitch(CoderInfo * coderInfo, PsyInfo * psyInfo, unsigned int numChannels)
