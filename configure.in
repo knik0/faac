@@ -19,13 +19,17 @@ AC_CHECK_TYPES(int16_t)
 
 AC_CHECK_LIB(gnugetopt, getopt_long)
 AC_CHECK_LIB(mp4v2, MP4MetadataDelete,
-		    [MY_DEFINE(HAVE_LIBMP4V2)
-		     LIBS="$LIBS -lstdc++ -lmp4v2"],, -lstdc++)
+		    [AC_MSG_NOTICE([*** Building with MP4 support ***])
+		     MY_DEFINE([HAVE_LIBMP4V2])
+		     LIBS="$LIBS -lstdc++ -lmp4v2"],
+		     [AC_MSG_NOTICE([*** Building without MP4 support ***])],
+		     -lstdc++)
 
 AC_C_BIGENDIAN
 
 dnl Checks for header files required for mp4.h
 AC_HEADER_STDC
+AC_SYS_LARGEFILE
 AC_CHECK_HEADERS(stdint.h inttypes.h)
 AC_CHECK_HEADERS(mathf.h)
 AC_CHECK_HEADERS(float.h)

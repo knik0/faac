@@ -16,7 +16,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: main.c,v 1.55 2004/03/03 15:54:50 knik Exp $
+ * $Id: main.c,v 1.56 2004/03/15 20:15:48 knik Exp $
  */
 
 #ifdef _MSC_VER
@@ -68,6 +68,12 @@
 /* globals */
 char* progName;
 
+enum output_format {
+  ADTS, RAW,
+#ifdef HAVE_LIBMP4V2
+  MP4,
+#endif
+};
 
 static int *mkChanMap(int channels, int center, int lf)
 {
@@ -132,7 +138,7 @@ int main(int argc, char *argv[])
     unsigned int objectType = LOW;
     unsigned int useMidSide = 1;
     static unsigned int useTns = DEFAULT_TNS;
-    unsigned int useAdts = 1;
+    enum output_format format = ADTS;
     int cutOff = -1;
     int bitRate = 0;
     unsigned long quantqual = 0;
@@ -141,6 +147,7 @@ int main(int argc, char *argv[])
 
     char *audioFileName;
     char *aacFileName;
+    char *aacFileExt;
 
     float *pcmbuf;
     int *chanmap = NULL;
@@ -161,7 +168,7 @@ int main(int argc, char *argv[])
 #ifdef HAVE_LIBMP4V2
     MP4FileHandle MP4hFile = MP4_INVALID_FILE_HANDLE;
     MP4TrackId MP4track = 0;
-    int mp4 = 0, ntracks = 0, trackno = 0;
+    int ntracks = 0, trackno = 0;
     const char *artist = NULL, *title = NULL, *album = NULL, *date = NULL,
       *genre = NULL, *comment = NULL;
     u_int64_t total_samples = 0;
@@ -265,7 +272,7 @@ int main(int argc, char *argv[])
             }
             break;
         case 'r': {
-            useAdts = 0;
+            format = RAW;
             break;
         }
         case 'n': {
@@ -336,7 +343,7 @@ int main(int argc, char *argv[])
         }
 #ifdef HAVE_LIBMP4V2
         case 'w':
-            mp4 = 1;
+	    format = MP4;
             break;
 	case 'A':
 	    artist = optarg;
@@ -381,10 +388,10 @@ int main(int argc, char *argv[])
     }
 
 #ifdef HAVE_LIBMP4V2
-    if (!mp4 && (ntracks || trackno || artist || title || album ||
+    if (format != MP4 && (ntracks || trackno || artist || title || album ||
 		 date || genre || comment))
     {
-      printf("\nERROR: Metadata requires MP4 output!", progName);
+      printf("\nERROR: Metadata requires MP4 output!");
 	dieUsage = 1;
     }
 #endif
@@ -405,7 +412,6 @@ int main(int argc, char *argv[])
         printf("  -n     Don\'t use mid/side coding.\n");
         printf("  -m X   AAC MPEG version, X can be 2 or 4.\n");
         printf("  -o X   AAC object type. (0=Low Complexity (default), 1=Main, 2=LTP)\n");
-        printf("  -r     RAW AAC output file.\n");
         printf("  --shortctl <x>  Enforce block type (1 = no short; 2 = no long)\n");
         printf("  -P     Raw PCM input mode (default 44100Hz 16bit stereo).\n");
         printf("  -R     Raw PCM input rate.\n");
@@ -413,18 +419,22 @@ int main(int argc, char *argv[])
         printf("  -C     Raw PCM input channels.\n");
 	printf("  -X     Raw PCM swap input bytes\n");
         printf("  -I <C,LF> Input channel config, default is 3,4 (Center third, LF fourth)\n");
+        printf("  -r     Use RAW AAC output file.\n");
 #ifdef HAVE_LIBMP4V2
-        printf("  -w     Wrap AAC data in MP4 container\n");
         printf("\n");
-        printf("  MP4 metadata:\n");
-        printf("  -A     Artist\n");
-        printf("  -T     Title\n");
-        printf("  -G     Genre\n");
-        printf("  -L     Album\n");
-        printf("  -N     Track (number/total)\n");
-        printf("  -D     Date\n");
-        printf("  -M     Comment\n");
+        printf("MP4 specific options:\n");
+	printf("  -w     Wrap AAC data in MP4 container. (default for *.mp4 and *m4a)\n");
+        printf("  -A X   Set artist to X\n");
+        printf("  -T X   Set title to X\n");
+        printf("  -G X   Set genre to X\n");
+        printf("  -L X   Set album to X\n");
+        printf("  -N X   Set track to X (number/total)\n");
+        printf("  -D X   Set date to X\n");
+        printf("  -M X   Set comment to X\n");
         printf("\n");
+#else
+        printf("\n");
+        printf("MP4 support unavailable.\n");
 #endif
         //printf("More details on FAAC usage can be found in the faac.html file.\n");
         printf("More tips on FAAC usage can be found in Knowledge base at www.audiocoding.com\n");
@@ -435,6 +445,7 @@ int main(int argc, char *argv[])
     /* point to the specified file names */
     audioFileName = argv[optind++];
     aacFileName = argv[optind++];
+    aacFileExt = strrchr(aacFileName, '.');
 
     /* open the audio input file */
     if (rawChans > 0) // use raw input
@@ -463,11 +474,24 @@ int main(int argc, char *argv[])
     hEncoder = faacEncOpen(infile->samplerate, infile->channels,
         &samplesInput, &maxBytesOutput);
 
-#ifdef HAVE_LIBMP4V2
-    if (mp4)
+
+    /* check file extension */
+    if (aacFileExt && 
+	(!strcmp(".m4a", aacFileExt) || !strcmp(".mp4", aacFileExt))) 
+#ifndef HAVE_LIBMP4V2
+        printf("WARNING: MP4 support unavailable!\n");
+#else
+    {
+        if (format == ADTS) 
+	    format = MP4;
+	else
+	    printf("WARNING: Using RAW file format for %s extension\n", 
+		   aacFileExt);
+    }
+
+    if (format == MP4)
     {
         mpegVersion = MPEG4;
-        useAdts = 0;
     }
     frameSize = samplesInput/infile->channels;
     delay_samples = frameSize; // encoder delay 1024 samples
@@ -515,19 +539,19 @@ int main(int argc, char *argv[])
     myFormat->bandWidth = cutOff;
     if (quantqual > 0)
         myFormat->quantqual = quantqual;
-    myFormat->outputFormat = useAdts;
+    myFormat->outputFormat = format == ADTS;
     myFormat->inputFormat = FAAC_INPUT_FLOAT;
     if (!faacEncSetConfiguration(hEncoder, myFormat)) {
         fprintf(stderr, "Unsupported output format!\n");
 #ifdef HAVE_LIBMP4V2
-        if (mp4) MP4Close(MP4hFile);
+        if (format == MP4) MP4Close(MP4hFile);
 #endif
         return 1;
     }
 
 #ifdef HAVE_LIBMP4V2
     /* initialize MP4 creation */
-    if (mp4) {
+    if (format == MP4) {
         u_int8_t *ASC = 0;
         u_int32_t ASCLength = 0;
 	char *version_string;
@@ -599,6 +623,20 @@ int main(int argc, char *argv[])
         fprintf(stderr, " + TNS");
     if (myFormat->allowMidside)
         fprintf(stderr, " + M/S");
+    switch(format)
+    {
+    case RAW:
+        fprintf(stderr, " (RAW)");
+        break;
+    case ADTS:
+        fprintf(stderr, " (ADTS)");
+        break;
+#ifdef HAVE_LIBMP4V2
+    case MP4:
+        fprintf(stderr, " (MP4)");
+        break;
+#endif
+    }
     fprintf(stderr, "\n");
 
     if (outfile
@@ -716,7 +754,7 @@ int main(int argc, char *argv[])
                 MP4Duration dur = samples_left > frameSize ? frameSize : samples_left;
                 MP4Duration ofs = encoded_samples > 0 ? 0 : delay_samples;
 
-                if (mp4)
+                if (format == MP4)
                 {
                     /* write bitstream to mp4 file */
                     MP4WriteSample(MP4hFile, MP4track, bitbuf, bytesWritten, dur, ofs, 1);
@@ -737,7 +775,7 @@ int main(int argc, char *argv[])
 
 #ifdef HAVE_LIBMP4V2
         /* clean up */
-        if (mp4)
+        if (format == MP4)
             MP4Close(MP4hFile);
         else
 #endif
@@ -756,6 +794,9 @@ int main(int argc, char *argv[])
 
 /*
 $Log: main.c,v $
+Revision 1.56  2004/03/15 20:15:48  knik
+improved MP4 support by Dan Christiansen
+
 Revision 1.55  2004/03/03 15:54:50  knik
 libmp4v2 autoconf detection and mp4 metadata support by Dan Christiansen
 
