@@ -152,6 +152,7 @@ void EncTfInit (faacAACConfig *ac, int VBR_setting)
 	/* some global initializations */
 	for (chanNum=0;chanNum<MAX_TIME_CHANNELS;chanNum++) {
 		DTimeSigBuf[chanNum]            = (double*)malloc(block_size_samples*sizeof(double));
+		memset(DTimeSigBuf[chanNum],0,(block_size_samples)*sizeof(double));
 		spectral_line_vector[chanNum]   = (double*)malloc(2*block_size_samples*sizeof(double));
 
 		reconstructed_spectrum[chanNum] = (double*)malloc(block_size_samples*sizeof(double));

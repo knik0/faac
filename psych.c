@@ -52,9 +52,9 @@ Copyright (c) 1997.
 
 Source file:
 
-$Id: psych.c,v 1.33 2000/02/05 14:23:42 menno Exp $
-$Id: psych.c,v 1.33 2000/02/05 14:23:42 menno Exp $
-$Id: psych.c,v 1.33 2000/02/05 14:23:42 menno Exp $
+$Id: psych.c,v 1.34 2000/02/05 15:09:33 menno Exp $
+$Id: psych.c,v 1.34 2000/02/05 15:09:33 menno Exp $
+$Id: psych.c,v 1.34 2000/02/05 15:09:33 menno Exp $
 
 **********************************************************************/
 
@@ -322,13 +322,10 @@ void psy_part_table_init(double sampling_rate,
 	}
 
 	for(b = 0; b < part_tbl_long->len ; b++) {
-		for (j=0;(b != partition[j]);j++);
-		{
-			double ji = j + (part_tbl_long->width[b]-1)/2.0;
-			double freq = part_tbl_long->sampling_rate*ji/2048;
-			double bark = 13*atan(0.00076*freq)+3.5*atan((freq/7500)*(freq/7500));
-			dyn_long.bval[b] = bark;
-		}
+		double ji = part_tbl_long->w_low[b] + (part_tbl_long->width[b]-1)/2.0;
+		double freq = part_tbl_long->sampling_rate*ji/2048;
+		double bark = 13*atan(0.00076*freq)+3.5*atan((freq/7500)*(freq/7500));
+		dyn_long.bval[b] = bark;
 	}
 
 	for (b = 0; b < part_tbl_short->len; b++) {
@@ -338,13 +335,10 @@ void psy_part_table_init(double sampling_rate,
 	}
 
 	for(b = 0; b < part_tbl_short->len ; b++) {
-		for (j=0;(b != partition[j]);j++);
-		{
-			double ji = j + (part_tbl_short->width[b]-1)/2.0;
-			double freq = part_tbl_short->sampling_rate*ji/256;
-			double bark = 13*atan(0.00076*freq) + 3.5*atan((freq/7500)*(freq/7500));
-			dyn_short.bval[b]=bark;
-		}
+		double ji = part_tbl_short->w_low[b] + (part_tbl_short->width[b]-1)/2.0;
+		double freq = part_tbl_short->sampling_rate*ji/256;
+		double bark = 13*atan(0.00076*freq) + 3.5*atan((freq/7500)*(freq/7500));
+		dyn_short.bval[b]=bark;
 	}
 
 	// Calculate the spreading function
@@ -632,7 +626,7 @@ void psy_step2(double sample[][BLOCK_LEN_LONG*2],
 {
     int w,l;
     double sqrtN;
-	double data[2048];
+	double data[2048+1024]; // +1024 becuase of problems in FFT
 
     /* FFT for long */
     psy_stvar_long->p_fft += BLOCK_LEN_LONG;
@@ -912,16 +906,16 @@ void psy_step8(PARTITION_TABLE_LONG *part_tbl_long,
 	       PSY_VARIABLE_SHORT *psy_var_short)
 {
 	int b,i;
-	double tmn = 14.5, nmt = 6.0;
+	double tmn = 18.0, nmt = 6.0;
 
 	for(b = 0; b < part_tbl_long->len; b++) {
-		psy_var_long->snr[b] = psy_var_long->tb[b] * (tmn+(b/3.0)) + (1.0 - psy_var_long->tb[b] ) * nmt;
+		psy_var_long->snr[b] = psy_var_long->tb[b] * tmn + (1.0 - psy_var_long->tb[b] ) * nmt;
 	}
 
 	/* added by T. Araki (1997.10.16) */
 	for(i = 0;  i < MAX_SHORT_WINDOWS; i++){
 		for(b = 0; b < part_tbl_short->len; b++)
-			psy_var_short->snr[i][b] = psy_var_short->tb[i][b] * (tmn+b) + (1.0 - psy_var_short->tb[i][b] ) * nmt ;
+			psy_var_short->snr[i][b] = psy_var_short->tb[i][b] * tmn + (1.0 - psy_var_short->tb[i][b] ) * nmt ;
 	}
 	/* added by T. Araki (1997.10.16) end */
 }    
