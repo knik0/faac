@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: bitstream.c,v 1.6 2001/03/12 16:58:36 menno Exp $
+ * $Id: bitstream.c,v 1.7 2001/03/17 09:22:54 menno Exp $
  */
 
 #include <stdlib.h>
@@ -186,10 +186,16 @@ static int WriteADTSHeader(faacEncHandle hEncoder,
 		PutBit(bitStream, hEncoder->config.aacProfile, 2); /* profile */
 		PutBit(bitStream, hEncoder->sampleRateIdx, 4); /* sampling rate */
 		PutBit(bitStream, 0, 1); /* private bit */
+#ifdef MPEG2AAC
+		PutBit(bitStream, 2, 3); /* ch. config (must be > 0) */
+#else
 		PutBit(bitStream, 1, 3); /* ch. config (must be > 0) */
+#endif
 		PutBit(bitStream, 0, 1); /* original/copy */
 		PutBit(bitStream, 0, 1); /* home */
+#ifndef MPEG2AAC
 		PutBit(bitStream, 0, 2); /* emphasis */
+#endif
 
 		/* Variable ADTS header */
 		PutBit(bitStream, 0, 1); /* copyr. id. bit */
@@ -198,7 +204,12 @@ static int WriteADTSHeader(faacEncHandle hEncoder,
 		PutBit(bitStream, 0x7FF, 11); /* buffer fullness (0x7FF for VBR) */
 		PutBit(bitStream, 0, 2); /* raw data blocks (0+1=1) */
 	}
+
+#ifdef MPEG2AAC
+	return 56;
+#else
 	return 58;
+#endif
 }
 
 static int WriteCPE(CoderInfo *coderInfoL,

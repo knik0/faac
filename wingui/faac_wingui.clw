@@ -33,8 +33,8 @@ Resource11=IDD_ENCODERID3PAGEDIALOG (English (U.S.))
 Class10=CProcessJobStatusDialog
 Resource12=IDD_ABOUTBOX (English (U.S.))
 Resource13=IDR_TOOLBARMAIN (English (U.S.))
-Resource14=IDD_PROPERTIESDUMMYPARENTDIALOG (German (Germany))
-Resource15=IDD_ENCODERQUALITYPAGEDIALOG (German (Germany))
+Resource14=IDD_ENCODERQUALITYPAGEDIALOG (German (Germany))
+Resource15=IDD_PROPERTIESDUMMYPARENTDIALOG (German (Germany))
 
 [CLS:CFaac_winguiApp]
 Type=0
@@ -142,7 +142,7 @@ ImplementationFile=EncoderGeneralPageDialog.cpp
 BaseClass=CDialog
 Filter=D
 VirtualFilter=dWC
-LastObject=IDC_CHECKRECURSIVE
+LastObject=CEncoderGeneralPageDialog
 
 [DLG:IDD_FLOATINGPROPERTYDIALOG (English (U.S.))]
 Type=1
@@ -273,6 +273,7 @@ CommandCount=4
 
 [DLG:IDD_PROPERTIESDUMMYPARENTDIALOG (German (Germany))]
 Type=1
+Class=?
 ControlCount=3
 Control1=IDC_STATIC,static,1073872896
 Control2=IDC_STATIC,static,1073872896
@@ -280,6 +281,7 @@ Control3=IDC_LABELDEBUGTAG,static,1073872896
 
 [DLG:IDD_ENCODERQUALITYPAGEDIALOG (German (Germany))]
 Type=1
+Class=?
 ControlCount=15
 Control1=IDC_STATIC,static,1342373888
 Control2=IDC_EDITBITRATE,edit,1350631552
