@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: aacquant.c,v 1.5 2001/03/05 11:33:37 menno Exp $
+ * $Id: aacquant.c,v 1.6 2001/03/06 14:01:36 menno Exp $
  */
 
 #include <math.h>
@@ -507,7 +507,7 @@ static int CalcNoise(CoderInfo *coderInfo,
 		error_energy[sb] = 0.0;
 
 		for (i = coderInfo->sfb_offset[sb]; i < coderInfo->sfb_offset[sb+1]; i++){
-			requant_xr[i] =  pow43[xi[i]] * invQuantFac; 
+			requant_xr[i] = pow43[xi[i]] * invQuantFac; 
 
 			/* measure the distortion in each scalefactor band */
 			linediff = fabs(xr[i]) - requant_xr[i];

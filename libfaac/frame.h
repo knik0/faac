@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: frame.h,v 1.6 2001/03/05 11:33:37 menno Exp $
+ * $Id: frame.h,v 1.7 2001/03/06 14:01:36 menno Exp $
  */
 
 #ifndef FRAME_H
@@ -99,6 +99,8 @@ typedef struct {
 	double *kbd_window_short;
 	double *freqBuff[MAX_CHANNELS];
 	double *overlapBuff[MAX_CHANNELS];
+
+	double *msSpectrum[MAX_CHANNELS];
 
 	/* Channel and Coder data for all channels */
 	CoderInfo coderInfo[MAX_CHANNELS];

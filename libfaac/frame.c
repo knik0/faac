@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: frame.c,v 1.12 2001/03/05 11:36:14 menno Exp $
+ * $Id: frame.c,v 1.13 2001/03/06 14:01:36 menno Exp $
  */
 
 /*
@@ -371,40 +371,43 @@ int FAACAPI faacEncEncode(faacEncHandle hEncoder,
 		}
 	}
 
+	MSReconstruct(coderInfo, channelInfo, numChannels);
+
 	for (channel = 0; channel < numChannels; channel++) 
 	{
-		if((coderInfo[channel].tnsInfo.tnsDataPresent != 0) && (useTns))
-			tnsDecInfo = &(coderInfo[channel].tnsInfo);
-		else
-			tnsDecInfo = NULL;
-		
-		if ((!channelInfo[channel].lfe) && (useLtp)) {  /* no reconstruction needed for LFE channel*/
-
-			LtpReconstruct(&coderInfo[channel], &(coderInfo[channel].ltpInfo),
-				coderInfo[channel].requantFreq);
-
-			if(tnsDecInfo != NULL)
-				TnsDecodeFilterOnly(&(coderInfo[channel].tnsInfo), coderInfo[channel].nr_of_sfb,
-					coderInfo[channel].max_sfb, coderInfo[channel].block_type,
-					coderInfo[channel].sfb_offset, coderInfo[channel].requantFreq);
-
-			IFilterBank(hEncoder, &coderInfo[channel],
-				coderInfo[channel].requantFreq,
-				coderInfo[channel].ltpInfo.time_buffer,
-				coderInfo[channel].ltpInfo.ltp_overlap_buffer,
-				MOVERLAPPED);
-
-			LtpUpdate(&(coderInfo[channel].ltpInfo),
-				coderInfo[channel].ltpInfo.time_buffer,
-				coderInfo[channel].ltpInfo.ltp_overlap_buffer,
-				BLOCK_LEN_LONG);
-		}
-
 		/* If short window, reconstruction not needed for prediction */
 		if ((coderInfo[channel].block_type == ONLY_SHORT_WINDOW)) {
 			int sind;
 			for (sind = 0; sind < 1024; sind++) {
 				coderInfo[channel].requantFreq[sind] = 0.0;
+			}
+		} else {
+
+			if((coderInfo[channel].tnsInfo.tnsDataPresent != 0) && (useTns))
+				tnsDecInfo = &(coderInfo[channel].tnsInfo);
+			else
+				tnsDecInfo = NULL;
+			
+			if ((!channelInfo[channel].lfe) && (useLtp)) {  /* no reconstruction needed for LFE channel*/
+
+				LtpReconstruct(&coderInfo[channel], &(coderInfo[channel].ltpInfo),
+					coderInfo[channel].requantFreq);
+
+				if(tnsDecInfo != NULL)
+					TnsDecodeFilterOnly(&(coderInfo[channel].tnsInfo), coderInfo[channel].nr_of_sfb,
+					coderInfo[channel].max_sfb, coderInfo[channel].block_type,
+					coderInfo[channel].sfb_offset, coderInfo[channel].requantFreq);
+
+				IFilterBank(hEncoder, &coderInfo[channel],
+					coderInfo[channel].requantFreq,
+					coderInfo[channel].ltpInfo.time_buffer,
+					coderInfo[channel].ltpInfo.ltp_overlap_buffer,
+					MOVERLAPPED);
+
+				LtpUpdate(&(coderInfo[channel].ltpInfo),
+					coderInfo[channel].ltpInfo.time_buffer,
+					coderInfo[channel].ltpInfo.ltp_overlap_buffer,
+					BLOCK_LEN_LONG);
 			}
 		}
 	}

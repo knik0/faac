@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: psych.c,v 1.7 2001/02/28 18:39:34 menno Exp $
+ * $Id: psych.c,v 1.8 2001/03/06 14:01:36 menno Exp $
  */
 
 #include <malloc.h>
@@ -168,7 +168,7 @@ void PsyInit(GlobalPsyInfo *gpsyInfo, PsyInfo *psyInfo, unsigned int numChannels
 		for (bb = 0; bb < gpsyInfo->psyPart->width[b]; bb++, j++) {
 			double freq = gpsyInfo->sampleRate*j/(1000.0*2*size);
 			double level;
-			level = ATHformula(freq*1000) - 20;
+			level = ATHformula(freq*1000.0) - 20.0;
 			level = pow(10., 0.1*level);
 			level *= gpsyInfo->psyPart->width[b];
 			if (level < gpsyInfo->ath[b])
@@ -235,7 +235,7 @@ void PsyInit(GlobalPsyInfo *gpsyInfo, PsyInfo *psyInfo, unsigned int numChannels
 		for (bb = 0; bb < gpsyInfo->psyPartS->width[b]; bb++, j++) {
 			double freq = gpsyInfo->sampleRate*j/(1000.0*2*size);
 			double level;
-			level = ATHformula(freq*1000) - 20;
+			level = ATHformula(freq*1000.0) - 20.0;
 			level = pow(10., 0.1*level);
 			level *= gpsyInfo->psyPartS->width[b];
 			if (level < gpsyInfo->athS[b])

@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: joint.c,v 1.3 2001/02/28 18:39:34 menno Exp $
+ * $Id: joint.c,v 1.4 2001/03/06 14:01:36 menno Exp $
  */
 
 #include "channels.h"
@@ -86,8 +86,8 @@ void MSEncode(CoderInfo *coderInfo,
 								for (w=startWindow;w<stopWindow;w++) {
 									if (msInfoL->ms_usedS[w][sfbNum]) {
 										for (lineNum = coderInfo[leftChan].sfb_offset[sfbNum];
-										lineNum < coderInfo[leftChan].sfb_offset[sfbNum+1];
-										lineNum++)
+											 lineNum < coderInfo[leftChan].sfb_offset[sfbNum+1];
+											 lineNum++)
 										{
 											line_offset = w*BLOCK_LEN_SHORT;
 											sum=spectrum[leftChan][line_offset+lineNum]+spectrum[rightChan][line_offset+lineNum];
@@ -107,8 +107,8 @@ void MSEncode(CoderInfo *coderInfo,
 							/* Enable MS mask */
 							if (msInfoL->ms_used[sfbNum]) {
 								for (lineNum = coderInfo[leftChan].sfb_offset[sfbNum];
-								lineNum < coderInfo[leftChan].sfb_offset[sfbNum+1];
-								lineNum++)
+									 lineNum < coderInfo[leftChan].sfb_offset[sfbNum+1];
+									 lineNum++)
 								{
 									sum=spectrum[leftChan][lineNum]+spectrum[rightChan][lineNum];
 									diff=spectrum[leftChan][lineNum]-spectrum[rightChan][lineNum];
@@ -124,3 +124,51 @@ void MSEncode(CoderInfo *coderInfo,
 	}
 }
 
+void MSReconstruct(CoderInfo *coderInfo,
+				   ChannelInfo *channelInfo,
+				   int numberOfChannels)
+{
+	int chanNum;
+	int sfbNum;
+	int lineNum;
+	double sum,diff;
+
+	/* Look for channel_pair_elements */
+	for (chanNum=0;chanNum<numberOfChannels;chanNum++) {
+		if (channelInfo[chanNum].present) {
+			if ((channelInfo[chanNum].cpe)&&(channelInfo[chanNum].ch_is_left)) {
+				int leftChan=chanNum;
+				int rightChan=channelInfo[chanNum].paired_ch;
+
+				MSInfo *msInfoL;
+				msInfoL = &(channelInfo[leftChan].msInfo);
+				if (msInfoL->is_present) {
+					int numGroups = coderInfo[leftChan].num_window_groups;
+					int maxSfb = coderInfo[leftChan].max_sfb;
+					int w,line_offset;
+					int startWindow;
+					w=0;
+
+					line_offset=0;
+					startWindow = 0;
+					if (coderInfo[leftChan].block_type != ONLY_SHORT_WINDOW) {
+						for (sfbNum = 0;sfbNum < maxSfb; sfbNum++) {
+
+							if (msInfoL->ms_used[sfbNum]) {
+								for (lineNum = coderInfo[leftChan].sfb_offset[sfbNum];
+									 lineNum < coderInfo[leftChan].sfb_offset[sfbNum+1];
+									 lineNum++)
+								{
+									sum=coderInfo[leftChan].requantFreq[lineNum];
+									diff=coderInfo[rightChan].requantFreq[lineNum];
+									coderInfo[leftChan].requantFreq[lineNum] = (sum+diff);
+									coderInfo[rightChan].requantFreq[lineNum] = (sum-diff);
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+}
