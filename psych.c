@@ -681,23 +681,6 @@ void EncTf_psycho_acoustic(
 		}
 	}
 
-
-	{
-		p_chpo_long[no_of_chan].p_ratio   = psy_stvar_long[no_of_chan].ismr;
-		p_chpo_long[no_of_chan].cb_width  = p_sri->cb_width_long;
-		p_chpo_long[no_of_chan].no_of_cb = p_sri->num_cb_long;
-		if (no_of_chan == 1)
-			memcpy(p_chpo_long[no_of_chan].use_ms, psy_stvar_long[no_of_chan].use_ms, NSFB_LONG*sizeof(int));
-
-		for( i=0; i<MAX_SHORT_WINDOWS; i++ ) {
-			p_chpo_short[no_of_chan][i].p_ratio  = psy_stvar_short[no_of_chan].ismr[i];
-			p_chpo_short[no_of_chan][i].cb_width = p_sri->cb_width_short;
-			p_chpo_short[no_of_chan][i].no_of_cb = p_sri->num_cb_short;
-			if (no_of_chan == 1)
-				memcpy(p_chpo_short[no_of_chan][i].use_ms, psy_stvar_short[no_of_chan].use_ms[i], NSFB_SHORT*sizeof(int));
-		}
-
-	}
 }
 
 void psy_step1(double* p_time_signal[],
