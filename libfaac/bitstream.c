@@ -24,7 +24,7 @@ copyright notice must be included in all copies or derivative works.
 Copyright (c) 1997.
 **********************************************************************/
 /*
- * $Id: bitstream.c,v 1.26 2003/07/16 16:27:34 knik Exp $
+ * $Id: bitstream.c,v 1.27 2003/10/14 15:23:44 menno Exp $
  */
 
 #include <stdio.h>
@@ -154,11 +154,11 @@ int WriteBitstream(faacEncHandle hEncoder,
 
     CountBitstream(hEncoder, coderInfo, channelInfo, bitStream, numChannel);
 
-	if(hEncoder->config.outputFormat == 1){
-		bits += WriteADTSHeader(hEncoder, bitStream, 1);
-	}else{
-		bits = 0; // compilier will remove it, byt anyone will see that current size of bitstream is 0
-	}
+    if(hEncoder->config.outputFormat == 1){
+        bits += WriteADTSHeader(hEncoder, bitStream, 1);
+    }else{
+        bits = 0; // compilier will remove it, byt anyone will see that current size of bitstream is 0
+    }
 
     if (hEncoder->frameNum == 4)
       WriteFAACStr(bitStream, hEncoder->config.name, 1);
@@ -241,11 +241,11 @@ static int CountBitstream(faacEncHandle hEncoder,
     int bitsLeftAfterFill, numFillBits;
 
 
-	if(hEncoder->config.outputFormat == 1){
-		bits += WriteADTSHeader(hEncoder, bitStream, 0);
-	}else{
-		bits = 0; // compilier will remove it, byt anyone will see that current size of bitstream is 0
-	}
+    if(hEncoder->config.outputFormat == 1){
+        bits += WriteADTSHeader(hEncoder, bitStream, 0);
+    }else{
+        bits = 0; // compilier will remove it, byt anyone will see that current size of bitstream is 0
+    }
 
     if (hEncoder->frameNum == 4)
       bits += WriteFAACStr(bitStream, hEncoder->config.name, 0);
@@ -576,7 +576,7 @@ static int WriteLTPPredictorData(CoderInfo *coderInfo, BitStream *bitStream, int
 
         if(writeFlag)
             PutBit(bitStream, 1, 1); /* LTP used */
-		bits++;
+        bits++;
 
         switch(coderInfo->block_type)
         {
@@ -591,9 +591,9 @@ static int WriteLTPPredictorData(CoderInfo *coderInfo, BitStream *bitStream, int
                 PutBit(bitStream, ltpInfo->weight_idx,  LEN_LTP_COEF);
             }
 
-//            last_band = ((coderInfo->nr_of_sfb < MAX_LT_PRED_LONG_SFB) ?
-//                coderInfo->nr_of_sfb : MAX_LT_PRED_LONG_SFB);
-            last_band = coderInfo->nr_of_sfb;
+            last_band = ((coderInfo->nr_of_sfb < MAX_LT_PRED_LONG_SFB) ?
+                coderInfo->nr_of_sfb : MAX_LT_PRED_LONG_SFB);
+//            last_band = coderInfo->nr_of_sfb;
 
             bits += last_band;
             if(writeFlag)
