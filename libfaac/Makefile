@@ -15,6 +15,7 @@ filtbank.c \
 frame.c \
 huffman.c \
 joint.c \
+ltp.c \
 psych.c \
 tns.c \
 util.c
