@@ -33,6 +33,9 @@
 #define CSQR4(a, b, u, v)  { u=a*a-b*b; v=a*b; v+=v; }
 #define CMULT6(c, s, c1, s1, u, v)  { u=c1*c-s1*s; v=c1*s+s1*c; }
 
+void fftw_init(){}
+void fftw_destroy(){}
+
 void rdft( double *fr, unsigned lg2n ) 
 /* real discrete Fourier transform; not recursive */
 {
@@ -153,6 +156,7 @@ void rdft( double *fr, unsigned lg2n )
             fi = fr + i;
             gi = fr + k1 - i;
 
+//most timeconsuming part of rdft (tuning?)
             do
             {
                 double a, b, g0, f0, f1, g1, f2, g2, f3, g3;

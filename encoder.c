@@ -13,7 +13,7 @@
 #include "rateconv.h"
 
 #include "enc.h"	/* encoder cores */
-
+#include "rdft.h"
 #define BITHEADERBUFSIZE (65536)
 
 /* ---------- functions ---------- */
@@ -586,6 +586,7 @@ int main(int argc, char *argv[])
 		printf("Cut-off frequency: %dHz.\n", cut_off);
 	printf("\n");
 
+	fftw_init();
 	for (i = 0; i < FileCount; i++) {
 		char aac_fn[255];
 		char *fnp;
@@ -717,7 +718,7 @@ int main(int argc, char *argv[])
 		nSecs = nTotSecs - (60*nMins);
 		printf("Encoding %s took:\t%d:%.2d\t\n", FileNames[i], nMins, nSecs);
 	}
-
+	fftw_destroy();
 	return FNO_ERROR;
 }
 
