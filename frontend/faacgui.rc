@@ -52,51 +52,50 @@ END
 // Dialog
 //
 
-IDD_MAINDIALOG DIALOGEX 0, 0, 277, 175
+IDD_MAINDIALOG DIALOGEX 0, 0, 264, 185
 STYLE DS_MODALFRAME | DS_CENTER | WS_MINIMIZEBOX | WS_POPUP | WS_CAPTION | 
     WS_SYSMENU
 CAPTION "FAAC GUI"
 FONT 8, "MS Sans Serif"
 BEGIN
-    PUSHBUTTON      "...",IDC_SELECT_INPUTFILE,238,12,19,14,0,
+    PUSHBUTTON      "...",IDC_SELECT_INPUTFILE,225,12,19,14,0,
                     WS_EX_STATICEDGE
-    PUSHBUTTON      "...",IDC_SELECT_OUTPUTFILE,238,33,19,14,WS_DISABLED,
+    PUSHBUTTON      "...",IDC_SELECT_OUTPUTFILE,225,33,19,14,WS_DISABLED,
                     WS_EX_STATICEDGE
     CONTROL         "Allow Mid/Side",IDC_ALLOWMIDSIDE,"Button",
-                    BS_AUTOCHECKBOX | BS_LEFTTEXT | WS_TABSTOP,13,78,71,10
-    EDITTEXT        IDC_BITRATE,138,77,31,14,ES_AUTOHSCROLL
-    EDITTEXT        IDC_BANDWIDTH,138,95,31,14,ES_AUTOHSCROLL
-    DEFPUSHBUTTON   "Encode",IDOK,75,154,50,14,WS_DISABLED
-    PUSHBUTTON      "Quit",IDCANCEL,141,154,50,14
-    EDITTEXT        IDC_INPUTFILENAME,61,12,171,14,ES_AUTOHSCROLL
-    EDITTEXT        IDC_OUTPUTFILENAME,61,33,171,14,ES_AUTOHSCROLL | 
+                    BS_AUTOCHECKBOX | BS_LEFTTEXT | WS_TABSTOP,14,81,71,10
+    EDITTEXT        IDC_BITRATE,98,82,52,14,ES_AUTOHSCROLL
+    EDITTEXT        IDC_BANDWIDTH,98,109,52,14,ES_AUTOHSCROLL
+    DEFPUSHBUTTON   "Encode",IDOK,75,164,50,14,WS_DISABLED
+    PUSHBUTTON      "Quit",IDCANCEL,141,164,50,14
+    EDITTEXT        IDC_INPUTFILENAME,61,12,158,14,ES_AUTOHSCROLL
+    EDITTEXT        IDC_OUTPUTFILENAME,61,33,158,14,ES_AUTOHSCROLL | 
                     WS_DISABLED
     LTEXT           "Input File:",IDC_STATIC,18,13,38,8
     LTEXT           "Output File:",IDC_STATIC,18,34,37,8
     CONTROL         "",IDC_STATIC,"Static",SS_BLACKFRAME | SS_SUNKEN,7,54,
-                    263,1
+                    250,1
     LTEXT           "-",IDC_INPUTPARAMS,32,66,55,8
     LTEXT           "In:",IDC_STATIC,14,66,12,8
     CONTROL         "Progress1",IDC_PROGRESS,"msctls_progress32",WS_BORDER,7,
-                    126,263,10
-    GROUPBOX        "Output Format",IDC_STATIC,92,62,178,59
-    CTEXT           "- - -",IDC_TIME,7,142,263,8
-    LTEXT           "Bandwidth:",IDC_STATIC,97,98,37,8
-    LTEXT           "Bitrate:",IDC_STATIC,97,80,37,8
-    LTEXT           "bps/ch",IDC_STATIC,173,80,24,8
-    LTEXT           "Hz",IDC_STATIC,173,98,10,8
+                    135,250,10
+    GROUPBOX        "Output Format",IDC_STATIC,93,62,164,67
+    CTEXT           "- - -",IDC_TIME,7,151,250,8
+    LTEXT           "Bandwidth:",IDC_STATIC,98,100,37,8
+    LTEXT           "Bitrate:",IDC_STATIC,98,73,37,8
+    LTEXT           "bps/ch",IDC_STATIC,151,85,24,8
+    LTEXT           "Hz",IDC_STATIC,152,112,10,8
     CONTROL         "Use LFE channel",IDC_USELFE,"Button",BS_AUTOCHECKBOX | 
-                    BS_LEFTTEXT | WS_DISABLED | WS_TABSTOP,13,100,71,10
+                    BS_LEFTTEXT | WS_DISABLED | WS_TABSTOP,14,103,71,10
     CONTROL         "Use TNS",IDC_USETNS,"Button",BS_AUTOCHECKBOX | 
-                    BS_LEFTTEXT | WS_TABSTOP,13,89,71,10
-    RTEXT           "-",IDC_COMPILEDATE,207,160,63,8
-    GROUPBOX        "AAC Profile",IDC_STATIC,200,71,61,46
-    CONTROL         "MPEG4 LTP",IDC_MPEG4LTP,"Button",BS_AUTORADIOBUTTON,204,
-                    103,56,10
-    CONTROL         "MPEG2 LC",IDC_MPEG2LC,"Button",BS_AUTORADIOBUTTON,204,
-                    81,51,10
-    CONTROL         "MPEG4 LC",IDC_MPEG4LC,"Button",BS_AUTORADIOBUTTON,204,
-                    92,51,10
+                    BS_LEFTTEXT | WS_TABSTOP,14,92,71,10
+    RTEXT           "-",IDC_COMPILEDATE,194,170,63,8
+    COMBOBOX        IDC_MPEGVERSION,183,82,67,63,CBS_DROPDOWNLIST | 
+                    WS_VSCROLL | WS_TABSTOP
+    COMBOBOX        IDC_OBJECTTYPE,183,109,67,59,CBS_DROPDOWNLIST | 
+                    WS_VSCROLL | WS_TABSTOP
+    LTEXT           "MPEG Verion",IDC_STATIC,183,73,44,8
+    LTEXT           "AAC Object Type",IDC_STATIC,183,100,56,8
 END
 
 
@@ -111,12 +110,25 @@ BEGIN
     IDD_MAINDIALOG, DIALOG
     BEGIN
         LEFTMARGIN, 7
-        RIGHTMARGIN, 270
+        RIGHTMARGIN, 257
         TOPMARGIN, 7
-        BOTTOMMARGIN, 168
+        BOTTOMMARGIN, 178
     END
 END
 #endif    // APSTUDIO_INVOKED
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Dialog Info
+//
+
+IDD_MAINDIALOG DLGINIT
+BEGIN
+    IDC_MPEGVERSION, 0x403, 1, 0
+"\000" 
+    0
+END
 
 #endif    // English (U.S.) resources
 /////////////////////////////////////////////////////////////////////////////

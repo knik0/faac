@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: main.c,v 1.15 2001/05/02 05:39:14 menno Exp $
+ * $Id: main.c,v 1.16 2001/05/08 13:19:08 menno Exp $
  */
 
 #ifdef _WIN32
@@ -74,12 +74,12 @@ int main(int argc, char *argv[])
 	{
 		printf("USAGE: %s -options infile outfile\n", argv[0]);
 		printf("Options:\n");
-		printf("  -pX   AAC object type, X=LC2 gives MPEG2 LC,\n");
-		printf("        X=LC4 gives MPEG4 LC and X=LTP gives LTP\n");
-		printf("  -nm   Don\'t use mid/side coding\n");
-		printf("  -tns  Use TNS coding\n");
-		printf("  -bwX  Set the bandwidth, X in Hz\n");
-		printf("  -brX  Set the bitrate per channel, X in bps\n\n");
+		printf("  -mX   AAC MPEG version, X can be 2 or 4.\n");
+		printf("  -pX   AAC object type, X can be LC, MAIN or LTP.\n");
+		printf("  -nm   Don\'t use mid/side coding.\n");
+		printf("  -tns  Use TNS coding.\n");
+		printf("  -bwX  Set the bandwidth, X in Hz.\n");
+		printf("  -brX  Set the bitrate per channel, X in bps.\n\n");
 		return 1;
 	}
 
@@ -120,16 +120,20 @@ int main(int argc, char *argv[])
 				switch(argv[i][1]) {
 				case 'p': case 'P':
 					if ((argv[i][2] == 'l') || (argv[i][2] == 'L')) {
-						myFormat->aacObjectType = LOW;
-						if (argv[i][4] == '2')
-							myFormat->mpegVersion = MPEG2;
-						else
-							myFormat->mpegVersion = MPEG4;
-					} else if ((argv[i][2] == 'l') || (argv[i][2] == 'L')) {
-						if ((argv[i][3] == 't') || (argv[i][2] == 'T')) {
+						if ((argv[i][3] == 'c') || (argv[i][2] == 'C')) {
+							myFormat->aacObjectType = LOW;
+						} else if ((argv[i][3] == 't') || (argv[i][2] == 'T')) {
 							myFormat->aacObjectType = LTP;
-							myFormat->mpegVersion = MPEG4;
 						}
+					} else if ((argv[i][2] == 'm') || (argv[i][2] == 'M')) {
+						myFormat->aacObjectType = MAIN;
+					}
+				break;
+				case 'm': case 'M':
+					if (argv[i][2] == '4') {
+						myFormat->mpegVersion = MPEG4;
+					} else {
+						myFormat->mpegVersion = MPEG2;
 					}
 				break;
 				case 't': case 'T':

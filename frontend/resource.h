@@ -16,17 +16,16 @@
 #define IDC_USELFE                      1011
 #define IDC_USETNS                      1012
 #define IDC_COMPILEDATE                 1018
-#define IDC_MPEG4LTP                    1019
-#define IDC_MPEG2LC                     1020
-#define IDC_MPEG4LC                     1021
+#define IDC_MPEGVERSION                 1020
+#define IDC_OBJECTTYPE                  1021
 
 // Next default values for new objects
 // 
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
-#define _APS_NEXT_RESOURCE_VALUE        103
+#define _APS_NEXT_RESOURCE_VALUE        104
 #define _APS_NEXT_COMMAND_VALUE         40001
-#define _APS_NEXT_CONTROL_VALUE         1020
+#define _APS_NEXT_CONTROL_VALUE         1022
 #define _APS_NEXT_SYMED_VALUE           101
 #endif
 #endif

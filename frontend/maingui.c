@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: maingui.c,v 1.14 2001/04/19 13:20:33 menno Exp $
+ * $Id: maingui.c,v 1.15 2001/05/08 13:19:08 menno Exp $
  */
 
 #include <windows.h>
@@ -26,7 +26,7 @@
 
 #include <sndfile.h>  /* http://www.zip.com.au/~erikd/libsndfile/ */
 
-#include "faac.h"
+#include <faac.h>
 #include "resource.h"
 
 
@@ -157,18 +157,12 @@ static DWORD WINAPI EncodeFile(LPVOID pParam)
 			config->allowMidside = IsDlgButtonChecked(hWnd, IDC_ALLOWMIDSIDE) == BST_CHECKED ? 1 : 0;
 			config->useTns = IsDlgButtonChecked(hWnd, IDC_USETNS) == BST_CHECKED ? 1 : 0;
 			config->useLfe = IsDlgButtonChecked(hWnd, IDC_USELFE) == BST_CHECKED ? 1 : 0;
-			if (IsDlgButtonChecked(hWnd, IDC_MPEG2LC) == BST_CHECKED) {
-				config->aacObjectType = LOW;
-				config->mpegVersion = MPEG2;
-			}
-			if (IsDlgButtonChecked(hWnd, IDC_MPEG4LC) == BST_CHECKED) {
-				config->aacObjectType = LOW;
-				config->mpegVersion = MPEG4;
-			}
-			if (IsDlgButtonChecked(hWnd, IDC_MPEG4LTP) == BST_CHECKED) {
+
+			config->mpegVersion = SendMessage(GetDlgItem(hWnd, IDC_MPEGVERSION), CB_GETCURSEL, 0, 0);
+			config->aacObjectType = SendMessage(GetDlgItem(hWnd, IDC_OBJECTTYPE), CB_GETCURSEL, 0, 0);
+			if (config->aacObjectType == SSR) /* Set to LTP */
 				config->aacObjectType = LTP;
-				config->mpegVersion = MPEG4;
-			}
+
 			GetDlgItemText(hWnd, IDC_BITRATE, szTemp, sizeof(szTemp));
 			config->bitRate = atoi(szTemp);
 			GetDlgItemText(hWnd, IDC_BANDWIDTH, szTemp, sizeof(szTemp));
@@ -300,9 +294,17 @@ static BOOL WINAPI DialogProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 	{
     case WM_INITDIALOG:
 
-		inputFilename [0] = 0x00;
+		inputFilename[0] = 0x00;
 
-		CheckDlgButton(hWnd, IDC_MPEG4LTP, TRUE);
+		SendMessage(GetDlgItem(hWnd, IDC_MPEGVERSION), CB_ADDSTRING, 0, (LPARAM)(LPCTSTR)"MPEG4");
+		SendMessage(GetDlgItem(hWnd, IDC_MPEGVERSION), CB_ADDSTRING, 0, (LPARAM)(LPCTSTR)"MPEG2");
+		SendMessage(GetDlgItem(hWnd, IDC_MPEGVERSION), CB_SETCURSEL, 1, 0);
+
+		SendMessage(GetDlgItem(hWnd, IDC_OBJECTTYPE), CB_ADDSTRING, 0, (LPARAM)(LPCTSTR)"Main");
+		SendMessage(GetDlgItem(hWnd, IDC_OBJECTTYPE), CB_ADDSTRING, 0, (LPARAM)(LPCTSTR)"Low Complexity");
+		SendMessage(GetDlgItem(hWnd, IDC_OBJECTTYPE), CB_ADDSTRING, 0, (LPARAM)(LPCTSTR)"LTP");
+		SendMessage(GetDlgItem(hWnd, IDC_OBJECTTYPE), CB_SETCURSEL, 1, 0);
+
 		CheckDlgButton(hWnd, IDC_ALLOWMIDSIDE, TRUE);
 		CheckDlgButton(hWnd, IDC_USELFE, FALSE);
 		CheckDlgButton(hWnd, IDC_USETNS, TRUE);
