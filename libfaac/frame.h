@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: frame.h,v 1.5 2001/02/28 18:39:34 menno Exp $
+ * $Id: frame.h,v 1.6 2001/03/05 11:33:37 menno Exp $
  */
 
 #ifndef FRAME_H
@@ -58,6 +58,9 @@ typedef struct faacEncConfiguration
 	/* Use Temporal Noise Shaping */
 	unsigned int useTns;
 
+	/* Use Long Term Prediction */
+	unsigned int useLtp;
+
 	/* bitrate / channel of AAC file */
 	unsigned long bitRate;
 
@@ -87,7 +90,7 @@ typedef struct {
 	double *sampleBuff[MAX_CHANNELS];
 	double *nextSampleBuff[MAX_CHANNELS];
 	double *next2SampleBuff[MAX_CHANNELS];
-	double *next3SampleBuff[MAX_CHANNELS];
+	double *ltpTimeBuff[MAX_CHANNELS];
 
 	/* Filterbank buffers */
 	double *sin_window_long;

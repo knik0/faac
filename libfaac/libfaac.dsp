@@ -117,6 +117,10 @@ SOURCE=.\joint.c
 # End Source File
 # Begin Source File
 
+SOURCE=.\ltp.c
+# End Source File
+# Begin Source File
+
 SOURCE=.\psych.c
 # End Source File
 # Begin Source File
@@ -174,6 +178,10 @@ SOURCE=.\joint.h
 # Begin Source File
 
 SOURCE=.\kbd_win.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\ltp.h
 # End Source File
 # Begin Source File
 

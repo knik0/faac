@@ -16,13 +16,14 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: frame.c,v 1.11 2001/03/05 11:33:37 menno Exp $
+ * $Id: frame.c,v 1.12 2001/03/05 11:36:14 menno Exp $
  */
 
 /*
  * CHANGES:
  *  2001/01/17: menno: Added frequency cut off filter.
  *  2001/02/28: menno: Added Temporal Noise Shaping.
+ *  2001/03/05: menno: Added Long Term Prediction.
  *
  */
 
