@@ -16,7 +16,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: frame.c,v 1.46 2003/09/07 16:48:31 knik Exp $
+ * $Id: frame.c,v 1.47 2003/09/24 16:26:54 knik Exp $
  */
 
 /*
@@ -281,7 +281,7 @@ faacEncHandle FAACAPI faacEncOpen(unsigned long sampleRate,
     if (hEncoder->config.bandWidth > bwmax)
       hEncoder->config.bandWidth = bwmax;
     hEncoder->config.quantqual = 100;
-    hEncoder->config.psymodellist = psymodellist;
+    hEncoder->config.psymodellist = (psymodellist_t *)psymodellist;
     hEncoder->config.psymodelidx = 0;
     hEncoder->psymodel =
       hEncoder->config.psymodellist[hEncoder->config.psymodelidx].model;
@@ -332,7 +332,8 @@ faacEncHandle FAACAPI faacEncOpen(unsigned long sampleRate,
 
     PredInit(hEncoder);
 
-    AACQuantizeInit(hEncoder, hEncoder->coderInfo, hEncoder->numChannels);
+    AACQuantizeInit(hEncoder->coderInfo, hEncoder->numChannels,
+		    &(hEncoder->aacquantCfg));
 
     HuffmanInit(hEncoder->coderInfo, hEncoder->numChannels);
 
@@ -351,7 +352,8 @@ int FAACAPI faacEncClose(faacEncHandle hEncoder)
 
     LtpEnd(hEncoder);
 
-    AACQuantizeEnd(hEncoder, hEncoder->coderInfo, hEncoder->numChannels);
+    AACQuantizeEnd(hEncoder->coderInfo, hEncoder->numChannels,
+		   &(hEncoder->aacquantCfg));
 
     HuffmanEnd(hEncoder->coderInfo, hEncoder->numChannels);
 
@@ -384,7 +386,7 @@ int FAACAPI faacEncEncode(faacEncHandle hEncoder,
 {
     unsigned int channel, i;
     int sb, frameBytes;
-    unsigned int bitsToUse, offset;
+    unsigned int offset;
     BitStream *bitStream; /* bitstream used for writing the frame to */
     TnsInfo *tnsInfo_for_LTP;
     TnsInfo *tnsDecInfo;
@@ -399,9 +401,8 @@ int FAACAPI faacEncEncode(faacEncHandle hEncoder,
     unsigned int useLfe = hEncoder->config.useLfe;
     unsigned int useTns = hEncoder->config.useTns;
     unsigned int allowMidside = hEncoder->config.allowMidside;
-    unsigned int bitRate = hEncoder->config.bitRate;
     unsigned int bandWidth = hEncoder->config.bandWidth;
-    unsigned int quantqual = hEncoder->config.quantqual;
+    unsigned int shortctl = hEncoder->config.shortctl;
 
     /* Increase frame number */
     hEncoder->frameNum++;
@@ -507,6 +508,22 @@ int FAACAPI faacEncEncode(faacEncHandle hEncoder,
         hEncoder->srInfo->num_cb_short, numChannels);
 
     hEncoder->psymodel->BlockSwitch(coderInfo, hEncoder->psyInfo, numChannels);
+
+    /* force block type */
+    if (shortctl == SHORTCTL_NOSHORT)
+    {
+      for (channel = 0; channel < numChannels; channel++)
+      {
+	coderInfo[channel].block_type = ONLY_LONG_WINDOW;
+      }
+    }
+    if (shortctl == SHORTCTL_NOLONG)
+    {
+      for (channel = 0; channel < numChannels; channel++)
+      {
+	coderInfo[channel].block_type = ONLY_SHORT_WINDOW;
+      }
+    }
 
     /* AAC Filterbank, MDCT with overlap and add */
     for (channel = 0; channel < numChannels; channel++) {
@@ -644,19 +661,18 @@ int FAACAPI faacEncEncode(faacEncHandle hEncoder,
     MSEncode(coderInfo, channelInfo, hEncoder->freqBuff, numChannels, allowMidside);
 
     /* Quantize and code the signal */
-    if (quantqual)
-      bitsToUse = quantqual;
-    else
-    bitsToUse = (int)(bitRate*FRAME_LEN/sampleRate+0.5);
+    hEncoder->aacquantCfg.quality = hEncoder->config.quantqual;
     for (channel = 0; channel < numChannels; channel++) {
         if (coderInfo[channel].block_type == ONLY_SHORT_WINDOW) {
-            AACQuantize(hEncoder, &coderInfo[channel], &hEncoder->psyInfo[channel],
+            AACQuantize(&coderInfo[channel], &hEncoder->psyInfo[channel],
                 &channelInfo[channel], hEncoder->srInfo->cb_width_short,
-                hEncoder->srInfo->num_cb_short, hEncoder->freqBuff[channel], bitsToUse);
+                hEncoder->srInfo->num_cb_short, hEncoder->freqBuff[channel],
+                &(hEncoder->aacquantCfg));
         } else {
-            AACQuantize(hEncoder, &coderInfo[channel], &hEncoder->psyInfo[channel],
+            AACQuantize(&coderInfo[channel], &hEncoder->psyInfo[channel],
                 &channelInfo[channel], hEncoder->srInfo->cb_width_long,
-                hEncoder->srInfo->num_cb_long, hEncoder->freqBuff[channel], bitsToUse);
+                hEncoder->srInfo->num_cb_long, hEncoder->freqBuff[channel],
+                &(hEncoder->aacquantCfg));
         }
     }
 
@@ -841,6 +857,10 @@ static SR_INFO srInfo[12+1] =
 
 /*
 $Log: frame.c,v $
+Revision 1.47  2003/09/24 16:26:54  knik
+faacEncStruct: quantizer specific data enclosed in AACQuantCfg structure.
+Added config option to enforce block type.
+
 Revision 1.46  2003/09/07 16:48:31  knik
 Updated psymodel call. Updated bitrate/cutoff mapping table.
 
