@@ -1,5 +1,4 @@
 
-
 typedef struct RCBufStruct RCBuf;	/* buffer handle */
 
 #define MAIN_PROFILE 0
@@ -8,23 +7,9 @@ typedef struct RCBufStruct RCBuf;	/* buffer handle */
 #define FNO_ERROR 0
 #define FERROR 1
 
-typedef struct {
-	int channels;      // Number of channels: Currently has to be 2
-	int in_sampling_rate; // Sampling rate of the input file
-	int out_sampling_rate; // Sampling rate of the output AAC file
-	int bit_rate;      // Bitrate: can be any bitrate higher than 16kbps in steps of 1kbps
-	int cut_off;       // Sets the cut_off frequency.
-	int profile;       // AAC Profile: can be MAIN_PROFILE or LOW_PROFILE
-	int write_header;  // If this is 1, a ADIF header will be written, if it is 0, no
-	                   //    header will be written. (better turn this on, because
-                       //    there is some bug when not using ADIF header)
-	int use_MS;        // If 1, MS stereo is on on all scalefactors, if 0 the intelligent switching is used
-	                   // if it is -1 MS is totally off.
-	int use_IS;        // If 1, IS stereo is on, if 0, it is off
-	int use_TNS;       // If 1, TNS is on, if 0, it is off
-	int use_LTP;       // If 1, LTP is on, if 0, it is off
-	int use_PNS;       // If 1, PNS is on, if 0, it is off
-} faacAACConfig;
+#define NO_HEADER	0
+#define ADIF_HEADER     1
+#define ADTS_HEADER     2
 
 typedef struct {
 	int DLLMajorVersion; // These 2 values should always be checked, because the DLL
@@ -45,7 +30,7 @@ typedef struct {
 	int in_sampling_rate;
 	int frame_bits;
 	int available_bits;
-	int write_header;
+        int header_type;
 	int use_MS;
 	int use_IS;
 	int use_TNS;
@@ -59,6 +44,7 @@ typedef struct {
 	int savedSize;
 	float saved[2048];
 	int cut_off;
+	int bit_rate;
 } faacAACStream;
 
 #ifndef FAAC_DLL
@@ -84,7 +70,7 @@ typedef struct {
 //               Later, after calling faacAACFree() the headerBuf should be written to this space in the AAC file.
 // Return value:
 //  faacAACStream structure that should be used in calls to other functions
-typedef faacAACStream* (*FAACENCODEINIT) (faacAACConfig *ac, int *samplesToRead, int *bitBufferSize, int *headerSize);
+typedef int (*FAACENCODEINIT) (faacAACStream *as, int *samplesToRead, int *bitBufferSize, int *headerSize);
 
 
 // int faacEncodeFrame(faacAACStream *as, short *Buffer, int Samples, unsigned char *bitBuffer,

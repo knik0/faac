@@ -1,7 +1,7 @@
 /**********************************************************************
 Header file: enc.h
 
-$Id: enc.h,v 1.3 1999/12/20 14:28:02 lenox Exp $
+$Id: enc.h,v 1.4 2000/02/15 07:01:21 lenox Exp $
 
 Authors:
 HP    Heiko Purnhagen, Uni Hannover <purnhage@tnt.uni-hannover.de>
@@ -37,7 +37,7 @@ extern "C" {
 /* EncTfInit() */
 /* Init t/f-based encoder core. */
 
-void EncTfInit (faacAACConfig *ac, int VBR_setting);
+void EncTfInit (faacAACStream *as, int VBR_setting);
 
 
 

@@ -19,66 +19,54 @@
 /* ---------- functions ---------- */
 
 
-faacAACStream *faacEncodeInit(faacAACConfig *ac, int *samplesToRead, int *bitBufferSize, int *headerSize)
+int faacEncodeInit(faacAACStream *as, int *samplesToRead, int *bitBufferSize, int *headerSize)
 {
 	int frameNumSample,delayNumSample;
 	int ch;
-	faacAACStream *as;
+//	faacAACStream *as;
 
 	int startupNumFrame;
 
-	as = malloc( sizeof(faacAACStream));
-	if ((as->inputBuffer = (double**)malloc( ac->channels*sizeof(double*)))==NULL)
+	if ((as->inputBuffer = (double**)malloc( as->channels*sizeof(double*)))==NULL)
 		return NULL;
-	for (ch=0; ch < ac->channels; ch++)
+	for (ch=0; ch < as->channels; ch++)
 	{
 		if ((as->inputBuffer[ch]=(double*)malloc( 1024*sizeof(double)))==NULL)
 			return NULL;
 	}
 
-	if((ac->bit_rate % 1000)||(ac->bit_rate < 16000)) {
+	if((as->bit_rate % 1000)||(as->bit_rate < 16000)) {
 		return NULL;
 	}
-	if (ac->channels != 2)
+	if (as->channels != 2)
 		return NULL;
-	if ((ac->profile != MAIN_PROFILE)&&(ac->profile != LOW_PROFILE))
+	if ((as->profile != MAIN_PROFILE)&&(as->profile != LOW_PROFILE))
 		return NULL;
 
 	as->total_bits = 0;
 	as->frames = 0;
 	as->cur_frame = 0;
-	as->channels = ac->channels;
-	as->out_sampling_rate = ac->out_sampling_rate;
-	as->in_sampling_rate = ac->in_sampling_rate;
-	as->write_header = ac->write_header;
-	as->cut_off = ac->cut_off;
-	as->use_MS = ac->use_MS;
-	as->use_IS = ac->use_IS;
-	as->use_TNS = ac->use_TNS;
-	as->use_LTP = ac->use_LTP;
-	as->use_PNS = ac->use_PNS;
-	as->profile = ac->profile;
 	as->is_first_frame = 1;
 
-	if (ac->in_sampling_rate != ac->out_sampling_rate)
+	if (as->in_sampling_rate != as->out_sampling_rate)
 		as->rc_needed = 1;
 	else
 		as->rc_needed = 0;
 
-	if (as->write_header) {
+	if (as->header_type==ADIF_HEADER) {
 		*headerSize = 17;
 	} else {
 		*headerSize = 0;
 	}
 
-	EncTfInit(ac, 0);
+	EncTfInit(as, 0);
 
 	frameNumSample = 1024;
 	delayNumSample = 2*frameNumSample;
 
-	*samplesToRead = frameNumSample * ac->channels;
+	*samplesToRead = frameNumSample * as->channels;
 
-	as->frame_bits = (int)(ac->bit_rate*frameNumSample/ac->out_sampling_rate+0.5);
+	as->frame_bits = (int)(as->bit_rate*frameNumSample/as->out_sampling_rate+0.5);
 	*bitBufferSize = (int)(((as->frame_bits * 5) + 7)/8);
 
 
@@ -106,7 +94,7 @@ faacAACStream *faacEncodeInit(faacAACConfig *ac, int *samplesToRead, int *bitBuf
 
 	as->savedSize = 0;
 
-	return as;
+	return 1;
 }
 
 int faacEncodeFrame(faacAACStream *as, short *Buffer, int Samples, unsigned char *bitBuffer, int *bitBufSize)
@@ -261,7 +249,7 @@ int faacEncodeFree(faacAACStream *as, unsigned char *headerBuf)
 	if (as->rc_needed)
 		RateConvFree (as->rc_buf);
 
-	if (as->write_header)
+	if (as->header_type==ADIF_HEADER)
 	{
 		int i;
 		static int SampleRates[] = {96000,88200,64000,48000,44100,32000,24000,22050,16000,12000,11025,8000,0};
@@ -328,7 +316,6 @@ int faacEncodeFree(faacAACStream *as, unsigned char *headerBuf)
 	for (ch=0; ch < as->channels; ch++)
 		if(as->inputBuffer[ch]) free(as->inputBuffer[ch]);
 	if(as->inputBuffer) free(as->inputBuffer);
-	if (as) free(as);
 
 	return FNO_ERROR;
 }
@@ -340,7 +327,7 @@ faacVersion *faacEncodeVersion(void)
 	faacv->DLLMajorVersion = 2;
 	faacv->DLLMinorVersion = 20;
 	faacv->MajorVersion = 0;
-	faacv->MinorVersion = 61;
+	faacv->MinorVersion = 65;
 	strcpy(faacv->HomePage, "http://www.slimline.net/aac/");
 
 	return faacv;
@@ -435,7 +422,7 @@ int main(int argc, char *argv[])
 	int headerSize;
 	int i, frames, cfr;
 	int profile = MAIN_PROFILE;
-	int no_header = 0;
+        int header_type = ADIF_HEADER;
 	int use_IS = 0, use_MS = 0, use_TNS = 0, use_LTP = 1, use_PNS = 0;
 	int cut_off = 0;
 	int bit_rate = 128;
@@ -446,15 +433,16 @@ int main(int argc, char *argv[])
 	char *argp;
 	char *FileNames[200];
 	int FileCount = 0;
+        int res;
 
 	faacAACStream *as;
-	faacAACConfig ac;
 	faacVersion *faacv;
 
 	long begin, end;
 	int nTotSecs, nSecs;
 	int nMins;
 
+        as = malloc(sizeof(faacAACStream));
 	faacv = faacEncodeVersion();
 	printf("FAAC cl (Freeware AAC Encoder)\n");
 	printf("FAAC homepage: %s\n", faacv->HomePage);
@@ -530,8 +518,8 @@ int main(int argc, char *argv[])
 					use_MS = -1;
 				else if ((argv[i][2] == 'p') || (argv[i][2] == 'P'))
 					use_LTP = 0;
-				else
-					no_header = 1;
+				else if ((argv[i][2] == 'h') || (argv[i][2] == 'H'))
+					header_type = NO_HEADER;
 				break;
 			case 'm': case 'M':
 				use_MS = 1;
@@ -577,7 +565,7 @@ int main(int argc, char *argv[])
 	printf("Temporal Noise Shaping: %s.\n", use_TNS?"On":"Off");
 	printf("Long Term Prediction: %s.\n", use_LTP?"On":"Off");
 	printf("Perceptual Noise Substitution: %s.\n", use_PNS?"On":"Off");
-	printf("ADIF header: %s.\n", no_header?"Off":"On");
+//	printf("ADIF header: %s.\n", no_header?"Off":"On");
 	if (out_dir_set)
 		printf("Output directory: %s.\n", out_dir);
 	if (out_rate)
@@ -628,21 +616,21 @@ int main(int argc, char *argv[])
 			continue;
 		}
 
-		ac.channels = sf_info.channels;
-		ac.in_sampling_rate = sf_info.samplerate;
-		ac.out_sampling_rate = out_rate ? out_rate : sf_info.samplerate;
-		ac.bit_rate = bit_rate * 1000;
-		ac.cut_off = cut_off ? cut_off : (ac.out_sampling_rate>>1);
-		ac.profile = profile;
-		ac.use_MS = use_MS;
-		ac.use_IS = use_IS;
-		ac.use_TNS = use_TNS;
-		ac.use_LTP = use_LTP;
-		ac.use_PNS = use_PNS;
-		ac.write_header = !no_header;
+		as->channels = sf_info.channels;
+		as->in_sampling_rate = sf_info.samplerate;
+		as->out_sampling_rate = out_rate ? out_rate : sf_info.samplerate;
+		as->bit_rate = bit_rate * 1000;
+		as->cut_off = cut_off ? cut_off : (as->out_sampling_rate>>1);
+		as->profile = profile;
+		as->use_MS = use_MS;
+		as->use_IS = use_IS;
+		as->use_TNS = use_TNS;
+		as->use_LTP = use_LTP;
+		as->use_PNS = use_PNS;
+		as->header_type = header_type;
 
-		as = faacEncodeInit(&ac, &readNumSample, &bitBufSize, &headerSize);
-		if (as == NULL) {
+		res = faacEncodeInit(as, &readNumSample, &bitBufSize, &headerSize);
+		if (res == NULL) {
 			printf("Error while encoding %s.\n", FileNames[i]);
 			continue;
 		}
@@ -652,7 +640,7 @@ int main(int argc, char *argv[])
 
 		if (headerSize > 0) {
 			memset(bitBuffer, 0, headerSize*sizeof(char));
-			// Skip headerSize bytes
+			// Skip headerSize bytes for ADIF header
 			// They should be written after calling faacEncodeFree
 			fwrite(bitBuffer, 1, headerSize, aacfile);
 		}
@@ -706,6 +694,7 @@ int main(int argc, char *argv[])
 		fclose(aacfile);
 		if (bitBuffer)  free(bitBuffer);
 		if (sampleBuffer)  free(sampleBuffer);
+                free(as);
 #ifdef WIN32
 		end = GetTickCount();
 #else

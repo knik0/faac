@@ -112,7 +112,7 @@ void EncTfFree (void)
  ***
  ****************************************************************************************/
 
-void EncTfInit (faacAACConfig *ac, int VBR_setting)
+void EncTfInit (faacAACStream *as, int VBR_setting)
 {
 	int chanNum, i;
 	int SampleRates[] = {
@@ -122,8 +122,8 @@ void EncTfInit (faacAACConfig *ac, int VBR_setting)
 //		64000,80000,96000,112000,128000,160000,192000,224000,256000,0
 //	};
 
-	sampling_rate = ac->out_sampling_rate;
-	bit_rate = ac->bit_rate;
+	sampling_rate = as->out_sampling_rate;
+	bit_rate = as->bit_rate;
 
 	for (i = 0; ; i++)
 	{
@@ -136,18 +136,18 @@ void EncTfInit (faacAACConfig *ac, int VBR_setting)
 	profile = MAIN;
 	qc_select = AAC_PRED;           /* enable prediction */
 
-	if (ac->profile == LOW) {
+	if (as->profile == LOW) {
 		profile = LOW;
 		qc_select = AAC_QC;          /* disable prediction */
 	}
 
-	if (ac->use_PNS)
+	if (as->use_PNS)
 		pns_sfb_start = 0;
 	else
 		pns_sfb_start = 60;
 
 	/* set the return values */
-	max_ch = ac->channels;
+	max_ch = as->channels;
 
 	/* some global initializations */
 	for (chanNum=0;chanNum<MAX_TIME_CHANNELS;chanNum++) {
