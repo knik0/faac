@@ -45,8 +45,8 @@ double *nok_tmp_DTimeSigBuf[MAX_TIME_CHANNELS]; /* temporary fix to the buffer s
 enum QC_MOD_SELECT qc_select = AAC_QC;                   /* later f(encPara) */
 enum AAC_PROFILE profile = MAIN;
 enum WINDOW_TYPE block_type[MAX_TIME_CHANNELS];
-enum WINDOW_TYPE desired_block_type[MAX_TIME_CHANNELS];
-enum WINDOW_TYPE next_desired_block_type[MAX_TIME_CHANNELS+2];
+enum WINDOW_TYPE desired_block_type;
+enum WINDOW_TYPE next_desired_block_type;
 
 /* Additional variables for AAC */
 int aacAllowScalefacs = 1;              /* Allow AAC scalefactors to be nonconstant */
@@ -291,7 +291,7 @@ int EncTfFrame (faacAACStream *as, BsBitStream  *fixed_stream)
 				sampling_rate,
 				chanNum,
 				&DTimeSigLookAheadBuf[chanNum],
-				&next_desired_block_type[chanNum],
+				&next_desired_block_type,
 				(int)qc_select,
 				block_size_samples,
 				chpo_long,
@@ -306,32 +306,30 @@ int EncTfFrame (faacAACStream *as, BsBitStream  *fixed_stream)
 	*
 	******************************************************************************************************************************/
 	{
-		int chanNum;
-		for (chanNum=0;chanNum<max_ch;chanNum++) {
-			/* A few definitions:                                                      */
-			/*   block_type:  Initially, the block_type used in the previous frame.    */
-			/*                Will be set to the block_type to use this frame.         */
-			/*                A block type will be selected to ensure a meaningful     */
-			/*                window transition.                                       */
-			/*   next_desired_block_type:  Block_type (LONG or SHORT) which the psycho */
-			/*                model wants to use next frame.  The psycho model is      */
-			/*                using a look-ahead buffer.                               */
-			/*   desired_block_type:  Block_type (LONG or SHORT) which the psycho      */
-			/*                previously wanted to use.  It is the desired block_type  */
-			/*                for this frame.                                          */
-			if ( (block_type[chanNum]==ONLY_SHORT_WINDOW)||(block_type[chanNum]==LONG_SHORT_WINDOW) ) {
-				if ( (desired_block_type[chanNum]==ONLY_LONG_WINDOW)&&(next_desired_block_type[chanNum]==ONLY_LONG_WINDOW) ) {
-					block_type[chanNum]=SHORT_LONG_WINDOW;
-				} else {
-					block_type[chanNum]=ONLY_SHORT_WINDOW;
-				}
-			} else if (next_desired_block_type[chanNum]==ONLY_SHORT_WINDOW) {
-				block_type[chanNum]=LONG_SHORT_WINDOW;
+		int chanNum = 0;
+		/* A few definitions:                                                      */
+		/*   block_type:  Initially, the block_type used in the previous frame.    */
+		/*                Will be set to the block_type to use this frame.         */
+		/*                A block type will be selected to ensure a meaningful     */
+		/*                window transition.                                       */
+		/*   next_desired_block_type:  Block_type (LONG or SHORT) which the psycho */
+		/*                model wants to use next frame.  The psycho model is      */
+		/*                using a look-ahead buffer.                               */
+		/*   desired_block_type:  Block_type (LONG or SHORT) which the psycho      */
+		/*                previously wanted to use.  It is the desired block_type  */
+		/*                for this frame.                                          */
+		if ( (block_type[chanNum]==ONLY_SHORT_WINDOW)||(block_type[chanNum]==LONG_SHORT_WINDOW) ) {
+			if ( (desired_block_type==ONLY_LONG_WINDOW)&&(next_desired_block_type==ONLY_LONG_WINDOW) ) {
+				block_type[chanNum]=SHORT_LONG_WINDOW;
 			} else {
-				block_type[chanNum]=ONLY_LONG_WINDOW;
+				block_type[chanNum]=ONLY_SHORT_WINDOW;
 			}
-			desired_block_type[chanNum]=next_desired_block_type[chanNum];
+		} else if (next_desired_block_type==ONLY_SHORT_WINDOW) {
+			block_type[chanNum]=LONG_SHORT_WINDOW;
+		} else {
+			block_type[chanNum]=ONLY_LONG_WINDOW;
 		}
+		desired_block_type=next_desired_block_type;
 	}
 
 //	printf("%d %d\n", block_type[0], block_type[1]);

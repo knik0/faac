@@ -52,9 +52,9 @@ Copyright (c) 1997.
 
 Source file:
 
-$Id: psych.c,v 1.15 2000/01/05 21:41:09 menno Exp $
-$Id: psych.c,v 1.15 2000/01/05 21:41:09 menno Exp $
-$Id: psych.c,v 1.15 2000/01/05 21:41:09 menno Exp $
+$Id: psych.c,v 1.16 2000/01/05 23:34:07 menno Exp $
+$Id: psych.c,v 1.16 2000/01/05 23:34:07 menno Exp $
+$Id: psych.c,v 1.16 2000/01/05 23:34:07 menno Exp $
 
 **********************************************************************/
 
@@ -607,7 +607,7 @@ void EncTf_psycho_acoustic(
 		psy_step11(part_tbl_long, part_tbl_short, &psy_stvar_long[no_of_chan], &psy_stvar_short[no_of_chan], ch);
 		psy_step12(part_tbl_long, part_tbl_short, &psy_stvar_long[no_of_chan], &psy_stvar_short[no_of_chan],
 			&psy_var_long, &psy_var_short, ch);
-		psy_step13(&psy_var_long, block_type, ch);
+		psy_step13(&psy_var_long, block_type, no_of_chan);
 		psy_step14(p_sri, part_tbl_long, part_tbl_short, &psy_stvar_long[no_of_chan], 
 			&psy_stvar_short[no_of_chan], &psy_var_long, &psy_var_short, ch);
 		psy_step15(use_ms_l, use_ms_s, p_sri, &psy_stvar_long[0], &psy_stvar_short[0], &psy_var_long, &psy_var_short, no_of_chan);
@@ -1155,12 +1155,22 @@ void psy_step13(PSY_VARIABLE_LONG *psy_var_long,
 		int ch
 		)
 {
-//	if (psy_var_long->pe < 1800)
+	static int old_type;
+//	if (psy_var_long->pe > 1800)
 //	printf("%f\n", psy_var_long->pe);
-	if(psy_var_long->pe < 1800) {
-        *block_type = ONLY_LONG_WINDOW;
-	} else {
-        *block_type = ONLY_SHORT_WINDOW;
+
+	if (ch == 0) {
+		if(psy_var_long->pe < 1800) {
+			old_type = ONLY_LONG_WINDOW;
+		} else {
+			old_type = ONLY_SHORT_WINDOW;
+		}
+	} else if(ch == 1) {
+		if((psy_var_long->pe < 1800) && (old_type == ONLY_LONG_WINDOW)) {
+			*block_type = ONLY_LONG_WINDOW;
+		} else {
+			*block_type = ONLY_SHORT_WINDOW;
+		}
 	}
 }
 
