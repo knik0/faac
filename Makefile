@@ -27,5 +27,8 @@ install:
 	  install faac ${DESTDIR}${prefix}/bin; \
 	fi
 
+uninstall:
+	@rm -f ${DESTDIR}${prefix}/bin/faac
+
 clean:
 	@rm -f *.o $(TARGETS)
