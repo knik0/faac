@@ -52,16 +52,16 @@ Copyright (c) 1997.
 
 Source file: 
 
-$Id: psych.c,v 1.4 1999/12/16 19:39:15 menno Exp $
-$Id: psych.c,v 1.4 1999/12/16 19:39:15 menno Exp $
-$Id: psych.c,v 1.4 1999/12/16 19:39:15 menno Exp $
+$Id: psych.c,v 1.5 1999/12/20 14:28:02 lenox Exp $
+$Id: psych.c,v 1.5 1999/12/20 14:28:02 lenox Exp $
+$Id: psych.c,v 1.5 1999/12/20 14:28:02 lenox Exp $
 
 **********************************************************************/
 
 /* CREATED BY :  Bernhard Grill -- August-96  */
 #include <stdlib.h>
 #include <math.h>
-
+#include <memory.h>
 #include "tf_main.h"
 #include "psych.h"
 

@@ -68,7 +68,7 @@ void PredCalcPrediction( double *act_spec,
 			 int *reset_group,
 			 int chanNum); 
 
-void PredInit();
+void PredInit(void);
 
 #endif
 

@@ -1,7 +1,7 @@
 /**********************************************************************
 Header file: enc.h
 
-$Id: enc.h,v 1.2 1999/12/16 19:39:15 menno Exp $
+$Id: enc.h,v 1.3 1999/12/20 14:28:02 lenox Exp $
 
 Authors:
 HP    Heiko Purnhagen, Uni Hannover <purnhage@tnt.uni-hannover.de>
@@ -51,7 +51,7 @@ int EncTfFrame (faacAACStream *as, BsBitStream *bitBuf);
 /* EncTfFree() */
 /* Free memory allocated by t/f-based encoder core. */
 
-void EncTfFree ();
+void EncTfFree (void);
 
 
 #ifdef __cplusplus

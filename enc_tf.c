@@ -71,7 +71,7 @@ int bit_rate;
 /* EncTfFree() */
 /* Free memory allocated by t/f-based encoder core. */
 
-void EncTfFree ()
+void EncTfFree (void)
 {
 	int chanNum;
 

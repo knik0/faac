@@ -56,7 +56,7 @@ void TnsInit(long samplingRate,enum AAC_PROFILE profile,TNS_INFO* tnsInfo)
   int fsIndex=0;
 
   /* Determine if sampling rate is supported */
-  while (samplingRate!=tnsSupportedSamplingRates[fsIndex]) {
+  while ((unsigned long)(samplingRate)!=tnsSupportedSamplingRates[fsIndex]) {
     fsIndex++;
   }
   
@@ -307,6 +307,7 @@ int TruncateCoeffs(int fOrder,double threshold,double* kArray) {
 		kArray[i] = (fabs(kArray[i])>threshold) ? kArray[i] : 0.0;
 		if (kArray[i]!=0.0) return i;
 	}
+return 0; // Avoid compiler warning
 }
 
 /*****************************************************/

@@ -69,7 +69,7 @@ double sb_samples_pred_mc[MAX_TIME_CHANNELS][FLEN_LONG/2];
 int thisLineNeedsResetting_mc[MAX_TIME_CHANNELS][FLEN_LONG/2];
 int reset_count_mc[MAX_TIME_CHANNELS];
 
-void PredInit()
+void PredInit(void)
 {
 	int i;
 	for (i=0;i<MAX_TIME_CHANNELS;i++) {

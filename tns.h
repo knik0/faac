@@ -47,7 +47,7 @@ Copyright (c) 1997.
 /* #defines              */
 /*************************/
 #define TNS_MAX_ORDER 20				   
-#define DEF_TNS_GAIN_THRESH 2 //1.4 //new2
+#define DEF_TNS_GAIN_THRESH 1.4 //new2
 #define DEF_TNS_COEFF_THRESH 0.1
 #define DEF_TNS_COEFF_RES 4
 #define DEF_TNS_RES_OFFSET 3

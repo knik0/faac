@@ -136,7 +136,7 @@ void buffer2freq(                    /* Input: Time signal              */
   Mdct_in        overlap_select      /* YT 970615 for Son_PP */
 );
 
-void __inline imdct(double in_data[], double out_data[], int len);
+void imdct(double in_data[], double out_data[], int len);
 
 #endif	/* #ifndef _TF_MAIN_H_INCLUDED */
 

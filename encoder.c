@@ -275,7 +275,7 @@ int faacEncodeFree(faacAACStream *as, unsigned char *headerBuf)
 	return FNO_ERROR;
 }
 
-faacVersion *faacEncodeVersion()
+faacVersion *faacEncodeVersion(void)
 {
 	faacVersion *faacv = malloc(sizeof(faacVersion));
 
@@ -630,3 +630,4 @@ int main(int argc, char *argv[])
 
 
 #endif
+
