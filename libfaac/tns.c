@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: tns.c,v 1.3 2001/03/12 16:58:37 menno Exp $
+ * $Id: tns.c,v 1.4 2001/04/10 18:48:58 menno Exp $
  */
 
 #include <math.h>
@@ -51,18 +51,6 @@ static unsigned short tnsMaxOrderLongMain = 20;
 static unsigned short tnsMaxOrderLongLow = 12;
 static unsigned short tnsMaxOrderShortMainLow = 7;
 
-/**************************************/
-/* SSR Profile TNS Parameters         */
-/**************************************/
-static unsigned short tnsMaxBandsLongSSR[12] = 
-{ 28, 28, 27, 26, 26, 26, 29, 29, 23, 23, 23, 19 };
-
-static unsigned short tnsMaxBandsShortSSR[12] = 
-{ 7, 7, 7, 6, 6, 6, 7, 7, 8, 8, 8, 7 };
-
-static unsigned short tnsMaxOrderLongSSR = 12;
-static unsigned short tnsMaxOrderShortSSR = 7;
-
 
 /*****************************************************/
 /* InitTns:                                          */
@@ -80,20 +68,28 @@ void TnsInit(faacEncHandle hEncoder)
 		case MAIN :
 			tnsInfo->tnsMaxBandsLong = tnsMaxBandsLongMainLow[fsIndex];
 			tnsInfo->tnsMaxBandsShort = tnsMaxBandsShortMainLow[fsIndex];
+#ifdef MPEG2AAC
 			tnsInfo->tnsMaxOrderLong = tnsMaxOrderLongMain;
+#else
+			if (fsIndex <= 5) /* fs > 32000Hz */
+				tnsInfo->tnsMaxOrderLong = 12;
+			else
+				tnsInfo->tnsMaxOrderLong = 20;
+#endif
 			tnsInfo->tnsMaxOrderShort = tnsMaxOrderShortMainLow;
 			break;
 		case LOW :
 			tnsInfo->tnsMaxBandsLong = tnsMaxBandsLongMainLow[fsIndex];
 			tnsInfo->tnsMaxBandsShort = tnsMaxBandsShortMainLow[fsIndex];
+#ifdef MPEG2AAC
 			tnsInfo->tnsMaxOrderLong = tnsMaxOrderLongLow;
+#else
+			if (fsIndex <= 5) /* fs > 32000Hz */
+				tnsInfo->tnsMaxOrderLong = 12;
+			else
+				tnsInfo->tnsMaxOrderLong = 20;
+#endif
 			tnsInfo->tnsMaxOrderShort = tnsMaxOrderShortMainLow;
-			break;
-		case SSR :
-			tnsInfo->tnsMaxBandsLong = tnsMaxBandsLongSSR[fsIndex];
-			tnsInfo->tnsMaxBandsShort = tnsMaxBandsShortSSR[fsIndex];
-			tnsInfo->tnsMaxOrderLong = tnsMaxOrderLongSSR;
-			tnsInfo->tnsMaxOrderShort = tnsMaxOrderShortSSR;
 			break;
 		}
 		tnsInfo->tnsMinBandNumberLong = tnsMinBandNumberLong[fsIndex];
