@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: bitstream.c,v 1.12 2001/04/11 13:50:31 menno Exp $
+ * $Id: bitstream.c,v 1.13 2001/04/19 13:20:34 menno Exp $
  */
 
 #include <stdlib.h>
@@ -96,6 +96,11 @@ int WriteBitstream(faacEncHandle hEncoder,
     PutBit(bitStream, ID_END, LEN_SE_ID);
 
 	/* Now byte align the bitstream */
+	/*
+	 * This byte_alignment() is correct for both MPEG2 and MPEG4, although
+	 * in MPEG4 the byte_alignment() is officially done before the new frame
+	 * instead of at the end. But this is basically the same.
+	 */
 	bits += ByteAlign(bitStream, 1);
 
 	return bits;
@@ -177,14 +182,12 @@ static int WriteADTSHeader(faacEncHandle hEncoder,
 						   BitStream *bitStream,
 						   int writeFlag)
 {
+	int bits = 56;
+
 	if (writeFlag) {
 		/* Fixed ADTS header */
 		PutBit(bitStream, 0xFFFF, 12); /* 12 bit Syncword */
-#ifdef MPEG2AAC
-		PutBit(bitStream, 1, 1); /* ID == 1 for MPEG2 AAC */
-#else
-		PutBit(bitStream, 0, 1); /* ID == 0 for MPEG4 AAC */
-#endif
+		PutBit(bitStream, hEncoder->config.mpegVersion, 1); /* ID == 0 for MPEG4 AAC, 1 for MPEG2 AAC */
 		PutBit(bitStream, 0, 2); /* layer == 0 */
 		PutBit(bitStream, 1, 1); /* protection absent */
 		PutBit(bitStream, hEncoder->config.aacObjectType, 2); /* profile */
@@ -196,9 +199,8 @@ static int WriteADTSHeader(faacEncHandle hEncoder,
 														configuration should be written */
 		PutBit(bitStream, 0, 1); /* original/copy */
 		PutBit(bitStream, 0, 1); /* home */
-#ifndef MPEG2AAC
-		PutBit(bitStream, 0, 2); /* emphasis */
-#endif
+		if (hEncoder->config.mpegVersion == 0)
+			PutBit(bitStream, 0, 2); /* emphasis */
 
 		/* Variable ADTS header */
 		PutBit(bitStream, 0, 1); /* copyr. id. bit */
@@ -206,13 +208,22 @@ static int WriteADTSHeader(faacEncHandle hEncoder,
 		PutBit(bitStream, hEncoder->usedBytes, 13);
 		PutBit(bitStream, 0x7FF, 11); /* buffer fullness (0x7FF for VBR) */
 		PutBit(bitStream, 0, 2); /* raw data blocks (0+1=1) */
+
 	}
 
-#ifdef MPEG2AAC
-	return 56;
-#else
-	return 58;
-#endif
+	/*
+	 * MPEG2 says byte_aligment() here, but ADTS always is multiple of 8 bits
+	 * MPEG4 has no byte_alignment() here
+	 */
+	/*
+	if (hEncoder->config.mpegVersion == 1)
+		bits += ByteAlign(bitStream, writeFlag);
+	*/
+
+	if (hEncoder->config.mpegVersion == 0)
+		bits += 2; /* emphasis */
+
+	return bits;
 }
 
 static int WriteCPE(CoderInfo *coderInfoL,

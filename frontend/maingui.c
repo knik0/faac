@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: maingui.c,v 1.13 2001/04/11 13:50:31 menno Exp $
+ * $Id: maingui.c,v 1.14 2001/04/19 13:20:33 menno Exp $
  */
 
 #include <windows.h>
@@ -157,10 +157,18 @@ static DWORD WINAPI EncodeFile(LPVOID pParam)
 			config->allowMidside = IsDlgButtonChecked(hWnd, IDC_ALLOWMIDSIDE) == BST_CHECKED ? 1 : 0;
 			config->useTns = IsDlgButtonChecked(hWnd, IDC_USETNS) == BST_CHECKED ? 1 : 0;
 			config->useLfe = IsDlgButtonChecked(hWnd, IDC_USELFE) == BST_CHECKED ? 1 : 0;
-			config->useLtp = IsDlgButtonChecked(hWnd, IDC_USELTP) == BST_CHECKED ? 1 : 0;
-			config->aacObjectType = IsDlgButtonChecked(hWnd, IDC_LC) == BST_CHECKED ? LOW : 0;
-			config->aacObjectType = IsDlgButtonChecked(hWnd, IDC_MAIN) == BST_CHECKED ? LTP : 0;
-			config->aacObjectType = IsDlgButtonChecked(hWnd, IDC_SSR) == BST_CHECKED ? SSR : 0;
+			if (IsDlgButtonChecked(hWnd, IDC_MPEG2LC) == BST_CHECKED) {
+				config->aacObjectType = LOW;
+				config->mpegVersion = MPEG2;
+			}
+			if (IsDlgButtonChecked(hWnd, IDC_MPEG4LC) == BST_CHECKED) {
+				config->aacObjectType = LOW;
+				config->mpegVersion = MPEG4;
+			}
+			if (IsDlgButtonChecked(hWnd, IDC_MPEG4LTP) == BST_CHECKED) {
+				config->aacObjectType = LTP;
+				config->mpegVersion = MPEG4;
+			}
 			GetDlgItemText(hWnd, IDC_BITRATE, szTemp, sizeof(szTemp));
 			config->bitRate = atoi(szTemp);
 			GetDlgItemText(hWnd, IDC_BANDWIDTH, szTemp, sizeof(szTemp));
@@ -294,11 +302,10 @@ static BOOL WINAPI DialogProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 
 		inputFilename [0] = 0x00;
 
-		CheckDlgButton(hWnd, IDC_MAIN, TRUE);
+		CheckDlgButton(hWnd, IDC_MPEG4LTP, TRUE);
 		CheckDlgButton(hWnd, IDC_ALLOWMIDSIDE, TRUE);
 		CheckDlgButton(hWnd, IDC_USELFE, FALSE);
 		CheckDlgButton(hWnd, IDC_USETNS, TRUE);
-		CheckDlgButton(hWnd, IDC_USELTP, TRUE);
 		SetDlgItemText(hWnd, IDC_BITRATE, "64000");
 		SetDlgItemText(hWnd, IDC_BANDWIDTH, "18000");
 

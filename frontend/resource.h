@@ -15,11 +15,10 @@
 #define IDC_BITRATE                     1010
 #define IDC_USELFE                      1011
 #define IDC_USETNS                      1012
-#define IDC_USELTP                      1013
 #define IDC_COMPILEDATE                 1018
-#define IDC_MAIN                        1019
-#define IDC_LC                          1020
-#define IDC_SSR                         1021
+#define IDC_MPEG4LTP                    1019
+#define IDC_MPEG2LC                     1020
+#define IDC_MPEG4LC                     1021
 
 // Next default values for new objects
 // 

@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: frame.h,v 1.9 2001/04/11 13:50:31 menno Exp $
+ * $Id: frame.h,v 1.10 2001/04/19 13:20:34 menno Exp $
  */
 
 #ifndef FRAME_H
@@ -46,6 +46,9 @@ static SR_INFO srInfo[12+1];
 
 typedef struct faacEncConfiguration
 {
+	/* MPEG version, 2 or 4 */
+	unsigned int mpegVersion;
+
 	/* AAC object type */
 	unsigned int aacObjectType;
 
@@ -57,9 +60,6 @@ typedef struct faacEncConfiguration
 
 	/* Use Temporal Noise Shaping */
 	unsigned int useTns;
-
-	/* Use Long Term Prediction */
-	unsigned int useLtp;
 
 	/* bitrate / channel of AAC file */
 	unsigned long bitRate;

@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: tns.c,v 1.5 2001/04/11 13:50:31 menno Exp $
+ * $Id: tns.c,v 1.6 2001/04/19 13:20:34 menno Exp $
  */
 
 #include <math.h>
@@ -69,27 +69,27 @@ void TnsInit(faacEncHandle hEncoder)
 		case LTP:
 			tnsInfo->tnsMaxBandsLong = tnsMaxBandsLongMainLow[fsIndex];
 			tnsInfo->tnsMaxBandsShort = tnsMaxBandsShortMainLow[fsIndex];
-#ifdef MPEG2AAC
-			tnsInfo->tnsMaxOrderLong = tnsMaxOrderLongMain;
-#else
-			if (fsIndex <= 5) /* fs > 32000Hz */
-				tnsInfo->tnsMaxOrderLong = 12;
-			else
-				tnsInfo->tnsMaxOrderLong = 20;
-#endif
+			if (hEncoder->config.mpegVersion == 1) { /* MPEG2 */
+				tnsInfo->tnsMaxOrderLong = tnsMaxOrderLongMain;
+			} else { /* MPEG4 */
+				if (fsIndex <= 5) /* fs > 32000Hz */
+					tnsInfo->tnsMaxOrderLong = 12;
+				else
+					tnsInfo->tnsMaxOrderLong = 20;
+			}
 			tnsInfo->tnsMaxOrderShort = tnsMaxOrderShortMainLow;
 			break;
 		case LOW :
 			tnsInfo->tnsMaxBandsLong = tnsMaxBandsLongMainLow[fsIndex];
 			tnsInfo->tnsMaxBandsShort = tnsMaxBandsShortMainLow[fsIndex];
-#ifdef MPEG2AAC
-			tnsInfo->tnsMaxOrderLong = tnsMaxOrderLongLow;
-#else
-			if (fsIndex <= 5) /* fs > 32000Hz */
-				tnsInfo->tnsMaxOrderLong = 12;
-			else
-				tnsInfo->tnsMaxOrderLong = 20;
-#endif
+			if (hEncoder->config.mpegVersion == 1) { /* MPEG2 */
+				tnsInfo->tnsMaxOrderLong = tnsMaxOrderLongLow;
+			} else { /* MPEG4 */
+				if (fsIndex <= 5) /* fs > 32000Hz */
+					tnsInfo->tnsMaxOrderLong = 12;
+				else
+					tnsInfo->tnsMaxOrderLong = 20;
+			}
 			tnsInfo->tnsMaxOrderShort = tnsMaxOrderShortMainLow;
 			break;
 		}

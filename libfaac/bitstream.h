@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: bitstream.h,v 1.4 2001/04/11 13:50:31 menno Exp $
+ * $Id: bitstream.h,v 1.5 2001/04/19 13:20:34 menno Exp $
  */
 
 #ifndef BITSTREAM_H
@@ -95,6 +95,11 @@ extern "C" {
 #define ID_PCE 5
 #define ID_FIL 6
 #define ID_END 7
+
+
+/* MPEG ID's */
+#define MPEG2 1
+#define MPEG4 0
 
 /* AAC object types */
 #define MAIN 0

@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: faac.h,v 1.6 2001/04/11 13:50:31 menno Exp $
+ * $Id: faac.h,v 1.7 2001/04/19 13:20:33 menno Exp $
  */
 
 #ifndef FAACLIB_H
@@ -40,6 +40,10 @@ extern "C" {
 #define FAACENC_VERSION 1.0
 #define FAACENC_VERSIONB 1 /* If 1 this version is still in beta */
 
+/* MPEG ID's */
+#define MPEG2 1
+#define MPEG4 0
+
 /* AAC object types */
 #define MAIN 0
 #define LOW  1
@@ -48,6 +52,9 @@ extern "C" {
 
 typedef struct faacEncConfiguration
 {
+	/* MPEG version, 2 or 4 */
+	unsigned int mpegVersion;
+
 	/* AAC object type */
 	unsigned int aacObjectType;
 
@@ -59,9 +66,6 @@ typedef struct faacEncConfiguration
 
 	/* Use Temporal Noise Shaping */
 	unsigned int useTns;
-
-	/* Use Long Term Prediction */
-	unsigned int useLtp;
 
 	/* bitrate / channel of AAC file */
 	unsigned long bitRate;

@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: frame.c,v 1.17 2001/04/11 13:50:31 menno Exp $
+ * $Id: frame.c,v 1.18 2001/04/19 13:20:34 menno Exp $
  */
 
 /*
@@ -57,8 +57,8 @@ int FAACAPI faacEncSetConfiguration(faacEncHandle hEncoder,
 	hEncoder->config.allowMidside = config->allowMidside;
 	hEncoder->config.useLfe = config->useLfe;
 	hEncoder->config.useTns = config->useTns;
-	hEncoder->config.useLtp = config->useLtp;
 	hEncoder->config.aacObjectType = config->aacObjectType;
+	hEncoder->config.mpegVersion = config->mpegVersion;
 
 	 /* No SSR / MAIN supported for now */
 	if ((hEncoder->config.aacObjectType != LTP)&&(hEncoder->config.aacObjectType != LOW))
@@ -103,11 +103,11 @@ faacEncHandle FAACAPI faacEncOpen(unsigned long sampleRate,
 	hEncoder->flushFrame = 0;
 
 	/* Default configuration */
+	hEncoder->config.mpegVersion = MPEG4;
 	hEncoder->config.aacObjectType = LTP;
 	hEncoder->config.allowMidside = 1;
 	hEncoder->config.useLfe = 0;
 	hEncoder->config.useTns = 0;
-	hEncoder->config.useLtp = 0;
 	hEncoder->config.bitRate = 64000; /* default bitrate / channel */
 	hEncoder->config.bandWidth = 18000; /* default bandwidth */
 
@@ -194,9 +194,9 @@ int FAACAPI faacEncEncode(faacEncHandle hEncoder,
 	unsigned int numChannels = hEncoder->numChannels;
 	unsigned int sampleRate = hEncoder->sampleRate;
 	unsigned int aacObjectType = hEncoder->config.aacObjectType;
+	unsigned int mpegVersion = hEncoder->config.mpegVersion;
 	unsigned int useLfe = hEncoder->config.useLfe;
 	unsigned int useTns = hEncoder->config.useTns;
-	unsigned int useLtp = hEncoder->config.useLtp;
 	unsigned int allowMidside = hEncoder->config.allowMidside;
 	unsigned int bitRate = hEncoder->config.bitRate;
 	unsigned int bandWidth = hEncoder->config.bandWidth;
@@ -346,7 +346,8 @@ int FAACAPI faacEncEncode(faacEncHandle hEncoder,
 			tnsInfo_for_LTP = NULL;
 
 		if(channelInfo[channel].present && (!channelInfo[channel].lfe) &&
-			(coderInfo[channel].block_type != ONLY_SHORT_WINDOW) && (useLtp) && (aacObjectType == LTP)) 
+			(coderInfo[channel].block_type != ONLY_SHORT_WINDOW) &&
+			(mpegVersion == MPEG4) && (aacObjectType == LTP)) 
 		{
 			LtpEncode(hEncoder,
 				&coderInfo[channel],
@@ -392,7 +393,7 @@ int FAACAPI faacEncEncode(faacEncHandle hEncoder,
 			else
 				tnsDecInfo = NULL;
 			
-			if ((!channelInfo[channel].lfe) && (useLtp) && (aacObjectType == LTP)) {  /* no reconstruction needed for LFE channel*/
+			if ((!channelInfo[channel].lfe) && (mpegVersion == MPEG4) && (aacObjectType == LTP)) {  /* no reconstruction needed for LFE channel*/
 
 				LtpReconstruct(&coderInfo[channel], &(coderInfo[channel].ltpInfo),
 					coderInfo[channel].requantFreq);
