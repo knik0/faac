@@ -576,7 +576,8 @@ HRESULT codec::decoder::convert(ACMDRVSTREAMHEADER* pHeader)
     return MMSYSERR_NOERROR;
 #else
     // fixme: check fdwConvert contents
-	
+
+    int iSrcDataLeft;
     const int iMinInputSize = 768*m_sFormat.nChannels;
     pHeader->cbSrcLengthUsed=0;
     pHeader->cbDstLengthUsed=0;
@@ -618,7 +619,7 @@ HRESULT codec::decoder::convert(ACMDRVSTREAMHEADER* pHeader)
 		}
     }
 	
-    int iSrcDataLeft=pHeader->cbSrcLength-pHeader->cbSrcLengthUsed;
+    iSrcDataLeft=pHeader->cbSrcLength-pHeader->cbSrcLengthUsed;
     
     if(iSrcDataLeft == 0)
 		goto finish;
