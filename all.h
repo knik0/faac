@@ -29,7 +29,6 @@ Copyright(c)1996.
 #include "tns.h"
 #include "bitstream.h"
 
-
 typedef struct
 {
     int is_present;	/* right channel uses intensiy stereo */

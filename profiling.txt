@@ -159,3 +159,37 @@ CVS Tue Feb 22 19:18:25 CST 2000
 3 min, 12.13 sec.
 The Outfield Bangin': track 2: Bangin' On My Heart
 Bingo! Got it. -O core dumps, and -O2 to -O6 are slower than thuer non optimized counterparts, unless you add -ffast-math. then things are speedy. The assembly it produces still has room for speed. Still more work to do.
+
+------------------------------------------------------------------------------
+thebard
+CVS Wed Feb 23 20:30:01 CST 2000
+-O6 -march=i686 -finline-functions -funroll-loops -ffast-math -g -pg -a
+3 min, 44.97 sec.
+The Outfield Bangin': track 2: Bangin' On My Heart
+This is the profiled fully optimized version. As you can see, there isnt a whole lot letf to optimize...
+Each sample counts as 0.01 seconds.
+  %   cumulative   self              self     total           
+ time   seconds   seconds    calls  us/call  us/call  name    
+  9.76     20.63    20.63 32619291     0.63     0.66  output_bits
+  9.18     40.05    19.42    20524   946.21  3941.14  tf_encode_spectrum_aac
+  7.83     56.60    16.55    20524   806.37  1361.39  psy_step2
+  7.72     72.93    16.33    41048   397.83  2266.16  EncTf_psycho_acoustic
+  6.20     86.05    13.12   102792   127.64   128.13  calc_noise
+  5.14     96.91    10.86    20524   529.14   529.14  psy_step4
+  4.51    106.44     9.53    41048   232.17   232.17  psy_step6
+  3.33    113.48     7.04    41048   171.51   171.51  psy_step9
+  3.22    120.30     6.82   223693    30.49    96.05  noiseless_bit_count
+  3.22    127.11     6.81   188315    36.16    36.16  PulseCoder
+  3.16    133.79     6.68    41048   162.74   162.74  psy_step14
+  3.03    140.20     6.41   203169    31.55    31.55  quantize
+  2.62    145.75     5.55     7931   699.79   699.79  estimate_delay
+  2.55    151.14     5.39    20524   262.62   463.36  nok_ltp_reconstruct
+  2.50    156.42     5.28   751457     7.03     7.03  pfftw_twiddle_4
+  2.38    161.46     5.04    41048   122.78   122.78  psy_step5
+  2.03    165.76     4.30   223693    19.22   115.27  bit_search
+  1.89    169.75     3.99    61089    65.31   102.13  MDCT
+  1.62    173.18     3.43    10263   334.21 20456.01  EncTfFrame
+  1.44    176.23     3.05  9744296     0.31     0.31  BsPutBit
+  1.32    179.03     2.80    20524   136.43   339.21  realft2048
+  1.28    181.74     2.71  1037456     2.61     2.61  pfftw_32
+  1.05    183.96     2.22    28455    78.02   297.27  buffer2freq

@@ -44,7 +44,6 @@ Copyright (c) 1997.
 #define M_PI 3.14159265358979323846
 #endif
 
-
 typedef struct { 
   long   sampling_rate;                   /* the following entries are for this sampling rate */
   int    num_cb_long;
@@ -200,20 +199,6 @@ void EncTf_psycho_acoustic(
   CH_PSYCH_OUTPUT_SHORT p_chpo_short[][MAX_SHORT_WINDOWS]
 );
 
-#ifndef WIN32
-/* structs for the psy_step6 part1 and part2 threads */
-typedef struct {
-	PARTITION_TABLE_LONG *part_tbl_long;
-	PSY_STATVARIABLE_LONG *psy_stvar_long;
-	PSY_VARIABLE_LONG *psy_var_long;
-} PSY_STEP6_PART1_CONTAINER;
-
-typedef struct {
-	PARTITION_TABLE_SHORT *part_tbl_short;
-	PSY_STATVARIABLE_SHORT *psy_stvar_short;
-	PSY_VARIABLE_SHORT *psy_var_short;
-} PSY_STEP6_PART2_CONTAINER;
-#endif
 /* added by T. Okada( 1997.07.10 ) */
 /* Jul 10 */
 #define psy_max(x,y) ((x) > (y) ? (x) : (y))

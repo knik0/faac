@@ -52,9 +52,9 @@ Copyright (c) 1997.
 
 Source file:
 
-$Id: psych.c,v 1.48 2000/02/23 19:05:49 thebard Exp $
-$Id: psych.c,v 1.48 2000/02/23 19:05:49 thebard Exp $
-$Id: psych.c,v 1.48 2000/02/23 19:05:49 thebard Exp $
+$Id: psych.c,v 1.49 2000/02/24 02:39:31 thebard Exp $
+$Id: psych.c,v 1.49 2000/02/24 02:39:31 thebard Exp $
+$Id: psych.c,v 1.49 2000/02/24 02:39:31 thebard Exp $
 
 **********************************************************************/
 
@@ -62,9 +62,12 @@ $Id: psych.c,v 1.48 2000/02/23 19:05:49 thebard Exp $
 #include <stdlib.h>
 #include <math.h>
 #include <memory.h>
+#include <pthread.h>
 #include "tf_main.h"
 #include "psych.h"
 #include "transfo.h"
+#include "all.h"
+#include "semaphore.h"
 
 double sqrt2048, sqrt256;
 
@@ -185,6 +188,7 @@ PSY_STATVARIABLE_LONG    psy_stvar_long[MAX_TIME_CHANNELS+2];
                                /* variables for long block */
 PSY_STATVARIABLE_SHORT    psy_stvar_short[MAX_TIME_CHANNELS+2];
                                /* variables for short block */
+
 /* added by T. Araki (1997.10.16) end */
 
 void EncTf_psycho_acoustic_init( void )
@@ -858,90 +862,6 @@ void psy_step5(PARTITION_TABLE_LONG *part_tbl_long,
     }
 	/* added by T. Araki (1997.10.16) end */
 }
-
-#ifndef WIN32
-void psy_step6_part1(void *inData)
-{
-	int b,bb,i;
-  double ecb,ct;
-  double sprd;
-
-	PARTITION_TABLE_LONG *part_tbl_long;
-	PSY_STATVARIABLE_LONG *psy_stvar_long;
-	PSY_VARIABLE_LONG *psy_var_long;
-	PSY_STEP6_PART1_CONTAINER *container;
-
-	container = (PSY_STEP6_PART1_CONTAINER *)inData;
-	part_tbl_long = container->part_tbl_long;
-	psy_stvar_long = container->psy_stvar_long;
-	psy_var_long = container->psy_var_long;
-
-	//part_tbl_long = *
-
-	for(b = 0; b < part_tbl_long->len; b++){
-    ecb = 0.0;
-    ct = 0.0;
-
-    for(bb = 0; bb < part_tbl_long->len; bb++){
-      //sprd = sprdngf(part_tbl_long, part_tbl_short, bb, b, 0);
-      sprd = part_tbl_long->dyn->spreading[bb][b];
-      ecb += psy_var_long->e[bb] * sprd;
-      ct += psy_var_long->c[bb] * sprd;
-    }
-
-    if (ecb!=0.0) {
-      psy_var_long->cb[b] = ct / ecb;
-      psy_stvar_long->en[b] = psy_var_long->en[b] = ecb
-        * part_tbl_long->dyn->rnorm[b];
-    } else {
-      psy_var_long->cb[b] = 0.0;
-      psy_stvar_long->en[b] = psy_var_long->en[b] = 0;
-    }
-  }
-}
-
-void psy_step6_part2(void *inData)
-{
-	int b,bb,i;
-  double ecb,ct;
-  double sprd;
-
-	PARTITION_TABLE_SHORT *part_tbl_short;
-  PSY_STATVARIABLE_SHORT *psy_stvar_short;
-  PSY_VARIABLE_SHORT *psy_var_short;
-	PSY_STEP6_PART2_CONTAINER *container;
-
-	container = (PSY_STEP6_PART2_CONTAINER *)inData;
-	part_tbl_short = container->part_tbl_short;
-	psy_stvar_short = container->psy_stvar_short;
-	psy_var_short = container->psy_var_short;
-
-	/* added by T. Araki (1997.10.16) */
-  for(i = 0; i < MAX_SHORT_WINDOWS; i++){
-    for(b = 0; b < part_tbl_short->len; b++){
-      ecb = 0.0;
-      ct = 0.0;
-
-      for(bb = 0; bb < part_tbl_short->len; bb++){
-        //sprd = sprdngf(part_tbl_long, part_tbl_short, bb, b, 1);
-        sprd = part_tbl_short->dyn->spreading[bb][b];
-        ecb += psy_var_short->e[i][bb] * sprd;
-        ct += psy_var_short->c[i][bb] * sprd;
-      }
-
-      if (ecb!=0.0) {
-        psy_var_short->cb[i][b] = ct / ecb;
-        psy_stvar_short->en[i][b] = psy_var_short->en[i][b] = ecb
-          * part_tbl_short->dyn->rnorm[b];
-      } else {
-        psy_var_short->cb[i][b] = 0.0;
-        psy_stvar_short->en[i][b] = psy_var_short->en[i][b] = 0;
-      }
-    }
-  }
-  /* added by T. Araki (1997.10.16) end */
-}
-#endif
 
 void psy_step6(PARTITION_TABLE_LONG *part_tbl_long, 
 			   PARTITION_TABLE_SHORT *part_tbl_short, 
