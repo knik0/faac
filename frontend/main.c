@@ -1,6 +1,8 @@
 /*
  * FAAC - Freeware Advanced Audio Coder
  * Copyright (C) 2001 Menno Bakker
+ * Copyright (C) 2002-2004 Krzysztof Nikiel
+ * Copyright (C) 2004 Dan Christiansen
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -16,7 +18,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: main.c,v 1.56 2004/03/15 20:15:48 knik Exp $
+ * $Id: main.c,v 1.57 2004/03/17 13:32:13 danchr Exp $
  */
 
 #ifdef _MSC_VER
@@ -36,6 +38,8 @@
 #ifdef WIN32
 #include <windows.h>
 #include <fcntl.h>
+#else
+#include <signal.h>
 #endif
 
 #if defined(__unix__) || defined(__APPLE__)
@@ -67,13 +71,27 @@
 
 /* globals */
 char* progName;
+#ifndef WIN32
+volatile int running = 1;
+#endif
 
-enum output_format {
-  ADTS, RAW,
+enum stream_format {
+  ADTS_STREAM,
+  RAW_STREAM,
+};
+
+enum container_format {
+  NO_CONTAINER,
 #ifdef HAVE_LIBMP4V2
-  MP4,
+  MP4_CONTAINER,
 #endif
 };
+
+#ifndef WIN32
+void signal_handler(int signal) {
+    running = 0;
+}
+#endif
 
 static int *mkChanMap(int channels, int center, int lf)
 {
@@ -131,14 +149,15 @@ int main(int argc, char *argv[])
     faacEncHandle hEncoder;
     pcmfile_t *infile = NULL;
 
-    unsigned long samplesInput, maxBytesOutput;
+    unsigned long samplesInput, maxBytesOutput, totalBytesWritten=0;
 
     faacEncConfigurationPtr myFormat;
     unsigned int mpegVersion = MPEG2;
     unsigned int objectType = LOW;
     unsigned int useMidSide = 1;
     static unsigned int useTns = DEFAULT_TNS;
-    enum output_format format = ADTS;
+    enum container_format container = NO_CONTAINER;
+    enum stream_format stream = ADTS_STREAM;
     int cutOff = -1;
     int bitRate = 0;
     unsigned long quantqual = 0;
@@ -179,6 +198,11 @@ int main(int argc, char *argv[])
     char *faac_id_string;
     char *faac_copyright_string;
 
+#ifndef WIN32
+    // install signal handler
+    signal(SIGINT, signal_handler);
+    signal(SIGTERM, signal_handler);
+#endif
 
     // get faac version
     if (faacEncGetVersion(&faac_id_string, &faac_copyright_string) == FAAC_CFG_VERSION)
@@ -272,7 +296,7 @@ int main(int argc, char *argv[])
             }
             break;
         case 'r': {
-            format = RAW;
+            stream = RAW_STREAM;
             break;
         }
         case 'n': {
@@ -343,7 +367,7 @@ int main(int argc, char *argv[])
         }
 #ifdef HAVE_LIBMP4V2
         case 'w':
-	    format = MP4;
+	    container = MP4_CONTAINER;
             break;
 	case 'A':
 	    artist = optarg;
@@ -388,8 +412,9 @@ int main(int argc, char *argv[])
     }
 
 #ifdef HAVE_LIBMP4V2
-    if (format != MP4 && (ntracks || trackno || artist || title || album ||
-		 date || genre || comment))
+    if (container != MP4_CONTAINER && (ntracks || trackno || artist ||
+				       title ||  album || date ||
+				       genre || comment))
     {
       printf("\nERROR: Metadata requires MP4 output!");
 	dieUsage = 1;
@@ -423,7 +448,7 @@ int main(int argc, char *argv[])
 #ifdef HAVE_LIBMP4V2
         printf("\n");
         printf("MP4 specific options:\n");
-	printf("  -w     Wrap AAC data in MP4 container. (default for *.mp4 and *m4a)\n");
+	printf("  -w     Wrap AAC data in MP4 container. (default for *.mp4 and *.m4a)\n");
         printf("  -A X   Set artist to X\n");
         printf("  -T X   Set title to X\n");
         printf("  -G X   Set genre to X\n");
@@ -482,17 +507,15 @@ int main(int argc, char *argv[])
         printf("WARNING: MP4 support unavailable!\n");
 #else
     {
-        if (format == ADTS) 
-	    format = MP4;
-	else
-	    printf("WARNING: Using RAW file format for %s extension\n", 
-		   aacFileExt);
+        container = MP4_CONTAINER;
     }
 
-    if (format == MP4)
+    if (container == MP4_CONTAINER)
     {
         mpegVersion = MPEG4;
+	stream = RAW_STREAM;
     }
+
     frameSize = samplesInput/infile->channels;
     delay_samples = frameSize; // encoder delay 1024 samples
 #endif
@@ -539,19 +562,19 @@ int main(int argc, char *argv[])
     myFormat->bandWidth = cutOff;
     if (quantqual > 0)
         myFormat->quantqual = quantqual;
-    myFormat->outputFormat = format == ADTS;
+    myFormat->outputFormat = stream == ADTS_STREAM;
     myFormat->inputFormat = FAAC_INPUT_FLOAT;
     if (!faacEncSetConfiguration(hEncoder, myFormat)) {
         fprintf(stderr, "Unsupported output format!\n");
 #ifdef HAVE_LIBMP4V2
-        if (format == MP4) MP4Close(MP4hFile);
+        if (container == MP4_CONTAINER) MP4Close(MP4hFile);
 #endif
         return 1;
     }
 
 #ifdef HAVE_LIBMP4V2
     /* initialize MP4 creation */
-    if (format == MP4) {
+    if (container == MP4_CONTAINER) {
         u_int8_t *ASC = 0;
         u_int32_t ASCLength = 0;
 	char *version_string;
@@ -623,21 +646,28 @@ int main(int argc, char *argv[])
         fprintf(stderr, " + TNS");
     if (myFormat->allowMidside)
         fprintf(stderr, " + M/S");
-    switch(format)
+    fprintf(stderr, "\n");
+
+    fprintf(stderr, "File format: ");
+    switch(container)
     {
-    case RAW:
-        fprintf(stderr, " (RAW)");
-        break;
-    case ADTS:
-        fprintf(stderr, " (ADTS)");
+    case NO_CONTAINER:
+      switch(stream)
+	{
+	case RAW_STREAM:
+	  fprintf(stderr, "Headerless AAC (RAW)\n");
+	  break;
+	case ADTS_STREAM:
+	  fprintf(stderr, "MPEG-2 AAC (ADTS)\n");
+	  break;
+	}
         break;
 #ifdef HAVE_LIBMP4V2
-    case MP4:
-        fprintf(stderr, " (MP4)");
+    case MP4_CONTAINER:
+        fprintf(stderr, "MPEG-4 File Format (MP4)\n");
         break;
 #endif
     }
-    fprintf(stderr, "\n");
 
     if (outfile
 #ifdef HAVE_LIBMP4V2
@@ -657,12 +687,13 @@ int main(int argc, char *argv[])
 
         fprintf(stderr, "Encoding %s to %s\n", audioFileName, aacFileName);
         if (frames != 0)
-            fprintf(stderr, "   frame          | elapsed/estim | play/CPU | ETA\n");
+            fprintf(stderr, "   frame          | bitrate | elapsed/estim | "
+		    "play/CPU | ETA\n");
         else
             fprintf(stderr, " frame | elapsed | play/CPU\n");
 
         /* encoding loop */
-        for ( ;; )
+        while (running)
         {
             int bytesWritten;
 
@@ -683,6 +714,7 @@ int main(int argc, char *argv[])
             {
                 currentFrame++;
                 showcnt--;
+		totalBytesWritten += bytesWritten;
             }
 
             if ((showcnt <= 0) || !bytesWritten)
@@ -712,15 +744,17 @@ int main(int argc, char *argv[])
 
                     if (frames != 0)
                         fprintf(stderr,
-                            "\r%5d/%-5d (%3d%%)| %6.1f/%-6.1f | %8.3f | %.1f ",
+                            "\r%5d/%-5d (%3d%%)|  %5.1f  | %6.1f/%-6.1f | %7.2fx | %.1f ",
                             currentFrame, frames, currentFrame*100/frames,
+			    ((double)totalBytesWritten * 8.0 / 1000.0) /
+			    ((double)infile->samples / infile->samplerate * currentFrame / frames),
                             timeused,
                             timeused * frames / currentFrame,
                             (1024.0 * currentFrame / infile->samplerate) / timeused,
                             timeused  * (frames - currentFrame) / currentFrame);
                     else
                         fprintf(stderr,
-                            "\r %5d |  %6.1f | %8.3f ",
+                            "\r %5d |  %6.1f | %7.2fx ",
                             currentFrame,
                             timeused,
                             (1024.0 * currentFrame / infile->samplerate) / timeused);
@@ -754,7 +788,7 @@ int main(int argc, char *argv[])
                 MP4Duration dur = samples_left > frameSize ? frameSize : samples_left;
                 MP4Duration ofs = encoded_samples > 0 ? 0 : delay_samples;
 
-                if (format == MP4)
+                if (container == MP4_CONTAINER)
                 {
                     /* write bitstream to mp4 file */
                     MP4WriteSample(MP4hFile, MP4track, bitbuf, bytesWritten, dur, ofs, 1);
@@ -775,7 +809,7 @@ int main(int argc, char *argv[])
 
 #ifdef HAVE_LIBMP4V2
         /* clean up */
-        if (format == MP4)
+        if (container == MP4_CONTAINER)
             MP4Close(MP4hFile);
         else
 #endif
@@ -794,6 +828,12 @@ int main(int argc, char *argv[])
 
 /*
 $Log: main.c,v $
+Revision 1.57  2004/03/17 13:32:13  danchr
+- New signal handler. Disabled on Windows, although it *should* work.
+- Separated handling of stream format and output format.
+- Bitrate + file format displayed on stderr.
+- knik and myself added to the copyright header.
+
 Revision 1.56  2004/03/15 20:15:48  knik
 improved MP4 support by Dan Christiansen
 
