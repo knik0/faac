@@ -52,9 +52,9 @@ Copyright (c) 1997.
 
 Source file: 
 
-$Id: psych.c,v 1.8 1999/12/23 15:21:19 menno Exp $
-$Id: psych.c,v 1.8 1999/12/23 15:21:19 menno Exp $
-$Id: psych.c,v 1.8 1999/12/23 15:21:19 menno Exp $
+$Id: psych.c,v 1.9 1999/12/23 15:35:15 menno Exp $
+$Id: psych.c,v 1.9 1999/12/23 15:35:15 menno Exp $
+$Id: psych.c,v 1.9 1999/12/23 15:35:15 menno Exp $
 
 **********************************************************************/
 
@@ -520,7 +520,8 @@ void EncTf_psycho_acoustic(
 
 	{
 		ch = 0;
-		psy_step1(p_time_signal,sample, no_of_chan);
+		if (no_of_chan < 2)
+			psy_step1(p_time_signal,sample, no_of_chan);
 		psy_step2(sample, part_tbl_long, part_tbl_short, psy_stvar_long,
 			psy_stvar_short, no_of_chan);
 		if (no_of_chan < 2) {
