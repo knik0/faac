@@ -16,7 +16,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: channels.h,v 1.6 2001/06/08 18:01:09 menno Exp $
+ * $Id: channels.h,v 1.7 2003/06/26 19:19:41 knik Exp $
  */
 
 #ifndef CHANNEL_H
@@ -31,7 +31,6 @@ extern "C" {
 typedef struct {
     int is_present;
     int ms_used[MAX_SCFAC_BANDS];
-    int ms_usedS[8][MAX_SCFAC_BANDS];
 } MSInfo;
 
 typedef struct {
