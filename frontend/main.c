@@ -16,7 +16,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: main.c,v 1.52 2003/12/14 12:25:44 ca5e Exp $
+ * $Id: main.c,v 1.53 2003/12/20 04:32:48 stux Exp $
  */
 
 #ifdef _MSC_VER
@@ -38,7 +38,7 @@
 #include <fcntl.h>
 #endif
 
-#ifdef __unix__
+#if defined(__unix__) || defined(__APPLE__)
 #include <sys/time.h>
 #include <sys/resource.h>
 #include <unistd.h>
@@ -681,6 +681,9 @@ int main(int argc, char *argv[])
 
 /*
 $Log: main.c,v $
+Revision 1.53  2003/12/20 04:32:48  stux
+i've added sms00's OSX patch to faac
+
 Revision 1.52  2003/12/14 12:25:44  ca5e
 Gapless MP4 handling method changed again...
 
