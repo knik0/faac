@@ -163,8 +163,8 @@ int numTracks = MP4GetNumberOfTracks(infile, NULL, 0);
 
             if (buff)
             {
-                rc = AudioSpecificConfig(buff, &dummy1_32, &dummy2_8, &dummy3_8, &dummy4_8,
-                    &dummy5_8, &dummy6_8, &dummy7_8, &dummy8_8);
+                rc = AudioSpecificConfig(buff, buff_size, &dummy1_32, &dummy2_8, &dummy3_8,
+                    &dummy4_8, &dummy5_8, &dummy6_8, &dummy7_8, &dummy8_8);
                 free(buff);
 
                 if (rc < 0)
@@ -494,7 +494,7 @@ start_point:
 		MP4GetTrackESConfiguration(mi->mp4File, track, (unsigned __int8 **)&mi->buffer, &buffer_size);
 	    if(!mi->buffer)
 			ERROR_OFI("MP4GetTrackESConfiguration");
-		AudioSpecificConfig(mi->buffer, &timeScale, &channels, &sf, &mi->type, &dummy8, &dummy8, &dummy8, &dummy8);
+		AudioSpecificConfig(mi->buffer, buffer_size, &timeScale, &channels, &sf, &mi->type, &dummy8, &dummy8, &dummy8, &dummy8);
 		if(faacDecInit2(mi->hDecoder, mi->buffer, buffer_size, &samplerate, &channels) < 0)
 			ERROR_OFI("Error initializing decoder library");
 	    FREE(mi->buffer);
@@ -618,7 +618,7 @@ start_point:
 				DWORD	Samples,
 						BytesConsumed;
 
-					if((mi->bytes_consumed=faacDecInit(mi->hDecoder, mi->buffer, &samplerate, &channels)) < 0)
+					if((mi->bytes_consumed=faacDecInit(mi->hDecoder, mi->buffer, mi->bytes_into_buffer, &samplerate, &channels)) < 0)
 						ERROR_OFI("Can't init library");
 					mi->bytes_into_buffer-=mi->bytes_consumed;
 					if(!(Samples=ReadFilterInput(hInput,0,0)/sizeof(short)))
@@ -645,7 +645,7 @@ start_point:
 				}
 			}
 
-		if((mi->bytes_consumed=faacDecInit(mi->hDecoder, mi->buffer, &samplerate, &channels)) < 0)
+		if((mi->bytes_consumed=faacDecInit(mi->hDecoder, mi->buffer, mi->bytes_into_buffer, &samplerate, &channels)) < 0)
 			ERROR_OFI("Can't init library");
 		mi->bytes_into_buffer-=mi->bytes_consumed;
 
@@ -734,7 +734,7 @@ MYINPUT				*mi;
 				ERROR_RFI("MP4ReadSample")
 			}
 
-			sample_buffer=(char *)faacDecDecode(mi->hDecoder,&frameInfo,buffer);
+			sample_buffer=(char *)faacDecDecode(mi->hDecoder,&frameInfo,buffer,buffer_size);
 			BytesDecoded=frameInfo.samples*sizeof(short);
 			memcpy(bufout,sample_buffer,BytesDecoded);
 			FREE(buffer);
@@ -776,7 +776,7 @@ MYINPUT				*mi;
 				else
 					ERROR_RFI(0)
 
-			sample_buffer=(char *)faacDecDecode(mi->hDecoder,&frameInfo,buffer);
+			sample_buffer=(char *)faacDecDecode(mi->hDecoder,&frameInfo,buffer,mi->bytes_into_buffer);
 			BytesDecoded=frameInfo.samples*sizeof(short);
 			if(bufout)
 				memcpy(bufout,sample_buffer,BytesDecoded);
