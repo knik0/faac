@@ -16,7 +16,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: frame.c,v 1.34 2003/05/01 09:31:39 knik Exp $
+ * $Id: frame.c,v 1.35 2003/05/10 09:39:55 knik Exp $
  */
 
 /*
@@ -56,6 +56,8 @@ static const psymodellist_t psymodellist[] = {
 };
 
 static SR_INFO srInfo[12+1];
+static const int bwmax = 16000;
+static const double bwfac = 0.45;
 
 int FAACAPI faacEncGetDecoderSpecificInfo(faacEncHandle hEncoder,unsigned char** ppBuffer,unsigned long* pSizeOfDecoderSpecificInfo)
 {
@@ -130,33 +132,84 @@ int FAACAPI faacEncSetConfiguration(faacEncHandle hEncoder,
     /* Check for correct bitrate */
     if (config->bitRate > MaxBitrate(hEncoder->sampleRate))
         return 0;
+#if 0
     if (config->bitRate < MinBitrate())
         return 0;
+#endif
 
-    /* Bitrate check passed */
+    if (config->bitRate)
+    {
+      int i;
+      static struct {
+	int rate; // per channel at 44100 sampling frequency
+        int cutoff;
+      } rates[] =
+      {
+	{33500, 5000},
+	{41000, 7000},
+	{49000, 10000},
+	{64000, 16000},
+	{76000, 20000},
+	{0, 0}
+      };
+      int f0, f1;
+      int r0, r1;
+
+      config->quantqual = 100;
+
+      config->bitRate = (double)config->bitRate * 44100 / hEncoder->sampleRate;
+
+      f0 = f1 = rates[0].cutoff;
+      r0 = r1 = rates[0].rate;
+      for (i = 0; rates[i].rate; i++)
+      {
+	f0 = f1;
+	f1 = rates[i].cutoff;
+	r0 = r1;
+	r1 = rates[i].rate;
+	if (rates[i].rate >= config->bitRate)
+	  break;
+      }
+
+      if (config->bitRate > r1)
+        config->bitRate = r1;
+      if (config->bitRate < r0)
+	config->bitRate = r0;
+
+      if (f1 > f0)
+	config->bandWidth =
+	  pow((double)config->bitRate / r1,
+	      log((double)f1 / f0) / log ((double)r1 / r0)) * (double)f1;
+      else
+	config->bandWidth = f1;
+
+      config->bandWidth =
+	(double)config->bandWidth * hEncoder->sampleRate / 44100;
+      config->bitRate = (double)config->bitRate * hEncoder->sampleRate / 44100;
+    }
+
     hEncoder->config.bitRate = config->bitRate;
 
-    if (config->quantqual > 500)
-      config->quantqual = 500;
-    if (config->quantqual < 10)
-      config->quantqual = 10;
-    hEncoder->config.quantqual = config->quantqual;
-
-    if (config->bandWidth)
-      hEncoder->config.bandWidth = config->bandWidth;
-    else if (config->bitRate)
+    if (!config->bandWidth)
     {
-      static const int bwdefault = 16000;
-
-	hEncoder->config.bandWidth =
-	  pow((double)config->bitRate / 64000, 1.3) * bwdefault;
+      config->bandWidth = bwfac * hEncoder->sampleRate;
+      if (config->bandWidth > bwmax)
+	config->bandWidth = bwmax;
     }
+
+    hEncoder->config.bandWidth = config->bandWidth;
 
     // check bandwidth
     if (hEncoder->config.bandWidth < 100)
       hEncoder->config.bandWidth = 100;
     if (hEncoder->config.bandWidth > (hEncoder->sampleRate / 2))
       hEncoder->config.bandWidth = hEncoder->sampleRate / 2;
+
+    if (config->quantqual > 500)
+      config->quantqual = 500;
+    if (config->quantqual < 10)
+      config->quantqual = 10;
+    hEncoder->config.quantqual = config->quantqual;
 
     // reset psymodel
     hEncoder->psymodel->PsyEnd(&hEncoder->gpsyInfo, hEncoder->psyInfo, hEncoder->numChannels);
@@ -203,8 +256,10 @@ faacEncHandle FAACAPI faacEncOpen(unsigned long sampleRate,
     hEncoder->config.allowMidside = 1;
     hEncoder->config.useLfe = 0;
     hEncoder->config.useTns = 0;
-    hEncoder->config.bitRate = 64000; /* default bitrate / channel */
-    hEncoder->config.bandWidth = hEncoder->config.bitRate / 4;
+    hEncoder->config.bitRate = 0; /* default bitrate / channel */
+    hEncoder->config.bandWidth = bwfac * hEncoder->sampleRate;
+    if (hEncoder->config.bandWidth > bwmax)
+      hEncoder->config.bandWidth = bwmax;
     hEncoder->config.quantqual = 100;
     hEncoder->config.psymodellist = psymodellist;
     hEncoder->config.psymodelidx = 0;
@@ -699,6 +754,10 @@ static SR_INFO srInfo[12+1] =
 
 /*
 $Log: frame.c,v $
+Revision 1.35  2003/05/10 09:39:55  knik
+added approximate ABR setting
+modified default cutoff
+
 Revision 1.34  2003/05/01 09:31:39  knik
 removed ISO psyodel
 disabled m/s coding
