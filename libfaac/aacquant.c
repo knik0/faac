@@ -17,7 +17,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: aacquant.c,v 1.25 2003/09/07 16:46:22 knik Exp $
+ * $Id: aacquant.c,v 1.26 2003/09/08 07:02:35 knik Exp $
  */
 
 #include <math.h>
@@ -353,7 +353,7 @@ static void CalcAllowedDist(CoderInfo *coderInfo, PsyInfo *psyInfo,
                             double *xr, double *xmin, int quality)
 {
   int sfb, start, end, l;
-  const double globalthr = 34.7 / (double)quality;
+  const double globalthr = 37.3 / (double)quality;
   int last = coderInfo->lastx;
   int lastsb = 0;
   int *cb_offset = coderInfo->sfb_offset;
@@ -384,7 +384,7 @@ static void CalcAllowedDist(CoderInfo *coderInfo, PsyInfo *psyInfo,
       enrg += xr[l]*xr[l];
 
     thr = enrg/((double)(end-start)*avgenrg);
-    thr = pow(thr, 0.4*(lastsb-sfb)/lastsb + 0.2);
+    thr = pow(thr, 0.2*(lastsb-sfb)/lastsb + 0.2);
 
     tmp = (double)start / (double)last;
     if (tmp < 0.3)
