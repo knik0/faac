@@ -18,6 +18,8 @@
 #define IDC_CHK_AUTOCFG                 1011
 #define IDC_BTN_ABOUT                   1012
 #define IDC_IMG_LOGO                    1013
+#define IDC_RADIO_RAW                   1013
+#define IDC_RADIO_ADTS                  1014
 
 // Next default values for new objects
 // 

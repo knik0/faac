@@ -20,11 +20,14 @@ Package=<4>
     Begin Project Dependency
     Project_Dep_Name libfaac
     End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name libmp4v2_st
+    End Project Dependency
 }}}
 
 ###############################################################################
 
-Project: "id3lib"=..\..\..\faad2\common\id3lib\prj\id3lib.dsp - Package Owner=<4>
+Project: "id3lib"=..\..\..\faad2\common\id3lib\libprj\id3lib.dsp - Package Owner=<4>
 
 Package=<5>
 {{{
@@ -36,7 +39,7 @@ Package=<4>
 
 ###############################################################################
 
-Project: "libfaac"=..\..\faac\libfaac\libfaac.dsp - Package Owner=<4>
+Project: "libfaac"=..\..\libfaac\libfaac.dsp - Package Owner=<4>
 
 Package=<5>
 {{{
@@ -49,6 +52,18 @@ Package=<4>
 ###############################################################################
 
 Project: "libfaad"=..\..\..\faad2\libfaad\libfaad.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+}}}
+
+###############################################################################
+
+Project: "libmp4v2_st"=..\..\..\faad2\common\mp4v2\libmp4v2_st60.dsp - Package Owner=<4>
 
 Package=<5>
 {{{
