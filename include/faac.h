@@ -16,18 +16,16 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: faac.h,v 1.29 2003/08/02 11:32:10 stux Exp $
+ * $Id: faac.h,v 1.30 2003/09/24 16:29:31 knik Exp $
  */
 
-#ifndef FAACLIB_H
-#define FAACLIB_H
-
+#ifndef _FAAC_H_
+#define _FAAC_H_
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
 
 #ifdef WIN32
-  #pragma pack(push, 1)
   #ifndef FAACAPI
     #define FAACAPI __stdcall
   #endif
@@ -37,87 +35,15 @@ extern "C" {
   #endif
 #endif
 
-#define FAAC_CFG_VERSION 102
+#pragma pack(push, 1)
 
-/* MPEG ID's */
-#define MPEG2 1
-#define MPEG4 0
-
-/* AAC object types */
-#define MAIN 0
-#define LOW  1
-#define SSR  2
-#define LTP  3
-
-/* Input Formats */
-#define FAAC_INPUT_NULL		0
-#define FAAC_INPUT_16BIT	1
-#define FAAC_INPUT_24BIT	2
-#define FAAC_INPUT_32BIT	3
-#define FAAC_INPUT_FLOAT	4
-
-typedef struct faacEncConfiguration
-{
-    /* config version */
-    /*const*/ int version;
-
-    /* library version */
-    /*const*/ char *name;
-
-    /* copyright string */
-    char *copyright;
-
-	/* MPEG version, 2 or 4 */
-	unsigned int mpegVersion;
-
-	/* AAC object type */
-	unsigned int aacObjectType;
-
-	/* Allow mid/side coding */
-	unsigned int allowMidside;
-
-	/* Use one of the channels as LFE channel */
-	unsigned int useLfe;
-
-	/* Use Temporal Noise Shaping */
-	unsigned int useTns;
-
-	/* bitrate / channel of AAC file */
-	unsigned long bitRate;
-
-	/* AAC file frequency bandwidth */
-	unsigned int bandWidth;
-
-    /* Quantizer quality */
-    unsigned long quantqual;
-
-	/*
-		Bitstream output format, meaning:
-		0 - Raw
-		1 - ADTS
-		/AV
-	*/
-	unsigned int outputFormat;
-
-	// psychoacoustic model list
-	/*const*/ struct {
+typedef struct {
 	  void *ptr;
 	  char *name;
-	} *psymodellist;
-	// selected index in psymodellist
-	unsigned int psymodelidx;
+} psymodellist_t;
 
-	/* 
-		PCM Sample Input Format
-		0	FAAC_INPUT_NULL			invalid, signifies a misconfigured config
-		1	FAAC_INPUT_16BIT		native endian 16bit
-		2	FAAC_INPUT_24BIT		native endian 24bit in 24 bits		(not implemented)
-		3	FAAC_INPUT_32BIT		native endian 24bit in 32 bits		(DEFAULT)
-		4	FAAC_INPUT_FLOAT		32bit floating point
-	*/
-	unsigned int inputFormat;
+#include "faaccfg.h"
 
-} faacEncConfiguration, *faacEncConfigurationPtr;
 
 typedef void *faacEncHandle;
 
@@ -143,12 +69,10 @@ int FAACAPI faacEncEncode(faacEncHandle hEncoder,
 int FAACAPI faacEncClose(faacEncHandle hEncoder);
 
 
-#ifdef WIN32
-  #pragma pack(pop)
-#endif
+#pragma pack(pop)
 
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
 
-#endif /* FAACLIB_H */
+#endif /* _FAAC_H_ */
