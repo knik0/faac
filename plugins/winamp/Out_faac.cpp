@@ -652,24 +652,21 @@ void Config(HWND hWnd)
 void About(HWND hwnd)
 {
 char buf[256];
-#ifndef FAACENC_VERSION
+  unsigned long samplesInput, maxBytesOutput;
+  faacEncHandle hEncoder =
+    faacEncOpen(44100, 2, &samplesInput, &maxBytesOutput);
+  faacEncConfigurationPtr myFormat =
+    faacEncGetCurrentConfiguration(hEncoder);
+
 	sprintf(buf,
 			APP_NAME " %s by Antonio Foranna\n\n"
-			"This plugin uses FAAC encoder engine\n\n"
+			"This plugin uses FAAC encoder engine v%s\n\n"
 			"Compiled on %s\n",
 			 APP_VER,
+			 myFormat->name,
 			 __DATE__
 			 );
-#elif
-	sprintf(buf,
-			APP_NAME " %s by Antonio Foranna\n\n"
-			"This plugin uses FAAC encoder engine v%g\n\n"
-			"Compiled on %s\n",
-			 APP_VER,
-			 FAACENC_VERSION,
-			 __DATE__
-			 );
-#endif
+	faacEncClose(hEncoder);
 	MessageBox(hwnd, buf, "About", MB_OK);
 }
 // *********************************************************************************************
