@@ -16,11 +16,16 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: main.c,v 1.30 2002/12/15 15:16:55 menno Exp $
+ * $Id: main.c,v 1.31 2002/12/23 19:02:43 knik Exp $
  */
 
-#ifdef _WIN32
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
+#ifdef WIN32
 #include <windows.h>
+#include <fcntl.h>
 #endif
 
 #ifdef __unix__
@@ -510,6 +515,9 @@ int main(int argc, char *argv[])
 
 /*
 $Log: main.c,v $
+Revision 1.31  2002/12/23 19:02:43  knik
+added some headers
+
 Revision 1.30  2002/12/15 15:16:55  menno
 Some portability changes
 
