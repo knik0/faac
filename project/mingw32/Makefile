@@ -4,14 +4,14 @@
 # Edit this path to let it point to the location of the source on your HDD
 SRCDIR=e:\faac
 
-# Edit this path to let it point to the location of your MinGW (or DJGPP) installation
-LCCDIR=c:\MinGW
+# Edit this path to let it point to the location of your MinGW (or Dev-C++) installation
+CCDIR=c:\MinGW
 
 # No editing needed after this point
 
-CFLAGS=-I$(LCCDIR)\include -I$(SRCDIR)\include -I$(SRCDIR)\common\getopt -I$(SRCDIR)\common\libsndfile\win32 -I$(SRCDIR)\common\libsndfile\src  -O 
-CC=$(LCCDIR)\bin\gcc.exe
-LINKER=$(LCCDIR)\bin\gcc.exe
+CFLAGS=-mconsole -O3 -DWIN32 -I$(CCDIR)\include -I$(SRCDIR)\include -I$(SRCDIR)\common\getopt -I$(SRCDIR)\common\libsndfile\win32 -I$(SRCDIR)\common\libsndfile\src 
+CC=$(CCDIR)\bin\gcc.exe
+LINKER=$(CCDIR)\bin\gcc.exe
 OBJS=\
 	getopt.o \
 	aiff.o \
@@ -68,7 +68,7 @@ OBJS=\
 LIBS=
 
 faac.exe:	$(OBJS) Makefile
-	$(LINKER)  -o $(SRCDIR)\lcc\faac.exe $(OBJS) $(LIBS)
+	$(LINKER) -s -o $(SRCDIR)\project\faac.exe $(OBJS) $(LIBS)
 
 # Build GETOPT.C
 GETOPT_C=\
@@ -727,5 +727,5 @@ util.o: $(UTIL_C) $(SRCDIR)\libfaac\util.c
 	$(CC) -c $(CFLAGS) $(SRCDIR)\libfaac\util.c
 
 link:
-	$(LINKER)  $(SRCDIR)\lcc\faac.exe $(OBJS) $(LIBS)
+	$(LINKER) -s -o $(SRCDIR)\project\faac.exe $(OBJS) $(LIBS)
 
