@@ -16,7 +16,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: frame.c,v 1.22 2001/06/08 18:01:09 menno Exp $
+ * $Id: frame.c,v 1.23 2001/07/08 09:43:51 menno Exp $
  */
 
 /*
@@ -61,6 +61,7 @@ int FAACAPI faacEncSetConfiguration(faacEncHandle hEncoder,
     hEncoder->config.useTns = config->useTns;
     hEncoder->config.aacObjectType = config->aacObjectType;
     hEncoder->config.mpegVersion = config->mpegVersion;
+    hEncoder->config.bandWidth = config->bandWidth;
 
     /* No SSR supported for now */
     if (hEncoder->config.aacObjectType == SSR)
