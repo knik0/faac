@@ -9,13 +9,14 @@
 #include "block.h"
 #include "tf_main.h"
 #include "psych.h"
-#include "aac_back_pred.h"
 #include "mc_enc.h"
 #include "ms.h"
 #include "is.h"
 #include "aac_qc.h"
 #include "all.h"
 #include "aac_se_enc.h"
+#include "nok_ltp_enc.h"
+
 #define SQRT2 sqrt(2)
 
 /* AAC tables */
@@ -38,6 +39,7 @@ double *reconstructed_spectrum[MAX_TIME_CHANNELS];
 double *overlap_buffer[MAX_TIME_CHANNELS];
 double *DTimeSigBuf[MAX_TIME_CHANNELS];
 double *DTimeSigLookAheadBuf[MAX_TIME_CHANNELS+2];
+double *nok_tmp_DTimeSigBuf[MAX_TIME_CHANNELS]; /* temporary fix to the buffer size problem. */
 
 /* static variables used by the T/F mapping */
 enum QC_MOD_SELECT qc_select = AAC_QC;                   /* later f(encPara) */
@@ -49,6 +51,7 @@ enum WINDOW_TYPE next_desired_block_type[MAX_TIME_CHANNELS+2];
 /* Additional variables for AAC */
 int aacAllowScalefacs = 1;              /* Allow AAC scalefactors to be nonconstant */
 TNS_INFO tnsInfo[MAX_TIME_CHANNELS];
+NOK_LT_PRED_STATUS nok_lt_status[MAX_TIME_CHANNELS];
 
 AACQuantInfo quantInfo[MAX_TIME_CHANNELS];               /* Info structure for AAC quantization and coding */
 
@@ -148,13 +151,14 @@ void EncTfInit (faacAACConfig *ac, int VBR_setting)
 		overlap_buffer[chanNum] = (double*)malloc(sizeof(double)*block_size_samples);
 		memset(overlap_buffer[chanNum],0,(block_size_samples)*sizeof(double));
 		block_type[chanNum] = ONLY_LONG_WINDOW;
+		nok_lt_status[chanNum].delay =  (int*)malloc(MAX_SHORT_WINDOWS*sizeof(int));
+		nok_tmp_DTimeSigBuf[chanNum]  = (double*)malloc(2*block_size_samples*sizeof(double));
+		memset(nok_tmp_DTimeSigBuf[chanNum],0,(2*block_size_samples)*sizeof(double));
 	}
 	for (chanNum=0;chanNum<MAX_TIME_CHANNELS+2;chanNum++) {
 		DTimeSigLookAheadBuf[chanNum]   = (double*)malloc((block_size_samples)*sizeof(double));
 		memset(DTimeSigLookAheadBuf[chanNum],0,(block_size_samples)*sizeof(double));
 	}
-
-	PredInit();
 
 	/* initialize psychoacoustic module */
 	EncTf_psycho_acoustic_init();
@@ -167,6 +171,12 @@ void EncTfInit (faacAACConfig *ac, int VBR_setting)
 	for (chanNum=0;chanNum<MAX_TIME_CHANNELS;chanNum++) {
 		TnsInit(sampling_rate,profile,&tnsInfo[chanNum]);
 		quantInfo[chanNum].tnsInfo = &tnsInfo[chanNum];         /* Set pointer to TNS data */
+	}
+
+	/* Init LTP predictor */
+	for (chanNum=0;chanNum<MAX_TIME_CHANNELS;chanNum++) {
+		nok_init_lt_pred (&nok_lt_status[chanNum]);
+		quantInfo[chanNum].ltpInfo = &nok_lt_status[chanNum];  /* Set pointer to LTP data */
 	}
 }
 
@@ -222,17 +232,17 @@ int EncTfFrame (faacAACStream *as, BsBitStream  *fixed_stream)
 	CH_PSYCH_OUTPUT_LONG chpo_long[MAX_TIME_CHANNELS+2];
 	CH_PSYCH_OUTPUT_SHORT chpo_short[MAX_TIME_CHANNELS+2][MAX_SHORT_WINDOWS];
 
-//	memset(chpo_long,0,sizeof(CH_PSYCH_OUTPUT_LONG)*(MAX_TIME_CHANNELS+2));
-//	memset(chpo_short,0,sizeof(CH_PSYCH_OUTPUT_SHORT)*(MAX_TIME_CHANNELS+2)*MAX_SHORT_WINDOWS);
-//	memset(p_ratio_long,0,sizeof(double)*(MAX_TIME_CHANNELS)*MAX_SCFAC_BANDS);
-//	memset(p_ratio_short,0,sizeof(double)*(MAX_TIME_CHANNELS)*MAX_SCFAC_BANDS);
-
-	{ /* convert float input to double, which is the internal format */
+	{
 		/* store input data in look ahead buffer which may be necessary for the window switching decision */
 		int i;
 		int chanNum;
 		
 		for (chanNum=0;chanNum<max_ch;chanNum++) {
+			for( i=0; i<block_size_samples; i++ ) {
+				/* temporary fix: a linear buffer for LTP containing the whole time frame */
+				nok_tmp_DTimeSigBuf[chanNum][i] = DTimeSigBuf[chanNum][i];
+				nok_tmp_DTimeSigBuf[chanNum][block_size_samples + i] = DTimeSigLookAheadBuf[chanNum][i];
+			}
 			for( i=0; i<block_size_samples; i++ ) {
 				/* last frame input data are encoded now */
 				DTimeSigBuf[chanNum][i] = DTimeSigLookAheadBuf[chanNum][i];
@@ -329,8 +339,7 @@ int EncTfFrame (faacAACStream *as, BsBitStream  *fixed_stream)
 //	block_type[1] = ONLY_LONG_WINDOW;
 //	block_type[0] = ONLY_SHORT_WINDOW;
 //	block_type[1] = ONLY_SHORT_WINDOW;
-//	if (as->use_MS)
-//		block_type[1] = block_type[0];
+	block_type[1] = block_type[0];
 
 	{
 		int chanNum;
@@ -364,7 +373,7 @@ int EncTfFrame (faacAACStream *as, BsBitStream  *fixed_stream)
 				quantInfo[chanNum].window_group_length[7] = 0;
 #endif
 				break;
-				
+
 			default:
 				no_sub_win   = 1;
 				sub_win_size = block_size_samples;
@@ -446,24 +455,8 @@ int EncTfFrame (faacAACStream *as, BsBitStream  *fixed_stream)
 		}
 	}
 
-//	if (as->use_MS) {
-		MSPreprocess(p_ratio_long, p_ratio_short, chpo_long, chpo_short,
-			channelInfo, block_type, quantInfo, as->use_MS, max_ch);
-//	} else {
-//		int chanNum;
-//		for (chanNum=0;chanNum<max_ch;chanNum++) {
-//
-//			/* Save p_ratio from psychoacoustic model for next frame.  */
-//			/* Psycho model is using a look-ahead window for block switching */
-//			if (as->use_MS) {
-//				memcpy( (char*)p_ratio_long[chanNum], (char*)chpo_long[chanNum+2].p_ratio, (NSFB_LONG)*sizeof(double) );
-//				memcpy( (char*)p_ratio_short[chanNum],(char*)chpo_short[chanNum+2][0].p_ratio,(MAX_SHORT_WINDOWS*NSFB_SHORT)*sizeof(double) );
-//			} else {
-//				memcpy( (char*)p_ratio_long[chanNum], (char*)chpo_long[chanNum].p_ratio, (NSFB_LONG)*sizeof(double) );
-//				memcpy( (char*)p_ratio_short[chanNum],(char*)chpo_short[chanNum][0].p_ratio,(MAX_SHORT_WINDOWS*NSFB_SHORT)*sizeof(double) );
-//			}
-//		}
-//	}
+	MSPreprocess(p_ratio_long, p_ratio_short, chpo_long, chpo_short,
+		channelInfo, block_type, quantInfo, as->use_MS, max_ch);
 
 	MSEnergy(spectral_line_vector, energy, chpo_long, chpo_short, sfb_width_table,
 		channelInfo, block_type, quantInfo, as->use_MS, max_ch);
@@ -532,27 +525,72 @@ int EncTfFrame (faacAACStream *as, BsBitStream  *fixed_stream)
 				max_ch);
 		}
 
-		/***********************************************************************/
-		/* If prediction is used, compute predictor info and residual spectrum */
-		/***********************************************************************/
-		for (chanNum=0;chanNum<max_ch;chanNum++) {
-//			if (qc_select == AAC_PRED) {
-			if (0) {
-				int numPredBands;
-				max_pred_sfb = 40;
-				numPredBands = min(max_pred_sfb,nr_of_sfb[chanNum]);
-				PredCalcPrediction( spectral_line_vector[chanNum],
-					reconstructed_spectrum[chanNum],
-					(int)block_type[chanNum],
-					numPredBands,
-					sfb_width_table[chanNum],
-					&(quantInfo[chanNum].pred_global_flag),
-					quantInfo[chanNum].pred_sfb_flag,
-					&(quantInfo[chanNum].reset_group_number),
-					chanNum);
-			} else {
-				quantInfo[chanNum].pred_global_flag = 0;
-			}
+		/*******************************************************************************/
+		/* If LTP prediction is used, compute LTP predictor info and residual spectrum */
+		/*******************************************************************************/
+		for(chanNum=0;chanNum<max_ch;chanNum++) 
+		{
+			if(block_type[chanNum] != ONLY_SHORT_WINDOW) 
+			{
+				if(channelInfo[chanNum].cpe)
+				{
+					if(channelInfo[chanNum].ch_is_left) 
+					{
+						int i;
+						int leftChan=chanNum;
+						int rightChan=channelInfo[chanNum].paired_ch;
+                        
+						nok_ltp_enc(spectral_line_vector[leftChan], 
+							nok_tmp_DTimeSigBuf[leftChan], 
+							block_type[leftChan], 
+							WS_FHG,
+							block_size_samples,
+							block_size_samples/2,
+							block_size_samples/short_win_in_long, 
+							&sfb_offset_table[leftChan][0], 
+							nr_of_sfb[leftChan],
+							&nok_lt_status[leftChan]);
+
+						nok_lt_status[rightChan].global_pred_flag = 
+							nok_lt_status[leftChan].global_pred_flag;
+						for(i = 0; i < NOK_MAX_BLOCK_LEN_LONG; i++)
+							nok_lt_status[rightChan].pred_mdct[i] = 
+							nok_lt_status[leftChan].pred_mdct[i];
+						for(i = 0; i < MAX_SCFAC_BANDS; i++)
+							nok_lt_status[rightChan].sfb_prediction_used[i] = 
+							nok_lt_status[leftChan].sfb_prediction_used[i];
+						nok_lt_status[rightChan].weight = nok_lt_status[leftChan].weight;
+						nok_lt_status[rightChan].delay[0] = nok_lt_status[leftChan].delay[0];
+
+						if(block_type[leftChan] != block_type[rightChan])
+							nok_ltp_enc(spectral_line_vector[rightChan],
+							nok_tmp_DTimeSigBuf[rightChan], 
+							block_type[rightChan], 
+							WS_FHG,
+							block_size_samples,
+							block_size_samples/2,
+							block_size_samples/short_win_in_long, 
+							&sfb_offset_table[rightChan][0], 
+							nr_of_sfb[rightChan],
+							&nok_lt_status[rightChan]);
+
+					} /* if(channelInfo[chanNum].ch_is_left) */
+				} /* if(channelInfo[chanNum].cpe) */
+				else
+					nok_ltp_enc(spectral_line_vector[chanNum], 
+					nok_tmp_DTimeSigBuf[chanNum], 
+					block_type[chanNum], 
+					WS_FHG,
+					block_size_samples,
+					block_size_samples/2,
+					block_size_samples/short_win_in_long, 
+					&sfb_offset_table[chanNum][0], 
+					nr_of_sfb[chanNum],
+					&nok_lt_status[chanNum]);
+
+			} /* if(channelInfo[chanNum].present... */
+			else
+				quantInfo[chanNum].ltpInfo->global_pred_flag = 0;
 		} /* for(chanNum... */
 
 		/******************************************/
@@ -607,13 +645,49 @@ int EncTfFrame (faacAACStream *as, BsBitStream  *fixed_stream)
 				return error;
 		}
 
-		/* If short window, reconstruction not needed for prediction */
+		/**********************************************************/
+		/* Reconstruct MS Stereo bands for prediction            */
+		/**********************************************************/
+		if (as->use_MS != -1) {
+			MSReconstruct(reconstructed_spectrum,
+				channelInfo,
+				sfb_offset_table,
+				block_type,
+				quantInfo,
+				max_ch);
+		}
+
+		/**********************************************************/
+		/* Reconstruct Intensity Stereo bands for prediction     */
+		/**********************************************************/
+		if (as->use_IS) {
+			ISReconstruct(reconstructed_spectrum,
+				channelInfo,
+				sfb_offset_table,
+				block_type,
+				quantInfo,
+				max_ch);
+		}
+
+		/**********************************************************/
+		/* Update LTP history buffer                              */
+		/**********************************************************/
 		for (chanNum=0;chanNum<max_ch;chanNum++) {
-			if ((block_type[chanNum]==ONLY_SHORT_WINDOW)) {
-				int sind;
-				for (sind=0;sind<1024;sind++) {
-					reconstructed_spectrum[chanNum][sind]=0.0;
-				}
+			nok_ltp_reconstruct(reconstructed_spectrum[chanNum], 
+				block_type[chanNum], 
+				WS_FHG, block_size_samples,
+				block_size_samples/2,
+				block_size_samples/short_win_in_long, 
+				&sfb_offset_table[chanNum][0], 
+				nr_of_sfb[chanNum],
+				&nok_lt_status[chanNum]);
+		}
+
+		/* If short window, reconstruction not needed for prediction */
+		if ((block_type[chanNum]==ONLY_SHORT_WINDOW)) {
+			int sind;
+			for (sind=0;sind<1024;sind++) {
+				reconstructed_spectrum[chanNum][sind]=0.0;
 			}
 		}
 

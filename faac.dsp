@@ -51,7 +51,7 @@ BSC32=bscmake.exe
 LINK32=link.exe
 # ADD BASE LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /nologo /subsystem:console /machine:I386
 # ADD LINK32 libsndfile.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /nologo /subsystem:console /machine:I386
-# SUBTRACT LINK32 /profile
+# SUBTRACT LINK32 /profile /nodefaultlib
 
 !ELSEIF  "$(CFG)" == "faac - Win32 Debug"
 
@@ -86,10 +86,6 @@ LINK32=link.exe
 # Begin Group "Source Files"
 
 # PROP Default_Filter "cpp;c;cxx;rc;def;r;odl;idl;hpj;bat"
-# Begin Source File
-
-SOURCE=.\aac_back_pred.c
-# End Source File
 # Begin Source File
 
 SOURCE=.\aac_qc.c
@@ -129,6 +125,14 @@ SOURCE=.\mc_enc.c
 # Begin Source File
 
 SOURCE=.\ms.c
+# End Source File
+# Begin Source File
+
+SOURCE=.\nok_ltp_enc.c
+# End Source File
+# Begin Source File
+
+SOURCE=.\nok_pitch.c
 # End Source File
 # Begin Source File
 

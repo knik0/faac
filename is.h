@@ -15,7 +15,7 @@
 #include "all.h"
 #include "tf_main.h"
 #include "aac_qc.h"
-#include "math.h"
+#include <math.h>
 
 #define IS_MIN_BAND_L 28
 #define IS_MIN_BAND_S 7

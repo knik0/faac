@@ -2,6 +2,7 @@
 #define TRANSFORM_H 
 
 void MDCT(double* data, int N);
+void IMDCT(double* data, int N);
 void FFT(double *data, int nn, int isign);
 
 #define c_re(c)  ((c).re)

@@ -92,10 +92,6 @@ LINK32=link.exe
 # PROP Default_Filter "cpp;c;cxx;rc;def;r;odl;idl;hpj;bat"
 # Begin Source File
 
-SOURCE=.\aac_back_pred.c
-# End Source File
-# Begin Source File
-
 SOURCE=.\aac_qc.c
 # End Source File
 # Begin Source File
@@ -133,6 +129,14 @@ SOURCE=.\mc_enc.c
 # Begin Source File
 
 SOURCE=.\ms.c
+# End Source File
+# Begin Source File
+
+SOURCE=.\nok_ltp_enc.c
+# End Source File
+# Begin Source File
+
+SOURCE=.\nok_pitch.c
 # End Source File
 # Begin Source File
 

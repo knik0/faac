@@ -7,6 +7,7 @@
 #include "tf_main.h"
 #include "tns.h"
 #include "all.h"
+#include "nok_ltp_common.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -56,6 +57,7 @@ typedef struct {
   int reset_group_number;               /* Prediction reset group number */
   TNS_INFO* tnsInfo;                    /* Ptr to tns data */
   AACPulseInfo pulseInfo;
+  NOK_LT_PRED_STATUS *ltpInfo;          /* Prt to LTP data */
 } AACQuantInfo;
 
 

@@ -141,3 +141,62 @@ void ISEncode(double *spectrum[MAX_TIME_CHANNELS],   /* array of pointers to spe
 	}  /* for (chanNum... */
 } 
 
+
+void ISReconstruct(double *spectrum[MAX_TIME_CHANNELS],   /* array of pointers to spectral data */
+				   Ch_Info *channelInfo,                  /* Pointer to Ch_Info */
+				   int sfb_offset_table[][MAX_SCFAC_BANDS+1],
+				   enum WINDOW_TYPE block_type[MAX_TIME_CHANNELS], /* Block type */
+				   AACQuantInfo* quantInfo,
+				   int numberOfChannels)                 /* Number of channels */
+{
+	int chanNum;
+	int sfbNum;
+	int lineNum,line_offset;
+	int startWindow,stopWindow,w;
+
+	/* Look for channel_pair_elements */
+	for (chanNum=0;chanNum<numberOfChannels;chanNum++) {
+		if (channelInfo[chanNum].present) {
+			if ((channelInfo[chanNum].cpe)&&(channelInfo[chanNum].ch_is_left)) {
+				int leftChan=chanNum;
+				int rightChan=channelInfo[chanNum].paired_ch;
+
+				/* If intensity stereo is present in right channel, reconstruct spectrum */
+				IS_Info *isInfo;
+				isInfo = &(channelInfo[rightChan].is_info);
+				if (isInfo->is_present) {
+					int numGroups = quantInfo[rightChan].num_window_groups;
+					int maxSfb = quantInfo[rightChan].max_sfb;
+					int g,b;
+
+					/* Currently, enable Intensity Stereo above band IS_MIN_BAND */
+					startWindow=0;
+					for (g=0;g<numGroups;g++) {
+
+						/* Enable IS bands */
+						int numWindows = quantInfo[leftChan].window_group_length[g];
+						stopWindow = startWindow + numWindows;
+						for (sfbNum=0;sfbNum<maxSfb;sfbNum++) {
+							b = g*maxSfb+sfbNum;
+							if (isInfo->is_used[b]) {
+								double scale = pow( 0.5, 0.25 * ((double)isInfo->fac[b])); 
+								scale = scale * (-2.0 * isInfo->sign[b] + 1.0);
+								for (w=startWindow;w<stopWindow;w++) {
+									line_offset = w*BLOCK_LEN_SHORT;
+									for (lineNum=sfb_offset_table[rightChan][sfbNum];
+									lineNum<sfb_offset_table[rightChan][sfbNum+1];
+									lineNum++) {
+										spectrum[rightChan][line_offset+lineNum] = 
+											spectrum[leftChan][line_offset+lineNum] * scale;
+									}
+								}
+							}  /* if (isInfo... */
+						}  /* for (sfbNum... */
+						startWindow = stopWindow;
+					}
+				}  /* if (block_type... */
+			}  /* if ((channelInfo... */
+		}  /* if (channelInfo... */
+	}  /* for (chanNum... */
+} 
+

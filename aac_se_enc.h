@@ -46,6 +46,7 @@ must be included in all copies or derivative works. Copyright 1996.
 #include "bitstream.h"
 #include "all.h"
 #include "aac_qc.h"
+#include "nok_ltp_enc.h"
 
 extern int max_pred_sfb;
 
@@ -98,6 +99,12 @@ int WriteICSInfo(AACQuantInfo* quantInfo,  /* Pointer to AACQuantInfo structure 
 		 BsBitStream* fixedStream, /* Pointer to bitstream */
 		 int writeFlag);           /* 1 means write, 0 means count only */
 
+/*****************************************************************************/
+/* WriteLTP_PredictorData(...), write LTP predictor data.                    */
+/*****************************************************************************/
+int WriteLTP_PredictorData(AACQuantInfo* quantInfo,  /* Pointer to AACQuantInfo structure */
+                           BsBitStream* fixedStream, /* Pointer to bitstream */
+                           int writeFlag);           /* 1 means write, 0 means count only */
 
 /*****************************************************************************/
 /* WritePredictorData(...), write predictor data.                            */

@@ -64,14 +64,10 @@ typedef struct {
 /* added by T. Araki (1997.07.10) */
 typedef struct {
   double hw[BLOCK_LEN_LONG*2];     /* Hann window table */
-  double st[BLOCK_LEN_LONG*5/2];   /* sin table*/
-  int    brt[BLOCK_LEN_LONG*2];    /* bit inverse table */
 } FFT_TABLE_LONG;
 
 typedef struct {
   double hw[BLOCK_LEN_SHORT*2];     /* Hann window table */
-  double st[BLOCK_LEN_SHORT*5/2];   /* sin table*/
-  int    brt[BLOCK_LEN_SHORT*2];    /* bit inverse table */
 } FFT_TABLE_SHORT;
  
 typedef struct {

@@ -281,54 +281,25 @@ int WriteICSInfo(AACQuantInfo* quantInfo,    /* AACQuantInfo structure */
       BsPutBit(fixed_stream,max_sfb,LEN_MAX_SFBL);
     }
     bit_count += LEN_MAX_SFBL;
-    bit_count += WritePredictorData(quantInfo,fixed_stream,writeFlag);
+    bit_count += WriteLTP_PredictorData(quantInfo,fixed_stream,writeFlag);
   }
 
   return bit_count;
 }
 
-
 /*****************************************************************************/
-/* WritePredictorData(...), write predictor data.                            */
+/* WriteLTP_PredictorData(...), write LTP predictor data.                    */
 /*****************************************************************************/
-int WritePredictorData(AACQuantInfo* quantInfo,    /* AACQuantInfo structure */
-		       BsBitStream* fixed_stream,  /* Pointer to bitstream */
-		       int writeFlag)              /* 1 means write, 0 means count only */  
+int WriteLTP_PredictorData(AACQuantInfo* quantInfo,    /* AACQuantInfo structure */
+                           BsBitStream* fixed_stream,  /* Pointer to bitstream */
+                           int writeFlag)              /* 1 means write, 0 means count only */  
 {
 	int bit_count = 0;
 
-	/* Write global predictor data present */
-	short predictorDataPresent = quantInfo->pred_global_flag;
-	int numBands = min(max_pred_sfb,quantInfo->nr_of_sfb);
+	bit_count += nok_ltp_encode (fixed_stream, quantInfo->block_type, quantInfo->nr_of_sfb, 
+		quantInfo->ltpInfo, writeFlag);
 
-	if (writeFlag) {
-		BsPutBit(fixed_stream,predictorDataPresent,LEN_PRED_PRES);  /* predictor_data_present */
-		if (predictorDataPresent) {
-			int b;
-
-			/* Code segment added by JB */
-			if (quantInfo->reset_group_number == -1)
-				BsPutBit(fixed_stream,0,LEN_PRED_RST); /* No prediction reset */
-			else
-			{
-				BsPutBit(fixed_stream,1,LEN_PRED_RST);
-				BsPutBit(fixed_stream,(unsigned long)quantInfo->reset_group_number,
-					LEN_PRED_RSTGRP);
-			}
-			/* End of code segment */
-
-			for (b=0;b<numBands;b++) {
-				BsPutBit(fixed_stream,quantInfo->pred_sfb_flag[b],LEN_PRED_ENAB);
-			}
-		}
-	}
-	bit_count = LEN_PRED_PRES;
-	bit_count += (predictorDataPresent) ?
-		(LEN_PRED_RST + 
-		((quantInfo->reset_group_number)!=-1)*LEN_PRED_RSTGRP + 
-		numBands*LEN_PRED_ENAB) : 0;
-
-	return bit_count;
+	return (bit_count);
 }
 
 /*****************************************************************************/
