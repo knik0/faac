@@ -8,8 +8,8 @@ AM_PROG_LIBTOOL
 
 AC_CHECK_HEADERS(getopt.h)
 
-AC_CHECK_TYPE(u_int32_t, unsigned int)
-AC_CHECK_TYPE(u_int16_t, unsigned short)
+AC_CHECK_TYPES(u_int32_t)
+AC_CHECK_TYPES(u_int16_t)
 
 AC_C_BIGENDIAN
 
