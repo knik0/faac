@@ -547,16 +547,14 @@ int main(int argc, char *argv[])
 			continue;
 		}
 
+		bitBuffer = malloc((bitBufSize+100)*sizeof(char));
+
 		if (headerSize > 0) {
-			bitBuffer = malloc(headerSize*sizeof(char));
 			memset(bitBuffer, 0, headerSize*sizeof(char));
 			// Skip headerSize bytes
 			// They should be written after calling faacEncodeFree
 			fwrite(bitBuffer, 1, headerSize, aacfile);
-			if (bitBuffer) { free(bitBuffer); bitBuffer = NULL; }
 		}
-
-		bitBuffer = malloc(bitBufSize*sizeof(char));
 
 		cfr = 0;
 
@@ -592,8 +590,6 @@ int main(int argc, char *argv[])
 
 		sf_close(sndfile);
 
-		fclose(aacfile);
-
 		error = faacEncodeFree(as, bitBuffer);
 		if (error == FERROR) {
 			printf("Error while encoding %s.\n", FileNames[i]);
@@ -602,11 +598,11 @@ int main(int argc, char *argv[])
 
 		// Write the header to the beginning of the file now
 		if (headerSize > 0) {
-			aacfile = fopen(aac_fn, "rb+");
+			fseek(aacfile, 0, SEEK_SET);
 			fwrite(bitBuffer, 1, headerSize, aacfile);
-			fclose(aacfile);
 		}
 
+		fclose(aacfile);
 		if (bitBuffer) { free(bitBuffer); bitBuffer = NULL; }
 
 #ifdef WIN32
