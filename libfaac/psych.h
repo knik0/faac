@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: psych.h,v 1.9 2001/09/09 16:03:16 menno Exp $
+ * $Id: psych.h,v 1.10 2002/08/07 18:13:09 knik Exp $
  */
 
 #ifndef PSYCH_H
@@ -41,39 +41,6 @@ typedef struct {
 	double *prevSamples;
 	double *prevSamplesS;
 
-	/* FFT data */
-
-	/* Magnitude */
-	double *fftMagPlus2;
-	double *fftMagPlus1;
-	double *fftMag;
-	double *fftMagMin1;
-	double *fftMagMin2;
-
-	double *fftMagPlus2S[8];
-	double *fftMagPlus1S[8];
-	double *fftMagS[8];
-	double *fftMagMin1S[8];
-
-	/* Phase */
-	double *fftPhPlus2;
-	double *fftPhPlus1;
-	double *fftPh;
-	double *fftPhMin1;
-	double *fftPhMin2;
-
-	double *fftPhPlus2S[8];
-	double *fftPhPlus1S[8];
-	double *fftPhS[8];
-	double *fftPhMin1S[8];
-
-	/* Unpredictability */
-	double *cw;
-	double *cwS[8];
-
-	double lastPe;
-	double lastEnr;
-	int threeInARow;
 	int block_type;
 
 	/* Final threshold values */
@@ -81,22 +48,13 @@ typedef struct {
 	double *maskEn;
 	double *maskThrS[8];
 	double *maskEnS[8];
-	double *maskThrNext;
-	double *maskEnNext;
-	double *maskThrNextS[8];
-	double *maskEnNextS[8];
-
-	double *lastNb;
-	double *lastNbMS;
 
 	double *maskThrMS;
 	double *maskEnMS;
 	double *maskThrSMS[8];
 	double *maskEnSMS[8];
-	double *maskThrNextMS;
-	double *maskEnNextMS;
-	double *maskThrNextSMS[8];
-	double *maskEnNextSMS[8];
+
+        void *data;
 } PsyInfo;
 
 typedef struct {
@@ -106,40 +64,28 @@ typedef struct {
 	double *hannWindow;
 	double *hannWindowS;
 
-	/* Stereo demasking thresholds */
-	double *mld;
-	double *mldS;
-
-	/* Spreading functions */
-	double spreading[MAX_SCFAC_BANDS][MAX_SCFAC_BANDS];
-	double spreadingS[MAX_SCFAC_BANDS][MAX_SCFAC_BANDS];
-	double *rnorm;
-	double *rnormS;
-
-	/* Absolute threshold of hearing */
-	double *ath;
-	double *athS;
+        void *data;
 } GlobalPsyInfo;
 
-void PsyInit(GlobalPsyInfo *gpsyInfo, PsyInfo *psyInfo, unsigned int numChannels,
-			 unsigned int sampleRate, int *cb_width_long, int num_cb_long,
+typedef struct {
+  void (*PsyInit) (GlobalPsyInfo *gpsyInfo, PsyInfo *psyInfo,
+		   unsigned int numChannels, unsigned int sampleRate,
+		   int *cb_width_long, int num_cb_long,
 			 int *cb_width_short, int num_cb_short);
-void PsyEnd(GlobalPsyInfo *gpsyInfo, PsyInfo *psyInfo, unsigned int numChannels);
-void PsyCalculate(ChannelInfo *channelInfo, GlobalPsyInfo *gpsyInfo, PsyInfo *psyInfo,
-				  int *cb_width_long, int num_cb_long, int *cb_width_short,
-				  int num_cb_short, unsigned int numChannels);
-void PsyBufferUpdate(GlobalPsyInfo *gpsyInfo, PsyInfo *psyInfo, double *newSamples);
-void BlockSwitch(CoderInfo *coderInfo, PsyInfo *psyInfo, unsigned int numChannels);
+  void (*PsyEnd) (GlobalPsyInfo *gpsyInfo, PsyInfo *psyInfo,
+		  unsigned int numChannels);
+  void (*PsyCalculate) (ChannelInfo *channelInfo, GlobalPsyInfo *gpsyInfo,
+			PsyInfo *psyInfo, int *cb_width_long, int num_cb_long,
+			int *cb_width_short, int num_cb_short,
+			unsigned int numChannels);
+  void (*PsyBufferUpdate) (GlobalPsyInfo *gpsyInfo, PsyInfo *psyInfo,
+			   double *newSamples, unsigned int bandwidth);
+  void (*BlockSwitch) (CoderInfo *coderInfo, PsyInfo *psyInfo,
+		       unsigned int numChannels);
+} psymodel_t;
 
-static void Hann(GlobalPsyInfo *gpsyInfo, double *inSamples, int N);
-static void PsyUnpredictability(PsyInfo *psyInfo);
-static void PsyThreshold(GlobalPsyInfo *gpsyInfo, PsyInfo *psyInfo, int *cb_width_long,
-						 int num_cb_long, int *cb_width_short, int num_cb_short);
-static void PsyThresholdMS(ChannelInfo *channelInfoL, GlobalPsyInfo *gpsyInfo,
-						   PsyInfo *psyInfoL, PsyInfo *psyInfoR, int *cb_width_long,
-						   int num_cb_long, int *cb_width_short, int num_cb_short);
-static double freq2bark(double freq);
-static double ATHformula(double f);
+extern psymodel_t psymodel1;
+extern psymodel_t psymodel2;
 
 #ifdef __cplusplus
 }
