@@ -16,7 +16,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: frame.c,v 1.31 2002/10/11 18:00:15 menno Exp $
+ * $Id: frame.c,v 1.32 2003/03/27 17:08:23 knik Exp $
  */
 
 /*
@@ -31,6 +31,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
+#include <math.h>
 
 #include "frame.h"
 #include "coder.h"
@@ -45,6 +46,8 @@
 #include "tns.h"
 #include "ltp.h"
 #include "backpred.h"
+
+static char *libfaacName = "1.15 beta (" __DATE__ ")";
 
 static const psymodellist_t psymodellist[] = {
   {&psymodel2, "knipsycho psychoacoustic"},
@@ -109,7 +112,6 @@ int FAACAPI faacEncSetConfiguration(faacEncHandle hEncoder,
     hEncoder->config.useTns = config->useTns;
     hEncoder->config.aacObjectType = config->aacObjectType;
     hEncoder->config.mpegVersion = config->mpegVersion;
-    hEncoder->config.bandWidth = config->bandWidth;
 	hEncoder->config.outputFormat = config->outputFormat;
 
 	assert((hEncoder->config.outputFormat == 0) || (hEncoder->config.outputFormat == 1));
@@ -133,6 +135,28 @@ int FAACAPI faacEncSetConfiguration(faacEncHandle hEncoder,
 
     /* Bitrate check passed */
     hEncoder->config.bitRate = config->bitRate;
+
+    if (config->quantqual > 500)
+      config->quantqual = 500;
+    if (config->quantqual < 10)
+      config->quantqual = 10;
+    hEncoder->config.quantqual = config->quantqual;
+
+    if (config->bandWidth)
+      hEncoder->config.bandWidth = config->bandWidth;
+    else // set according to quality
+    {
+      static const int bwdefault = 16000;
+
+      if (config->quantqual)
+	hEncoder->config.bandWidth =
+	  pow((double)config->quantqual / 100.0, 1.3) * bwdefault;
+      else if (config->bitRate)
+	hEncoder->config.bandWidth =
+	  pow((double)config->bitRate / 64000, 1.3) * bwdefault;
+      else
+        hEncoder->config.bandWidth = bwdefault;
+    }
 
     // check bandwidth
     if (hEncoder->config.bandWidth < 100)
@@ -178,6 +202,8 @@ faacEncHandle FAACAPI faacEncOpen(unsigned long sampleRate,
     hEncoder->flushFrame = 0;
 
     /* Default configuration */
+    hEncoder->config.version = FAAC_CFG_VERSION;
+    hEncoder->config.name = libfaacName;
     hEncoder->config.mpegVersion = MPEG4;
     hEncoder->config.aacObjectType = LTP;
     hEncoder->config.allowMidside = 1;
@@ -185,6 +211,7 @@ faacEncHandle FAACAPI faacEncOpen(unsigned long sampleRate,
     hEncoder->config.useTns = 0;
     hEncoder->config.bitRate = 64000; /* default bitrate / channel */
     hEncoder->config.bandWidth = hEncoder->config.bitRate / 4;
+    hEncoder->config.quantqual = 100;
     hEncoder->config.psymodellist = psymodellist;
     hEncoder->config.psymodelidx = 0;
     hEncoder->psymodel =
@@ -294,6 +321,7 @@ int FAACAPI faacEncEncode(faacEncHandle hEncoder,
     unsigned int allowMidside = hEncoder->config.allowMidside;
     unsigned int bitRate = hEncoder->config.bitRate;
     unsigned int bandWidth = hEncoder->config.bandWidth;
+    unsigned int quantqual = hEncoder->config.quantqual;
 
     /* Increase frame number */
     hEncoder->frameNum++;
@@ -480,6 +508,9 @@ int FAACAPI faacEncEncode(faacEncHandle hEncoder,
     MSEncode(coderInfo, channelInfo, hEncoder->freqBuff, numChannels, allowMidside);
 
     /* Quantize and code the signal */
+    if (quantqual)
+      bitsToUse = quantqual;
+    else
     bitsToUse = (int)(bitRate*FRAME_LEN/sampleRate+0.5);
     for (channel = 0; channel < numChannels; channel++) {
         if (coderInfo[channel].block_type == ONLY_SHORT_WINDOW) {
@@ -657,6 +688,9 @@ static SR_INFO srInfo[12+1] =
 
 /*
 $Log: frame.c,v $
+Revision 1.32  2003/03/27 17:08:23  knik
+added quantizer quality and bandwidth setting
+
 Revision 1.31  2002/10/11 18:00:15  menno
 small bugfix
 
