@@ -152,6 +152,7 @@ void MSPreprocess(double p_ratio_long[][MAX_SCFAC_BANDS],
 						for (g=0;g<numGroups;g++) {
 							for (sfbNum=0;sfbNum<maxSfb;sfbNum++) {
 								b = g*maxSfb+sfbNum;
+								groupIndex = 0;
 
 								if (block_type[chan] == ONLY_SHORT_WINDOW) {
 
@@ -191,6 +192,7 @@ void MSPreprocess(double p_ratio_long[][MAX_SCFAC_BANDS],
 						for (g=0;g<numGroups;g++) {
 							for (sfbNum=0;sfbNum<maxSfb;sfbNum++) {
 								b = g*maxSfb+sfbNum;
+								groupIndex = 0;
 
 								if (block_type[chan] == ONLY_SHORT_WINDOW) {
 
