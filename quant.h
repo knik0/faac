@@ -21,8 +21,8 @@
 /**************************************************************************
   Version Control Information			Method: CVS
   Identifiers:
-  $Revision: 1.3 $
-  $Date: 2000/10/05 08:39:03 $ (check in)
+  $Revision: 1.4 $
+  $Date: 2000/10/05 13:04:05 $ (check in)
   $Author: menno $
   *************************************************************************/
 
@@ -31,10 +31,9 @@
 
 #include "pulse.h"
 #include "interface.h"
-#include "tf_main.h"
 #include "tns.h"
-#include "all.h"
 #include "nok_ltp_common.h"
+#include "bitstream.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -45,13 +44,18 @@ extern "C" {
 
 /* assumptions for the first run of this quantizer */
 #define CHANNEL  1
-#define NUM_COEFF  BLOCK_LEN_LONG       /* now using BLOCK_LEN_LONG of block.h */
 #define MAGIC_NUMBER  0.4054
 #define MAX_QUANT 8192
 #define SF_OFFSET 100
 #define ABS(A) ((A) < 0 ? (-A) : (A))
 #define sgn(A) ((A) > 0 ? (1) : (-1))
-#define SFB_NUM_MAX MAX_SCFAC_BANDS     /* now using MAX_SCFAC_BANDS of tf_main.h */
+
+#define MAXFAC 121   /* maximum scale factor */
+#define MIDFAC (MAXFAC-1)/2
+#define SF_OFFSET 100   /* global gain must be positive */
+
+#define INTENSITY_HCB 15
+#define INTENSITY_HCB2 14
 
 
 extern int pns_sfb_start;                        /* lower border for PNS */
@@ -65,12 +69,12 @@ typedef struct {
   int nr_of_sfb;                        /* Number of scalefactor bands, interleaved */
   int spectralCount;                    /* Number of spectral data coefficients */
   enum WINDOW_TYPE block_type;	        /* Block type */      
-  int scale_factor[SFB_NUM_MAX];        /* Scalefactor data array , interleaved */			
+  int scale_factor[MAX_SCFAC_BANDS];        /* Scalefactor data array , interleaved */			
   int sfb_offset[250];                  /* Scalefactor spectral offset, interleaved */
-  int book_vector[SFB_NUM_MAX];         /* Huffman codebook selected for each sf band */
-  int data[5*NUM_COEFF];                /* Data of spectral bitstream elements, for each spectral pair, 
+  int book_vector[MAX_SCFAC_BANDS];         /* Huffman codebook selected for each sf band */
+  int data[5*BLOCK_LEN_LONG];                /* Data of spectral bitstream elements, for each spectral pair, 
                                            5 elements are required: 1*(esc)+2*(sign)+2*(esc value)=5 */
-  int len[5*NUM_COEFF];                 /* Lengths of spectral bitstream elements */
+  int len[5*BLOCK_LEN_LONG];                 /* Lengths of spectral bitstream elements */
   int num_window_groups;                /* Number of window groups */
   int window_group_length
     [MAX_SHORT_IN_LONG_BLOCK];          /* Length (in windows) of each window group */
@@ -78,13 +82,13 @@ typedef struct {
   Window_shape window_shape;            /* Window shape parameter */
   Window_shape prev_window_shape;       /* Previous window shape parameter */
   short pred_global_flag;               /* Global prediction enable flag */
-  int pred_sfb_flag[SFB_NUM_MAX];       /* Prediction enable flag for each scalefactor band */
+  int pred_sfb_flag[MAX_SCFAC_BANDS];       /* Prediction enable flag for each scalefactor band */
   int reset_group_number;               /* Prediction reset group number */
   TNS_INFO* tnsInfo;                    /* Ptr to tns data */
   AACPulseInfo pulseInfo;
   NOK_LT_PRED_STATUS *ltpInfo;          /* Prt to LTP data */
-  int pns_sfb_nrg[SFB_NUM_MAX];
-  int pns_sfb_flag[SFB_NUM_MAX];
+  int pns_sfb_nrg[MAX_SCFAC_BANDS];
+  int pns_sfb_flag[MAX_SCFAC_BANDS];
   int profile;
   int srate_idx;
 } AACQuantInfo;
@@ -92,17 +96,17 @@ typedef struct {
 
 void quantize(AACQuantInfo *quantInfo,
 			  double *pow_spectrum,
-			  int quant[NUM_COEFF]
+			  int quant[BLOCK_LEN_LONG]
 			  );
 void dequantize(AACQuantInfo *quantInfo,
 				double *p_spectrum,
-				int quant[NUM_COEFF],
-				double requant[NUM_COEFF],
-				double error_energy[SFB_NUM_MAX]
+				int quant[BLOCK_LEN_LONG],
+				double requant[BLOCK_LEN_LONG],
+				double error_energy[MAX_SCFAC_BANDS]
 				);
 int count_bits(AACQuantInfo* quantInfo,
-			   int quant[NUM_COEFF]
-//			   ,int output_book_vector[SFB_NUM_MAX*2]
+			   int quant[BLOCK_LEN_LONG]
+//			   ,int output_book_vector[MAX_SCFAC_BANDS*2]
                            );
 
 

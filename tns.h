@@ -21,17 +21,14 @@
 /**************************************************************************
   Version Control Information			Method: CVS
   Identifiers:
-  $Revision: 1.5 $
-  $Date: 2000/10/05 08:39:03 $ (check in)
+  $Revision: 1.6 $
+  $Date: 2000/10/05 13:04:05 $ (check in)
   $Author: menno $
   *************************************************************************/
  
 #ifndef _TNS_H_INCLUDED
 #define _TNS_H_INCLUDED
  
-#include <math.h>
-#include <stdio.h>
-#include "tf_main.h"
 #include "interface.h"
 
 /*************************/
@@ -42,7 +39,9 @@
 #define DEF_TNS_COEFF_THRESH 0.1
 #define DEF_TNS_COEFF_RES 4
 #define DEF_TNS_RES_OFFSET 3
-#define PI C_PI
+#ifndef M_PI
+#define M_PI 3.14159265358979323846
+#endif
 #ifndef min
 #define min(a,b) ( (a) < (b) ? (a) : (b) )
 #endif
@@ -79,7 +78,7 @@ typedef struct {
   int tnsMaxBandsShort;
   int tnsMaxOrderLong;
   int tnsMaxOrderShort;
-  TNS_WINDOW_DATA windowData[NSHORT];	/* TNS data per window */
+  TNS_WINDOW_DATA windowData[MAX_SHORT_IN_LONG_BLOCK];	/* TNS data per window */
 } TNS_INFO;
 
 

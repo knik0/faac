@@ -21,18 +21,14 @@
 /**************************************************************************
   Version Control Information			Method: CVS
   Identifiers:
-  $Revision: 1.67 $
-  $Date: 2000/10/05 08:39:02 $ (check in)
+  $Revision: 1.68 $
+  $Date: 2000/10/05 13:04:05 $ (check in)
   $Author: menno $
   *************************************************************************/
 
-#include <stdlib.h>
 #include <math.h>
-#include <memory.h>
-#include "tf_main.h"
 #include "psych.h"
 #include "transfo.h"
-#include "all.h"
 
 double sqrt2048, sqrt256;
 
@@ -358,11 +354,11 @@ void psy_part_table_init(double sampling_rate,
     }
 
 	for(b = 0; b < part_tbl_long->len; b++) {
-		dyn_long.bmax[b] = pow(10, 1.25*(1-cos(PI*b/part_tbl_long->len))-2.5);
+		dyn_long.bmax[b] = pow(10, 1.25*(1-cos(M_PI*b/part_tbl_long->len))-2.5);
 //		dyn_long.bmax[b] = pow(10, -3*(0.5+0.5*(M_PI*(min(dyn_long.bval[b], 15.5)/15.5))));
 	}
 	for(b = 0; b < part_tbl_short->len; b++) {
-		dyn_short.bmax[b] = pow(10, 1.25*(1-cos(PI*b/part_tbl_short->len))-2.5);
+		dyn_short.bmax[b] = pow(10, 1.25*(1-cos(M_PI*b/part_tbl_short->len))-2.5);
 //		dyn_short.bmax[b] = pow(10, -3*(0.5+0.5*(M_PI*(min(dyn_short.bval[b], 15.5)/15.5))));
 	}
 
@@ -1137,13 +1133,13 @@ void psy_step11(PARTITION_TABLE_LONG *part_tbl_long,
     else if( p1 == NPART_LONG ) p2 = 0;
 
     for(b = 0; b < part_tbl_long->len; b++) {
-		temp = psy_min( psy_stvar_long->nb[p1+b], 2.0*psy_stvar_long->nb[p2+b]);
+		temp = min( psy_stvar_long->nb[p1+b], 2.0*psy_stvar_long->nb[p2+b]);
 		if (temp > 0.01)
 			psy_stvar_long->nb[p1+b] = temp;
     }
 
     for(b = 0; b < part_tbl_short->len; b++){
-		temp = psy_min( psy_stvar_short->nb[0][b], 1.0*psy_stvar_short->last7_nb[b]);
+		temp = min( psy_stvar_short->nb[0][b], 1.0*psy_stvar_short->last7_nb[b]);
 		if (temp > 0.01)
 			psy_stvar_short->nb[0][b] = temp;
     }
@@ -1154,7 +1150,7 @@ void psy_step11(PARTITION_TABLE_LONG *part_tbl_long,
 
 	for(i = 1;  i < MAX_SHORT_WINDOWS; i++){
 		for(b = 0; b < part_tbl_short->len; b++){
-			temp = psy_min( psy_stvar_short->nb[i][b], 1.0*psy_stvar_short->nb[i - 1][b]);
+			temp = min( psy_stvar_short->nb[i][b], 1.0*psy_stvar_short->nb[i - 1][b]);
 			if (temp > 0.01)
 				psy_stvar_short->nb[i][b] = temp;
 		}

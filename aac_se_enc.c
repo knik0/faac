@@ -21,12 +21,11 @@
 /**************************************************************************
   Version Control Information			Method: CVS
   Identifiers:
-  $Revision: 1.12 $
-  $Date: 2000/10/05 08:39:02 $ (check in)
+  $Revision: 1.13 $
+  $Date: 2000/10/05 13:04:05 $ (check in)
   $Author: menno $
   *************************************************************************/
 
-#include <stdlib.h>
 #include "aac_se_enc.h"
 #include "quant.h"
 #include "huffman.h"
@@ -244,7 +243,7 @@ int WriteICS(AACQuantInfo* quantInfo,    /* AACQuantInfo structure */
   /* this function writes out an individual_channel_stream to the bitstream and */
   /* returns the number of bits written to the bitstream */
   int bit_count = 0;
-//  int output_book_vector[SFB_NUM_MAX*2];
+//  int output_book_vector[MAX_SCFAC_BANDS*2];
   writeFlag = ( writeFlag != 0 );
 
   /* Write the 8-bit global_gain */

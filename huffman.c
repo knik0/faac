@@ -21,16 +21,13 @@
 /**************************************************************************
   Version Control Information			Method: CVS
   Identifiers:
-  $Revision: 1.3 $
-  $Date: 2000/10/05 08:39:02 $ (check in)
+  $Revision: 1.4 $
+  $Date: 2000/10/05 13:04:05 $ (check in)
   $Author: menno $
   *************************************************************************/
 
-#include <math.h>
-#include <string.h>
 #include "aacenc.h"
 #include "bitstream.h"
-#include "tf_main.h"
 #include "pulse.h"
 #include "quant.h"
 #include "huffman.h"
@@ -45,7 +42,7 @@ sort_book_numbers(AACQuantInfo* quantInfo,     /* Quantization information */
 		  int write_flag)              /* Write flag: 0 count, 1 write */
 {
   /*
-    This function inputs the vector, 'book_vector[]', which is of length SFB_NUM_MAX,
+    This function inputs the vector, 'book_vector[]', which is of length MAX_SCFAC_BANDS,
     and contains the optimal huffman tables of each sfb.  It returns the vector, 'output_book_vector[]', which
     has it's elements formatted for the encoded bit stream.  It's syntax is:
 
@@ -142,12 +139,12 @@ sort_book_numbers(AACQuantInfo* quantInfo,     /* Quantization information */
 	return(bit_count);
 }
 
-int bit_search(int quant[NUM_COEFF],  /* Quantized spectral values */
+int bit_search(int quant[BLOCK_LEN_LONG],  /* Quantized spectral values */
                AACQuantInfo* quantInfo)        /* Quantization information */
   /*
   This function inputs a vector of quantized spectral data, quant[][], and returns a vector,
   'book_vector[]' that describes how to group together the scalefactor bands into a smaller
-  number of sections.  There are SFB_NUM_MAX elements in book_vector (equal to 49 in the
+  number of sections.  There are MAX_SCFAC_BANDS elements in book_vector (equal to 49 in the
   case of long blocks and 112 for short blocks), and each element has a huffman codebook 
   number assigned to it.
 
@@ -239,7 +236,7 @@ int bit_search(int quant[NUM_COEFF],  /* Quantized spectral values */
 }
 
 
-int noiseless_bit_count(int quant[NUM_COEFF],
+int noiseless_bit_count(int quant[BLOCK_LEN_LONG],
 			/*int huff[13][MAXINDEX][NUMINTAB],*/
 			int hop,  // hop is now always 1
 			int min_book_choice[112][3],
@@ -426,7 +423,7 @@ __inline
 int output_bits(AACQuantInfo* quantInfo,
 		/*int huff[13][MAXINDEX][NUMINTAB],*/
                 int book,
-		int quant[NUM_COEFF],
+		int quant[BLOCK_LEN_LONG],
                 int offset,
 		int length,
 		int write_flag)

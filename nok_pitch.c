@@ -21,23 +21,17 @@
 /**************************************************************************
   Version Control Information			Method: CVS
   Identifiers:
-  $Revision: 1.8 $
-  $Date: 2000/10/05 08:39:02 $ (check in)
+  $Revision: 1.9 $
+  $Date: 2000/10/05 13:04:05 $ (check in)
   $Author: menno $
   *************************************************************************/
 
 /**************************************************************************
   External Objects Needed
   *************************************************************************/
-/*
-  Standard library declarations.  */
-#include <math.h>
-#include <stdio.h>
 
 /*
   Interface to related modules.  */
-#include "tf_main.h"
-#include "block.h"
 #include "interface.h"
 #include "nok_ltp_common.h"
 #include "nok_ltp_enc.h"

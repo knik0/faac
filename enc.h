@@ -21,15 +21,14 @@
 /**************************************************************************
   Version Control Information			Method: CVS
   Identifiers:
-  $Revision: 1.6 $
-  $Date: 2000/10/05 08:39:02 $ (check in)
+  $Revision: 1.7 $
+  $Date: 2000/10/05 13:04:05 $ (check in)
   $Author: menno $
   *************************************************************************/
 
 #ifndef _enc_h_
 #define _enc_h_
 
-#include <stdio.h>              /* typedef FILE */
 
 #include "bitstream.h"		/* bit stream module */
 

@@ -21,10 +21,14 @@
 /**************************************************************************
   Version Control Information			Method: CVS
   Identifiers:
-  $Revision: 1.4 $
-  $Date: 2000/10/05 08:39:02 $ (check in)
+  $Revision: 1.5 $
+  $Date: 2000/10/05 13:04:05 $ (check in)
   $Author: menno $
   *************************************************************************/
+
+#ifndef _FASTFFT_H_
+#define _FASTFFT_H_
+
 
 #include "transfo.h"
 
@@ -37,3 +41,4 @@
 void PFFTW(twiddle_4)(fftw_complex *A, const fftw_complex *W, int iostride);
 void PFFTWI(twiddle_4)(fftw_complex *A, const fftw_complex *W, int iostride);
 
+#endif

@@ -21,13 +21,44 @@
 /**************************************************************************
   Version Control Information			Method: CVS
   Identifiers:
-  $Revision: 1.10 $
-  $Date: 2000/10/05 08:39:03 $ (check in)
+  $Revision: 1.11 $
+  $Date: 2000/10/05 13:04:05 $ (check in)
   $Author: menno $
   *************************************************************************/
 
 #ifndef TRANSFORM_H
 #define TRANSFORM_H
+
+#include "interface.h"
+
+
+void freq2buffer(
+  double           p_in_data[],
+  double           p_out_data[],
+  double           p_overlap[],
+  enum WINDOW_TYPE block_type,
+  Window_shape     wfun_select,      
+  Window_shape     wfun_select_prev,   
+  Mdct_in	   overlap_select
+);
+
+void buffer2freq(                    
+  double           p_in_data[],      
+  double           p_out_mdct[],
+  double           p_overlap[],
+  enum WINDOW_TYPE block_type,
+  Window_shape     wfun_select,      
+  Window_shape     wfun_select_prev,   
+  Mdct_in          overlap_select      
+);
+
+void specFilter (double p_in[],
+		 double p_out[],
+		 int  samp_rate,
+		 int lowpass_freq,
+		 int    specLen
+);
+
 
 // Use this for decoder - single precision
 //typedef float fftw_real;

@@ -21,8 +21,8 @@
 /**************************************************************************
   Version Control Information			Method: CVS
   Identifiers:
-  $Revision: 1.11 $
-  $Date: 2000/10/05 08:39:03 $ (check in)
+  $Revision: 1.12 $
+  $Date: 2000/10/05 13:04:05 $ (check in)
   $Author: menno $
   *************************************************************************/
 
@@ -131,8 +131,8 @@ int TnsEncode(int numberOfBands,       /* Number of bands per window */
 
 	switch( blockType ) {
 	case ONLY_SHORT_WINDOW :
-		numberOfWindows = NSHORT;
-		windowSize = SN2;
+		numberOfWindows = MAX_SHORT_IN_LONG_BLOCK;
+		windowSize = BLOCK_LEN_SHORT;
 		startBand = tnsInfo->tnsMinBandNumberShort;
 		stopBand = numberOfBands; 
 		lengthInBands = stopBand-startBand;
@@ -350,8 +350,8 @@ void QuantizeReflectionCoeffs(int fOrder,
 	double iqfac,iqfac_m;
 	int i;
 
-	iqfac = ((1<<(coeffRes-1))-0.5)/(PI/2);
-	iqfac_m = ((1<<(coeffRes-1))+0.5)/(PI/2);
+	iqfac = ((1<<(coeffRes-1))-0.5)/(M_PI/2);
+	iqfac_m = ((1<<(coeffRes-1))+0.5)/(M_PI/2);
 
 	/* Quantize and inverse quantize */
 	for (i=1;i<=fOrder;i++) {

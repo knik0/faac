@@ -21,8 +21,8 @@
 /**************************************************************************
   Version Control Information			Method: CVS
   Identifiers:
-  $Revision: 1.3 $
-  $Date: 2000/10/05 08:39:02 $ (check in)
+  $Revision: 1.4 $
+  $Date: 2000/10/05 13:04:05 $ (check in)
   $Author: menno $
   *************************************************************************/
 
@@ -34,15 +34,7 @@
   Purpose:	Number of short windows in one long window.
   Explanation:	-  */
 #ifndef MAX_SHORT_WINDOWS
-#define MAX_SHORT_WINDOWS NSHORT
-#endif
-
-/*
-  Macro:	MAX_SCFAC_BANDS
-  Purpose:	Maximum number of scalefactor bands in one frame.
-  Explanation:	-  */
-#ifndef MAX_SCFAC_BANDS
-#define MAX_SCFAC_BANDS MAXBANDS
+#define MAX_SHORT_WINDOWS MAX_SHORT_IN_LONG_BLOCK
 #endif
 
 /*

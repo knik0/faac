@@ -21,14 +21,16 @@
 /**************************************************************************
   Version Control Information			Method: CVS
   Identifiers:
-  $Revision: 1.3 $
-  $Date: 2000/10/05 08:39:02 $ (check in)
+  $Revision: 1.4 $
+  $Date: 2000/10/05 13:04:05 $ (check in)
   $Author: menno $
   *************************************************************************/
 
 #ifndef _NOK_LTP_ENC_H
 #define _NOK_LTP_ENC_H
 
+#include "interface.h"
+#include "bitstream.h"
 #include "nok_ltp_common.h"
 
 extern void nok_init_lt_pred (NOK_LT_PRED_STATUS * lt_status);

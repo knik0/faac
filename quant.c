@@ -21,17 +21,15 @@
 /**************************************************************************
   Version Control Information			Method: CVS
   Identifiers:
-  $Revision: 1.9 $
-  $Date: 2000/10/05 08:39:03 $ (check in)
+  $Revision: 1.10 $
+  $Date: 2000/10/05 13:04:05 $ (check in)
   $Author: menno $
   *************************************************************************/
 
 #include <math.h>
-#include <string.h>
 #include "aacenc.h"
 #include "quant.h"
 #include "bitstream.h"
-#include "tf_main.h"
 #include "pulse.h"
 #include "huffman.h"
 #include "aac_se_enc.h"
@@ -47,7 +45,7 @@ int old_startsf;
 int pns_sfb_start = 1000;         /* lower border for Perceptual Noise Substitution
                                       (off by default) */
 
-double ATH[SFB_NUM_MAX];
+double ATH[MAX_SCFAC_BANDS];
 
 double ATHformula(double f)
 {
@@ -65,7 +63,7 @@ double ATHformula(double f)
 }
 
 
-void compute_ath(AACQuantInfo *quantInfo, double ATH[SFB_NUM_MAX])
+void compute_ath(AACQuantInfo *quantInfo, double ATH[MAX_SCFAC_BANDS])
 {
 	int sfb,i,start=0,end=0;
 	double ATH_f;
@@ -347,7 +345,7 @@ loop1:
 
 int inner_loop(AACQuantInfo *quantInfo,
 			   double *pow_spectrum,
-			   int quant[NUM_COEFF],
+			   int quant[BLOCK_LEN_LONG],
 			   int max_bits)
 {
 	int bits;
@@ -365,7 +363,7 @@ int inner_loop(AACQuantInfo *quantInfo,
 
 int search_common_scalefac(AACQuantInfo *quantInfo,
 						   double *pow_spectrum,
-						   int quant[NUM_COEFF],
+						   int quant[BLOCK_LEN_LONG],
 						   int desired_rate)
 {
 	int flag_GoneOver = 0;
@@ -410,10 +408,10 @@ int search_common_scalefac(AACQuantInfo *quantInfo,
 
 int calc_noise(AACQuantInfo *quantInfo,
 				double *p_spectrum,
-				int quant[NUM_COEFF],
-				double requant[NUM_COEFF],
-				double error_energy[SFB_NUM_MAX],
-				double allowed_dist[SFB_NUM_MAX],
+				int quant[BLOCK_LEN_LONG],
+				double requant[BLOCK_LEN_LONG],
+				double error_energy[MAX_SCFAC_BANDS],
+				double allowed_dist[MAX_SCFAC_BANDS],
 				double *over_noise,
 				double *tot_noise,
 				double *max_noise
@@ -519,7 +517,7 @@ int quant_compare(int best_over, double best_tot_noise, double best_over_noise,
 
 
 int count_bits(AACQuantInfo* quantInfo,
-			   int quant[NUM_COEFF]
+			   int quant[BLOCK_LEN_LONG]
 			   )
 {
 	int i, bits = 0;
@@ -594,22 +592,22 @@ int tf_encode_spectrum_aac(
 //			   ,int bitRate
                            )
 {
-	int quant[NUM_COEFF];
-	int s_quant[NUM_COEFF];
+	int quant[BLOCK_LEN_LONG];
+	int s_quant[BLOCK_LEN_LONG];
 	int i;
 //	int j=0;
 	int k;
 	double max_dct_line = 0;
 //	int global_gain;
 	int store_common_scalefac;
-	int best_scale_factor[SFB_NUM_MAX];
-	double pow_spectrum[NUM_COEFF];
-	double requant[NUM_COEFF];
+	int best_scale_factor[MAX_SCFAC_BANDS];
+	double pow_spectrum[BLOCK_LEN_LONG];
+	double requant[BLOCK_LEN_LONG];
 	int sb;
 	int extra_bits;
 //	int max_bits;
-//	int output_book_vector[SFB_NUM_MAX*2];
-	double SigMaskRatio[SFB_NUM_MAX];
+//	int output_book_vector[MAX_SCFAC_BANDS*2];
+	double SigMaskRatio[MAX_SCFAC_BANDS];
 	MS_Info *ms_info;
 	int *ptr_book_vector;
 
@@ -626,14 +624,14 @@ int tf_encode_spectrum_aac(
 	double noise_thresh;
 	double sfQuantFac;
 	double over_noise, tot_noise, max_noise;
-	double noise[SFB_NUM_MAX];
+	double noise[MAX_SCFAC_BANDS];
 	double best_max_noise = 0;
 	double best_over_noise = 0;
 	double best_tot_noise = 0;
 //	static int init = -1;
 
 	/* Set block type in quantization info */
-	quantInfo -> block_type = block_type[MONO_CHAN];
+	quantInfo -> block_type = block_type[0];
 
 #if 0
 	if (init != quantInfo->block_type) {
@@ -650,10 +648,10 @@ int tf_encode_spectrum_aac(
 		/* Now compute interleaved sf bands and spectrum */
 		sort_for_grouping(
 			quantInfo,                       /* ptr to quantization information */
-			sfb_width_table[MONO_CHAN],      /* Widths of single window */
+			sfb_width_table[0],      /* Widths of single window */
 			p_spectrum,                      /* Spectral values, noninterleaved */
 			SigMaskRatio,
-			PsySigMaskRatio[MONO_CHAN]
+			PsySigMaskRatio[0]
 			);
 
 		extra_bits = 51;
@@ -668,8 +666,8 @@ int tf_encode_spectrum_aac(
 			k=0;
 			for( i=0; i< quantInfo -> nr_of_sfb; i++ ){
 				sfb_offset[i] = k;
-				k +=sfb_width_table[MONO_CHAN][i];
-				SigMaskRatio[i]=PsySigMaskRatio[MONO_CHAN][i];
+				k +=sfb_width_table[0][i];
+				SigMaskRatio[i]=PsySigMaskRatio[0][i];
 			}
 			sfb_offset[i] = k;
 			extra_bits = 100; /* header bits and more ... */
@@ -701,9 +699,9 @@ int tf_encode_spectrum_aac(
 				int w;
 				for (w=0;w<numWindowsThisGroup;w++) {
 					int bandNum = (w+windowOffset)*maxBand + b;
-					sum += energy[MONO_CHAN][bandNum];
+					sum += energy[0][bandNum];
 				}
-				energy[MONO_CHAN][sfb_index] = sum/numWindowsThisGroup;
+				energy[0][sfb_index] = sum/numWindowsThisGroup;
 				sfb_index++;
 			}
 			windowOffset += numWindowsThisGroup;
@@ -726,7 +724,7 @@ int tf_encode_spectrum_aac(
     for(sb=0; sb < quantInfo->nr_of_sfb; sb++ )
 		quantInfo->pns_sfb_flag[sb] = 0;
 
-//	if (block_type[MONO_CHAN] != ONLY_SHORT_WINDOW) {     /* long blocks only */
+//	if (block_type[0] != ONLY_SHORT_WINDOW) {     /* long blocks only */
 		for(sb = pns_sfb_start; sb < quantInfo->nr_of_sfb; sb++ ) {
 			/* Calc. pseudo scalefactor */
 			if (energy[0][sb] == 0.0) {
@@ -735,7 +733,7 @@ int tf_encode_spectrum_aac(
 			}
 
 			if ((ms_info->is_present)&&(!ms_info->ms_used[sb])) {
-				if ((10*log10(energy[MONO_CHAN][sb]*sfb_width_table[0][sb]+1e-60)<70)||(SigMaskRatio[sb] > 1.0)) {
+				if ((10*log10(energy[0][sb]*sfb_width_table[0][sb]+1e-60)<70)||(SigMaskRatio[sb] > 1.0)) {
 					quantInfo->pns_sfb_flag[sb] = 1;
 					quantInfo->pns_sfb_nrg[sb] = (int) (2.0 * log(energy[0][sb]*sfb_width_table[0][sb]+1e-60) / log(2.0) + 0.5) + PNS_SF_OFFSET;
 
@@ -750,17 +748,17 @@ int tf_encode_spectrum_aac(
 
 	/* Compute allowed distortion */
 	for(sb = 0; sb < quantInfo->nr_of_sfb; sb++) {
-		allowed_dist[MONO_CHAN][sb] = energy[MONO_CHAN][sb] * SigMaskRatio[sb];
-//		if (allowed_dist[MONO_CHAN][sb] < ATH[sb]) {
+		allowed_dist[0][sb] = energy[0][sb] * SigMaskRatio[sb];
+//		if (allowed_dist[0][sb] < ATH[sb]) {
 //			printf("%d Yes\n", sb);
-//			allowed_dist[MONO_CHAN][sb] = ATH[sb];
+//			allowed_dist[0][sb] = ATH[sb];
 //		}
 //		printf("%d\t\t%.3f\n", sb, SigMaskRatio[sb]);
 	}
 
 	/** find the maximum spectral coefficient **/
 	/* Bug fix, 3/10/98 CL */
-	/* for(i=0; i<NUM_COEFF; i++){ */
+	/* for(i=0; i<BLOCK_LEN_LONG; i++){ */
 	for(i=0; i < sfb_offset[quantInfo->nr_of_sfb]; i++){
 		pow_spectrum[i] = (pow(ABS(p_spectrum[0][i]), 0.75));
 		sign[i] = sgn(p_spectrum[0][i]);
@@ -833,7 +831,7 @@ int tf_encode_spectrum_aac(
 				for (sb = 0; sb < quantInfo->nr_of_sfb; sb++) {
 					best_scale_factor[sb] = scale_factor[sb];
 				}
-				memcpy(s_quant, quant, sizeof(int)*NUM_COEFF);
+				memcpy(s_quant, quant, sizeof(int)*BLOCK_LEN_LONG);
 			}
 		}
 
@@ -985,14 +983,14 @@ int sort_for_grouping(AACQuantInfo* quantInfo,        /* ptr to quantization inf
 		for (k=0; k<*nr_of_sfb; k++) {
 			for (j=0; j < window_group_length[i]; j++) {
 				for (ii=0;ii< sfb_width_table[k];ii++)
-					tmp[index++] = p_spectrum[MONO_CHAN][ii+ sfb_offset[k] + 128*j +group_offset];
+					tmp[index++] = p_spectrum[0][ii+ sfb_offset[k] + 128*j +group_offset];
 			}
 		}
 		group_offset +=  128*window_group_length[i];
 	}
 
 	for (k=0; k<1024; k++){
-		p_spectrum[MONO_CHAN][k] = tmp[k];
+		p_spectrum[0][k] = tmp[k];
 	}
 
 	/* now calc the new sfb_offset table for the whole p_spectrum vector*/
@@ -1054,8 +1052,8 @@ int sort_for_grouping(AACQuantInfo* quantInfo,        /* ptr to quantization inf
 
 
 int compute_scalefacs(AACQuantInfo* quantInfo,
-					  int sf[SFB_NUM_MAX],
-					  int scalefac[SFB_NUM_MAX])
+					  int sf[MAX_SCFAC_BANDS],
+					  int scalefac[MAX_SCFAC_BANDS])
 {
 	int sfb;
 	int maxover;
@@ -1187,12 +1185,12 @@ VBR_noise_shaping(AACQuantInfo* quantInfo,
 				  double pow_quant_orig[1024],
 				  double allowed_dist[SFB_NUM_MAX],
 				  int quant[1024], int minbits, int maxbits,
-				  int scalefac[SFB_NUM_MAX])
+				  int scalefac[MAX_SCFAC_BANDS])
 {
 	int start,end,bw,sfb,l, vbrmax;
 	int bits_used;
-	int vbrsf[SFB_NUM_MAX];
-	int save_sf[SFB_NUM_MAX];
+	int vbrsf[MAX_SCFAC_BANDS];
+	int save_sf[MAX_SCFAC_BANDS];
 	int maxover0,maxover1,maxover,mover;
 	int ifqstep;
 	double pow_quant[1024];
@@ -1229,12 +1227,12 @@ VBR_noise_shaping(AACQuantInfo* quantInfo,
 
 
 	/* save a copy of vbrsf, incase we have to recomptue scalefacs */
-	memcpy(&save_sf,&vbrsf,sizeof(int)*SFB_NUM_MAX);
+	memcpy(&save_sf,&vbrsf,sizeof(int)*MAX_SCFAC_BANDS);
 
 
 	do {
 
-		memset(scalefac,0,sizeof(int)*SFB_NUM_MAX);
+		memset(scalefac,0,sizeof(int)*MAX_SCFAC_BANDS);
 
 		maxover0=0;
 		maxover1=0;
@@ -1311,7 +1309,7 @@ VBR_noise_shaping(AACQuantInfo* quantInfo,
 
 
 			--vbrmax;
-			memcpy(&vbrsf,&save_sf,sizeof(int)*SFB_NUM_MAX);
+			memcpy(&vbrsf,&save_sf,sizeof(int)*MAX_SCFAC_BANDS);
 			memcpy(pow_quant, pow_quant_orig, sizeof(pow_quant));
 		}
 
@@ -1365,15 +1363,15 @@ int tf_encode_spectrum_aac_VBR(
 			   Ch_Info* ch_info
                )
 {
-	int quant[NUM_COEFF];
+	int quant[BLOCK_LEN_LONG];
 	int i;
 	int k;
 	double max_dct_line = 0;
-	double pow_spectrum[NUM_COEFF];
-	double requant[NUM_COEFF];
+	double pow_spectrum[BLOCK_LEN_LONG];
+	double requant[BLOCK_LEN_LONG];
 	int sb;
 	int extra_bits;
-	double SigMaskRatio[SFB_NUM_MAX];
+	double SigMaskRatio[MAX_SCFAC_BANDS];
 	MS_Info *ms_info;
 	int *ptr_book_vector;
 
@@ -1386,7 +1384,7 @@ int tf_encode_spectrum_aac_VBR(
 	int best_over = 100;
 	double sfQuantFac;
 	double over_noise, tot_noise, max_noise;
-	double noise[SFB_NUM_MAX];
+	double noise[MAX_SCFAC_BANDS];
 	double best_max_noise = 0;
 	double best_over_noise = 0;
 	double best_tot_noise = 0;
@@ -1400,7 +1398,7 @@ int tf_encode_spectrum_aac_VBR(
 	int used_bits;
 
 	/* Set block type in quantization info */
-	quantInfo -> block_type = block_type[MONO_CHAN];
+	quantInfo -> block_type = block_type[0];
 
 	sfQuantFac = pow(2.0, 0.1875);
 
@@ -1410,10 +1408,10 @@ int tf_encode_spectrum_aac_VBR(
 		/* Now compute interleaved sf bands and spectrum */
 		sort_for_grouping(
 			quantInfo,                       /* ptr to quantization information */
-			sfb_width_table[MONO_CHAN],      /* Widths of single window */
+			sfb_width_table[0],      /* Widths of single window */
 			p_spectrum,                      /* Spectral values, noninterleaved */
 			SigMaskRatio,
-			PsySigMaskRatio[MONO_CHAN]
+			PsySigMaskRatio[0]
 			);
 
 		extra_bits = 51;
@@ -1428,8 +1426,8 @@ int tf_encode_spectrum_aac_VBR(
 			k=0;
 			for( i=0; i< quantInfo -> nr_of_sfb; i++ ){
 				sfb_offset[i] = k;
-				k +=sfb_width_table[MONO_CHAN][i];
-				SigMaskRatio[i]=PsySigMaskRatio[MONO_CHAN][i];
+				k +=sfb_width_table[0][i];
+				SigMaskRatio[i]=PsySigMaskRatio[0][i];
 			}
 			sfb_offset[i] = k;
 			extra_bits = 100; /* header bits and more ... */
@@ -1461,9 +1459,9 @@ int tf_encode_spectrum_aac_VBR(
 				int w;
 				for (w=0;w<numWindowsThisGroup;w++) {
 					int bandNum = (w+windowOffset)*maxBand + b;
-					sum += energy[MONO_CHAN][bandNum];
+					sum += energy[0][bandNum];
 				}
-				energy[MONO_CHAN][sfb_index] = sum/numWindowsThisGroup;
+				energy[0][sfb_index] = sum/numWindowsThisGroup;
 				sfb_index++;
 			}
 			windowOffset += numWindowsThisGroup;
@@ -1494,7 +1492,7 @@ int tf_encode_spectrum_aac_VBR(
 		}
 
 		if ((ms_info->is_present)&&(!ms_info->ms_used[sb])) {
-			if ((10*log10(energy[MONO_CHAN][sb]*sfb_width_table[0][sb]+1e-60)<70)||(SigMaskRatio[sb] > 1.0)) {
+			if ((10*log10(energy[0][sb]*sfb_width_table[0][sb]+1e-60)<70)||(SigMaskRatio[sb] > 1.0)) {
 				quantInfo->pns_sfb_flag[sb] = 1;
 				quantInfo->pns_sfb_nrg[sb] = (int) (2.0 * log(energy[0][sb]*sfb_width_table[0][sb]+1e-60) / log(2.0) + 0.5) + PNS_SF_OFFSET;
 
@@ -1508,7 +1506,7 @@ int tf_encode_spectrum_aac_VBR(
 
 	/** find the maximum spectral coefficient **/
 	/* Bug fix, 3/10/98 CL */
-	/* for(i=0; i<NUM_COEFF; i++){ */
+	/* for(i=0; i<BLOCK_LEN_LONG; i++){ */
 	for(i=0; i < sfb_offset[quantInfo->nr_of_sfb]; i++){
 		pow_spectrum[i] = (pow(ABS(p_spectrum[0][i]), 0.75));
 		sign[i] = sgn(p_spectrum[0][i]);

@@ -21,16 +21,14 @@
 /**************************************************************************
   Version Control Information			Method: CVS
   Identifiers:
-  $Revision: 1.9 $
-  $Date: 2000/10/05 08:39:02 $ (check in)
+  $Revision: 1.10 $
+  $Date: 2000/10/05 13:04:05 $ (check in)
   $Author: menno $
   *************************************************************************/
 
 #ifndef MS_ENC
 #define MS_ENC
 
-#include "all.h"
-#include "tf_main.h"
 #include "quant.h"
 
 

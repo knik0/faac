@@ -21,8 +21,8 @@
 /**************************************************************************
   Version Control Information			Method: CVS
   Identifiers:
-  $Revision: 1.4 $
-  $Date: 2000/10/05 08:39:02 $ (check in)
+  $Revision: 1.5 $
+  $Date: 2000/10/05 13:04:05 $ (check in)
   $Author: menno $
   *************************************************************************/
 
@@ -31,9 +31,7 @@
 
 #include "pulse.h"
 #include "interface.h"
-#include "tf_main.h"
 #include "tns.h"
-#include "all.h"
 #include "nok_ltp_common.h"
 
 #ifdef __cplusplus
@@ -68,13 +66,13 @@ int sort_book_numbers(AACQuantInfo* quantInfo,     /* Quantization information *
 /*********************************************************/
 /* bit_search                                            */
 /*********************************************************/
-int bit_search(int quant[NUM_COEFF],  /* Quantized spectral values */
+int bit_search(int quant[BLOCK_LEN_LONG],  /* Quantized spectral values */
                AACQuantInfo* quantInfo);       /* Quantization information */
 
 /*********************************************************/
 /* noiseless_bit_count                                   */
 /*********************************************************/
-int noiseless_bit_count(int quant[NUM_COEFF],
+int noiseless_bit_count(int quant[BLOCK_LEN_LONG],
 			int hop,
 			int min_book_choice[112][3],
 			AACQuantInfo* quantInfo);         /* Quantization information */
@@ -88,7 +86,7 @@ __inline
 int output_bits(AACQuantInfo* quantInfo,
 		/*int huff[13][MAXINDEX][NUMINTAB],*/
                 int book,                /* codebook */
-		int quant[NUM_COEFF],		
+		int quant[BLOCK_LEN_LONG],		
 		int offset,
 		int length,
 		int write_flag);

@@ -21,25 +21,21 @@
 /**************************************************************************
   Version Control Information			Method: CVS
   Identifiers:
-  $Revision: 1.62 $
-  $Date: 2000/10/05 08:39:02 $ (check in)
+  $Revision: 1.63 $
+  $Date: 2000/10/05 13:04:05 $ (check in)
   $Author: menno $
   *************************************************************************/
 
-#include <math.h>
 #include <stdlib.h>
-#include <memory.h>
+
 #include "aacenc.h"
 #include "bitstream.h"
 #include "interface.h"
 #include "enc.h"
-#include "block.h"
-#include "tf_main.h"
 #include "psych.h"
 #include "mc_enc.h"
 #include "ms.h"
 #include "quant.h"
-#include "all.h"
 #include "aac_se_enc.h"
 #include "nok_ltp_enc.h"
 #include "transfo.h"
@@ -68,8 +64,6 @@ double *DTimeSigLookAheadBuf[MAX_TIME_CHANNELS*2];
 double *nok_tmp_DTimeSigBuf[MAX_TIME_CHANNELS]; /* temporary fix to the buffer size problem. */
 
 /* variables used by the T/F mapping */
-enum QC_MOD_SELECT qc_select = AAC_QC;                   /* later f(encPara) */
-enum AAC_PROFILE profile = MAIN;
 enum WINDOW_TYPE block_type[MAX_TIME_CHANNELS];
 enum WINDOW_TYPE desired_block_type[MAX_TIME_CHANNELS];
 enum WINDOW_TYPE next_desired_block_type[MAX_TIME_CHANNELS];
@@ -143,14 +137,6 @@ void EncTfInit (faacAACStream *as)
     }
   }
 
-  profile = MAIN;
-  qc_select = AAC_PRED;           /* enable prediction */
-
-  if (as->profile == LOW) {
-    profile = LOW;
-    qc_select = AAC_QC;          /* disable prediction */
-  }
-
   if (as->use_PNS)
     pns_sfb_start = 0;
   else
@@ -187,7 +173,7 @@ void EncTfInit (faacAACStream *as)
 
   /* Init TNS */
   for (chanNum=0;chanNum<MAX_TIME_CHANNELS;chanNum++) {
-    TnsInit(as->out_sampling_rate,profile,&tnsInfo[chanNum]);
+    TnsInit(as->out_sampling_rate,as->profile,&tnsInfo[chanNum]);
     quantInfo[chanNum].tnsInfo = &tnsInfo[chanNum];         /* Set pointer to TNS data */
   }
 

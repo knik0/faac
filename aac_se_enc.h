@@ -21,21 +21,21 @@
 /**************************************************************************
   Version Control Information			Method: CVS
   Identifiers:
-  $Revision: 1.6 $
-  $Date: 2000/10/05 08:39:02 $ (check in)
+  $Revision: 1.7 $
+  $Date: 2000/10/05 13:04:05 $ (check in)
   $Author: menno $
   *************************************************************************/
 
 #ifndef AAC_SE_ENC
 #define AAC_SE_ENC
 
-#include "interface.h"
 #include "bitstream.h"
-#include "all.h"
 #include "quant.h"
 #include "nok_ltp_enc.h"
 
 extern int max_pred_sfb;
+
+
 
 /*****************************************************************************/
 /* Write AAC fill bits to the bitStream                                      */

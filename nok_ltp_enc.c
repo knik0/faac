@@ -21,8 +21,8 @@
 /**************************************************************************
   Version Control Information			Method: CVS
   Identifiers:
-  $Revision: 1.13 $
-  $Date: 2000/10/05 08:39:02 $ (check in)
+  $Revision: 1.14 $
+  $Date: 2000/10/05 13:04:05 $ (check in)
   $Author: menno $
   *************************************************************************/
 
@@ -35,8 +35,8 @@
 
 /*
   Interface to related modules.  */
-#include "tf_main.h"
 #include "interface.h"
+#include "transfo.h"
 #include "bitstream.h"
 #include "nok_ltp_common.h"
 #include "nok_pitch.h"
@@ -110,7 +110,7 @@ nok_init_lt_pred (NOK_LT_PRED_STATUS *lt_status)
 		lt_status->pred_mdct[i] = 0;
 
 	lt_status->weight_idx = 0;
-	for(i=0; i<NSHORT; i++)
+	for(i=0; i<MAX_SHORT_IN_LONG_BLOCK; i++)
 		lt_status->sbk_prediction_used[i] = lt_status->delay[i] = 0;
 
 	for(i=0; i<MAX_SCFAC_BANDS; i++)

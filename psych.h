@@ -21,19 +21,26 @@
 /**************************************************************************
   Version Control Information			Method: CVS
   Identifiers:
-  $Revision: 1.21 $
-  $Date: 2000/10/05 08:39:03 $ (check in)
+  $Revision: 1.22 $
+  $Date: 2000/10/05 13:04:05 $ (check in)
   $Author: menno $
   *************************************************************************/
 
-#include "all.h"
+#include "interface.h"
 
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
 #endif
 
+#ifndef min
+#define min(a,b) ( (a) < (b) ? (a) : (b) )
+#endif
+#ifndef max
+#define max(a,b) ( (a) > (b) ? (a) : (b) )
+#endif
+
 typedef struct { 
-  long   sampling_rate;                   /* the following entries are for this sampling rate */
+  long   sampling_rate;  /* the following entries are for this sampling rate */
   int    num_cb_long;
   int    num_cb_short;
   int    cb_width_long[NSFB_LONG];
@@ -180,10 +187,6 @@ void EncTf_psycho_acoustic(
   CH_PSYCH_OUTPUT_SHORT p_chpo_short[][MAX_SHORT_WINDOWS]
 );
 
-/* added by T. Okada( 1997.07.10 ) */
-/* Jul 10 */
-#define psy_max(x,y) ((x) > (y) ? (x) : (y))
-#define psy_min(x,y) ((x) < (y) ? (x) : (y))
 #define psy_sqr(x) ((x)*(x))
 
 
