@@ -16,7 +16,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: frame.c,v 1.45 2003/08/23 15:02:13 knik Exp $
+ * $Id: frame.c,v 1.46 2003/09/07 16:48:31 knik Exp $
  */
 
 /*
@@ -61,7 +61,7 @@ static const psymodellist_t psymodellist[] = {
 };
 
 static SR_INFO srInfo[12+1];
-static const int bwmax = 16000;
+static const int bwmax = 15000;
 static const double bwfac = 0.45;
 
 int FAACAPI faacEncGetDecoderSpecificInfo(faacEncHandle hEncoder,unsigned char** ppBuffer,unsigned long* pSizeOfDecoderSpecificInfo)
@@ -164,11 +164,11 @@ int FAACAPI faacEncSetConfiguration(faacEncHandle hEncoder,
         int cutoff;
       } rates[] =
       {
-    {26500, 5000},
-    {32000, 7000},
-    {41000, 10000},
-    {64000, 16000},
-    {84500, 20000},
+    {29700, 5000},
+    {37700, 7000},
+    {48500, 10000},
+    {64000, 15000},
+    {78500, 20000},
     {0, 0}
       };
       int f0, f1;
@@ -491,7 +491,9 @@ int FAACAPI faacEncEncode(faacEncHandle hEncoder,
     if (!channelInfo[channel].lfe || channelInfo[channel].cpe)
     {
       hEncoder->psymodel->PsyBufferUpdate(&hEncoder->gpsyInfo, &hEncoder->psyInfo[channel],
-                          hEncoder->next3SampleBuff[channel], bandWidth);
+					      hEncoder->next3SampleBuff[channel], bandWidth,
+					      hEncoder->srInfo->cb_width_short,
+					      hEncoder->srInfo->num_cb_short);
     }
     }
 
@@ -839,6 +841,9 @@ static SR_INFO srInfo[12+1] =
 
 /*
 $Log: frame.c,v $
+Revision 1.46  2003/09/07 16:48:31  knik
+Updated psymodel call. Updated bitrate/cutoff mapping table.
+
 Revision 1.45  2003/08/23 15:02:13  knik
 last frame moved back to the library
 
