@@ -637,7 +637,7 @@ int tf_encode_spectrum_aac(
 
 			if ((is_info->is_present)&&(!is_info->is_used[sb])) {
 				if ((ms_info->is_present)&&(!ms_info->ms_used[sb])) {
-					if ((10*log10(energy[MONO_CHAN][sb]+1e-60)<50)||(SigMaskRatio[sb] > 1.0)) {
+					if ((10*log10(energy[MONO_CHAN][sb]*sfb_width_table[0][sb]+1e-60)<70)||(SigMaskRatio[sb] > 1.0)) {
 						quantInfo->pns_sfb_flag[sb] = 1;
 						quantInfo->pns_sfb_nrg[sb] = (int) (2.0 * log(energy[0][sb]*sfb_width_table[0][sb]+1e-60) / log(2.0) + 0.5) + PNS_SF_OFFSET;
 						
@@ -904,13 +904,13 @@ int sort_for_grouping(AACQuantInfo* quantInfo,        /* ptr to quantization inf
 			int bandNum=windowOffset*NSFB_SHORT + k;
 			double worstISMR = PsySigMaskRatio[bandNum];
 			int w=0;
-			for (w=0;w<window_group_length[i];w++) {
+			for (w=1;w<window_group_length[i];w++) {
 				bandNum=(w+windowOffset)*NSFB_SHORT + k;
 				if (PsySigMaskRatio[bandNum]<worstISMR) {
-					worstISMR = (PsySigMaskRatio[bandNum] > 0)?PsySigMaskRatio[bandNum]:worstISMR;
+					worstISMR += (PsySigMaskRatio[bandNum] > 0)?PsySigMaskRatio[bandNum]:worstISMR;
 				}
 			}
-			SigMaskRatio[k+ i* *nr_of_sfb]=worstISMR;
+			SigMaskRatio[k+ i* *nr_of_sfb]=worstISMR/window_group_length[i];
 			sfb_offset[index] = sfb_offset[index-1] + sfb_width_table[k]*window_group_length[i] ;
 			index++;
 		}
