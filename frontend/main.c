@@ -16,7 +16,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: main.c,v 1.18 2001/05/30 08:57:08 menno Exp $
+ * $Id: main.c,v 1.19 2001/05/31 18:03:21 menno Exp $
  */
 
 #ifdef _WIN32
@@ -222,8 +222,7 @@ int main(int argc, char *argv[])
 		printf("Encoding %s took:\t%d:%.2d\t\n", argv[argc-2], nMins, nSecs);
 #else
 #ifdef __unix__
-		getrusage(RUSAGE_SELF,&usage);
-		if (usage) {
+		if (getrusage(RUSAGE_SELF, &usage) == 0) {
 			totalSecs=usage.ru_utime.tv_sec;
 			mins = totalSecs/60;
 			printf("Encoding %s took: %i min, %.2f sec. of cpu-time\n", argv[argc-2], mins, totalSecs - (60 * mins));
