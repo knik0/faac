@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: psych.h,v 1.1 2001/01/17 11:21:40 menno Exp $
+ * $Id: psych.h,v 1.2 2001/01/31 23:40:05 menno Exp $
  */
 
 #ifndef PSYCH_H
@@ -33,6 +33,19 @@ extern "C" {
 #include "coder.h"
 #include "channels.h"
 
+#define NPART_LONG  72
+#define NPART_SHORT 48
+#define MAX_NPART   NPART_LONG
+
+typedef struct {
+	int sampling_rate;
+	int len;
+	unsigned char width[MAX_NPART];
+} PsyPartTable;
+
+static PsyPartTable psyPartTableLong[12+1];
+static PsyPartTable psyPartTableShort[12+1];
+
 typedef struct {
 	int size;
 	int sizeS;
@@ -44,32 +57,15 @@ typedef struct {
 	/* FFT data */
 
 	/* Magnitude */
-	double *fftMagPlus2;
-	double *fftMagPlus1;
-	double *fftMag;
-	double *fftMagMin1;
-	double *fftMagMin2;
+	double *energy;
+	double *energyS[8];
+	double *energyMS;
+	double *energySMS[8];
+	double *transBuff;
+	double *transBuffS[8];
 
-	double *fftMagPlus2S[8];
-	double *fftMagPlus1S[8];
-	double *fftMagS[8];
-	double *fftMagMin1S[8];
-
-	/* Phase */
-	double *fftPhPlus2;
-	double *fftPhPlus1;
-	double *fftPh;
-	double *fftPhMin1;
-	double *fftPhMin2;
-
-	double *fftPhPlus2S[8];
-	double *fftPhPlus1S[8];
-	double *fftPhS[8];
-	double *fftPhMin1S[8];
-
-	/* Unpredictability */
-	double *cw;
-	double *cwS[8];
+	/* Tonality */
+	double *tonality;
 
 	double lastPe;
 	double lastEnr;
@@ -77,6 +73,8 @@ typedef struct {
 	int block_type;
 
 	/* Final threshold values */
+	double *nb;
+	double *nbS[8];
 	double *maskThr;
 	double *maskEn;
 	double *maskThrS[8];
@@ -103,18 +101,21 @@ typedef struct {
 	double sampleRate;
 
 	/* Hann window */
-	double *hannWindow;
-	double *hannWindowS;
+	double *window;
+	double *windowS;
 
 	/* Stereo demasking thresholds */
 	double *mld;
 	double *mldS;
 
+	PsyPartTable *psyPart;
+	PsyPartTable *psyPartS;
+
 	/* Spreading functions */
-	double spreading[MAX_SCFAC_BANDS][MAX_SCFAC_BANDS];
-	double spreadingS[MAX_SCFAC_BANDS][MAX_SCFAC_BANDS];
-	double *rnorm;
-	double *rnormS;
+	double spreading[NPART_LONG][NPART_LONG];
+	double spreadingS[NPART_SHORT][NPART_SHORT];
+	int sprInd[NPART_LONG][2];
+	int sprIndS[NPART_SHORT][2];
 
 	/* Absolute threshold of hearing */
 	double *ath;
@@ -122,17 +123,17 @@ typedef struct {
 } GlobalPsyInfo;
 
 void PsyInit(GlobalPsyInfo *gpsyInfo, PsyInfo *psyInfo, unsigned int numChannels,
-			 unsigned int sampleRate, int *cb_width_long, int num_cb_long,
-			 int *cb_width_short, int num_cb_short);
+			 unsigned int sampleRate, unsigned int sampleRateIdx);
 void PsyEnd(GlobalPsyInfo *gpsyInfo, PsyInfo *psyInfo, unsigned int numChannels);
 void PsyCalculate(ChannelInfo *channelInfo, GlobalPsyInfo *gpsyInfo, PsyInfo *psyInfo,
 				  int *cb_width_long, int num_cb_long, int *cb_width_short,
 				  int num_cb_short, unsigned int numChannels);
 void PsyBufferUpdate(GlobalPsyInfo *gpsyInfo, PsyInfo *psyInfo, double *newSamples);
+void PsyBufferUpdateMS(GlobalPsyInfo *gpsyInfo, PsyInfo *psyInfoL, PsyInfo *psyInfoR);
 void BlockSwitch(CoderInfo *coderInfo, PsyInfo *psyInfo, unsigned int numChannels);
 
 static void Hann(GlobalPsyInfo *gpsyInfo, double *inSamples, int N);
-static void PsyUnpredictability(PsyInfo *psyInfo);
+__inline double mask_add(double m1, double m2, int k, int b, double *ath);
 static void PsyThreshold(GlobalPsyInfo *gpsyInfo, PsyInfo *psyInfo, int *cb_width_long,
 						 int num_cb_long, int *cb_width_short, int num_cb_short);
 static void PsyThresholdMS(ChannelInfo *channelInfoL, GlobalPsyInfo *gpsyInfo,
