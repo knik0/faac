@@ -16,12 +16,18 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: psych.c,v 1.12 2001/09/09 16:03:16 menno Exp $
+ * $Id: psych.c,v 1.13 2001/09/21 09:50:16 eraser Exp $
  */
 
 #include <stdlib.h>
 #include <memory.h>
 #include <math.h>
+
+#if defined(_DEBUG)
+
+#include <stdio.h>
+
+#endif
 
 #include "psych.h"
 #include "coder.h"
