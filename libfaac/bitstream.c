@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: bitstream.c,v 1.10 2001/04/03 10:35:10 menno Exp $
+ * $Id: bitstream.c,v 1.11 2001/04/03 19:32:13 menno Exp $
  */
 
 #include <stdlib.h>
@@ -180,7 +180,11 @@ static int WriteADTSHeader(faacEncHandle hEncoder,
 	if (writeFlag) {
 		/* Fixed ADTS header */
 		PutBit(bitStream, 0xFFFF, 12); /* 12 bit Syncword */
-		PutBit(bitStream, 1, 1); /* ID */
+#ifdef MPEG2AAC
+		PutBit(bitStream, 1, 1); /* ID == 1 for MPEG2 AAC */
+#else
+		PutBit(bitStream, 0, 1); /* ID == 0 for MPEG4 AAC */
+#endif
 		PutBit(bitStream, 0, 2); /* layer == 0 */
 		PutBit(bitStream, 1, 1); /* protection absent */
 		PutBit(bitStream, hEncoder->config.aacProfile, 2); /* profile */
