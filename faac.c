@@ -120,6 +120,7 @@ int parse_arg(int argc, char *argv[],faacAACStream *as, char *InFileNames[100], 
 	  if (INVALID_HANDLE_VALUE != (hFindFile = FindFirstFile(argp, &fd))) {
 	     do {
 	       InFileNames[FileCount] = (char*) malloc((strlen(fd.cFileName) + strlen(path) + 2)*sizeof(char));
+	       OutFileNames[FileCount] = (char*) malloc((strlen(fd.cFileName) + strlen(path) + 2)*sizeof(char));
                strcat(strcpy(InFileNames[FileCount], path), fd.cFileName);
 	       FileCount++;
              }
@@ -220,7 +221,7 @@ void printConf(faacAACStream *as)
   printf("AAC configuration:\n");
   printf("----------------------------------------------\n");
   printf("AAC profile: %s.\n", (as->profile==MAIN_PROFILE)?"MAIN":"LOW");
-  printf("Bitrate: %dkbps.\n", as->bit_rate);
+  printf("Bitrate: %dkbps.\n", as->bit_rate/1000);
   printf("Mid/Side (MS) stereo coding: %s.\n",
  	(as->use_MS==1)?"Always":((as->use_MS==0)?"Switching":"Off"));
   printf("Intensity stereo (IS) coding: %s.\n", as->use_IS?"On":"Off");
@@ -242,18 +243,18 @@ void printConf(faacAACStream *as)
 
 int main(int argc, char *argv[])
 {
-  int						i, frames, currentFrame, result, FileCount;
-  char					*InFileNames[100], *OutFileNames[100];
+  int i, frames, currentFrame, result, FileCount;
+  char *InFileNames[100], *OutFileNames[100];
   faacAACStream *as;
 
 	/* System dependant types */
 #ifdef WIN32
   long	begin, end;
-  int		nTotSecs, nSecs;
-  int		nMins;
+  int nTotSecs, nSecs;
+  int nMins;
 #else
-	float	totalSecs;
-	int		mins;
+  float	totalSecs;
+  int mins;
 #endif
 
   /* create main aacstream object */
@@ -303,10 +304,9 @@ int main(int argc, char *argv[])
     nSecs = nTotSecs - (60*nMins);
     printf("Encoding %s took:\t%d:%.2d\t\n", InFileNames[i], nMins, nSecs);
 #else
-		totalSecs = (float)(clock())/(float)CLOCKS_PER_SEC;
-		mins = totalSecs/60;
-		printf("Encoding %s took: %i min, %.2f sec.\n", InFileNames[i],
-			mins, totalSecs - (60 * mins));
+    totalSecs = (float)(clock())/(float)CLOCKS_PER_SEC;
+    mins = totalSecs/60;
+    printf("Encoding %s took: %i min, %.2f sec.\n", InFileNames[i], mins, totalSecs - (60 * mins));
 #endif
     if(InFileNames[i]) free(InFileNames[i]);
     if(OutFileNames[i]) free(OutFileNames[i]);

@@ -113,7 +113,6 @@ int faac_EncodeInit(faacAACStream *as, char *in_file, char *out_file)
       return -4;
   }
 
-  as->bit_rate*=1000;
   if((as->bit_rate % 1000)||(as->bit_rate < 16000))
     return -5;
   if (as->channels != 2)
@@ -367,7 +366,7 @@ void faac_InitParams(faacAACStream *as)
   as->use_LTP = 1;
   as->use_PNS = 0;
   as->cut_off = 0;
-  as->bit_rate = 128;
+  as->bit_rate = 128000;
   as->out_sampling_rate = 0;
   as->raw_audio = 0;
 }
@@ -388,7 +387,7 @@ void faac_SetParam(faacAACStream *as, int param, int value)
       as->use_IS = value;
       break;
     case BITRATE:
-      as->bit_rate = value;
+      as->bit_rate = value*1000;
       break;
     case CUT_OFF:
       as->cut_off = value;
