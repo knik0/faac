@@ -16,7 +16,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: main.c,v 1.54 2004/02/14 10:31:23 knik Exp $
+ * $Id: main.c,v 1.55 2004/03/03 15:54:50 knik Exp $
  */
 
 #ifdef _MSC_VER
@@ -48,6 +48,7 @@
 #include <stdlib.h>
 #include <ctype.h>
 #include <math.h>
+#include <string.h>
 
 #ifdef HAVE_GETOPT_H
 # include <getopt.h>
@@ -160,7 +161,9 @@ int main(int argc, char *argv[])
 #ifdef HAVE_LIBMP4V2
     MP4FileHandle MP4hFile = MP4_INVALID_FILE_HANDLE;
     MP4TrackId MP4track = 0;
-    int mp4 = 0;
+    int mp4 = 0, ntracks = 0, trackno = 0;
+    const char *artist = NULL, *title = NULL, *album = NULL, *date = NULL,
+      *genre = NULL, *comment = NULL;
     u_int64_t total_samples = 0;
     u_int64_t encoded_samples = 0;
     unsigned int delay_samples;
@@ -202,6 +205,13 @@ int main(int argc, char *argv[])
             { "notns", 0, 0, 302},
 #ifdef HAVE_LIBMP4V2
             { "createmp4", 0, 0, 'w'},
+            { "artist", 1, 0, 'A'},
+            { "title", 1, 0, 'T'},
+            { "album", 1, 0, 'L'},
+            { "track", 1, 0, 'N'},
+            { "genre", 1, 0, 'G'},
+            { "date", 1, 0, 'D'},
+            { "comment", 1, 0, 'M'},
 #endif
 	    { "pcmswapbytes", 0, 0, 'X'},
             { 0, 0, 0, 0}
@@ -211,7 +221,7 @@ int main(int argc, char *argv[])
 
         c = getopt_long(argc, argv, "a:m:o:rnc:q:PR:B:C:I:X"
 #ifdef HAVE_LIBMP4V2
-                        "w"
+                        "wA:T:L:N:G:D:C:"
 #endif
             ,long_options, &option_index);
 
@@ -328,6 +338,27 @@ int main(int argc, char *argv[])
         case 'w':
             mp4 = 1;
             break;
+	case 'A':
+	    artist = optarg;
+	    break;
+	case 'T':
+	    title = optarg;
+	    break;
+	case 'L':
+	    album = optarg;
+	    break;
+	case 'N':
+	    sscanf(optarg, "%i/%i", &trackno, &ntracks);
+	    break;
+	case 'G':
+	    genre = optarg;
+	    break;
+	case 'D':
+	    date = optarg;
+	    break;
+	case 'M':
+	    comment = optarg;
+	    break;
 #endif
         case 300:
             shortctl = atoi(optarg);
@@ -348,6 +379,15 @@ int main(int argc, char *argv[])
           break;
         }
     }
+
+#ifdef HAVE_LIBMP4V2
+    if (!mp4 && (ntracks || trackno || artist || title || album ||
+		 date || genre || comment))
+    {
+      printf("\nERROR: Metadata requires MP4 output!", progName);
+	dieUsage = 1;
+    }
+#endif
 
     /* check that we have at least two non-option arguments */
     if ((argc - optind) < 2 || dieUsage == 1)
@@ -375,6 +415,16 @@ int main(int argc, char *argv[])
         printf("  -I <C,LF> Input channel config, default is 3,4 (Center third, LF fourth)\n");
 #ifdef HAVE_LIBMP4V2
         printf("  -w     Wrap AAC data in MP4 container\n");
+        printf("\n");
+        printf("  MP4 metadata:\n");
+        printf("  -A     Artist\n");
+        printf("  -T     Title\n");
+        printf("  -G     Genre\n");
+        printf("  -L     Album\n");
+        printf("  -N     Track (number/total)\n");
+        printf("  -D     Date\n");
+        printf("  -M     Comment\n");
+        printf("\n");
 #endif
         //printf("More details on FAAC usage can be found in the faac.html file.\n");
         printf("More tips on FAAC usage can be found in Knowledge base at www.audiocoding.com\n");
@@ -480,6 +530,7 @@ int main(int argc, char *argv[])
     if (mp4) {
         u_int8_t *ASC = 0;
         u_int32_t ASCLength = 0;
+	char *version_string;
 
         MP4hFile = MP4Create(aacFileName, 0, 0, 0);
         if (MP4hFile == MP4_INVALID_FILE_HANDLE) {
@@ -492,6 +543,21 @@ int main(int argc, char *argv[])
         MP4SetAudioProfileLevel(MP4hFile, 0x0F);
         faacEncGetDecoderSpecificInfo(hEncoder, &ASC, &ASCLength);
         MP4SetTrackESConfiguration(MP4hFile, MP4track, ASC, ASCLength);
+
+	/* set metadata */
+	version_string = malloc(strlen(faac_id_string) + 6);
+	strcpy(version_string, "FAAC ");
+	strcpy(version_string + 5, faac_id_string);
+	MP4SetMetadataTool(MP4hFile, version_string);
+	free(version_string);
+
+	if (artist) MP4SetMetadataArtist(MP4hFile, artist);
+	if (title) MP4SetMetadataName(MP4hFile, title);
+	if (album) MP4SetMetadataAlbum(MP4hFile, album);
+	if (trackno > 0) MP4SetMetadataTrack(MP4hFile, trackno, ntracks);
+	if (date > 0) MP4SetMetadataYear(MP4hFile, date);
+	if (genre) MP4SetMetadataGenre(MP4hFile, genre);
+	if (comment) MP4SetMetadataComment(MP4hFile, genre);
     }
     else
     {
@@ -690,6 +756,9 @@ int main(int argc, char *argv[])
 
 /*
 $Log: main.c,v $
+Revision 1.55  2004/03/03 15:54:50  knik
+libmp4v2 autoconf detection and mp4 metadata support by Dan Christiansen
+
 Revision 1.54  2004/02/14 10:31:23  knik
 Print help and exit when unknown option is specified.
 

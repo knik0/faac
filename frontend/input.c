@@ -16,7 +16,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: input.c,v 1.11 2003/10/17 17:11:18 knik Exp $
+ * $Id: input.c,v 1.12 2004/03/03 15:54:50 knik Exp $
  */
 
 #ifdef HAVE_CONFIG_H
@@ -25,6 +25,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #ifdef WIN32
 #include <io.h>
