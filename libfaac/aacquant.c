@@ -17,7 +17,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: aacquant.c,v 1.15 2002/12/28 09:22:18 knik Exp $
+ * $Id: aacquant.c,v 1.16 2003/03/27 17:06:50 knik Exp $
  */
 
 #include <math.h>
@@ -52,7 +52,7 @@ static int SearchStepSize(CoderInfo *coderInfo,
                           int *xi);
 
 static void CalcAllowedDist(PsyInfo *psyInfo, int *cb_offset, int num_cb,
-			    double *xr, double *xmin, int bits);
+			    double *xr, double *xmin, int quality);
 
 static int CountBits(CoderInfo *coderInfo, int *ix, const double *xr);
 
@@ -177,7 +177,7 @@ int AACQuantize(CoderInfo *coderInfo,
                 int *cb_width,
                 int num_cb,
                 double *xr,
-                int desired_rate)
+                int quality)
 {
     int sb, i, do_q = 0;
     int bits, sign;
@@ -187,7 +187,6 @@ int AACQuantize(CoderInfo *coderInfo,
 
     /* Use local copy's */
     int *scale_factor = coderInfo->scale_factor;
-
 
     if (coderInfo->block_type == ONLY_SHORT_WINDOW) {
         SortForGrouping(coderInfo, psyInfo, channelInfo, cb_width, xr);
@@ -215,8 +214,8 @@ int AACQuantize(CoderInfo *coderInfo,
 
     if (do_q) {
         CalcAllowedDist(psyInfo, coderInfo->sfb_offset,
-			coderInfo->nr_of_sfb, xr, xmin, desired_rate);
-	bits = SearchStepSize(coderInfo, 0.8 * desired_rate, xr_pow, xi);
+			coderInfo->nr_of_sfb, xr, xmin, quality);
+	bits = SearchStepSize(coderInfo, 9 * quality, xr_pow, xi);
 	FixNoise(coderInfo, xr, xr_pow, xi, xmin);
 	BalanceEnergy(coderInfo, xr, xi);
 	UpdateRequant(coderInfo, xi);
@@ -480,11 +479,11 @@ static int CountBits(CoderInfo *coderInfo, int *ix, const double *xr)
 }
 
 static void CalcAllowedDist(PsyInfo *psyInfo, int *cb_offset, int num_cb,
-                            double *xr, double *xmin, int bits)
+                            double *xr, double *xmin, int quality)
 {
     int sfb, start, end;
     double xmin0;
-    static const double globalthr = 23e-3;
+    const double globalthr = 12.0 / (double)quality;
 
     for (sfb = 0; sfb < num_cb; sfb++)
     {
@@ -493,7 +492,7 @@ static void CalcAllowedDist(PsyInfo *psyInfo, int *cb_offset, int num_cb,
 
         xmin0 = psyInfo->maskEn[sfb];
         if (xmin0 > 0.0)
-	  xmin0 = psyInfo->maskThr[sfb] * (double)end * globalthr / xmin0;
+	  xmin0 = psyInfo->maskThr[sfb] * pow(end, 0.6) * globalthr / xmin0;
 
 	xmin[sfb] = xmin0;
     }
