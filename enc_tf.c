@@ -119,7 +119,7 @@ void EncTfInit (faacAACConfig *ac, int VBR_setting)
 		64000,80000,96000,112000,128000,160000,192000,224000,256000,0
 	};
 
-	sampling_rate = ac->sampling_rate;
+	sampling_rate = ac->out_sampling_rate;
 	bit_rate = ac->bit_rate;
 
 	for (i = 0; ; i++)

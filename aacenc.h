@@ -1,5 +1,7 @@
 
 
+typedef struct RCBufStruct RCBuf;	/* buffer handle */
+
 #define MAIN_PROFILE 0
 #define LOW_PROFILE 1
 
@@ -8,9 +10,9 @@
 
 typedef struct {
 	int channels;      // Number of channels: Currently has to be 2
-	int sampling_rate; // Sampling rate
-	int bit_rate;      // Bitrate: can be: 64000, 80000, 96000, 112000, 128000, 160000
-	                   //    192000, 224000 or 256000
+	int in_sampling_rate; // Sampling rate of the input file
+	int out_sampling_rate; // Sampling rate of the output AAC file
+	int bit_rate;      // Bitrate: can be any bitrate higher than 16kbps in steps of 1kbps
 	int profile;       // AAC Profile: can be MAIN_PROFILE or LOW_PROFILE
 	int write_header;  // If this is 1, a ADIF header will be written, if it is 0, no
 	                   //    header will be written. (better turn this on, because
@@ -23,6 +25,14 @@ typedef struct {
 	int use_PNS;       // If 1, PNS is on, if 0, it is off
 } faacAACConfig;
 
+typedef struct {
+	int DLLMajorVersion; // These 2 values should always be checked, because the DLL
+	int DLLMinorVersion; // interface can change from version to version.
+	int MajorVersion;
+	int MinorVersion;
+	char HomePage[255];
+} faacVersion;
+
 // This structure is for internal use of the encoder only.
 typedef struct {
 	long total_bits;
@@ -30,7 +40,8 @@ typedef struct {
 	long cur_frame;
 	int is_first_frame;
 	int channels;
-	int sampling_rate;
+	int out_sampling_rate;
+	int in_sampling_rate;
 	int frame_bits;
 	int available_bits;
 	int write_header;
@@ -41,15 +52,12 @@ typedef struct {
 	int use_PNS;
 	int profile;
 	double **inputBuffer;
+	RCBuf *rc_buf;
+	int rc_needed;
+	int samplesToRead;
+	int savedSize;
+	float saved[2048];
 } faacAACStream;
-
-typedef struct {
-	int DLLMajorVersion; // These 2 values should always be checked, because the DLL
-	int DLLMinorVersion; // interface can change from version to version.
-	int MajorVersion;
-	int MinorVersion;
-	char HomePage[255];
-} faacVersion;
 
 #ifndef FAAC_DLL
 

@@ -10,6 +10,7 @@
 
 #include "aacenc.h"
 #include "bitstream.h"	/* bit stream module */
+#include "rateconv.h"
 
 #include "enc.h"	/* encoder cores */
 
@@ -49,7 +50,8 @@ faacAACStream *faacEncodeInit(faacAACConfig *ac, int *samplesToRead, int *bitBuf
 	as->frames = 0;
 	as->cur_frame = 0;
 	as->channels = ac->channels;
-	as->sampling_rate = ac->sampling_rate;
+	as->out_sampling_rate = ac->out_sampling_rate;
+	as->in_sampling_rate = ac->in_sampling_rate;
 	as->write_header = ac->write_header;
 	as->use_MS = ac->use_MS;
 	as->use_IS = ac->use_IS;
@@ -58,6 +60,11 @@ faacAACStream *faacEncodeInit(faacAACConfig *ac, int *samplesToRead, int *bitBuf
 	as->use_PNS = ac->use_PNS;
 	as->profile = ac->profile;
 	as->is_first_frame = 1;
+
+	if (ac->in_sampling_rate != ac->out_sampling_rate)
+		as->rc_needed = 1;
+	else
+		as->rc_needed = 0;
 
 	if (as->write_header) {
 		*headerSize = 17;
@@ -72,8 +79,8 @@ faacAACStream *faacEncodeInit(faacAACConfig *ac, int *samplesToRead, int *bitBuf
 
 	*samplesToRead = frameNumSample * ac->channels;
 
-	as->frame_bits = (int)(ac->bit_rate*frameNumSample/ac->sampling_rate+0.5);
-	*bitBufferSize = (int)(((as->frame_bits * 2) + 7)/8);
+	as->frame_bits = (int)(ac->bit_rate*frameNumSample/ac->out_sampling_rate+0.5);
+	*bitBufferSize = (int)(((as->frame_bits * 5) + 7)/8);
 
 
 	/* num frames to start up encoder due to delay compensation */
@@ -83,86 +90,141 @@ faacAACStream *faacEncodeInit(faacAACConfig *ac, int *samplesToRead, int *bitBuf
 	as->cur_frame = -startupNumFrame;
 	as->available_bits = 8184;
 
+	if (as->rc_needed) {
+		as->rc_buf = RateConvInit (0,		/* in: debug level */
+			(double)as->out_sampling_rate/(double)as->in_sampling_rate, /* in: outputRate / inputRate */
+			as->channels,		/* in: number of channels */
+			-1,			/* in: num taps */
+			-1,			/* in: alpha for Kaiser window */
+			-1,			/* in: 6dB cutoff freq / input bandwidth */
+			-1,			/* in: 100dB cutoff freq / input bandwidth */
+			samplesToRead);		/* out: num input samples / frame */
+		as->samplesToRead = *samplesToRead;
+	} else
+		*samplesToRead = 1024*as->channels;
+
+	as->savedSize = 0;
+
 	return as;
 }
 
 int faacEncodeFrame(faacAACStream *as, short *Buffer, int Samples, unsigned char *bitBuffer, int *bitBufSize)
 {
-	int i, error;
+	int i, j, error;
 	int usedNumBit, usedBytes;
+	int savedSamplesOut, samplesOut, curSample = 0;
 	BsBitStream *bitBuf;
+	float *dataOut;
+	float *data = NULL;
+	int totalBytes = 0;
 
 	// Is this the last (incomplete) frame
-	if ((Samples < 1024*as->channels)&&(Samples > 0)) {
+	if ((Samples < as->samplesToRead)&&(Samples > 0)) {
 		// Padd with zeros
-		memset(Buffer + Samples, 0, (2048-Samples)*sizeof(short));
+		memset(Buffer + Samples, 0, (as->samplesToRead-Samples)*sizeof(short));
 	}
 
-	// Process Buffer
-	if (Buffer) {
-		if (as->channels == 2)
-		{
-			if (Samples > 0)
-				for (i = 0; i < 1024; i++)
-				{
-					as->inputBuffer[0][i] = *Buffer++;
-					as->inputBuffer[1][i] = *Buffer++;
-				}
-				else // (Samples == 0) when called by faacEncodeFinish
+	if (as->rc_needed && (Samples > 0)) {
+		savedSamplesOut = samplesOut = as->savedSize + RateConv (
+			as->rc_buf,			/* in: buffer (handle) */
+			Buffer,		/* in: input data[] */
+			as->samplesToRead,		/* in: number of input samples */
+			&dataOut);
+
+		data = malloc((samplesOut)*sizeof(float));
+		for (i = 0; i < as->savedSize; i++)
+			data[i] = as->saved[i];
+		for (j = 0; i < samplesOut; i++, j++)
+			data[i] = dataOut[j];
+	} else if (Samples > 0) {
+		samplesOut = 1024*as->channels;
+		data = malloc((samplesOut)*sizeof(float));
+		for (i = 0; i < samplesOut; i++)
+			data[i] = Buffer[i];
+	}
+
+	while(samplesOut >= 1024*as->channels)
+	{
+
+		// Process Buffer
+		if (Buffer) {
+			if (as->channels == 2)
+			{
+				if (Samples > 0)
 					for (i = 0; i < 1024; i++)
 					{
-						as->inputBuffer[0][i] = 0;
-						as->inputBuffer[1][i] = 0;
+						as->inputBuffer[0][i] = data[curSample+(i*2)];
+						as->inputBuffer[1][i] = data[curSample+(i*2)+1];
 					}
-		} else {
-			// No mono supported yet (basically only a problem with decoder
-			// the encoder in fact supports it).
-			return FERROR;
+					else // (Samples == 0) when called by faacEncodeFinish
+						for (i = 0; i < 1024; i++)
+						{
+							as->inputBuffer[0][i] = 0;
+							as->inputBuffer[1][i] = 0;
+						}
+			} else {
+				// No mono supported yet (basically only a problem with decoder
+				// the encoder in fact supports it).
+				return FERROR;
+			}
 		}
-	}
 
-	if (as->is_first_frame) {
-		EncTfFrame(as, (BsBitStream*)NULL);
+#if 0
+		if (as->is_first_frame) {
+			EncTfFrame(as, (BsBitStream*)NULL);
 
-		as->is_first_frame = 0;
+			as->is_first_frame = 0;
+			as->cur_frame++;
+
+			*bitBufSize = 0;
+
+			return FNO_ERROR;
+		}
+#endif
+
+		bitBuf = BsOpenWrite(as->frame_bits * 10);
+
+		/* compute available number of bits */
+		/* frameAvailNumBit contains number of bits in reservoir */
+		/* variable bit rate: don't exceed bit reservoir size */
+		if (as->available_bits > 8184)
+			as->available_bits = 8184;
+		
+		/* Add to frameAvailNumBit the number of bits for this frame */
+		as->available_bits += as->frame_bits;
+
+		/* Encode frame */
+		error = EncTfFrame(as, bitBuf);
+
+		if (error == FERROR)
+			return FERROR;
+
+		usedNumBit = BsBufferNumBit(bitBuf);
+		as->total_bits += usedNumBit;
+
+		// Copy bitBuf into bitBuffer here
+		usedBytes = (int)((usedNumBit+7)/8);
+		for (i = 0; i < usedBytes; i++)
+			bitBuffer[i+totalBytes] = bitBuf->data[i];
+		totalBytes += usedBytes;
+		BsClose(bitBuf);
+
+		/* Adjust available bit counts */
+		as->available_bits -= usedNumBit;    /* Subtract bits used */
+
 		as->cur_frame++;
 
-		*bitBufSize = 0;
+		samplesOut -= (as->channels*1024);
+		curSample  += (as->channels*1024);
 
-		return FNO_ERROR;
 	}
 
-	bitBuf = BsOpenWrite(as->frame_bits * 10);
+	*bitBufSize = totalBytes;
 
-	/* compute available number of bits */
-	/* frameAvailNumBit contains number of bits in reservoir */
-	/* variable bit rate: don't exceed bit reservoir size */
-	if (as->available_bits > 8184)
-		as->available_bits = 8184;
-		
-	/* Add to frameAvailNumBit the number of bits for this frame */
-	as->available_bits += as->frame_bits;
-
-	/* Encode frame */
-	error = EncTfFrame(as, bitBuf);
-
-	if (error == FERROR)
-		return FERROR;
-
-	usedNumBit = BsBufferNumBit(bitBuf);
-	as->total_bits += usedNumBit;
-
-	// Copy bitBuf into bitBuffer here
-	usedBytes = (int)((usedNumBit+7)/8);
-	*bitBufSize = usedBytes;
-	for (i = 0; i < usedBytes; i++)
-		bitBuffer[i] = bitBuf->data[i];
-	BsClose(bitBuf);
-
-	/* Adjust available bit counts */
-	as->available_bits -= usedNumBit;    /* Subtract bits used */
-
-	as->cur_frame++;
+	as->savedSize = samplesOut;
+	for (i = 0; i < samplesOut; i++)
+		as->saved[i] = data[curSample+i];
+	if (data) free(data);
 
 	return FNO_ERROR;
 }
@@ -188,11 +250,13 @@ int faacEncodeFree(faacAACStream *as, unsigned char *headerBuf)
 	float seconds;
 	int bits, bytes, ch;
 
-	seconds = (float)as->sampling_rate/(float)1024;
+	seconds = (float)as->out_sampling_rate/(float)1024;
 	seconds = (float)as->cur_frame/seconds;
 
 	/* free encoder memory */
 	EncTfFree();
+	if (as->rc_needed)
+		RateConvFree (as->rc_buf);
 
 	if (as->write_header)
 	{
@@ -205,7 +269,7 @@ int faacEncodeFree(faacAACStream *as, unsigned char *headerBuf)
 
 		for (i = 0; ; i++)
 		{
-			if (SampleRates[i] == as->sampling_rate)
+			if (SampleRates[i] == as->out_sampling_rate)
 				break;
 			else if (SampleRates[i] == 0)
 			{
@@ -340,6 +404,7 @@ void usage(void)
 	printf(" -np   Don't use LTP (Long Term Prediction).\n");
 	printf(" -nh   No header will be written to the AAC file.\n");
 	printf(" -oX   Set output directory.\n");
+	printf(" -sX   Set output sampling rate.\n");
 	printf(" -r    Use raw data input file.\n");
 	printf(" file  Multiple files can be given as well as wild cards.\n");
 	printf("       Can be any of the filetypes supported by libsndfile\n");
@@ -354,7 +419,7 @@ int main(int argc, char *argv[])
 {
 	int readNumSample;
 
-	short sampleBuffer[2048];
+	short *sampleBuffer;
 	unsigned char *bitBuffer = NULL;
 	FILE *aacfile;
 	SNDFILE *sndfile;
@@ -369,6 +434,7 @@ int main(int argc, char *argv[])
 	int no_header = 0;
 	int use_IS = 0, use_MS = 0, use_TNS = 1, use_LTP = 1, use_PNS = 0;
 	int bit_rate = 128;
+	int out_rate = 0;
 	char out_dir[255];
 	int out_dir_set = 0;
 	int raw_audio = 0;
@@ -481,6 +547,10 @@ int main(int argc, char *argv[])
 			case 'B':
 				bit_rate = atoi(&argv[i][2]);
 				break;
+			case 's':
+			case 'S':
+				out_rate = atoi(&argv[i][2]);
+				break;
 			case 'o':
 			case 'O':
 				out_dir_set = 1;
@@ -541,7 +611,8 @@ int main(int argc, char *argv[])
 		}
 
 		ac.channels = sf_info.channels;
-		ac.sampling_rate = sf_info.samplerate;
+		ac.in_sampling_rate = sf_info.samplerate;
+		ac.out_sampling_rate = out_rate ? out_rate : sf_info.samplerate;
 		ac.bit_rate = bit_rate * 1000;
 		ac.profile = profile;
 		ac.use_MS = use_MS;
@@ -556,6 +627,7 @@ int main(int argc, char *argv[])
 			printf("Error while encoding %s.\n", FileNames[i]);
 			continue;
 		}
+		sampleBuffer = malloc(readNumSample*sizeof(short));
 
 		bitBuffer = malloc((bitBufSize+100)*sizeof(char));
 
@@ -614,6 +686,7 @@ int main(int argc, char *argv[])
 
 		fclose(aacfile);
 		if (bitBuffer) { free(bitBuffer); bitBuffer = NULL; }
+		if (sampleBuffer) { free(sampleBuffer); sampleBuffer = NULL; }
 
 #ifdef WIN32
 		end = GetTickCount();

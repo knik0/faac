@@ -148,6 +148,10 @@ SOURCE=.\pulse.c
 # End Source File
 # Begin Source File
 
+SOURCE=.\rateconv.c
+# End Source File
+# Begin Source File
+
 SOURCE=.\tns.c
 # End Source File
 # Begin Source File
