@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: frame.c,v 1.19 2001/05/02 05:39:14 menno Exp $
+ * $Id: frame.c,v 1.20 2001/05/28 18:12:32 menno Exp $
  */
 
 /*
@@ -147,7 +147,7 @@ faacEncHandle FAACAPI faacEncOpen(unsigned long sampleRate,
 
 	LtpInit(hEncoder);
 
-	PredInit();
+	PredInit(hEncoder);
 
 	AACQuantizeInit(hEncoder->coderInfo, hEncoder->numChannels);
 

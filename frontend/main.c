@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: main.c,v 1.16 2001/05/08 13:19:08 menno Exp $
+ * $Id: main.c,v 1.17 2001/05/28 18:12:32 menno Exp $
  */
 
 #ifdef _WIN32
@@ -56,7 +56,7 @@ int main(int argc, char *argv[])
 	FILE *outfile;
 
 #ifdef __unix__
-	struct rusage *usage;
+	struct rusage usage;
 #endif
 #ifdef _WIN32
 	long begin, end;
@@ -222,9 +222,9 @@ int main(int argc, char *argv[])
 		printf("Encoding %s took:\t%d:%.2d\t\n", argv[argc-2], nMins, nSecs);
 #else
 #ifdef __unix__
-		getrusage(RUSAGE_SELF,usage);
+		getrusage(RUSAGE_SELF,&usage);
 		if (usage) {
-			totalSecs=usage->ru_utime.tv_sec;
+			totalSecs=usage.ru_utime.tv_sec;
 			mins = totalSecs/60;
 			printf("Encoding %s took: %i min, %.2f sec. of cpu-time\n", argv[argc-2], mins, totalSecs - (60 * mins));
 		}
