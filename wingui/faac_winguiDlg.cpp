@@ -724,6 +724,9 @@ void CFaac_winguiDlg::ProcessJobs(TItemList<long> oJobIds, bool bRemoveProcessJo
 		// dialog is updated
 		OnJobListCtrlUserAction();
 	}
+
+	// wake up the user
+	MessageBeep(MB_OK);
 }
 
 bool CFaac_winguiDlg::LoadJobList(const CString &oCompletePath)
