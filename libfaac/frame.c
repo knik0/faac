@@ -16,7 +16,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: frame.c,v 1.54 2003/11/24 18:09:12 knik Exp $
+ * $Id: frame.c,v 1.55 2003/12/17 20:59:55 knik Exp $
  */
 
 /*
@@ -61,7 +61,7 @@ static const psymodellist_t psymodellist[] = {
 };
 
 static SR_INFO srInfo[12+1];
-static const int bwmax = 15000;
+static const int bwmax = 16000;
 static const double bwfac = 0.45;
 
 
@@ -180,11 +180,11 @@ int FAACAPI faacEncSetConfiguration(faacEncHandle hEncoder,
 			int rate; // per channel at 44100 sampling frequency
 			int cutoff;
 		}	rates[] = {
-			{29700, 5000},
-			{37700, 7000},
-			{48500, 10000},
-			{64000, 15000},
-			{78500, 20000},
+			{29500, 5000},
+			{37500, 7000},
+			{47000, 10000},
+			{64000, 16000},
+			{76000, 20000},
 			{0, 0}
 		};
 
@@ -942,6 +942,9 @@ static SR_INFO srInfo[12+1] =
 
 /*
 $Log: frame.c,v $
+Revision 1.55  2003/12/17 20:59:55  knik
+changed default cutoff to 16k
+
 Revision 1.54  2003/11/24 18:09:12  knik
 A safe version of faacEncGetVersion() without string length problem.
 Removed Stux from copyright notice. I don't think he contributed something very
