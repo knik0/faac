@@ -16,7 +16,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: frame.c,v 1.40 2003/08/07 08:17:00 knik Exp $
+ * $Id: frame.c,v 1.41 2003/08/08 10:02:09 menno Exp $
  */
 
 /*
@@ -51,8 +51,8 @@
 static char *libfaacName = FAAC_VERSION " (" __DATE__ ")";
 static char *libCopyright =
   "FAAC - Freeware Advanced Audio Coder (http://www.audiocoding.com/)\n"
-  "	Portions Copyright (C) 2001 Menno Bakker\n"
-  "	Portions Copyright (C) 2002,2003 Krzysztof Nikiel\n"
+  " Portions Copyright (C) 2001 Menno Bakker\n"
+  " Portions Copyright (C) 2002,2003 Krzysztof Nikiel\n"
   "This software is based on the ISO MPEG-4 reference source code.\n";
 
 static const psymodellist_t psymodellist[] = {
@@ -71,7 +71,7 @@ int FAACAPI faacEncGetDecoderSpecificInfo(faacEncHandle hEncoder,unsigned char**
     if((hEncoder == NULL) || (ppBuffer == NULL) || (pSizeOfDecoderSpecificInfo == NULL)) {
         return -1;
     }
-    
+
     if(hEncoder->config.mpegVersion == MPEG2){
         return -2; /* not supported */
     }
@@ -119,22 +119,23 @@ int FAACAPI faacEncSetConfiguration(faacEncHandle hEncoder,
     hEncoder->config.useTns = config->useTns;
     hEncoder->config.aacObjectType = config->aacObjectType;
     hEncoder->config.mpegVersion = config->mpegVersion;
-	hEncoder->config.outputFormat = config->outputFormat;
+    hEncoder->config.outputFormat = config->outputFormat;
+    hEncoder->config.inputFormat = config->inputFormat;
 
-	assert((hEncoder->config.outputFormat == 0) || (hEncoder->config.outputFormat == 1));
+    assert((hEncoder->config.outputFormat == 0) || (hEncoder->config.outputFormat == 1));
 
-	switch( hEncoder->config.inputFormat )
-	{
-		case FAAC_INPUT_16BIT:
-		//case FAAC_INPUT_24BIT:
-		case FAAC_INPUT_32BIT:
-		case FAAC_INPUT_FLOAT:
-			break;
+    switch( hEncoder->config.inputFormat )
+    {
+        case FAAC_INPUT_16BIT:
+        //case FAAC_INPUT_24BIT:
+        case FAAC_INPUT_32BIT:
+        case FAAC_INPUT_FLOAT:
+            break;
 
-		default:
-			return 0;
-			break;
-	}
+        default:
+            return 0;
+            break;
+    }
 
     /* No SSR supported for now */
     if (hEncoder->config.aacObjectType == SSR)
@@ -159,16 +160,16 @@ int FAACAPI faacEncSetConfiguration(faacEncHandle hEncoder,
     {
       int i;
       static struct {
-	int rate; // per channel at 44100 sampling frequency
+    int rate; // per channel at 44100 sampling frequency
         int cutoff;
       } rates[] =
       {
-	{26500, 5000},
-	{32000, 7000},
-	{41000, 10000},
-	{64000, 16000},
-	{84500, 20000},
-	{0, 0}
+    {26500, 5000},
+    {32000, 7000},
+    {41000, 10000},
+    {64000, 16000},
+    {84500, 20000},
+    {0, 0}
       };
       int f0, f1;
       int r0, r1;
@@ -181,28 +182,28 @@ int FAACAPI faacEncSetConfiguration(faacEncHandle hEncoder,
       r0 = r1 = rates[0].rate;
       for (i = 0; rates[i].rate; i++)
       {
-	f0 = f1;
-	f1 = rates[i].cutoff;
-	r0 = r1;
-	r1 = rates[i].rate;
-	if (rates[i].rate >= config->bitRate)
-	  break;
+    f0 = f1;
+    f1 = rates[i].cutoff;
+    r0 = r1;
+    r1 = rates[i].rate;
+    if (rates[i].rate >= config->bitRate)
+      break;
       }
 
       if (config->bitRate > r1)
         config->bitRate = r1;
       if (config->bitRate < r0)
-	config->bitRate = r0;
+    config->bitRate = r0;
 
       if (f1 > f0)
-	config->bandWidth =
-	  pow((double)config->bitRate / r1,
-	      log((double)f1 / f0) / log ((double)r1 / r0)) * (double)f1;
+    config->bandWidth =
+      pow((double)config->bitRate / r1,
+          log((double)f1 / f0) / log ((double)r1 / r0)) * (double)f1;
       else
-	config->bandWidth = f1;
+    config->bandWidth = f1;
 
       config->bandWidth =
-	(double)config->bandWidth * hEncoder->sampleRate / 44100;
+    (double)config->bandWidth * hEncoder->sampleRate / 44100;
       config->bitRate = (double)config->bitRate * hEncoder->sampleRate / 44100;
     }
 
@@ -212,7 +213,7 @@ int FAACAPI faacEncSetConfiguration(faacEncHandle hEncoder,
     {
       config->bandWidth = bwfac * hEncoder->sampleRate;
       if (config->bandWidth > bwmax)
-	config->bandWidth = bwmax;
+    config->bandWidth = bwmax;
     }
 
     hEncoder->config.bandWidth = config->bandWidth;
@@ -236,9 +237,9 @@ int FAACAPI faacEncSetConfiguration(faacEncHandle hEncoder,
     hEncoder->config.psymodelidx = config->psymodelidx;
     hEncoder->psymodel = psymodellist[hEncoder->config.psymodelidx].model;
     hEncoder->psymodel->PsyInit(&hEncoder->gpsyInfo, hEncoder->psyInfo, hEncoder->numChannels,
-	      hEncoder->sampleRate, hEncoder->srInfo->cb_width_long,
-	      hEncoder->srInfo->num_cb_long, hEncoder->srInfo->cb_width_short,
-	      hEncoder->srInfo->num_cb_short);
+          hEncoder->sampleRate, hEncoder->srInfo->cb_width_long,
+          hEncoder->srInfo->num_cb_long, hEncoder->srInfo->cb_width_short,
+          hEncoder->srInfo->num_cb_short);
 
     /* OK */
     return 1;
@@ -285,17 +286,17 @@ faacEncHandle FAACAPI faacEncOpen(unsigned long sampleRate,
     hEncoder->psymodel =
       hEncoder->config.psymodellist[hEncoder->config.psymodelidx].model;
 
-	/*
-		by default we have to be compatible with all previous software
-		which assumes that we will generate ADTS
-		/AV
-	*/
-	hEncoder->config.outputFormat = 1;
+    /*
+        by default we have to be compatible with all previous software
+        which assumes that we will generate ADTS
+        /AV
+    */
+    hEncoder->config.outputFormat = 1;
 
-	/*
-		be compatible with software which assumes 24bit in 32bit PCM
-	*/
-	hEncoder->config.inputFormat = FAAC_INPUT_32BIT;
+    /*
+        be compatible with software which assumes 24bit in 32bit PCM
+    */
+    hEncoder->config.inputFormat = FAAC_INPUT_32BIT;
 
     /* find correct sampling rate depending parameters */
     hEncoder->srInfo = &srInfo[hEncoder->sampleRateIdx];
@@ -321,7 +322,7 @@ faacEncHandle FAACAPI faacEncOpen(unsigned long sampleRate,
     hEncoder->psymodel->PsyInit(&hEncoder->gpsyInfo, hEncoder->psyInfo, hEncoder->numChannels,
         hEncoder->sampleRate, hEncoder->srInfo->cb_width_long,
         hEncoder->srInfo->num_cb_long, hEncoder->srInfo->cb_width_short,
-        hEncoder->srInfo->num_cb_short); 
+        hEncoder->srInfo->num_cb_short);
 
     FilterBankInit(hEncoder);
 
@@ -357,15 +358,15 @@ int FAACAPI faacEncClose(faacEncHandle hEncoder)
     /* Free remaining buffer memory */
     for (channel = 0; channel < hEncoder->numChannels; channel++) {
       if (hEncoder->ltpTimeBuff[channel])
-	FreeMemory(hEncoder->ltpTimeBuff[channel]);
+    FreeMemory(hEncoder->ltpTimeBuff[channel]);
       if (hEncoder->sampleBuff[channel])
-	FreeMemory(hEncoder->sampleBuff[channel]);
+    FreeMemory(hEncoder->sampleBuff[channel]);
       if (hEncoder->nextSampleBuff[channel])
-	FreeMemory(hEncoder->nextSampleBuff[channel]);
+    FreeMemory(hEncoder->nextSampleBuff[channel]);
       if (hEncoder->next2SampleBuff[channel])
-	FreeMemory (hEncoder->next2SampleBuff[channel]);
+    FreeMemory (hEncoder->next2SampleBuff[channel]);
       if (hEncoder->next3SampleBuff[channel])
-	FreeMemory (hEncoder->next3SampleBuff[channel]);
+    FreeMemory (hEncoder->next3SampleBuff[channel]);
     }
 
     /* Free handle */
@@ -418,7 +419,7 @@ int FAACAPI faacEncEncode(faacEncHandle hEncoder,
 
     /* Update current sample buffers */
     for (channel = 0; channel < numChannels; channel++) {
-	double *tmp;
+    double *tmp;
 
         if (hEncoder->sampleBuff[channel]) {
             for(i = 0; i < FRAME_LEN; i++) {
@@ -432,66 +433,66 @@ int FAACAPI faacEncEncode(faacEncHandle hEncoder,
             }
         }
 
-	if (!hEncoder->sampleBuff[channel])
-	  hEncoder->sampleBuff[channel] = (double*)AllocMemory(FRAME_LEN*sizeof(double));
-	tmp = hEncoder->sampleBuff[channel];
+    if (!hEncoder->sampleBuff[channel])
+      hEncoder->sampleBuff[channel] = (double*)AllocMemory(FRAME_LEN*sizeof(double));
+    tmp = hEncoder->sampleBuff[channel];
         hEncoder->sampleBuff[channel] = hEncoder->nextSampleBuff[channel];
         hEncoder->nextSampleBuff[channel] = hEncoder->next2SampleBuff[channel];
         hEncoder->next2SampleBuff[channel] = hEncoder->next3SampleBuff[channel];
-	hEncoder->next3SampleBuff[channel] = tmp;
+    hEncoder->next3SampleBuff[channel] = tmp;
 
         if (samplesInput == 0)
-		{ 
-			/* start flushing*/
+        {
+            /* start flushing*/
             for (i = 0; i < FRAME_LEN; i++)
                 hEncoder->next3SampleBuff[channel][i] = 0.0;
-        } 
-		else 
-		{ 
-			/* handle the various input formats */
-			switch( hEncoder->config.inputFormat )
-			{
-				case FAAC_INPUT_16BIT:
-					for (i = 0; i < (int)(samplesInput/numChannels); i++)
-					{
-						hEncoder->next3SampleBuff[channel][i] =
-							(double)((short*)inputBuffer)[(i*numChannels)+channel];
-					}
-					break;
+        }
+        else
+        {
+            /* handle the various input formats */
+            switch( hEncoder->config.inputFormat )
+            {
+                case FAAC_INPUT_16BIT:
+                    for (i = 0; i < (int)(samplesInput/numChannels); i++)
+                    {
+                        hEncoder->next3SampleBuff[channel][i] =
+                            (double)((short*)inputBuffer)[(i*numChannels)+channel];
+                    }
+                    break;
 
-				case FAAC_INPUT_32BIT:
-					for (i = 0; i < (int)(samplesInput/numChannels); i++)
-					{
-						hEncoder->next3SampleBuff[channel][i] =
-							(1.0/256) *  (double)inputBuffer[(i*numChannels)+channel];
-					}
-					break;
+                case FAAC_INPUT_32BIT:
+                    for (i = 0; i < (int)(samplesInput/numChannels); i++)
+                    {
+                        hEncoder->next3SampleBuff[channel][i] =
+                            (1.0/256) *  (double)inputBuffer[(i*numChannels)+channel];
+                    }
+                    break;
 
-				case FAAC_INPUT_FLOAT:
-					for (i = 0; i < (int)(samplesInput/numChannels); i++)
-					{
-						hEncoder->next3SampleBuff[channel][i] =
-							((float*)inputBuffer)[(i*numChannels)+channel];
-					}
-					break;
+                case FAAC_INPUT_FLOAT:
+                    for (i = 0; i < (int)(samplesInput/numChannels); i++)
+                    {
+                        hEncoder->next3SampleBuff[channel][i] =
+                            ((float*)inputBuffer)[(i*numChannels)+channel];
+                    }
+                    break;
 
-				default:
-					return -1; /* invalid input format */
-					break;
-			}
+                default:
+                    return -1; /* invalid input format */
+                    break;
+            }
 
             for (i = (int)(samplesInput/numChannels); i < FRAME_LEN; i++)
                 hEncoder->next3SampleBuff[channel][i] = 0.0;
         }
 
         /* Psychoacoustics */
-	/* Update buffers and run FFT on new samples */
-	/* LFE psychoacoustic can run without it */
-	if (!channelInfo[channel].lfe || channelInfo[channel].cpe)
-	{
-	  hEncoder->psymodel->PsyBufferUpdate(&hEncoder->gpsyInfo, &hEncoder->psyInfo[channel],
-					      hEncoder->next3SampleBuff[channel], bandWidth);
-	}
+    /* Update buffers and run FFT on new samples */
+    /* LFE psychoacoustic can run without it */
+    if (!channelInfo[channel].lfe || channelInfo[channel].cpe)
+    {
+      hEncoder->psymodel->PsyBufferUpdate(&hEncoder->gpsyInfo, &hEncoder->psyInfo[channel],
+                          hEncoder->next3SampleBuff[channel], bandWidth);
+    }
     }
 
     if (hEncoder->frameNum <= 3) /* Still filling up the buffers */
@@ -623,18 +624,18 @@ int FAACAPI faacEncEncode(faacEncHandle hEncoder,
 
     for (channel = 0; channel < numChannels; channel++) {
       if (coderInfo[channel].block_type == ONLY_SHORT_WINDOW) {
-	SortForGrouping(&coderInfo[channel],
-			&hEncoder->psyInfo[channel],
-			&channelInfo[channel],
-			hEncoder->srInfo->cb_width_short,
-			hEncoder->freqBuff[channel]);
+    SortForGrouping(&coderInfo[channel],
+            &hEncoder->psyInfo[channel],
+            &channelInfo[channel],
+            hEncoder->srInfo->cb_width_short,
+            hEncoder->freqBuff[channel]);
       }
       CalcAvgEnrg(&coderInfo[channel], hEncoder->freqBuff[channel]);
 
       // reduce LFE bandwidth
       if (!channelInfo[channel].cpe && channelInfo[channel].lfe)
       {
-	coderInfo[channel].nr_of_sfb = coderInfo[channel].max_sfb = 3;
+    coderInfo[channel].nr_of_sfb = coderInfo[channel].max_sfb = 3;
       }
     }
 
@@ -660,18 +661,18 @@ int FAACAPI faacEncEncode(faacEncHandle hEncoder,
     // fix max_sfb in CPE mode
     for (channel = 0; channel < numChannels; channel++)
     {
-	if (channelInfo[channel].present
-	    && (channelInfo[channel].cpe)
-	    && (channelInfo[channel].ch_is_left))
-	{
-	  CoderInfo *cil, *cir;
+    if (channelInfo[channel].present
+        && (channelInfo[channel].cpe)
+        && (channelInfo[channel].ch_is_left))
+    {
+      CoderInfo *cil, *cir;
 
-	  cil = &coderInfo[channel];
-	  cir = &coderInfo[channelInfo[channel].paired_ch];
+      cil = &coderInfo[channel];
+      cir = &coderInfo[channelInfo[channel].paired_ch];
 
-	  cil->max_sfb = cir->max_sfb = max(cil->max_sfb, cir->max_sfb);
+      cil->max_sfb = cir->max_sfb = max(cil->max_sfb, cir->max_sfb);
           cil->nr_of_sfb = cir->nr_of_sfb = cil->max_sfb;
-	}
+    }
     }
 
     MSReconstruct(coderInfo, channelInfo, numChannels);
@@ -838,6 +839,9 @@ static SR_INFO srInfo[12+1] =
 
 /*
 $Log: frame.c,v $
+Revision 1.41  2003/08/08 10:02:09  menno
+Small fix
+
 Revision 1.40  2003/08/07 08:17:00  knik
 Better LFE support (reduced bandwidth)
 
