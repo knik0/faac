@@ -16,7 +16,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: frame.c,v 1.35 2003/05/10 09:39:55 knik Exp $
+ * $Id: frame.c,v 1.36 2003/05/12 17:53:16 knik Exp $
  */
 
 /*
@@ -145,11 +145,11 @@ int FAACAPI faacEncSetConfiguration(faacEncHandle hEncoder,
         int cutoff;
       } rates[] =
       {
-	{33500, 5000},
-	{41000, 7000},
-	{49000, 10000},
+	{26500, 5000},
+	{32000, 7000},
+	{41000, 10000},
 	{64000, 16000},
-	{76000, 20000},
+	{84500, 20000},
 	{0, 0}
       };
       int f0, f1;
@@ -754,6 +754,9 @@ static SR_INFO srInfo[12+1] =
 
 /*
 $Log: frame.c,v $
+Revision 1.36  2003/05/12 17:53:16  knik
+updated ABR table
+
 Revision 1.35  2003/05/10 09:39:55  knik
 added approximate ABR setting
 modified default cutoff
