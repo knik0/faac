@@ -18,7 +18,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: main.c,v 1.65 2004/04/03 17:47:40 danchr Exp $
+ * $Id: main.c,v 1.66 2004/04/13 13:47:05 danchr Exp $
  */
 
 #ifdef _MSC_VER
@@ -94,9 +94,11 @@ const char *short_help =
 #ifdef HAVE_LIBMP4V2
   "  -w\t\tWrap AAC data in MP4 container. (default for *.mp4 and *.m4a)\n"
   "  --artist X\tSet artist to X\n"
+  "  --writer X\tSet writer to X\n"
   "  --title X\tSet title to X\n"
   "  --genre X\tSet genre to X\n"
   "  --album X\tSet album to X\n"
+  "  --compilation\tSet compilation\n"
   "  --track X\tSet track to X (number/total)\n"
   "  --disc X\tSet disc to X (number/total)\n"
   "  --year X\tSet year to X\n"
@@ -159,14 +161,16 @@ const char *long_help =
 #ifdef HAVE_LIBMP4V2
   "  -w\t\tWrap AAC data in MP4 container. (default for *.mp4 and *.m4a)\n"
   "  --artist X\tSet artist to X\n"
+  "  --writer X\tSet writer to X\n"
   "  --title X\tSet title to X\n"
   "  --genre X\tSet genre to X\n"
   "  --album X\tSet album to X\n"
+  "  --compilation\tSet compilation\n"
   "  --track X\tSet track to X (number/total)\n"
   "  --disc X\tSet disc to X (number/total)\n"
   "  --year X\tSet year to X\n"
   "  --cover-art X\tRead cover art from file X\n"
-  "\t\tSupported image formats are jpg and png.\n"
+  "\t\tSupported image formats are gif, jpg, and png.\n"
   "  --comment X\tSet comment to X\n"
 #else
   "  MP4 support unavailable.\n"
@@ -180,7 +184,8 @@ const char *long_help =
 #endif
   "  --no-midside\tDon\'t use mid/side coding.\n"
   "  --mpeg-vers X\tAAC MPEG version, X can be 2 or 4.\n"
-  "  --obj-type X\tAAC object type. (0=Low Complexity (default), 1=Main, 2=LTP)\n"
+  "  --obj-type X\tAAC object type. (LC (Low Complexity, default), Main or LTP\n"
+  "\t\t(Long Term Prediction)\n"
   "  --shortctl X\tEnforce block type (default: both; 1 = short only; 2 = long\n"
   "\t\tonly).\n"
   "\n"
@@ -272,6 +277,29 @@ enum container_format {
   NO_CONTAINER,
 #ifdef HAVE_LIBMP4V2
   MP4_CONTAINER,
+#endif
+};
+
+enum flags {
+  SHORTCTL_FLAG = 300,
+  TNS_FLAG = 301,
+  NO_TNS_FLAG = 302,
+  MPEGVERS_FLAG = 303,
+  OBJTYPE_FLAG = 304,
+  NO_MIDSIDE_FLAG = 306,
+
+#ifdef HAVE_LIBMP4V2
+  ARTIST_FLAG = 320,
+  TITLE_FLAG = 321,
+  GENRE_FLAG = 322,
+  ALBUM_FLAG = 323,
+  COMPILATION_FLAG = 324,
+  TRACK_FLAG = 325,
+  DISC_FLAG = 326,
+  YEAR_FLAG = 327,
+  COVER_ART_FLAG = 328,
+  COMMENT_FLAG = 329,
+  WRITER_FLAG = 330,
 #endif
 };
 
@@ -391,8 +419,9 @@ int main(int argc, char *argv[])
     MP4TrackId MP4track = 0;
     int ntracks = 0, trackno = 0;
     int ndiscs = 0, discno = 0;
+    u_int8_t compilation = 0;
     const char *artist = NULL, *title = NULL, *album = NULL, *year = NULL,
-      *genre = NULL, *comment = NULL;
+      *genre = NULL, *comment = NULL, *writer = NULL;
     u_int8_t *art = NULL;
     u_int64_t artSize = 0;
     u_int64_t total_samples = 0;
@@ -424,33 +453,35 @@ int main(int argc, char *argv[])
     progName = argv[0];
     while (1) {
         static struct option long_options[] = {
-            { "help", 0, 0, 'h' },
-            { "long-help", 0, 0, '?' },
-            { "raw", 0, 0, 'r' },
-            { "no-midside", 0, 0, 'n' },
-            { "cutoff", 1, 0, 'c' },
-            { "quality", 1, 0, 'q' },
+            { "help", 0, 0, 'h'},
+            { "long-help", 0, 0, '?'},
+            { "raw", 0, 0, 'r'},
+            { "no-midside", 0, 0, NO_MIDSIDE_FLAG},
+            { "cutoff", 1, 0, 'c'},
+            { "quality", 1, 0, 'q'},
             { "pcmraw", 0, 0, 'P'},
             { "pcmsamplerate", 1, 0, 'R'},
             { "pcmsamplebits", 1, 0, 'B'},
             { "pcmchannels", 1, 0, 'C'},
-            { "shortctl", 1, 0, 300},
-            { "tns", 0, 0, 301},
-            { "no-tns", 0, 0, 302},
-            { "mpeg-version", 0, 0, 303},
-            { "object-type", 0, 0, 304},
-            { "license", 0, 0, 305},
+            { "shortctl", 1, 0, SHORTCTL_FLAG},
+            { "tns", 0, 0, TNS_FLAG},
+            { "no-tns", 0, 0, NO_TNS_FLAG},
+            { "mpeg-version", 1, 0, MPEGVERS_FLAG},
+            { "obj-type", 1, 0, OBJTYPE_FLAG},
+            { "license", 0, 0, 'L'},
 #ifdef HAVE_LIBMP4V2
             { "createmp4", 0, 0, 'w'},
-            { "artist", 1, 0, 'A'},
-            { "title", 1, 0, 'T'},
-            { "album", 1, 0, 'L'},
-            { "track", 1, 0, 'N'},
-            { "disc", 1, 0, 'D'},
-            { "genre", 1, 0, 'G'},
-            { "year", 1, 0, 'Y'},
-            { "cover-art", 1, 0, 'V'},
-            { "comment", 1, 0, 'M'},
+            { "artist", 1, 0, ARTIST_FLAG},
+            { "title", 1, 0, TITLE_FLAG},
+            { "album", 1, 0, ALBUM_FLAG},
+            { "track", 1, 0, TRACK_FLAG},
+            { "disc", 1, 0, DISC_FLAG},
+            { "genre", 1, 0, GENRE_FLAG},
+            { "year", 1, 0, YEAR_FLAG},
+            { "cover-art", 1, 0, COVER_ART_FLAG},
+            { "comment", 1, 0, COMMENT_FLAG},
+	    { "writer", 1, 0, WRITER_FLAG},
+	    { "compilation", 0, 0, COMPILATION_FLAG},
 #endif
 	    { "pcmswapbytes", 0, 0, 'X'},
             { 0, 0, 0, 0}
@@ -460,7 +491,7 @@ int main(int argc, char *argv[])
 
         c = getopt_long(argc, argv, "Hha:m:o:rnc:q:PR:B:C:I:X"
 #ifdef HAVE_LIBMP4V2
-                        "wA:T:L:N:G:D:Y:M:V:"
+                        "w"
 #endif
             ,long_options, &option_index);
 
@@ -477,15 +508,16 @@ int main(int argc, char *argv[])
 	case 'o':
 	    {
 	        int l = strlen(optarg);
-		aacFileName = malloc(l);
+		aacFileName = malloc(l+1);
 		memcpy(aacFileName, optarg, l);
+		aacFileName[l] = '\0';
 	    }
 	    break;
         case 'r': {
             stream = RAW_STREAM;
             break;
         }
-        case 'n': {
+        case NO_MIDSIDE_FLAG: {
             useMidSide = 0;
             break;
         }
@@ -555,31 +587,37 @@ int main(int argc, char *argv[])
         case 'w':
 	    container = MP4_CONTAINER;
             break;
-	case 'A':
+	case ARTIST_FLAG:
 	    artist = optarg;
 	    break;
-	case 'T':
+	case WRITER_FLAG:
+	    writer = optarg;
+	    break;
+	case TITLE_FLAG:
 	    title = optarg;
 	    break;
-	case 'L':
+	case ALBUM_FLAG:
 	    album = optarg;
 	    break;
-	case 'N':
+	case TRACK_FLAG:
 	    sscanf(optarg, "%i/%i", &trackno, &ntracks);
 	    break;
-	case 'D':
+	case DISC_FLAG:
 	    sscanf(optarg, "%i/%i", &discno, &ndiscs);
 	    break;
-	case 'G':
+	case COMPILATION_FLAG:
+	    compilation = 0x1;
+	    break;
+	case GENRE_FLAG:
 	    genre = optarg;
 	    break;
-	case 'Y':
+	case YEAR_FLAG:
 	    year = optarg;
 	    break;
-	case 'M':
+	case COMMENT_FLAG:
 	    comment = optarg;
 	    break;
-	case 'V': {
+	case COVER_ART_FLAG: {
 	    FILE *artFile = fopen(optarg, "rb");
 
 	    if(artFile) {
@@ -601,7 +639,7 @@ int main(int argc, char *argv[])
 		    art = NULL;
 		} else if (artSize < 12 || !check_image_header(art)) {
 		    /* the above expression checks the image signature */
-		    dieMessage = "Unrecognised cover image file format\n";
+		    dieMessage = "Unsupported cover image file format!\n";
 		    free(art);
 		    art = NULL;
 		}
@@ -614,16 +652,16 @@ int main(int argc, char *argv[])
 	    break;
 	}
 #endif
-        case 300:
+        case SHORTCTL_FLAG:
             shortctl = atoi(optarg);
             break;
-        case 301:
+        case TNS_FLAG:
             useTns = 1;
             break;
-        case 302:
+        case NO_TNS_FLAG:
             useTns = 0;
             break;
-	case 303:
+	case MPEGVERS_FLAG:
             mpegVersion = atoi(optarg);
             switch(mpegVersion)
             {
@@ -634,25 +672,20 @@ int main(int argc, char *argv[])
                 mpegVersion = MPEG4;
                 break;
             default:
-                mpegVersion = MPEG4;
+	        dieMessage = "Unrecognised MPEG version!\n";
             }
             break;
-	case 304:
-            objectType = atoi(optarg);
-            switch (objectType)
-            {
-            case 1:
-                objectType = MAIN;
-                break;
-            case 2:
-                objectType = LTP;
-                break;
-            default:
+	case OBJTYPE_FLAG:
+	    if (!strcasecmp(optarg, "LC") || !strcasecmp(optarg, "lc"))
                 objectType = LOW;
-                break;
-            }
-            break;
-        case 305:
+	    else if (!strcmp(optarg, "Main") || !strcmp(optarg, "main"))
+	        objectType = MAIN;
+	    else if (!strcasecmp(optarg, "LTP") || !strcasecmp(optarg, "ltp"))
+	        objectType = LTP;
+	    else
+	        dieMessage = "Unrecognised object type!\n";
+	    break;
+        case 'L':
 	    printf(faac_copyright_string);
 	    dieMessage = license;
 	    break;
@@ -698,9 +731,10 @@ int main(int argc, char *argv[])
 	aacFileExt = ".aac";
 #endif
 
-	aacFileName = malloc(l+4);
+	aacFileName = malloc(l+1+4);
 	memcpy(aacFileName, audioFileName, l);
 	memcpy(aacFileName + l, aacFileExt, 4);
+	aacFileName[l+4] = '\0';
     } else {
         aacFileExt = strrchr(aacFileName, '.');
 
@@ -742,7 +776,8 @@ int main(int argc, char *argv[])
 #ifdef HAVE_LIBMP4V2
     if (container != MP4_CONTAINER && (ntracks || trackno || artist ||
 				       title ||  album || year || art ||
-				       genre || comment || discno || ndiscs))
+				       genre || comment || discno || ndiscs ||
+				       writer || compilation))
     {
         fprintf(stderr, "Metadata requires MP4 output!\n");
 	return 1;
@@ -820,11 +855,11 @@ int main(int argc, char *argv[])
 #ifdef MP4_CREATE_EXTENSIBLE_FORMAT
 	/* hack to compile against libmp4v2 >= 1.0RC3
 	 * why is there no version identifier in mp4.h? */
-        MP4hFile = MP4Create(aacFileName, 0, 0);
+        MP4hFile = MP4Create(aacFileName, MP4_DETAILS_ERROR, 0);
 #else
-	MP4hFile = MP4Create(aacFileName, 0, 0, 0);
+	MP4hFile = MP4Create(aacFileName, MP4_DETAILS_ERROR, 0, 0);
 #endif
-        if (MP4hFile == MP4_INVALID_FILE_HANDLE) {
+        if (!MP4_IS_VALID_FILE_HANDLE(MP4hFile)) {
             fprintf(stderr, "Couldn't create output file %s\n", aacFileName);
             return 1;
         }
@@ -844,13 +879,15 @@ int main(int argc, char *argv[])
 	free(version_string);
 
 	if (artist) MP4SetMetadataArtist(MP4hFile, artist);
+	if (writer) MP4SetMetadataWriter(MP4hFile, writer);
 	if (title) MP4SetMetadataName(MP4hFile, title);
 	if (album) MP4SetMetadataAlbum(MP4hFile, album);
 	if (trackno > 0) MP4SetMetadataTrack(MP4hFile, trackno, ntracks);
 	if (discno > 0) MP4SetMetadataDisk(MP4hFile, discno, ndiscs);
+	if (compilation) MP4SetMetadataCompilation(MP4hFile, compilation);
 	if (year) MP4SetMetadataYear(MP4hFile, year);
 	if (genre) MP4SetMetadataGenre(MP4hFile, genre);
-	if (comment) MP4SetMetadataComment(MP4hFile, genre);
+	if (comment) MP4SetMetadataComment(MP4hFile, comment);
         if (artSize) {
 	    MP4SetMetadataCoverArt(MP4hFile, art, artSize);
 	    free(art);
@@ -1082,6 +1119,11 @@ int main(int argc, char *argv[])
 
 /*
 $Log: main.c,v $
+Revision 1.66  2004/04/13 13:47:05  danchr
+compilation and composer patch by Jordan Breeding
+undocumented single-letter switches removed
+numerous bug-fixes
+
 Revision 1.65  2004/04/03 17:47:40  danchr
 fix typo + add GIF support
 
