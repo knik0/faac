@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: maingui.c,v 1.8 2001/03/05 11:33:37 menno Exp $
+ * $Id: maingui.c,v 1.9 2001/03/05 15:55:40 menno Exp $
  */
 
 #include <windows.h>
@@ -319,7 +319,7 @@ static BOOL WINAPI DialogProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 		CheckDlgButton(hWnd, IDC_ALLOWMIDSIDE, TRUE);
 		CheckDlgButton(hWnd, IDC_USELFE, FALSE);
 		CheckDlgButton(hWnd, IDC_USETNS, TRUE);
-		CheckDlgButton(hWnd, IDC_USELTP, FALSE);
+		CheckDlgButton(hWnd, IDC_USELTP, TRUE);
 		SetDlgItemText(hWnd, IDC_BITRATE, "64000");
 		SetDlgItemText(hWnd, IDC_BANDWIDTH, "18000");
 

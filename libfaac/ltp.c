@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: ltp.c,v 1.1 2001/03/05 11:34:01 menno Exp $
+ * $Id: ltp.c,v 1.2 2001/03/05 15:55:40 menno Exp $
  */
 
 #include <malloc.h>
@@ -38,14 +38,14 @@
 /*  Purpose:	Codebook for LTP weight coefficients.  */
 static double codebook[CODESIZE] =
 {
-  0.570829,
-  0.696616,
-  0.813004,
-  0.911304,
-  0.984900,
-  1.067894,
-  1.194601,
-  1.369533
+	0.570829,
+	0.696616,
+	0.813004,
+	0.911304,
+	0.984900,
+	1.067894,
+	1.194601,
+	1.369533
 };
 
 
@@ -161,187 +161,73 @@ static void w_quantize(double *freq, int *ltp_idx)
 	*freq = codebook[*ltp_idx];
 }
 
-#if 0
 static int pitch(double *sb_samples, short *x_buffer, int flen, int lag0, int lag1, 
 		  double *predicted_samples, double *gain, int *cb_idx)
 {
-	int i, j, delay, start;
-	int offset;
-	double corr1, corr2, corrtbl, lag_corr;
-	double p_max, energy, enertbl, lag_energy;
-
-	p_max = 0.0;
-	lag_corr = lag_energy = 0.0;
-	delay = lag0;
-
-	corrtbl = 0.0;
-	enertbl = 0.0;
-	offset = 0;
-	for (j = flen / 2 + lag0; j < flen; j++) //precalculation
-	{
-		corrtbl += x_buffer[NOK_LT_BLEN - offset - j - 1] * sb_samples[flen - j - 1];
-		enertbl += x_buffer[NOK_LT_BLEN - offset - j - 1] * x_buffer[NOK_LT_BLEN - offset - j - 1];
-	}
-
-	/* Find the lag. */
-	for (i = lag0; i < lag1; i++)
-	{
-		corr2 = 0.0;
-
-		start = 0;
-		offset = i;
-
-		/*
-		 * Below is a figure illustrating how the lag and the
-		 * samples in the buffer relate to each other.
-		 *
-		 * ------------------------------------------------------------------
-		 * |              |               |                |                 |
-		 * |    slot 1    |      2        |       3        |       4         |
-		 * |              |               |                |                 |
-		 * ------------------------------------------------------------------
-		 *
-		 * lag = 0 refers to the end of slot 4 and lag = DELAY refers to the end
-		 * of slot 2. The start of the predicted frame is then obtained by
-		 * adding the length of the frame to the lag. Remember that slot 4 doesn't
-		 * actually exist, since it is always filled with zeros.
-		 *
-		 * The above short explanation was for long blocks. For short blocks the
-		 * zero lag doesn't refer to the end of slot 4 but to the start of slot
-		 * 4 - the frame length of a short block.
-		 *
-		 * Some extra code is then needed to handle those lag values that refer
-		 * to slot 4.
-		 */
-
-		if(i < DELAY / 2)
-		{
-			offset = i - lag0;
-			start = flen / 2 + i;
-
-			if(start || offset == 0) //maybe the if's may be thrown out too
-			{
-				energy = enertbl;
-				enertbl -= x_buffer[NOK_LT_BLEN - offset - j - 1] * x_buffer[NOK_LT_BLEN - offset - j - 1];
-				corr1 = corrtbl;
-				corrtbl -= x_buffer[NOK_LT_BLEN - offset - j - 1] * sb_samples[flen - j - 1];
-			}
-
-		} else {
-			offset = i - DELAY / 2; 
-			start = 0;
-
-			if (start == 0 && offset != 0){ //maybe the if's may be thrown out too
-				/* No need to compute the whole energy. */
-				energy -= x_buffer[NOK_LT_BLEN - offset] * x_buffer[NOK_LT_BLEN - offset];
-				energy += x_buffer[NOK_LT_BLEN - offset - flen] * x_buffer[NOK_LT_BLEN - offset - flen];
-
-				corr1=0.0;
-				for (j = 0; j < flen; j++)
-					corr1 += x_buffer[NOK_LT_BLEN - offset - j - 1] * sb_samples[flen - j - 1];
-			}
-		}
-		
-		if (energy != 0.0)
-			corr2 = corr1 / sqrt (energy);
-		else
-			corr2 = 0.0;
-
-		if (p_max < corr2)
-		{
-			p_max = corr2;
-			delay = i;
-			lag_corr = corr1;
-			lag_energy = energy;
-		}
-	}
-
-	/* Compute the gain. */
-	if(lag_energy != 0.0)
-		*gain =  lag_corr / (1.010 * lag_energy);
-	else
-		*gain = 0.0;
-
-	/* Quantize the gain. */
-	w_quantize(gain, cb_idx);
-
-	/* Get the predicted signal. */
-	prediction(x_buffer, predicted_samples, gain, delay, flen);
-
-	return (delay);
-}
-#else
-static int pitch(double *sb_samples, short *x_buffer, int flen, int lag0, int lag1, 
-		  double *predicted_samples, double *gain, int *cb_idx)
-{
-	int i, j, delay, start;
-	int offset;
-	double corr1, corr2, lag_corr;
+	int i, j, delay;
+	double corr1, corr2, lag_corr, corrtmp;
 	double p_max, energy, lag_energy;
 
+	/*
+	 * Below is a figure illustrating how the lag and the
+	 * samples in the buffer relate to each other.
+	 *
+	 * ------------------------------------------------------------------
+	 * |              |               |                |                 |
+	 * |    slot 1    |      2        |       3        |       4         |
+	 * |              |               |                |                 |
+	 * ------------------------------------------------------------------
+	 *
+	 * lag = 0 refers to the end of slot 4 and lag = DELAY refers to the end
+	 * of slot 2. The start of the predicted frame is then obtained by
+	 * adding the length of the frame to the lag. Remember that slot 4 doesn't
+	 * actually exist, since it is always filled with zeros.
+	 *
+	 * The above short explanation was for long blocks. For short blocks the
+	 * zero lag doesn't refer to the end of slot 4 but to the start of slot
+	 * 4 - the frame length of a short block.
+	 *
+	 * Some extra code is then needed to handle those lag values that refer
+	 * to slot 4.
+	 */
+
 	p_max = 0.0;
 	lag_corr = lag_energy = 0.0;
 	delay = lag0;
 
-	/* Find the lag. */
-	for (i = lag0; i < lag1; i++)
+	energy = 0.0;
+	corr1 = 0.0;
+	for (j = lag0; j < lag1; j++)
 	{
-		corr1 = corr2 = 0.0;
+		corr1 += x_buffer[NOK_LT_BLEN - j - 1] * sb_samples[flen - j - 1];
+		energy += x_buffer[NOK_LT_BLEN - j - 1] * x_buffer[NOK_LT_BLEN - j - 1];
+	}
+	corrtmp=corr1;
+	if (energy != 0.0)
+		corr2 = corr1 / sqrt(energy);
+	else
+		corr2 = 0.0;
 
-		start = 0;
-		offset = i;
+	if (p_max < corr2)
+	{
+		p_max = corr2;
+		delay = 0;
+		lag_corr = corr1;
+		lag_energy = energy;
+	}
 
-		/*
-		 * Below is a figure illustrating how the lag and the
-		 * samples in the buffer relate to each other.
-		 *
-		 * ------------------------------------------------------------------
-		 * |              |               |                |                 |
-		 * |    slot 1    |      2        |       3        |       4         |
-		 * |              |               |                |                 |
-		 * ------------------------------------------------------------------
-		 *
-		 * lag = 0 refers to the end of slot 4 and lag = DELAY refers to the end
-		 * of slot 2. The start of the predicted frame is then obtained by
-		 * adding the length of the frame to the lag. Remember that slot 4 doesn't
-		 * actually exist, since it is always filled with zeros.
-		 *
-		 * The above short explanation was for long blocks. For short blocks the
-		 * zero lag doesn't refer to the end of slot 4 but to the start of slot
-		 * 4 - the frame length of a short block.
-		 *
-		 * Some extra code is then needed to handle those lag values that refer
-		 * to slot 4.
-		 */
+	/* Find the lag. */
+	for (i = lag0 + 1; i < lag1; i++)
+	{
+		energy -= x_buffer[NOK_LT_BLEN - i] * x_buffer[NOK_LT_BLEN - i];
+		energy += x_buffer[NOK_LT_BLEN - i - flen] * x_buffer[NOK_LT_BLEN - i - flen];
+		corr1 = corrtmp;
+		corr1 -= x_buffer[NOK_LT_BLEN - i] * sb_samples[flen - 1];
+		corr1 += x_buffer[NOK_LT_BLEN - i - flen] * sb_samples[0];
+		corrtmp = corr1;
 
-		if(i < DELAY / 2)
-		{
-			offset = i - lag0;
-			start = flen / 2 + i;
-		} else {
-			offset = i - DELAY / 2; 
-			start = 0;
-		}
-
-		if(start || offset == 0)
-		{
-			energy = 0.0f;
-			for (j = start; j < flen; j++)
-			{
-				corr1 += x_buffer[NOK_LT_BLEN - offset - j - 1] * sb_samples[flen - j - 1];
-				energy += x_buffer[NOK_LT_BLEN - offset - j - 1] * x_buffer[NOK_LT_BLEN - offset - j - 1];
-			}
-		} else { /* start == 0 && offset != 0 */
-			/* No need to compute the whole energy. */
-			energy -= x_buffer[NOK_LT_BLEN - offset] * x_buffer[NOK_LT_BLEN - offset];
-			energy += x_buffer[NOK_LT_BLEN - offset - flen] * x_buffer[NOK_LT_BLEN - offset - flen];
-			
-			for (j = 0; j < flen; j++)
-				corr1 += x_buffer[NOK_LT_BLEN - offset - j - 1] * sb_samples[flen - j - 1];
-		}
-		
 		if (energy != 0.0)
-			corr2 = corr1 / sqrt (energy);
+			corr2 = corr1 / sqrt(energy);
 		else
 			corr2 = 0.0;
 
@@ -368,7 +254,6 @@ static int pitch(double *sb_samples, short *x_buffer, int flen, int lag0, int la
 
 	return (delay);
 }
-#endif
 
 static double ltp_enc_tf(faacEncHandle hEncoder,
 				CoderInfo *coderInfo, double *p_spectrum, double *predicted_samples, 
@@ -525,9 +410,9 @@ void  LtpUpdate(LtpInfo *ltpInfo, double *time_signal,
 	for(i = 0; i < block_size_long; i++) 
 	{
 		ltpInfo->buffer[NOK_LT_BLEN - 2 * block_size_long + i] = 
-			double_to_int(time_signal[i]);
+			(short)double_to_int(time_signal[i]);
 
 		ltpInfo->buffer[NOK_LT_BLEN - block_size_long + i] = 
-			double_to_int(overlap_signal[i]);
+			(short)double_to_int(overlap_signal[i]);
 	}
 }
