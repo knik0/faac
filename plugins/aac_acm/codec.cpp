@@ -1,5 +1,5 @@
 #include "codec.h"
-//#include <assert.h>
+#include <assert.h>
 
 // we must register these by emailing to mmreg@microsoft.com
 const int codec::m_iCompressedFormatTag = 0x1234;
@@ -576,8 +576,7 @@ HRESULT codec::decoder::convert(ACMDRVSTREAMHEADER* pHeader)
     return MMSYSERR_NOERROR;
 #else
     // fixme: check fdwConvert contents
-
-    int iSrcDataLeft;
+	
     const int iMinInputSize = 768*m_sFormat.nChannels;
     pHeader->cbSrcLengthUsed=0;
     pHeader->cbDstLengthUsed=0;
@@ -596,39 +595,48 @@ HRESULT codec::decoder::convert(ACMDRVSTREAMHEADER* pHeader)
     unsigned long samples;    
     if(pHeader->cbDstLength<4096)
 		goto finish;
+
+    int iSrcDataLeft=pHeader->cbSrcLength;
 	
-    if(m_pCache)
+    while(m_pCache)
     {
 		int iFillSize = iMinInputSize - m_iCacheSize;
-		if(iFillSize > pHeader->cbSrcLength)
-			iFillSize = pHeader->cbSrcLength;
-		memcpy(&m_pCache[m_iCacheSize], pHeader->pbSrc, iFillSize);
+		if(iFillSize > iSrcDataLeft)
+			iFillSize = iSrcDataLeft;
+		memcpy(&m_pCache[m_iCacheSize], pHeader->pbSrc+pHeader->cbSrcLengthUsed, iFillSize);
 		m_iCacheSize += iFillSize;
-		pHeader->cbSrcLengthUsed = iFillSize;
-		if(m_iCacheSize == iMinInputSize)
+		iSrcDataLeft -= iFillSize;
+		pHeader->cbSrcLengthUsed += iFillSize;
+		if(m_iCacheSize < iMinInputSize)
+			goto finish;
+		int result=faacDecDecode(m_pHandle, m_pCache, &bytesconsumed, 
+			(short*)(pHeader->pbDst+pHeader->cbDstLengthUsed), &samples); // no way to prevent output buffer overrun???
+		if(result==FAAD_FATAL_ERROR)
 		{
-			int result=faacDecDecode(m_pHandle, pHeader->pbSrc+pHeader->cbSrcLengthUsed, &bytesconsumed, 
-				(short*)(pHeader->pbDst+pHeader->cbDstLengthUsed), &samples); // no way to prevent output buffer overrun???
-			if(result==FAAD_FATAL_ERROR)
-				reset();
-			if(result==FAAD_OK)
-				pHeader->cbDstLengthUsed+=sizeof(short)*samples;
-			delete[] m_pCache;
-			m_pCache=0;
+			reset();
 			goto finish;
 		}
+		if(result==FAAD_OK)
+			pHeader->cbDstLengthUsed+=sizeof(short)*samples;
+		assert(bytesconsumed <= iMinInputSize);
+		if(bytesconsumed < iMinInputSize)
+			memmove(m_pCache, &m_pCache[bytesconsumed], iMinInputSize-bytesconsumed);
+		m_iCacheSize-=bytesconsumed;
+		if(m_iCacheSize==0)
+		{
+			delete[] m_pCache;
+			m_pCache=0;
+		}
     }
-	
-    iSrcDataLeft=pHeader->cbSrcLength-pHeader->cbSrcLengthUsed;
-    
+
     if(iSrcDataLeft == 0)
 		goto finish;
-	
 	
     if(iSrcDataLeft < iMinInputSize)
     {
 		m_pCache = new unsigned char[iMinInputSize];
 		memcpy(m_pCache, pHeader->pbSrc + pHeader->cbSrcLengthUsed, iSrcDataLeft);
+		m_iCacheSize = iSrcDataLeft;
 		pHeader->cbSrcLengthUsed = pHeader->cbSrcLength;
 		goto finish;
     }
@@ -643,7 +651,7 @@ HRESULT codec::decoder::convert(ACMDRVSTREAMHEADER* pHeader)
 		{
 			pHeader->cbSrcLengthUsed=pHeader->cbSrcLength;
 			reset();
-			break;
+			goto finish;
 		}
 		if(result==FAAD_OK)
 			pHeader->cbDstLengthUsed+=sizeof(short)*samples;
