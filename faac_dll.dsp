@@ -33,8 +33,8 @@ RSC=rc.exe
 
 # PROP BASE Use_MFC 0
 # PROP BASE Use_Debug_Libraries 0
-# PROP BASE Output_Dir "faac_dll___Win32_Release"
-# PROP BASE Intermediate_Dir "faac_dll___Win32_Release"
+# PROP BASE Output_Dir "ReleaseDLL"
+# PROP BASE Intermediate_Dir "ReleaseDLL"
 # PROP BASE Target_Dir ""
 # PROP Use_MFC 0
 # PROP Use_Debug_Libraries 0
@@ -59,8 +59,8 @@ LINK32=link.exe
 
 # PROP BASE Use_MFC 0
 # PROP BASE Use_Debug_Libraries 1
-# PROP BASE Output_Dir "faac_dll___Win32_Debug"
-# PROP BASE Intermediate_Dir "faac_dll___Win32_Debug"
+# PROP BASE Output_Dir "DebugDLL"
+# PROP BASE Intermediate_Dir "DebugDLL"
 # PROP BASE Target_Dir ""
 # PROP Use_MFC 0
 # PROP Use_Debug_Libraries 1
