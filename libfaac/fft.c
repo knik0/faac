@@ -16,7 +16,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: fft.c,v 1.5 2001/06/08 18:01:09 menno Exp $
+ * $Id: fft.c,v 1.6 2002/08/07 18:10:39 knik Exp $
  */
 
 #include <math.h>
@@ -417,11 +417,29 @@ void srifft(double *xr, double *xi, int logm)
 
 void rsfft(double *x, int logm)
 {
+   int i;
+   int size;
+
    /* Call recursive routine */
    rsrec(x, logm);
 
    /* Output array unshuffling using bit-reversed indices */
    if (logm > 1) {
       BR_permute(x, logm);
+   }
+
+   size = 1 << (logm - 1);
+
+   for (i = 0; i < (size / 2); i++)
+   {
+     double tmp;
+
+     tmp = 1 * x[i];
+     x[i] = 1 * x[size - 1 - i];
+     x[size - 1 - i] = tmp;
+
+     tmp = 1 * x[size + i];
+     x[size + i] = 1 * x[2*size - 1 - i];
+     x[2*size - 1 - i] = tmp;
    }
 }
