@@ -1,4 +1,23 @@
+2001-08-03  menno
+		Updated cooledit plugin
+		New winamp output plugin
+
+2001-07-12  menno
+		Major bugfixes to Cooledit filter
+		encoding now works
+
+		Added DLL project file for FAAC
+
+2001-07-08  menno
+		Small config bugfix
+
+		Fixed CoolEdit filter
+
+		Correct processor used
+
 2001-07-02  menno
+		Fixes for compiling CoolEdit filter
+
 		Added CoolEdit filter
 
 2001-06-27  menno
