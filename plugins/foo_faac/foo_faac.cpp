@@ -2,6 +2,7 @@
 // Copyright (C) 2003 Janne Hyvärinen
 //
 // Changes:
+//  0.3.1 (2003-09-14): Fixed possible memory access problems
 //  0.3   (2003-08-17): Even more corrections to MP4 writing, now encoder delay is taken into account and first MP4 sample is given length 0
 //                      writes 'TOOL' metadata tag with libfaac version string
 //  0.2.9 (2003-08-16): Fixes in MP4 writing
@@ -29,7 +30,7 @@
 #include <faac.h>
 #include <version.h>
 
-#define FOO_FAAC_VERSION     "0.3"
+#define FOO_FAAC_VERSION     "0.3.1"
 
 #define FF_AAC  0
 #define FF_MP4  1
@@ -239,57 +240,52 @@ public:
             unsigned int samples = src->get_sample_count() * nch;
             const audio_sample *s = src->get_data();
 
-            while ( samples + bufferedSamples >= samplesInput ) {
+            do {
+                unsigned int num = (samples > samplesInput) ? samplesInput : samples;
+                if ( num == 0 ) break;
+
                 float *d = (float *)floatbuf.get_ptr() + bufferedSamples;
 
-                for ( unsigned int i = bufferedSamples; i < samplesInput; i++ ) {
+                for ( unsigned int i = bufferedSamples; i < num; i++ ) {
                     *d++ = (float)((*s++) * 32768.);
+
+                    bufferedSamples++;
+                    samples--;
                 }
 
-                if ( nch >= 3 && chanmap ) {
-                    chan_remap ( (int *)floatbuf.get_ptr(), nch, frameSize, chanmap );
-                }
+                if ( bufferedSamples == samplesInput ) {
+                    if ( nch >= 3 && chanmap ) {
+                        chan_remap ( (int *)floatbuf.get_ptr(), nch, frameSize, chanmap );
+                    }
 
-                // call the actual encoding routine
-                int bytesWritten = faacEncEncode ( hEncoder, (int32_t *)floatbuf.get_ptr(), samplesInput, bitbuf.get_ptr(), maxBytesOutput );
+                    // call the actual encoding routine
+                    int bytesWritten = faacEncEncode ( hEncoder, (int32_t *)floatbuf.get_ptr(), samplesInput, bitbuf.get_ptr(), maxBytesOutput );
 
-                if ( bytesWritten < 0 ) {
-                    console::error ( "faacEncEncode() failed" );
                     bufferedSamples = 0;
-                    return 0;
-                }
 
-                if ( bytesWritten > 0 ) {
-                    MP4Duration dur = frameSize;
-
-                    if ( delay_samples > 0 ) {
-                        dur = 0;
-                        delay_samples -= frameSize;
+                    if ( bytesWritten < 0 ) {
+                        console::error ( "faacEncEncode() failed" );
+                        return 0;
                     }
 
-                    if ( create_mp4 ) {
-                        MP4WriteSample ( MP4hFile, MP4track, (const unsigned __int8 *)bitbuf.get_ptr(), bytesWritten, dur );
-                    } else {
-                        m_reader->write ( bitbuf.get_ptr(), bytesWritten );
+                    if ( bytesWritten > 0 ) {
+                        MP4Duration dur = frameSize;
+
+                        if ( delay_samples > 0 ) {
+                            dur = 0;
+                            delay_samples -= frameSize;
+                        }
+
+                        if ( create_mp4 ) {
+                            MP4WriteSample ( MP4hFile, MP4track, (const unsigned __int8 *)bitbuf.get_ptr(), bytesWritten, dur );
+                        } else {
+                            m_reader->write ( bitbuf.get_ptr(), bytesWritten );
+                        }
+
+                        encoded_samples += dur;
                     }
-
-                    encoded_samples += dur;
                 }
-
-                samples -= (samplesInput - bufferedSamples);
-
-                bufferedSamples = 0;
-            }
-
-            if ( samples > 0 ) {
-                float *d = (float *)floatbuf.get_ptr() + bufferedSamples;
-
-                for ( unsigned int i = 0; i < samples; i++ ) {
-                    *d++ = (float)((*s++) * 32768.);
-                }
-
-                bufferedSamples += samples;
-            }
+            } while ( bufferedSamples == 0 );
         }
 
         total_samples += src->get_sample_count();
@@ -305,7 +301,7 @@ public:
             }
 
             while ( encoded_samples < total_samples ) {
-                if ( !bufferedSamples ) { // libfaac doesn't output all samples unless fed with more data
+                if ( !bufferedSamples ) {
                     bufferedSamples = samplesInput;
                     memset ( floatbuf.get_ptr(), 0, samplesInput * sizeof(float) );
                 }
