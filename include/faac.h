@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: faac.h,v 1.2 2001/01/17 15:51:15 menno Exp $
+ * $Id: faac.h,v 1.3 2001/02/28 18:39:34 menno Exp $
  */
 
 #ifndef FAACLIB_H
@@ -40,13 +40,24 @@ extern "C" {
 #define FAACENC_VERSION 1.0
 #define FAACENC_VERSIONB 1 /* If 1 this version is still in beta */
 
+/* AAC profiles */
+#define MAIN 0
+#define LOW  1
+#define SSR  2
+
 typedef struct faacEncConfiguration
 {
+	/* AAC profile */
+	unsigned int aacProfile;
 
 	/* Allow mid/side coding */
 	unsigned int allowMidside;
+
 	/* Use one of the channels as LFE channel */
 	unsigned int useLfe;
+
+	/* Use Temporal Noise Shaping */
+	unsigned int useTns;
 
 	/* bitrate / channel of AAC file */
 	unsigned long bitRate;

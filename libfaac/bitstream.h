@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: bitstream.h,v 1.2 2001/01/23 13:46:18 menno Exp $
+ * $Id: bitstream.h,v 1.3 2001/02/28 18:39:34 menno Exp $
  */
 
 #ifndef BITSTREAM_H
@@ -96,6 +96,10 @@ extern "C" {
 #define ID_FIL 6
 #define ID_END 7
 
+/* AAC profiles */
+#define MAIN 0
+#define LOW  1
+#define SSR  2
 
 
 #define BYTE_NUMBIT 8		/* bits in byte (char) */

@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: channels.h,v 1.3 2001/02/26 14:07:55 oxygene Exp $
+ * $Id: channels.h,v 1.4 2001/02/28 18:39:34 menno Exp $
  */
 
 #ifndef CHANNEL_H
@@ -25,10 +25,6 @@
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
-
-#ifdef __unix__
-#define min(a,b) ( (a) < (b) ? (a) : (b) )
-#endif
 
 #include "coder.h"
 

@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: coder.h,v 1.2 2001/02/04 17:50:47 oxygene2000 Exp $
+ * $Id: coder.h,v 1.3 2001/02/28 18:39:34 menno Exp $
  */
 
 #ifndef CODER_H
@@ -43,6 +43,44 @@ enum WINDOW_TYPE {
 	ONLY_SHORT_WINDOW,
 	SHORT_LONG_WINDOW
 };
+
+/* Added TNS defines and structures here to get it to compile */
+#define TNS_MAX_ORDER 20
+#define DEF_TNS_GAIN_THRESH 1.4
+#define DEF_TNS_COEFF_THRESH 0.1
+#define DEF_TNS_COEFF_RES 4
+#define DEF_TNS_RES_OFFSET 3
+#define LEN_TNS_NFILTL 2
+#define LEN_TNS_NFILTS 1
+
+typedef struct {
+	int order;                           /* Filter order */
+	int direction;		                 /* Filtering direction */
+	int coefCompress;		             /* Are coeffs compressed? */
+	int length;                          /* Length, in bands */                     
+	double aCoeffs[TNS_MAX_ORDER+1];     /* AR Coefficients */
+	double kCoeffs[TNS_MAX_ORDER+1];     /* Reflection Coefficients */
+	int index[TNS_MAX_ORDER+1];	         /* Coefficient indices */
+} TnsFilterData;
+
+typedef struct {
+	int numFilters;				                /* Number of filters */
+	int coefResolution;				            /* Coefficient resolution */
+	TnsFilterData tnsFilter[1<<LEN_TNS_NFILTL];	/* TNS filters */
+} TnsWindowData;
+
+typedef struct {
+	int tnsDataPresent;
+	int tnsMinBandNumberLong;
+	int tnsMinBandNumberShort;
+	int tnsMaxBandsLong;
+	int tnsMaxBandsShort;
+	int tnsMaxOrderLong;
+	int tnsMaxOrderShort;
+	TnsWindowData windowData[MAX_SHORT_WINDOWS]; /* TNS data per window */
+} TnsInfo;
+/* End of TNS defines and structures */
+
 
 typedef struct {
 	int window_shape;
@@ -72,6 +110,8 @@ typedef struct {
 
 	/* Lengths of spectral bitstream elements */
 	int *len;
+
+	TnsInfo tnsInfo;
 
 } CoderInfo;
 

@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: frame.h,v 1.4 2001/02/04 17:50:47 oxygene2000 Exp $
+ * $Id: frame.h,v 1.5 2001/02/28 18:39:34 menno Exp $
  */
 
 #ifndef FRAME_H
@@ -41,15 +41,22 @@ extern "C" {
   #endif
 #endif
 
+
 static SR_INFO srInfo[12+1];
 
 typedef struct faacEncConfiguration
 {
+	/* AAC profile */
+	unsigned int aacProfile;
 
 	/* Allow mid/side coding */
 	unsigned int allowMidside;
+
 	/* Use one of the channels as LFE channel */
 	unsigned int useLfe;
+
+	/* Use Temporal Noise Shaping */
+	unsigned int useTns;
 
 	/* bitrate / channel of AAC file */
 	unsigned long bitRate;
@@ -67,7 +74,6 @@ typedef struct {
 	unsigned long sampleRate;
 	unsigned int sampleRateIdx;
 
-	unsigned int aacProfile;
 	unsigned int usedBytes;
 
 	/* frame number */

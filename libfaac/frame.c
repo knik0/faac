@@ -16,12 +16,13 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: frame.c,v 1.9 2001/02/12 14:39:14 menno Exp $
+ * $Id: frame.c,v 1.10 2001/02/28 18:39:34 menno Exp $
  */
 
 /*
  * CHANGES:
  *  2001/01/17: menno: Added frequency cut off filter.
+ *  2001/02/28: menno: Added Temporal Noise Shaping.
  *
  */
 
@@ -39,6 +40,7 @@
 #include "util.h"
 #include "huffman.h"
 #include "psych.h"
+#include "tns.h"
 
 
 faacEncConfigurationPtr FAACAPI faacEncGetCurrentConfiguration(faacEncHandle hEncoder)
@@ -53,6 +55,15 @@ int FAACAPI faacEncSetConfiguration(faacEncHandle hEncoder,
 {
 	hEncoder->config.allowMidside = config->allowMidside;
 	hEncoder->config.useLfe = config->useLfe;
+	hEncoder->config.useTns = config->useTns;
+	hEncoder->config.aacProfile = config->aacProfile;
+
+	 /* No SSR supported yet */
+	if ((hEncoder->config.aacProfile != MAIN)&&(hEncoder->config.aacProfile != LOW))
+		return 0;
+
+	/* Re-init TNS for new profile */
+	TnsInit(hEncoder);
 
 	/* Check for correct bitrate */
 	if (config->bitRate > MaxBitrate(hEncoder->sampleRate))
@@ -83,9 +94,12 @@ faacEncHandle FAACAPI faacEncOpen(unsigned long sampleRate,
 	/* Initialize variables to default values */
 	hEncoder->frameNum = 0;
 	hEncoder->flushFrame = 0;
-	hEncoder->aacProfile = 0; /* MAIN = 0, LOW = 1, SSR = 2 */
+
+	/* Default configuration */
+	hEncoder->config.aacProfile = MAIN;
 	hEncoder->config.allowMidside = 1;
 	hEncoder->config.useLfe = 0;
+	hEncoder->config.useTns = 0;
 	hEncoder->config.bitRate = 64000; /* default bitrate / channel */
 	hEncoder->config.bandWidth = 18000; /* default bandwidth */
 
@@ -109,6 +123,8 @@ faacEncHandle FAACAPI faacEncOpen(unsigned long sampleRate,
 		hEncoder->sampleRate, hEncoder->sampleRateIdx);
 
 	FilterBankInit(hEncoder);
+
+    TnsInit(hEncoder);
 
 	AACQuantizeInit(hEncoder->coderInfo, hEncoder->numChannels);
 
@@ -160,7 +176,9 @@ int FAACAPI faacEncEncode(faacEncHandle hEncoder,
 	CoderInfo *coderInfo = hEncoder->coderInfo;
 	unsigned int numChannels = hEncoder->numChannels;
 	unsigned int sampleRate = hEncoder->sampleRate;
+	unsigned int aacProfile = hEncoder->config.aacProfile;
 	unsigned int useLfe = hEncoder->config.useLfe;
+	unsigned int useTns = hEncoder->config.useTns;
 	unsigned int allowMidside = hEncoder->config.allowMidside;
 	unsigned int bitRate = hEncoder->config.bitRate;
 	unsigned int bandWidth = hEncoder->config.bandWidth;
@@ -272,6 +290,20 @@ int FAACAPI faacEncEncode(faacEncHandle hEncoder,
 				offset += hEncoder->srInfo->cb_width_long[sb];
 			}
 			coderInfo[channel].sfb_offset[coderInfo[channel].nr_of_sfb] = offset;
+		}
+	}
+
+	/* Perform TNS analysis and filtering */
+	for (channel = 0; channel < numChannels; channel++) {
+		if ((!channelInfo[channel].lfe) && (useTns)) {
+			TnsEncode(&(coderInfo[channel].tnsInfo),
+				coderInfo[channel].max_sfb,
+				coderInfo[channel].max_sfb,
+				coderInfo[channel].block_type,
+				coderInfo[channel].sfb_offset,
+				hEncoder->freqBuff[channel]);
+		} else {
+			coderInfo[channel].tnsInfo.tnsDataPresent = 0;      /* TNS not used for LFE */
 		}
 	}
 

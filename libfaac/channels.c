@@ -16,12 +16,12 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: channels.c,v 1.1 2001/01/17 11:21:40 menno Exp $
+ * $Id: channels.c,v 1.2 2001/02/28 18:39:34 menno Exp $
  */
 
 #include "channels.h"
 #include "coder.h"
-
+#include "util.h"
 
 /* If LFE present                                                       */
 /*  Num channels       # of SCE's       # of CPE's       #of LFE's      */ 

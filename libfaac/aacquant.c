@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: aacquant.c,v 1.3 2001/02/04 17:50:47 oxygene2000 Exp $
+ * $Id: aacquant.c,v 1.4 2001/02/28 18:39:34 menno Exp $
  */
 
 #include <math.h>
@@ -27,7 +27,7 @@
 #include "coder.h"
 #include "huffman.h"
 #include "psych.h"
-
+#include "util.h"
 
 
 #define XRPOW_FTOI(src,dest) ((dest) = (int)(src))

@@ -16,17 +16,12 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: util.c,v 1.5 2001/02/26 14:31:45 oxygene Exp $
+ * $Id: util.c,v 1.6 2001/02/28 18:39:34 menno Exp $
  */
 
 #include <math.h>
 
-#ifndef max
-#define max(a, b) (((a) > (b)) ? (a) : (b))
-#endif
-#ifndef min
-#define min(a, b) (((a) < (b)) ? (a) : (b))
-#endif
+#include "util.h"
 
 /* Returns the sample rate index */
 int GetSRIndex(unsigned int sampleRate)

@@ -16,16 +16,16 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: psych.c,v 1.6 2001/02/12 14:39:14 menno Exp $
+ * $Id: psych.c,v 1.7 2001/02/28 18:39:34 menno Exp $
  */
 
-#include <stdlib.h>
-#include <memory.h>
+#include <malloc.h>
 #include <math.h>
 
 #include "psych.h"
 #include "coder.h"
 #include "fft.h"
+#include "util.h"
 
 #define NS_INTERP(x,y,r) (pow((x),(r))*pow((y),1-(r)))
 #define SQRT2 1.41421356237309504880

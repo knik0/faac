@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: filtbank.h,v 1.4 2001/02/25 18:41:16 menno Exp $
+ * $Id: filtbank.h,v 1.5 2001/02/28 18:39:34 menno Exp $
  */
 
 #ifndef FILTBANK_H
@@ -29,14 +29,6 @@ extern "C" {
 #include "frame.h"
 
 #define NFLAT_LS 448
-
-#ifndef M_PI
-#define M_PI        3.14159265358979323846
-#endif
-
-#ifndef M_PI_2
-#define M_PI_2      1.57079632679489661923
-#endif
 
 
 #define SINE_WINDOW 0

@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: bitstream.c,v 1.3 2001/02/04 17:50:47 oxygene2000 Exp $
+ * $Id: bitstream.c,v 1.4 2001/02/28 18:39:34 menno Exp $
  */
 
 #include <stdlib.h>
@@ -183,7 +183,7 @@ static int WriteADTSHeader(faacEncHandle hEncoder,
 		PutBit(bitStream, 1, 1); /* ID */
 		PutBit(bitStream, 0, 2); /* layer */
 		PutBit(bitStream, 1, 1); /* protection absent */
-		PutBit(bitStream, hEncoder->aacProfile, 2); /* profile */
+		PutBit(bitStream, hEncoder->config.aacProfile, 2); /* profile */
 		PutBit(bitStream, hEncoder->sampleRateIdx, 4); /* sampling rate */
 		PutBit(bitStream, 0, 1); /* private bit */
 		PutBit(bitStream, 1, 3); /* ch. config (must be > 0) */
@@ -411,13 +411,83 @@ static int WriteTNSData(CoderInfo *coderInfo,
 						int writeFlag)
 {
 	int bits = 0;
+	int numWindows;
+	int len_tns_nfilt;
+	int len_tns_length;
+	int len_tns_order;
+	int filtNumber;
+	int resInBits;
+	int bitsToTransmit;
+	unsigned long unsignedIndex;
+	int w;
+
+	TnsInfo* tnsInfoPtr = &coderInfo->tnsInfo;
 
 	if (writeFlag) {
-		PutBit(bitStream, 0, LEN_TNS_PRES);
+		PutBit(bitStream,tnsInfoPtr->tnsDataPresent,LEN_TNS_PRES);
 	}
-
 	bits += LEN_TNS_PRES;
 
+	/* If TNS is not present, bail */
+	if (!tnsInfoPtr->tnsDataPresent) {
+		return bits;
+	}
+
+	/* Set window-dependent TNS parameters */
+	if (coderInfo->block_type == ONLY_SHORT_WINDOW) {
+		numWindows = MAX_SHORT_WINDOWS;
+		len_tns_nfilt = LEN_TNS_NFILTS;
+		len_tns_length = LEN_TNS_LENGTHS;
+		len_tns_order = LEN_TNS_ORDERS;
+	}
+	else {
+		numWindows = 1;
+		len_tns_nfilt = LEN_TNS_NFILTL;
+		len_tns_length = LEN_TNS_LENGTHL;
+		len_tns_order = LEN_TNS_ORDERL;
+	}
+
+	/* Write TNS data */
+	bits += (numWindows * len_tns_nfilt);
+	for (w=0;w<numWindows;w++) {
+		TnsWindowData* windowDataPtr = &tnsInfoPtr->windowData[w];
+		int numFilters = windowDataPtr->numFilters;
+		if (writeFlag) {
+			PutBit(bitStream,numFilters,len_tns_nfilt); /* n_filt[] = 0 */
+		}
+		if (numFilters) {
+			bits += LEN_TNS_COEFF_RES;
+			resInBits = windowDataPtr->coefResolution;
+			if (writeFlag) {
+				PutBit(bitStream,resInBits-DEF_TNS_RES_OFFSET,LEN_TNS_COEFF_RES);
+			}
+			bits += numFilters * (len_tns_length+len_tns_order);
+			for (filtNumber=0;filtNumber<numFilters;filtNumber++) {
+				TnsFilterData* tnsFilterPtr=&windowDataPtr->tnsFilter[filtNumber];
+				int order = tnsFilterPtr->order;
+				if (writeFlag) {
+					PutBit(bitStream,tnsFilterPtr->length,len_tns_length);
+					PutBit(bitStream,order,len_tns_order);
+				}
+				if (order) {
+					bits += (LEN_TNS_DIRECTION + LEN_TNS_COMPRESS);
+					if (writeFlag) {
+						PutBit(bitStream,tnsFilterPtr->direction,LEN_TNS_DIRECTION);
+						PutBit(bitStream,tnsFilterPtr->coefCompress,LEN_TNS_COMPRESS);
+					}
+					bitsToTransmit = resInBits - tnsFilterPtr->coefCompress;
+					bits += order * bitsToTransmit;
+					if (writeFlag) {
+						int i;
+						for (i=1;i<=order;i++) {
+							unsignedIndex = (unsigned long) (tnsFilterPtr->index[i])&(~(~0<<bitsToTransmit));
+							PutBit(bitStream,unsignedIndex,bitsToTransmit);
+						}
+					}
+				}
+			}
+		}
+	}
 	return bits;
 }
 

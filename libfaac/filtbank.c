@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: filtbank.c,v 1.3 2001/02/25 18:41:16 menno Exp $
+ * $Id: filtbank.c,v 1.4 2001/02/28 18:39:34 menno Exp $
  */
 
 /*
@@ -34,8 +34,9 @@
 #include "filtbank.h"
 #include "frame.h"
 #include "fft.h"
+#include "util.h"
 
-#define  TWOPI       6.28318530717958647692
+#define  TWOPI       2*M_PI
 
 
 void FilterBankInit(faacEncHandle hEncoder)
