@@ -16,7 +16,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: aacquant.c,v 1.9 2001/06/08 18:01:09 menno Exp $
+ * $Id: aacquant.c,v 1.10 2001/09/28 18:36:06 menno Exp $
  */
 
 #include <math.h>
@@ -129,7 +129,8 @@ int AACQuantize(CoderInfo *coderInfo,
         bits = SearchStepSize(coderInfo, desired_rate, xr_pow, xi);
         coderInfo->old_value = coderInfo->global_gain;
 
-        CalcAllowedDist(psyInfo, cb_width, num_cb, xr, xmin);
+        CalcAllowedDist(psyInfo, coderInfo->sfb_offset,
+            coderInfo->nr_of_sfb, xr, xmin);
         OuterLoop(coderInfo, xr, xr_pow, xi, xmin, desired_rate);
 
         for ( i = 0; i < FRAME_LEN; i++ )  {
@@ -369,7 +370,7 @@ static int InnerLoop(CoderInfo *coderInfo,
     return bits;
 }
 
-static void CalcAllowedDist(PsyInfo *psyInfo, int *cb_width, int num_cb,
+static void CalcAllowedDist(PsyInfo *psyInfo, int *cb_offset, int num_cb,
                             double *xr, double *xmin)
 {
     int sfb, start, end, i;
@@ -378,14 +379,14 @@ static void CalcAllowedDist(PsyInfo *psyInfo, int *cb_width, int num_cb,
     end = 0;
     for (sfb = 0; sfb < num_cb; sfb++)
     {
-        start = end;
-        end += cb_width[sfb];
+        start = cb_offset[sfb];
+        end = cb_offset[sfb + 1];
 
         for (en0 = 0.0, i = start; i < end; i++)
         {
             en0 += xr[i] * xr[i];
         }
-        en0 /= cb_width[sfb];
+        en0 /= (end - start);
 
         xmin0 = psyInfo->maskEn[sfb];
         if (xmin0 > 0.0)

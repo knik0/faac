@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: psych.c,v 1.13 2001/09/21 09:50:16 eraser Exp $
+ * $Id: psych.c,v 1.14 2001/09/28 18:36:06 menno Exp $
  */
 
 #include <stdlib.h>
@@ -452,7 +452,7 @@ void PsyBufferUpdate(GlobalPsyInfo *gpsyInfo, PsyInfo *psyInfo, double *newSampl
 		/* In 2 frames this will be the frequencies where
 		   the psychoacoustics are calculated for */
 		Hann(gpsyInfo, transBuffS, 2*psyInfo->sizeS);
-		rsfft(transBuff, 8);
+		rsfft(transBuffS, 8);
 
 
 		/* shift all buffers 1 frame ahead */
