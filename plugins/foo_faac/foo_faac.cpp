@@ -2,6 +2,7 @@
 // Copyright (C) 2003 Janne Hyvärinen
 //
 // Changes:
+//  0.3.3 (2003-10-02): Removed gapless support for raw AAC files, it was hacky and recent libfaad changes broke it
 //  0.3.2 (2003-09-17): Last fix wasn't perfect and very small input chunks wouldn't have been encoded
 //  0.3.1 (2003-09-14): Fixed possible memory access problems
 //  0.3   (2003-08-17): Even more corrections to MP4 writing, now encoder delay is taken into account and first MP4 sample is given length 0
@@ -31,7 +32,7 @@
 #include <faac.h>
 #include <version.h>
 
-#define FOO_FAAC_VERSION     "0.3.2"
+#define FOO_FAAC_VERSION     "0.3.3"
 
 #define FF_AAC  0
 #define FF_MP4  1
@@ -356,12 +357,6 @@ private:
         info.info_remove_all();
 
         if ( !create_mp4 ) {
-            if ( total_samples > 0 ) {
-                char temp[64];
-                _ui64toa ( total_samples, temp, 10 );
-                info.meta_add ( "samples", temp );
-            }
-
             return tag_writer::g_run ( m_reader, &info, "ape" );
         } else {
             MP4SetMetadataTool ( MP4hFile, "libfaac version " FAAC_VERSION );
@@ -549,6 +544,10 @@ static cutoff_list_t cutoff_list[] = {
     {  16000, "16000"     },
     {  15000, "15000"     },
     {  14000, "14000"     },
+    {  13000, "13000"     },
+    {  12000, "12000"     },
+    {  11000, "11000"     },
+    {  10000, "10000"     },
 };
 
 class config_faac : public config {
