@@ -17,7 +17,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: faac.c,v 1.1 2003/08/18 07:25:03 knik Exp $
+ * $Id: faac.c,v 1.2 2003/08/23 15:02:53 knik Exp $
  */
 
 #ifdef HAVE_CONFIG_H
@@ -130,7 +130,6 @@ int main(int argc, char *argv[])
     unsigned long quantqual = 0;
     int chanC = 3;
     int chanLF = 4;
-    int addsilent = 1;
 
     char *audioFileName;
     char *aacFileName;
@@ -181,7 +180,6 @@ int main(int argc, char *argv[])
             { "pcmsamplerate", 1, 0, 'R'},
             { "pcmsamplebits", 1, 0, 'B'},
             { "pcmchannels", 1, 0, 'C'},
-            { "addsilent", 1, 0, 300},
             { 0, 0, 0, 0}
         };
       int c = -1;
@@ -296,9 +294,6 @@ int main(int argc, char *argv[])
 	      rawChans = i;
        break;
        }
-	case 300:
-	  sscanf(optarg, "%u", &addsilent);
-	  break;
         case '?':
             break;
         default:
@@ -329,8 +324,6 @@ int main(int argc, char *argv[])
 	printf("  -B     Raw PCM input sample size (16 default or 8bits).\n");
 	printf("  -C     Raw PCM input channels.\n");
 	printf("  -I <C,LF> Input channel config, default is 3,4 (Center third, LF fourth)\n");
-	printf("  --addsilent <n> Add n silent frames at the end of output (default=%d)\n",
-	       addsilent);
 	//printf("More details on FAAC usage can be found in the faac.html file.\n");
 	printf("More tips on FAAC usage can be found in Knowledge base at www.audiocoding.com\n");
 
@@ -443,7 +436,7 @@ int main(int argc, char *argv[])
     long begin = GetTickCount();
 #endif
    if (infile->samples)
-     frames = (int)infile->samples / 1024 + 1 + addsilent;
+     frames = ((infile->samples + 1023) / 1024) + 1;
    else
      frames = 0;
         currentFrame = 0;
@@ -461,16 +454,6 @@ int main(int argc, char *argv[])
             int bytesWritten;
 
 	    samplesRead = wav_read_int24(infile, pcmbuf, samplesInput, chanmap);
-
-	    if (!samplesRead)
-	    {
-	      if (addsilent)
-	      {
-		addsilent--;
-		memset(pcmbuf, 0, samplesInput * sizeof(*pcmbuf));
-		samplesRead = samplesInput;
-	      }
-	    }
 
             /* call the actual encoding routine */
             bytesWritten = faacEncEncode(hEncoder,
@@ -568,6 +551,9 @@ int main(int argc, char *argv[])
 
 /*
 $Log: faac.c,v $
+Revision 1.2  2003/08/23 15:02:53  knik
+last frame moved back to the library
+
 Revision 1.1  2003/08/18 07:25:03  knik
 second CLI frontend cloned from main.c
 

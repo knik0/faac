@@ -16,7 +16,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: frame.c,v 1.44 2003/08/15 11:42:08 knik Exp $
+ * $Id: frame.c,v 1.45 2003/08/23 15:02:13 knik Exp $
  */
 
 /*
@@ -411,7 +411,7 @@ int FAACAPI faacEncEncode(faacEncHandle hEncoder,
 
     /* After 4 flush frames all samples have been encoded,
        return 0 bytes written */
-    if (hEncoder->flushFrame >= 4)
+    if (hEncoder->flushFrame > 4)
         return 0;
 
     /* Determine the channel configuration */
@@ -839,6 +839,9 @@ static SR_INFO srInfo[12+1] =
 
 /*
 $Log: frame.c,v $
+Revision 1.45  2003/08/23 15:02:13  knik
+last frame moved back to the library
+
 Revision 1.44  2003/08/15 11:42:08  knik
 removed single silent flush frame
 
