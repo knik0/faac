@@ -1,0 +1,148 @@
+//Microsoft Developer Studio generated resource script.
+//
+#include "resource.h"
+
+#define APSTUDIO_READONLY_SYMBOLS
+/////////////////////////////////////////////////////////////////////////////
+//
+// Generated from the TEXTINCLUDE 2 resource.
+//
+#include "afxres.h"
+
+/////////////////////////////////////////////////////////////////////////////
+#undef APSTUDIO_READONLY_SYMBOLS
+
+/////////////////////////////////////////////////////////////////////////////
+// English (U.S.) resources
+
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_ENU)
+#ifdef _WIN32
+LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
+#pragma code_page(1252)
+#endif //_WIN32
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Dialog
+//
+
+IDD_COMPRESSION DIALOG DISCARDABLE  0, 0, 199, 118
+STYLE DS_MODALFRAME | WS_POPUP | WS_VISIBLE | WS_CAPTION | WS_SYSMENU
+CAPTION "AAC-MPEG4 Format"
+FONT 8, "MS Sans Serif"
+BEGIN
+    DEFPUSHBUTTON   "OK",IDOK,124,99,36,14
+    PUSHBUTTON      "Cancel",IDCANCEL,159,99,36,14
+    COMBOBOX        IDC_CB_BANDWIDTH,147,73,48,30,CBS_DROPDOWN | WS_VSCROLL | 
+                    WS_TABSTOP
+    CONTROL         "Allow Mid/Side",IDC_ALLOWMIDSIDE,"Button",
+                    BS_AUTOCHECKBOX | WS_TABSTOP,111,7,63,10
+    CONTROL         "Use TNS",IDC_USETNS,"Button",BS_AUTOCHECKBOX | 
+                    WS_TABSTOP,111,19,45,10
+    CONTROL         "Use LFE channel",IDC_USELFE,"Button",BS_AUTOCHECKBOX | 
+                    WS_DISABLED | WS_TABSTOP,111,32,67,10
+    CONTROL         "MPEG4",IDC_RADIO1,"Button",BS_AUTORADIOBUTTON | 
+                    WS_GROUP,61,16,42,10
+    CONTROL         "MPEG2",IDC_RADIO2,"Button",BS_AUTORADIOBUTTON,61,29,41,
+                    9
+    CONTROL         "RAW",IDC_RADIO7,"Button",BS_AUTORADIOBUTTON | 
+                    WS_DISABLED | WS_GROUP,8,16,33,10
+    CONTROL         "ADIF",IDC_RADIO8,"Button",BS_AUTORADIOBUTTON | 
+                    WS_DISABLED,8,27,32,10
+    CONTROL         "ADTS",IDC_RADIO9,"Button",BS_AUTORADIOBUTTON | 
+                    WS_DISABLED,8,39,31,10
+    CONTROL         "Main",IDC_RADIO3,"Button",BS_AUTORADIOBUTTON | WS_GROUP,
+                    12,63,31,10
+    CONTROL         "Low",IDC_RADIO4,"Button",BS_AUTORADIOBUTTON,12,73,29,10
+    CONTROL         "SSR",IDC_RADIO5,"Button",BS_AUTORADIOBUTTON | 
+                    WS_DISABLED,60,63,31,10
+    CONTROL         "LTP",IDC_RADIO6,"Button",BS_AUTORADIOBUTTON,60,73,29,10
+    LTEXT           "Bitrate",IDC_STATIC,109,61,21,8
+    LTEXT           "Bandwidth",IDC_STATIC,109,78,34,8
+    GROUPBOX        "AAC type",IDC_STATIC,57,4,48,49
+    GROUPBOX        "Header",IDC_STATIC,4,4,48,49
+    GROUPBOX        "Profile",IDC_STATIC,4,55,101,31
+    COMBOBOX        IDC_CB_BITRATE,147,56,48,30,CBS_DROPDOWN | WS_VSCROLL | 
+                    WS_TABSTOP
+    CONTROL         104,IDC_STATIC,"Static",SS_BITMAP,4,90,36,23
+END
+
+
+#ifdef APSTUDIO_INVOKED
+/////////////////////////////////////////////////////////////////////////////
+//
+// TEXTINCLUDE
+//
+
+1 TEXTINCLUDE DISCARDABLE 
+BEGIN
+    "resource.h\0"
+END
+
+2 TEXTINCLUDE DISCARDABLE 
+BEGIN
+    "#include ""afxres.h""\r\n"
+    "\0"
+END
+
+3 TEXTINCLUDE DISCARDABLE 
+BEGIN
+    "\r\n"
+    "\0"
+END
+
+#endif    // APSTUDIO_INVOKED
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// DESIGNINFO
+//
+
+#ifdef APSTUDIO_INVOKED
+GUIDELINES DESIGNINFO DISCARDABLE 
+BEGIN
+    IDD_COMPRESSION, DIALOG
+    BEGIN
+        LEFTMARGIN, 4
+        RIGHTMARGIN, 195
+        TOPMARGIN, 4
+        BOTTOMMARGIN, 113
+    END
+END
+#endif    // APSTUDIO_INVOKED
+
+#endif    // English (U.S.) resources
+/////////////////////////////////////////////////////////////////////////////
+
+
+/////////////////////////////////////////////////////////////////////////////
+// Italian (Italy) resources
+
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_ITA)
+#ifdef _WIN32
+LANGUAGE LANG_ITALIAN, SUBLANG_ITALIAN
+#pragma code_page(1252)
+#endif //_WIN32
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Bitmap
+//
+
+IDB_LOGO                BITMAP  DISCARDABLE     "Logo.bmp"
+#endif    // Italian (Italy) resources
+/////////////////////////////////////////////////////////////////////////////
+
+
+
+#ifndef APSTUDIO_INVOKED
+/////////////////////////////////////////////////////////////////////////////
+//
+// Generated from the TEXTINCLUDE 3 resource.
+//
+
+
+/////////////////////////////////////////////////////////////////////////////
+#endif    // not APSTUDIO_INVOKED
+
