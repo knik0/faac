@@ -1,4 +1,9 @@
+2001-05-31  menno
+		Bugfix for linux
+
 2001-05-30  menno
+		Changed license from GPL to LPGL
+
 		Higher release version
 
 		Fixed linux compilation
