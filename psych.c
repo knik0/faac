@@ -800,8 +800,7 @@ void psy_step3(PSY_STATVARIABLE_LONG *psy_stvar_long,
                PSY_STATVARIABLE_SHORT *psy_stvar_short,
                PSY_VARIABLE_LONG *psy_var_long,
                PSY_VARIABLE_SHORT *psy_var_short
-//               ,int ch
-	       )
+			   )
 {
     int w,i;
     int p1_l,p2_l;
@@ -842,10 +841,9 @@ void psy_step3(PSY_STATVARIABLE_LONG *psy_stvar_long,
 
 void psy_step4(PSY_STATVARIABLE_LONG *psy_stvar_long,
                PSY_STATVARIABLE_SHORT *psy_stvar_short,
-	       PSY_VARIABLE_LONG *psy_var_long,
-	       PSY_VARIABLE_SHORT *psy_var_short
-//	       ,int ch
-	       )
+			   PSY_VARIABLE_LONG *psy_var_long,
+			   PSY_VARIABLE_SHORT *psy_var_short
+			   )
 {
     int w,i;
     double r,f,rp,fp;
@@ -971,7 +969,6 @@ void psy_step6(PARTITION_TABLE_LONG *part_tbl_long,
 		ct = 0.0;
 
 		for(bb = 0; bb < part_tbl_long->len; bb++){
-			//sprd = sprdngf(part_tbl_long, part_tbl_short, bb, b, 0);
 			sprd = part_tbl_long->dyn->spreading[bb][b];
 			ecb += psy_var_long->e[bb] * sprd;
 			ct += psy_var_long->cb[bb] * sprd;
@@ -993,7 +990,6 @@ void psy_step6(PARTITION_TABLE_LONG *part_tbl_long,
 			ct = 0.0;
 			
 			for(bb = 0; bb < part_tbl_short->len; bb++){
-				//sprd = sprdngf(part_tbl_long, part_tbl_short, bb, b, 1);
 				sprd = part_tbl_short->dyn->spreading[bb][b];
 				ecb += psy_var_short->e[i][bb] * sprd;
 				ct += psy_var_short->cb[i][bb] * sprd;
@@ -1262,15 +1258,13 @@ void psy_step11MS(PARTITION_TABLE_LONG *part_tbl_long,
 }
 
 
-void psy_step12(
-                PARTITION_TABLE_LONG *part_tbl_long,
-		PARTITION_TABLE_SHORT *part_tbl_short,
-		PSY_STATVARIABLE_LONG *psy_stvar_long,
-		PSY_STATVARIABLE_SHORT *psy_stvar_short,
-		PSY_VARIABLE_LONG *psy_var_long
-		,PSY_VARIABLE_SHORT *psy_var_short
-//		,int ch
-		)
+void psy_step12(PARTITION_TABLE_LONG *part_tbl_long,
+				PARTITION_TABLE_SHORT *part_tbl_short,
+				PSY_STATVARIABLE_LONG *psy_stvar_long,
+				PSY_STATVARIABLE_SHORT *psy_stvar_short,
+				PSY_VARIABLE_LONG *psy_var_long,
+				PSY_VARIABLE_SHORT *psy_var_short
+				)
 {
 	int b,i,shb;
 	double temp;
@@ -1312,7 +1306,6 @@ void psy_step12(
 
 void psy_step13(PSY_VARIABLE_LONG *psy_var_long,
 				enum WINDOW_TYPE *block_type
-//				,int ch
 				)
 {
 	if(psy_var_long->pe == 1) {
@@ -1329,7 +1322,6 @@ void psy_step14(SR_INFO *p_sri,
 				PSY_STATVARIABLE_SHORT *psy_stvar_short,
 				PSY_VARIABLE_LONG *psy_var_long,
 				PSY_VARIABLE_SHORT *psy_var_short
-//				,int ch
 				)
 {
     int b, n, w, i;
