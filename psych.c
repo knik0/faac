@@ -52,9 +52,9 @@ Copyright (c) 1997.
 
 Source file:
 
-$Id: psych.c,v 1.44 2000/02/08 07:37:01 lenox Exp $
-$Id: psych.c,v 1.44 2000/02/08 07:37:01 lenox Exp $
-$Id: psych.c,v 1.44 2000/02/08 07:37:01 lenox Exp $
+$Id: psych.c,v 1.45 2000/02/08 12:12:47 oxygene2000 Exp $
+$Id: psych.c,v 1.45 2000/02/08 12:12:47 oxygene2000 Exp $
+$Id: psych.c,v 1.45 2000/02/08 12:12:47 oxygene2000 Exp $
 
 **********************************************************************/
 
@@ -841,10 +841,11 @@ void psy_step6(PARTITION_TABLE_LONG *part_tbl_long,
 		}
 		if (ecb!=0.0) {
 			psy_var_long->cb[b] = ct / ecb;
+			psy_stvar_long->en[b] = psy_var_long->en[b] = ecb * part_tbl_long->dyn->rnorm[b];
 		} else {
 			psy_var_long->cb[b] = 0.0;
+			psy_stvar_long->en[b] = psy_var_long->en[b] = 0;
 		}
-		psy_stvar_long->en[b] = psy_var_long->en[b] = ecb * part_tbl_long->dyn->rnorm[b];
     }
 
 	/* added by T. Araki (1997.10.16) */
@@ -860,10 +861,11 @@ void psy_step6(PARTITION_TABLE_LONG *part_tbl_long,
 			}
 			if (ecb!=0.0) {	
 				psy_var_short->cb[i][b] = ct / ecb;
+				psy_stvar_short->en[i][b] = psy_var_short->en[i][b] = ecb * part_tbl_short->dyn->rnorm[b];
 			} else {
 				psy_var_short->cb[i][b] = 0.0;
+				psy_stvar_short->en[i][b] = psy_var_short->en[i][b] = 0;
 			}
-			psy_stvar_short->en[i][b] = psy_var_short->en[i][b] = ecb * part_tbl_short->dyn->rnorm[b];
 		}
     }
 	/* added by T. Araki (1997.10.16) end */
