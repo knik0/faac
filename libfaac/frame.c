@@ -16,7 +16,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: frame.c,v 1.37 2003/06/26 19:20:09 knik Exp $
+ * $Id: frame.c,v 1.38 2003/07/10 19:17:01 knik Exp $
  */
 
 /*
@@ -357,7 +357,7 @@ int FAACAPI faacEncClose(faacEncHandle hEncoder)
 }
 
 int FAACAPI faacEncEncode(faacEncHandle hEncoder,
-                          short *inputBuffer,
+                          int32_t *inputBuffer,
                           unsigned int samplesInput,
                           unsigned char *outputBuffer,
                           unsigned int bufferSize
@@ -428,7 +428,7 @@ int FAACAPI faacEncEncode(faacEncHandle hEncoder,
         } else {
             for (i = 0; i < (int)(samplesInput/numChannels); i++)
                 hEncoder->next3SampleBuff[channel][i] =
-                    (double)inputBuffer[(i*numChannels)+channel];
+		(1.0/256) * (double)inputBuffer[(i*numChannels)+channel];
             for (i = (int)(samplesInput/numChannels); i < FRAME_LEN; i++)
                 hEncoder->next3SampleBuff[channel][i] = 0.0;
         }
@@ -777,6 +777,9 @@ static SR_INFO srInfo[12+1] =
 
 /*
 $Log: frame.c,v $
+Revision 1.38  2003/07/10 19:17:01  knik
+24-bit input
+
 Revision 1.37  2003/06/26 19:20:09  knik
 Mid/Side support.
 Copyright info moved from frontend.

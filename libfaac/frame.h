@@ -16,11 +16,29 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: frame.h,v 1.19 2003/06/26 19:20:20 knik Exp $
+ * $Id: frame.h,v 1.20 2003/07/10 19:17:44 knik Exp $
  */
 
 #ifndef FRAME_H
 #define FRAME_H
+
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
+#ifdef HAVE_SYS_TYPES_H
+# include <sys/types.h>
+#endif
+#ifdef HAVE_INTTYPES_H
+# include <inttypes.h>
+#endif
+#ifdef HAVE_STDINT_H
+# include <stdint.h>
+#endif
+
+#ifndef HAVE_INT32_T
+typedef int int32_t;
+#endif
 
 #ifdef __cplusplus
 extern "C" {
@@ -160,7 +178,7 @@ faacEncHandle FAACAPI faacEncOpen(unsigned long sampleRate,
                                   unsigned long *maxOutputBytes);
 
 int FAACAPI faacEncEncode(faacEncHandle hEncoder,
-                          short *inputBuffer,
+                          int32_t *inputBuffer,
                           unsigned int samplesInput,
                           unsigned char *outputBuffer,
                           unsigned int bufferSize
