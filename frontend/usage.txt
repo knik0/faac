@@ -1,0 +1,10 @@
+Using the command line tool is quite simple.
+
+FAAC -options infile outfile
+
+infile can be any of the filetypes supported by
+libsndfile (http://www.zip.com.au/~erikd/libsndfile/)
+
+options:
+-nm   Don't use mid/side coding
+-brX  Use bitrate X, this is in bps/channel
