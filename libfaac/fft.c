@@ -1,6 +1,6 @@
 /*
  * FAAC - Freeware Advanced Audio Coder
- * $Id: fft.c,v 1.10 2003/11/16 05:02:51 stux Exp $
+ * $Id: fft.c,v 1.11 2004/04/02 14:56:17 danchr Exp $
  * Copyright (C) 2002 Krzysztof Nikiel
  *
  * This library is free software; you can redistribute it and/or
@@ -29,7 +29,7 @@
 #define MAXLOGM 9
 #define MAXLOGR 8
 
-void fft_init( FFT_Tables *fft_tables )
+void fft_initialize( FFT_Tables *fft_tables )
 {
 	int i;
 	fft_tables->costbl		= AllocMemory( (MAXLOGM+1) * sizeof( fft_tables->costbl[0] ) );
@@ -238,6 +238,10 @@ void ffti( FFT_Tables *fft_tables, double *xr, double *xi, int logm)
 
 /*
 $Log: fft.c,v $
+Revision 1.11  2004/04/02 14:56:17  danchr
+fix name clash w/ libavcodec: fft_init -> fft_initialize
+bump version number to 1.24 beta
+
 Revision 1.10  2003/11/16 05:02:51  stux
 moved global tables from fft.c into hEncoder FFT_Tables. Add fft_init and fft_terminate, flowed through all necessary changes. This should remove at least one instance of a memory leak, and fix some thread-safety problems. Version update to 1.23.3
 

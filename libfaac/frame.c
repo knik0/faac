@@ -16,7 +16,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: frame.c,v 1.58 2004/03/17 13:34:20 danchr Exp $
+ * $Id: frame.c,v 1.59 2004/04/02 14:56:17 danchr Exp $
  */
 
 /*
@@ -357,7 +357,7 @@ faacEncHandle FAACAPI faacEncOpen(unsigned long sampleRate,
     }
 
     /* Initialize coder functions */
-	fft_init( &hEncoder->fft_tables );
+	fft_initialize( &hEncoder->fft_tables );
     
 	hEncoder->psymodel->PsyInit(&hEncoder->gpsyInfo, hEncoder->psyInfo, hEncoder->numChannels,
         hEncoder->sampleRate, hEncoder->srInfo->cb_width_long,
@@ -944,6 +944,10 @@ static SR_INFO srInfo[12+1] =
 
 /*
 $Log: frame.c,v $
+Revision 1.59  2004/04/02 14:56:17  danchr
+fix name clash w/ libavcodec: fft_init -> fft_initialize
+bump version number to 1.24 beta
+
 Revision 1.58  2004/03/17 13:34:20  danchr
 Automatic, untuned setting of lowpass for VBR.
 
