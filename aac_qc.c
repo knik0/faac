@@ -915,6 +915,7 @@ int sort_for_grouping(AACQuantInfo* quantInfo,        /* ptr to quantization inf
 					worstISMR += (PsySigMaskRatio[bandNum] > 0)?PsySigMaskRatio[bandNum]:worstISMR;
 				}
 			}
+			worstISMR /= 2.0;
 			SigMaskRatio[k+ i* *nr_of_sfb]=worstISMR/window_group_length[i];
 			sfb_offset[index] = sfb_offset[index-1] + sfb_width_table[k]*window_group_length[i] ;
 			index++;
