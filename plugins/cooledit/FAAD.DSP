@@ -98,6 +98,10 @@ SOURCE=.\Aacinfo.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\CRegistry.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\Faac.cpp
 # End Source File
 # Begin Source File
@@ -116,14 +120,22 @@ SOURCE=.\FAAD.rc
 
 SOURCE=.\Main.cpp
 # End Source File
-# Begin Source File
-
-SOURCE=.\Registry.cpp
-# End Source File
 # End Group
 # Begin Group "Header Files"
 
 # PROP Default_Filter "h;hpp;hxx;hm;inl;fi;fd"
+# Begin Source File
+
+SOURCE=.\AACINFO.H
+# End Source File
+# Begin Source File
+
+SOURCE=.\CRegistry.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\defines.h
+# End Source File
 # Begin Source File
 
 SOURCE=..\..\include\faac.h
@@ -135,10 +147,6 @@ SOURCE=..\..\..\faad2\include\faad.h
 # Begin Source File
 
 SOURCE=.\filters.h
-# End Source File
-# Begin Source File
-
-SOURCE=.\Registry.h
 # End Source File
 # Begin Source File
 

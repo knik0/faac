@@ -1,14 +1,31 @@
+/*
+FAAD - codec plugin for Cooledit
+Copyright (C) 2002 Antonio Foranna
+
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation.
+	
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+		
+You should have received a copy of the GNU General Public License
+along with this program; if not, write to the Free Software
+Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+			
+The author can be contacted at:
+kreel@interfree.it
+*/
+
 #include <windows.h>
 #include <stdio.h>  // FILE *
 #include "filters.h" //CoolEdit
 #include "resource.h"
 #include "faac.h"
-#include "registry.h"
-
-
-
-#define PI_VER "v2.0 beta2"
-#define REGISTRY_PROGRAM_NAME "SOFTWARE\\4N\\CoolEdit\\AAC-MPEG4"
+#include "CRegistry.h"
+#include "defines.h"
 
 
 
@@ -44,36 +61,41 @@ faacEncConfiguration	EncCfg;
 
 void RD_Cfg(MYCFG *cfg) 
 { 
-registryClass *reg=new registryClass();
+CRegistry reg;
 
-	reg->openCreateReg(HKEY_LOCAL_MACHINE,REGISTRY_PROGRAM_NAME);
-	cfg->AutoCfg=reg->getSetRegDword("Auto",true) ? true : false; 
-	cfg->EncCfg.mpegVersion=reg->getSetRegDword("MPEG version",MPEG2); 
-	cfg->EncCfg.aacObjectType=reg->getSetRegDword("Profile",LOW); 
-	cfg->EncCfg.allowMidside=reg->getSetRegDword("MidSide",true); 
-	cfg->EncCfg.useTns=reg->getSetRegDword("TNS",true); 
-	cfg->EncCfg.useLfe=reg->getSetRegDword("LFE",false);
-	cfg->EncCfg.bitRate=reg->getSetRegDword("BitRate",128000); 
-	cfg->EncCfg.bandWidth=reg->getSetRegDword("BandWidth",0); 
-	cfg->EncCfg.outputFormat=reg->getSetRegDword("Header",1); 
-	delete reg;
+	reg.openCreateReg(HKEY_LOCAL_MACHINE,REGISTRY_PROGRAM_NAME);
+	cfg->AutoCfg=reg.getSetRegDword("Auto",true) ? true : false; 
+	cfg->EncCfg.mpegVersion=reg.getSetRegDword("MPEG version",MPEG2); 
+	cfg->EncCfg.aacObjectType=reg.getSetRegDword("Profile",LOW); 
+	cfg->EncCfg.allowMidside=reg.getSetRegDword("MidSide",true); 
+	cfg->EncCfg.useTns=reg.getSetRegDword("TNS",true); 
+	cfg->EncCfg.useLfe=reg.getSetRegDword("LFE",false);
+	cfg->EncCfg.bitRate=reg.getSetRegDword("BitRate",128000); 
+	cfg->EncCfg.bandWidth=reg.getSetRegDword("BandWidth",0); 
+	cfg->EncCfg.outputFormat=reg.getSetRegDword("Header",1); 
 }
 
 void WR_Cfg(MYCFG *cfg) 
 { 
-registryClass *reg=new registryClass();
+CRegistry reg;
 
-	reg->openCreateReg(HKEY_LOCAL_MACHINE,REGISTRY_PROGRAM_NAME);
-	reg->setRegDword("Auto",cfg->AutoCfg); 
-	reg->setRegDword("MPEG version",cfg->EncCfg.mpegVersion); 
-	reg->setRegDword("Profile",cfg->EncCfg.aacObjectType); 
-	reg->setRegDword("MidSide",cfg->EncCfg.allowMidside); 
-	reg->setRegDword("TNS",cfg->EncCfg.useTns); 
-	reg->setRegDword("LFE",cfg->EncCfg.useLfe); 
-	reg->setRegDword("BitRate",cfg->EncCfg.bitRate); 
-	reg->setRegDword("BandWidth",cfg->EncCfg.bandWidth); 
-	reg->setRegDword("Header",cfg->EncCfg.outputFormat); 
-	delete reg;
+	reg.openCreateReg(HKEY_LOCAL_MACHINE,REGISTRY_PROGRAM_NAME);
+	reg.setRegDword("Auto",cfg->AutoCfg); 
+	reg.setRegDword("MPEG version",cfg->EncCfg.mpegVersion); 
+	reg.setRegDword("Profile",cfg->EncCfg.aacObjectType); 
+	reg.setRegDword("MidSide",cfg->EncCfg.allowMidside); 
+	reg.setRegDword("TNS",cfg->EncCfg.useTns); 
+	reg.setRegDword("LFE",cfg->EncCfg.useLfe); 
+	reg.setRegDword("BitRate",cfg->EncCfg.bitRate); 
+	reg.setRegDword("BandWidth",cfg->EncCfg.bandWidth); 
+	reg.setRegDword("Header",cfg->EncCfg.outputFormat); 
+}
+
+#define INIT_CB(hWnd,nID,list,IdSelected) \
+{ \
+	for(int i=0; list[i]; i++) \
+		SendMessage(GetDlgItem(hWnd, nID), CB_ADDSTRING, 0, (LPARAM)list[i]); \
+	SendMessage(GetDlgItem(hWnd, nID), CB_SETCURSEL, IdSelected, 0); \
 }
 
 #define DISABLE_LTP \
@@ -118,35 +140,15 @@ __declspec(dllexport) BOOL FAR PASCAL DIALOGMsgProc(HWND hWndDlg, UINT Message, 
 	{
 	case WM_INITDIALOG:
 		{
-		char buf[10];
+		char buf[50];
+		char *BitRate[]={"Auto","8","18","20","24","32","40","48","56","64","96","112","128","160","192","256",0};
+		char *BandWidth[]={"Auto","Full","4000","8000","16000","22050","24000","48000",0};
 		MYCFG cfg;
 
 			RD_Cfg(&cfg);
 
-			SendMessage(GetDlgItem(hWndDlg, IDC_CB_BITRATE), CB_ADDSTRING, 0, (LPARAM)(LPCTSTR)"8");
-			SendMessage(GetDlgItem(hWndDlg, IDC_CB_BITRATE), CB_ADDSTRING, 0, (LPARAM)(LPCTSTR)"18");
-			SendMessage(GetDlgItem(hWndDlg, IDC_CB_BITRATE), CB_ADDSTRING, 0, (LPARAM)(LPCTSTR)"20");
-			SendMessage(GetDlgItem(hWndDlg, IDC_CB_BITRATE), CB_ADDSTRING, 0, (LPARAM)(LPCTSTR)"24");
-			SendMessage(GetDlgItem(hWndDlg, IDC_CB_BITRATE), CB_ADDSTRING, 0, (LPARAM)(LPCTSTR)"32");
-			SendMessage(GetDlgItem(hWndDlg, IDC_CB_BITRATE), CB_ADDSTRING, 0, (LPARAM)(LPCTSTR)"40");
-			SendMessage(GetDlgItem(hWndDlg, IDC_CB_BITRATE), CB_ADDSTRING, 0, (LPARAM)(LPCTSTR)"48");
-			SendMessage(GetDlgItem(hWndDlg, IDC_CB_BITRATE), CB_ADDSTRING, 0, (LPARAM)(LPCTSTR)"56");
-			SendMessage(GetDlgItem(hWndDlg, IDC_CB_BITRATE), CB_ADDSTRING, 0, (LPARAM)(LPCTSTR)"64");
-			SendMessage(GetDlgItem(hWndDlg, IDC_CB_BITRATE), CB_ADDSTRING, 0, (LPARAM)(LPCTSTR)"96");
-			SendMessage(GetDlgItem(hWndDlg, IDC_CB_BITRATE), CB_ADDSTRING, 0, (LPARAM)(LPCTSTR)"112");
-			SendMessage(GetDlgItem(hWndDlg, IDC_CB_BITRATE), CB_ADDSTRING, 0, (LPARAM)(LPCTSTR)"128");
-			SendMessage(GetDlgItem(hWndDlg, IDC_CB_BITRATE), CB_ADDSTRING, 0, (LPARAM)(LPCTSTR)"160");
-			SendMessage(GetDlgItem(hWndDlg, IDC_CB_BITRATE), CB_ADDSTRING, 0, (LPARAM)(LPCTSTR)"192");
-			SendMessage(GetDlgItem(hWndDlg, IDC_CB_BITRATE), CB_ADDSTRING, 0, (LPARAM)(LPCTSTR)"256");
-			SendMessage(GetDlgItem(hWndDlg, IDC_CB_BITRATE), CB_SETCURSEL, 8, 0);
-
-			SendMessage(GetDlgItem(hWndDlg, IDC_CB_BANDWIDTH), CB_ADDSTRING, 0, (LPARAM)(LPCTSTR)"0");
-			SendMessage(GetDlgItem(hWndDlg, IDC_CB_BANDWIDTH), CB_ADDSTRING, 0, (LPARAM)(LPCTSTR)"4000");
-			SendMessage(GetDlgItem(hWndDlg, IDC_CB_BANDWIDTH), CB_ADDSTRING, 0, (LPARAM)(LPCTSTR)"8000");
-			SendMessage(GetDlgItem(hWndDlg, IDC_CB_BANDWIDTH), CB_ADDSTRING, 0, (LPARAM)(LPCTSTR)"16000");
-			SendMessage(GetDlgItem(hWndDlg, IDC_CB_BANDWIDTH), CB_ADDSTRING, 0, (LPARAM)(LPCTSTR)"22050");
-			SendMessage(GetDlgItem(hWndDlg, IDC_CB_BANDWIDTH), CB_ADDSTRING, 0, (LPARAM)(LPCTSTR)"24000");
-//       SendMessage(GetDlgItem(hWndDlg, IDC_CB_BANDWIDTH), CB_SETCURSEL, 0, 0);
+			INIT_CB(hWndDlg,IDC_CB_BITRATE,BitRate,0);
+			INIT_CB(hWndDlg,IDC_CB_BANDWIDTH,BandWidth,0);
 
 			if(cfg.EncCfg.mpegVersion==MPEG4)
 				CheckDlgButton(hWndDlg,IDC_RADIO_MPEG4,TRUE);
@@ -183,10 +185,29 @@ __declspec(dllexport) BOOL FAR PASCAL DIALOGMsgProc(HWND hWndDlg, UINT Message, 
 			CheckDlgButton(hWndDlg, IDC_ALLOWMIDSIDE, cfg.EncCfg.allowMidside);
 			CheckDlgButton(hWndDlg, IDC_USETNS, cfg.EncCfg.useTns);
 			CheckDlgButton(hWndDlg, IDC_USELFE, cfg.EncCfg.useLfe);
-			sprintf(buf,"%lu",cfg.EncCfg.bitRate);
-			SetDlgItemText(hWndDlg, IDC_CB_BITRATE, buf);
-			sprintf(buf,"%lu",cfg.EncCfg.bandWidth);
-			SetDlgItemText(hWndDlg, IDC_CB_BANDWIDTH, buf);
+			switch(cfg.EncCfg.bitRate)
+			{
+			case 0:
+				SendMessage(GetDlgItem(hWndDlg, IDC_CB_BITRATE), CB_SETCURSEL, 0, 0);
+				break;
+			default:
+				sprintf(buf,"%lu",cfg.EncCfg.bitRate);
+				SetDlgItemText(hWndDlg, IDC_CB_BITRATE, buf);
+				break;
+			}
+			switch(cfg.EncCfg.bandWidth)
+			{
+			case 0:
+				SendMessage(GetDlgItem(hWndDlg, IDC_CB_BANDWIDTH), CB_SETCURSEL, 0, 0);
+				break;
+			case 0xffffffff:
+				SendMessage(GetDlgItem(hWndDlg, IDC_CB_BANDWIDTH), CB_SETCURSEL, 1, 0);
+				break;
+			default:
+				sprintf(buf,"%lu",cfg.EncCfg.bandWidth);
+				SetDlgItemText(hWndDlg, IDC_CB_BANDWIDTH, buf);
+				break;
+			}
 
 			CheckDlgButton(hWndDlg,IDC_CHK_AUTOCFG, cfg.AutoCfg);
 
@@ -211,34 +232,48 @@ __declspec(dllexport) BOOL FAR PASCAL DIALOGMsgProc(HWND hWndDlg, UINT Message, 
 
 		case IDOK:
 			{
+			char buf[50];
 			HANDLE hCfg=(HANDLE)lParam;
-			MYCFG far *cfg=0;
+			MYCFG cfg;
 
-				if(!(hCfg=GlobalAlloc(GMEM_MOVEABLE|GMEM_SHARE,sizeof(MYCFG))))
-					return TRUE;
-				cfg=(MYCFG *)GlobalLock(hCfg);
-
-				cfg->AutoCfg=IsDlgButtonChecked(hWndDlg,IDC_CHK_AUTOCFG) ? TRUE : FALSE;
-				cfg->EncCfg.mpegVersion=IsDlgButtonChecked(hWndDlg,IDC_RADIO_MPEG4) ? MPEG4 : MPEG2;
+				cfg.AutoCfg=IsDlgButtonChecked(hWndDlg,IDC_CHK_AUTOCFG) ? TRUE : FALSE;
+				cfg.EncCfg.mpegVersion=IsDlgButtonChecked(hWndDlg,IDC_RADIO_MPEG4) ? MPEG4 : MPEG2;
 				if(IsDlgButtonChecked(hWndDlg,IDC_RADIO_MAIN))
-					cfg->EncCfg.aacObjectType=MAIN;
+					cfg.EncCfg.aacObjectType=MAIN;
 				if(IsDlgButtonChecked(hWndDlg,IDC_RADIO_LOW))
-					cfg->EncCfg.aacObjectType=LOW;
+					cfg.EncCfg.aacObjectType=LOW;
 				if(IsDlgButtonChecked(hWndDlg,IDC_RADIO_SSR))
-					cfg->EncCfg.aacObjectType=SSR;
+					cfg.EncCfg.aacObjectType=SSR;
 				if(IsDlgButtonChecked(hWndDlg,IDC_RADIO_LTP))
-					cfg->EncCfg.aacObjectType=LTP;
-				cfg->EncCfg.allowMidside=IsDlgButtonChecked(hWndDlg, IDC_ALLOWMIDSIDE);
-				cfg->EncCfg.useTns=IsDlgButtonChecked(hWndDlg, IDC_USETNS);
-				cfg->EncCfg.useLfe=IsDlgButtonChecked(hWndDlg, IDC_USELFE);
-				cfg->EncCfg.bitRate=1000*GetDlgItemInt(hWndDlg, IDC_CB_BITRATE, 0, FALSE);
-				cfg->EncCfg.bandWidth=GetDlgItemInt(hWndDlg, IDC_CB_BANDWIDTH, 0, FALSE);
-				cfg->EncCfg.outputFormat=IsDlgButtonChecked(hWndDlg,IDC_RADIO_RAW) ? 0 : 1;
-				WR_Cfg(cfg);
+					cfg.EncCfg.aacObjectType=LTP;
+				cfg.EncCfg.allowMidside=IsDlgButtonChecked(hWndDlg, IDC_ALLOWMIDSIDE);
+				cfg.EncCfg.useTns=IsDlgButtonChecked(hWndDlg, IDC_USETNS);
+				cfg.EncCfg.useLfe=IsDlgButtonChecked(hWndDlg, IDC_USELFE);
+				
+				GetDlgItemText(hWndDlg, IDC_CB_BITRATE, buf, 50);
+				switch(*buf)
+				{
+				case 'A': 
+						cfg.EncCfg.bitRate=0;
+						break;
+				default:
+						cfg.EncCfg.bitRate=1000*GetDlgItemInt(hWndDlg, IDC_CB_BITRATE, 0, FALSE);
+				}
+				GetDlgItemText(hWndDlg, IDC_CB_BANDWIDTH, buf, 50);
+				switch(*buf)
+				{
+				case 'A': 
+					cfg.EncCfg.bandWidth=0;
+					break;
+				case 'F':
+					cfg.EncCfg.bandWidth=0xffffffff;
+					break;
+				default:
+					cfg.EncCfg.bandWidth=GetDlgItemInt(hWndDlg, IDC_CB_BANDWIDTH, 0, FALSE);
+				}
+				cfg.EncCfg.outputFormat=IsDlgButtonChecked(hWndDlg,IDC_RADIO_RAW) ? 0 : 1;
 
-				GlobalUnlock(hCfg);
-//				dwOptions=(DWORD)hCfg;
-
+				WR_Cfg(&cfg);
 				EndDialog(hWndDlg, (DWORD)hCfg);
 			}
 			break;
@@ -252,11 +287,11 @@ __declspec(dllexport) BOOL FAR PASCAL DIALOGMsgProc(HWND hWndDlg, UINT Message, 
 		case IDC_BTN_ABOUT:
            	 {
 		     char buf[256];
- 			  sprintf(buf,	"AAC-MPEG4 plugin %s by 4N\n"
-				  "This plugin uses FAAC encoder engine v"
-				  FAACENC_VERSION " and FAAD2 decoder engine\n\n"
+ 			  sprintf(buf,	APP_NAME " plugin %s by 4N\n"
+							"This plugin uses FAAC encoder engine v%g and FAAD2 decoder engine\n\n"
 							"Compiled on %s\n",
-							PI_VER,
+							APP_VER,
+							FAACENC_VERSION,
 							__DATE__
 						  );
 		      MessageBox(hWndDlg, buf, "About", MB_OK);
@@ -286,23 +321,31 @@ __declspec(dllexport) DWORD FAR PASCAL FilterGetOptions(HWND hWnd, HINSTANCE hIn
 long nDialogReturn=0;
 FARPROC lpfnDIALOGMsgProc;
 	
- lpfnDIALOGMsgProc=GetProcAddress(hInst,(LPCSTR)MAKELONG(20,0));			
- nDialogReturn=(long)DialogBoxParam((HINSTANCE)hInst,(LPCSTR)MAKEINTRESOURCE(IDD_COMPRESSION), (HWND)hWnd, (DLGPROC)lpfnDIALOGMsgProc, dwOptions);
+	lpfnDIALOGMsgProc=GetProcAddress(hInst,(LPCSTR)MAKELONG(20,0));			
+	nDialogReturn=(long)DialogBoxParam((HINSTANCE)hInst,(LPCSTR)MAKEINTRESOURCE(IDD_COMPRESSION), (HWND)hWnd, (DLGPROC)lpfnDIALOGMsgProc, dwOptions);
 
- return nDialogReturn;
+	return nDialogReturn;
+}
+// *********************************************************************************************
+
+__declspec(dllexport) void FAR PASCAL GetSuggestedSampleType(LONG *lplSamprate, WORD *lpwBitsPerSample, WORD *wChannels)
+{
+	*lplSamprate=0; // don't care
+	*lpwBitsPerSample= *lpwBitsPerSample<=24 ? 0: 24;
+	*wChannels= *wChannels<=2 ? 0 : 2;
 }
 // *********************************************************************************************
 
 __declspec(dllexport) DWORD FAR PASCAL FilterWriteFirstSpecialData(HANDLE hInput, 
 	SPECIALDATA * psp)
 {
- return 0;
+	return 0;
 }
 // *********************************************************************************************
 
 __declspec(dllexport) DWORD FAR PASCAL FilterWriteNextSpecialData(HANDLE hInput, SPECIALDATA * psp)
 {	
- return 0;
+	return 0;
 // only has 1 special data!  Otherwise we would use psp->hSpecialData
 // as either a counter to know which item to retrieve next, or as a
 // structure with other state information in it.
@@ -312,43 +355,44 @@ __declspec(dllexport) DWORD FAR PASCAL FilterWriteNextSpecialData(HANDLE hInput,
 __declspec(dllexport) DWORD FAR PASCAL FilterWriteSpecialData(HANDLE hOutput,
 	LPCSTR szListType, LPCSTR szType, char * pData,DWORD dwSize)
 {
- return 0;
+	return 0;
 }
 // *********************************************************************************************
 
 __declspec(dllexport) void FAR PASCAL CloseFilterOutput(HANDLE hOutput)
 {
- if(hOutput)
- {
- MYOUTPUT *mo;
-  mo=(MYOUTPUT *)GlobalLock(hOutput);
+	if(!hOutput)
+		return;
 
- if(mo->fFile)
- {
-  fclose(mo->fFile);
-  mo->fFile=0;
- }
+MYOUTPUT *mo;
 
- if(mo->hEncoder)
-  faacEncClose(mo->hEncoder);
-
- if(mo->bitbuf)
- {
-  free(mo->bitbuf);
-  mo->bitbuf=0;
- }
-
- 
-  GlobalUnlock(hOutput);
-  GlobalFree(hOutput);
- }
+	mo=(MYOUTPUT *)GlobalLock(hOutput);
+	
+	if(mo->fFile)
+	{
+		fclose(mo->fFile);
+		mo->fFile=0;
+	}
+	
+	if(mo->hEncoder)
+		faacEncClose(mo->hEncoder);
+	
+	if(mo->bitbuf)
+	{
+		free(mo->bitbuf);
+		mo->bitbuf=0;
+	}
+	
+	
+	GlobalUnlock(hOutput);
+	GlobalFree(hOutput);
 }              
 // *********************************************************************************************
 
 #define ERROR_OFO(msg) \
 { \
 	if(msg) \
-		MessageBox(0, msg, "FAAC plugin", MB_OK); \
+		MessageBox(0, msg, APP_NAME " plugin", MB_OK); \
 	if(hOutput) \
 	{ \
 		GlobalUnlock(hOutput); \
@@ -391,10 +435,21 @@ int				tmp;
 	if(!cfg.AutoCfg)
 	{
     faacEncConfigurationPtr myFormat=&cfg.EncCfg;
-//     myFormat=faacEncGetCurrentConfiguration(mo->hEncoder);
+    faacEncConfigurationPtr CurFormat=faacEncGetCurrentConfiguration(mo->hEncoder);
 
-		if(!myFormat->bandWidth)
+		if(!myFormat->bitRate)
+			myFormat->bitRate=CurFormat->bitRate;
+
+		switch(myFormat->bandWidth)
+		{
+		case 0:
+			myFormat->bandWidth=CurFormat->bandWidth;
+			break;
+		case 0xffffffff:
 			myFormat->bandWidth=lSamprate/2;
+			break;
+		default: break;
+		}
 
 		if(!faacEncSetConfiguration(mo->hEncoder, myFormat))
 			ERROR_OFO("Unsupported parameters");
@@ -431,7 +486,7 @@ int				tmp;
 #define ERROR_WFO(msg) \
 { \
 	if(msg) \
-		MessageBox(0, msg, "FAAC plugin", MB_OK); \
+		MessageBox(0, msg, APP_NAME " plugin", MB_OK); \
 	if(hOutput) \
 	{ \
 		mo->bStopEnc=1; \
@@ -442,34 +497,34 @@ int				tmp;
 
 __declspec(dllexport) DWORD FAR PASCAL WriteFilterOutput(HANDLE hOutput, unsigned char far *buf, long lBytes)
 {
+	if(!hOutput)
+		return 0;
+
 int bytesWritten;
 int bytesEncoded;
+MYOUTPUT far *mo;
 
- if(hOutput)
- { 
- MYOUTPUT far *mo;
-  mo=(MYOUTPUT far *)GlobalLock(hOutput);
+	mo=(MYOUTPUT far *)GlobalLock(hOutput);
+	
+	if(!mo->bStopEnc) // Is this case possible?
+	{
+		// call the actual encoding routine
+		bytesEncoded=faacEncEncode(mo->hEncoder, (short *)buf, mo->samplesInput, mo->bitbuf, mo->maxBytesOutput);
+		if(bytesEncoded<1) // end of flushing process
+		{
+			if(bytesEncoded<0)
+				ERROR_WFO("faacEncEncode");
+			bytesWritten=lBytes ? 1 : 0; // bytesWritten==0 stops CoolEdit...
+			GlobalUnlock(hOutput);
+			return bytesWritten;
+		}
+		// write bitstream to aac file 
+		bytesWritten=fwrite(mo->bitbuf, 1, bytesEncoded, mo->fFile);
+		if(bytesWritten!=bytesEncoded)
+			ERROR_WFO("fwrite");
+		
+		GlobalUnlock(hOutput);
+	}
 
-  if(!mo->bStopEnc) // Is this case possible?
-  {
-// call the actual encoding routine
-   bytesEncoded=faacEncEncode(mo->hEncoder, (short *)buf, mo->samplesInput, mo->bitbuf, mo->maxBytesOutput);
-   if(bytesEncoded<1) // end of flushing process
-   {
-    if(bytesEncoded<0)
-		ERROR_WFO("faacEncEncode");
-	bytesWritten=lBytes ? 1 : 0; // bytesWritten==0 stops CoolEdit...
-    GlobalUnlock(hOutput);
-    return bytesWritten;
-   }
-// write bitstream to aac file 
-   bytesWritten=fwrite(mo->bitbuf, 1, bytesEncoded, mo->fFile);
-   if(bytesWritten!=bytesEncoded)
-		ERROR_WFO("fwrite");
-
-   GlobalUnlock(hOutput);
-  }
- }
-
- return bytesWritten;
+return bytesWritten;
 }

@@ -1,5 +1,27 @@
+/*
+FAAD - codec plugin for Cooledit
+Copyright (C) 2002 Antonio Foranna
+
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation.
+	
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+		
+You should have received a copy of the GNU General Public License
+along with this program; if not, write to the Free Software
+Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+			
+The author can be contacted at:
+kreel@interfree.it
+*/
+
 #include <windows.h>
 #include "filters.h" //CoolEdit
+#include "defines.h"
 
 
 
@@ -60,11 +82,10 @@ BOOL WINAPI DllMain (HANDLE hModule, DWORD fdwReason, LPVOID lpReserved)
 }
 
 // Fill COOLQUERY structure with information regarding this file filter
-
 __declspec(dllexport) short FAR PASCAL QueryCoolFilter(COOLQUERY far * cq)
 {
-	lstrcpy(cq->szName,"MPEG4-AAC Format");		
-	lstrcpy(cq->szCopyright,"Freeware AAC-MPEG4 codec");
+	lstrcpy(cq->szName, APP_NAME " Format");		
+	lstrcpy(cq->szCopyright, APP_NAME " codec");
 	lstrcpy(cq->szExt,"AAC");
 	lstrcpy(cq->szExt2,"MP4"); 
 	cq->lChunkSize=16384; 

@@ -1,3 +1,24 @@
+/*
+FAAD - codec plugin for Cooledit
+Copyright (C) 2002 Antonio Foranna
+
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation.
+	
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+		
+You should have received a copy of the GNU General Public License
+along with this program; if not, write to the Free Software
+Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+			
+The author can be contacted at:
+kreel@interfree.it
+*/
+
 #include <windows.h>
 #include <stdio.h>  // FILE *
 #include "filters.h" //CoolEdit
@@ -5,9 +26,17 @@
 #include "faac.h"
 #include "aacinfo.h"
 #include "..\..\..\faad2\common\mp4v2\mp4.h"
+#include "defines.h"
+
 
 
 #define MAX_CHANNELS 2
+#define FREE(ptr) \
+{ \
+	if(ptr) \
+		free(ptr); \
+	ptr=0; \
+}
 
 
 typedef struct input_tag // any special vars associated with input file
@@ -25,13 +54,13 @@ typedef struct input_tag // any special vars associated with input file
  MP4FileHandle	mp4File;
  MP4SampleId	sampleId, numSamples;
  int			track;
- DWORD			type;
+ BYTE			type;
 
-// GENERAL
+// GLOBAL
  faacDecHandle	hDecoder;
  faadAACInfo	file_info;
  __int32		len_ms;
- WORD			wChannels;
+ BYTE			wChannels;
  DWORD			dwSamprate;
  WORD			wBitsPerSample;
  char			szName[256];
@@ -62,44 +91,44 @@ static const char* mpeg4AudioNames[]=
 
 int id3v2_tag(unsigned char *buffer)
 {
- if(StringComp((const char *)buffer, "ID3", 3) == 0) 
- {
-unsigned long tagsize;
+	if(StringComp((const char *)buffer, "ID3", 3) == 0) 
+	{
+		unsigned long tagsize;
+		
+		// high bit is not used 
+		tagsize=(buffer[6] << 21) | (buffer[7] << 14) |
+			(buffer[8] <<  7) | (buffer[9] <<  0);
+		tagsize += 10;
+		return tagsize;
+	}
 
-// high bit is not used 
-  tagsize=(buffer[6] << 21) | (buffer[7] << 14) |
-          (buffer[8] <<  7) | (buffer[9] <<  0);
-  tagsize += 10;
-  return tagsize;
- }
- else 
-  return 0;
+	return 0;
 }
 
 int GetAACTrack(MP4FileHandle infile)
 {
     /* find AAC track */
     int i, rc;
-	int numTracks = MP4GetNumberOfTracks(infile, NULL);
+	int numTracks = MP4GetNumberOfTracks(infile, NULL, 0);
 
 	for (i = 0; i < numTracks; i++)
     {
-        MP4TrackId trackId = MP4FindTrackId(infile, i, NULL);
+        MP4TrackId trackId = MP4FindTrackId(infile, i, NULL, 0);
         const char* trackType = MP4GetTrackType(infile, trackId);
 
         if (!strcmp(trackType, MP4_AUDIO_TRACK_TYPE))
         {
             unsigned char *buff = NULL;
-            unsigned __int32 buff_size = 0;
-			DWORD dummy1_32;
-			BYTE dummy2_8, dummy3_8, dummy4_8, dummy5_8, dummy6_8,
+            int buff_size = 0;
+            unsigned char dummy2_8, dummy3_8, dummy4_8, dummy5_8, dummy6_8,
                 dummy7_8, dummy8_8;
+            unsigned int dummy1_32;
             MP4GetTrackESConfiguration(infile, trackId, &buff, &buff_size);
 
             if (buff)
             {
-                rc = AudioSpecificConfig(buff, &dummy1_32, &dummy2_8, &dummy3_8,
-                    &dummy4_8, &dummy5_8, &dummy6_8, &dummy7_8, &dummy8_8);
+                rc = AudioSpecificConfig(buff, &dummy1_32, &dummy2_8, &dummy3_8, &dummy4_8,
+                    &dummy5_8, &dummy6_8, &dummy7_8, &dummy8_8);
                 free(buff);
 
                 if (rc < 0)
@@ -114,7 +143,6 @@ int GetAACTrack(MP4FileHandle infile)
 }
 
 
-
 // *********************************************************************************************
 
 
@@ -122,11 +150,12 @@ int GetAACTrack(MP4FileHandle infile)
 __declspec(dllexport) BOOL FAR PASCAL FilterUnderstandsFormat(LPSTR filename)
 {
 WORD len;
- if((len=lstrlen(filename))>4 && 
-	(!strcmpi(filename+len-4,".aac") ||
-	 !strcmpi(filename+len-4,".mp4")))
-  return TRUE;
- return FALSE;
+
+	if((len=lstrlen(filename))>4 && 
+		(!strcmpi(filename+len-4,".aac") ||
+		!strcmpi(filename+len-4,".mp4")))
+		return TRUE;
+	return FALSE;
 }
 // *********************************************************************************************
 
@@ -134,82 +163,91 @@ __declspec(dllexport) long FAR PASCAL FilterGetFileSize(HANDLE hInput)
 {
 DWORD full_size;
 
- if(hInput)  
- {
- MYINPUT *mi;
-  mi=(MYINPUT *)GlobalLock(hInput);
-  full_size=mi->full_size;
+	if(hInput)  
+	{
+		MYINPUT *mi;
+		mi=(MYINPUT *)GlobalLock(hInput);
+		full_size=mi->full_size;
+		
+		GlobalUnlock(hInput);
+	}
 
-  GlobalUnlock(hInput);
- }
-
- return full_size;
+	return full_size;
 }
 // *********************************************************************************************
 
 __declspec(dllexport) DWORD FAR PASCAL FilterOptionsString(HANDLE hInput, LPSTR szString)
 {
+	if(!hInput)
+	{
+		lstrcpy(szString,"");
+		return 0;
+	}
+
 char buf[20];
+MYINPUT *mi;
 
- if(hInput)
- {
- MYINPUT *mi;
-  mi=(MYINPUT *)GlobalLock(hInput);
- 
-  lstrcpy(szString,"");
-
-  if(mi->file_info.version == 2)
-   lstrcat(szString,"MPEG2 - ");
-  else
-   lstrcat(szString,"MPEG4 - ");
- 
-  sprintf(buf,"%lu bps\n",mi->file_info.bitrate);
-  lstrcat(szString,buf);
- 
-  if(mi->IsAAC)  // AAC file --------------------------------------------------------------------
-  {
-	switch(mi->file_info.headertype)
+mi=(MYINPUT *)GlobalLock(hInput);
+	
+	lstrcpy(szString,"");
+	
+	if(mi->file_info.version == 2)
+		lstrcat(szString,"MPEG2 - ");
+	else
+		lstrcat(szString,"MPEG4 - ");
+	
+	sprintf(buf,"%lu bps\n",mi->file_info.bitrate);
+	lstrcat(szString,buf);
+	
+	if(mi->IsAAC)  // AAC file --------------------------------------------------------------------
 	{
-	case 0:
-		lstrcat(szString,"RAW\n");
-		return 0L;
-	case 1:
-		lstrcat(szString,"ADIF\n");
-		break;
-	case 2:
-		lstrcat(szString,"ADTS\n");
-		break;
+		switch(mi->file_info.headertype)
+		{
+		case 0:
+			lstrcat(szString,"RAW\n");
+			return 0L;
+		case 1:
+			lstrcat(szString,"ADIF\n");
+			break;
+		case 2:
+			lstrcat(szString,"ADTS\n");
+			break;
+		}
+		
+		switch(mi->file_info.object_type)
+		{
+		case MAIN:
+			lstrcat(szString,"Main");
+			break;
+		case LOW:
+			lstrcat(szString,"Low Complexity");
+			break;
+		case SSR:
+			lstrcat(szString,"SSR (unsupported)");
+			break;
+		case LTP:
+			lstrcat(szString,"Main LTP");
+			break;
+		}
 	}
+	else  // MP4 file -----------------------------------------------------------------------------
+    {
+        if (mi->type > 16)
+            lstrcat(szString,"Type not known");
+        else
+            lstrcat(szString,mpeg4AudioNames[mi->type]);
+    }
+	
+	GlobalUnlock(hInput);
 
-	switch(mi->file_info.object_type)
-	{
-	case MAIN:
-		lstrcat(szString,"Main");
-		break;
-	case LOW:
-		lstrcat(szString,"Low Complexity");
-		break;
-	case SSR:
-		lstrcat(szString,"SSR (unsupported)");
-		break;
-	case LTP:
-		lstrcat(szString,"Main LTP");
-		break;
-	}
-  }
-  else  // MP4 file -----------------------------------------------------------------------------
-	lstrcat(szString,mpeg4AudioNames[mi->type]);
-
-  GlobalUnlock(hInput);
- }
- return 1;
+	return 1;
 }
 // *********************************************************************************************
 
 __declspec(dllexport) DWORD FAR PASCAL FilterGetFirstSpecialData(HANDLE hInput, 
 	SPECIALDATA * psp)
 {
-return 0L;
+	return 0L;
 }
 // *********************************************************************************************
     
@@ -222,35 +260,35 @@ __declspec(dllexport) DWORD FAR PASCAL FilterGetNextSpecialData(HANDLE hInput, S
 
 __declspec(dllexport) void FAR PASCAL CloseFilterInput(HANDLE hInput)
 {
- if(hInput)
- {
- MYINPUT far *mi;
-	mi=(MYINPUT far *)GlobalLock(hInput);
+	if(!hInput)
+		return;
 
+MYINPUT far *mi;
+
+	mi=(MYINPUT far *)GlobalLock(hInput);
+	
 // AAC file ---------------------------------------------------------------------
 	if(mi->aacFile)
 		fclose(mi->aacFile);
-  
-	if(mi->buffer)
-		free(mi->buffer);
-
+	
+	FREE(mi->buffer);
+	
 // MP4 file ---------------------------------------------------------------------
 	if(mi->mp4File)
 		MP4Close(mi->mp4File);
-
+	
 	if(mi->hDecoder)
 		faacDecClose(mi->hDecoder);
-
+	
 	GlobalUnlock(hInput);
 	GlobalFree(hInput);
- }
 }
 // *********************************************************************************************
 
 #define ERROR_OFI(msg) \
 { \
 	if(msg) \
-		MessageBox(0, msg, "FAAD plugin", MB_OK); \
+		MessageBox(0, msg, APP_NAME " plugin", MB_OK); \
 	if(hInput) \
 	{ \
 		GlobalUnlock(hInput); \
@@ -265,7 +303,8 @@ __declspec(dllexport) HANDLE FAR PASCAL OpenFilterInput(LPSTR lpstrFilename, lon
 HANDLE					hInput;
 MYINPUT					*mi;
 faacDecConfigurationPtr	config;
-DWORD					samplerate, channels;
+DWORD					samplerate;
+BYTE channels;
 DWORD					tmp;
 BYTE					BitsPerSample=16;
 
@@ -283,7 +322,8 @@ BYTE					BitsPerSample=16;
 	MP4Duration			length;
 	int					track;
 	unsigned __int32	buffer_size;
-	unsigned long		timeScale, sf;
+	unsigned long		timeScale;
+    BYTE sf;
     BYTE dummy1, dummy2, dummy3, dummy4;
 
 		if(!(mi->mp4File = MP4Read(lpstrFilename, 0)))
@@ -301,14 +341,18 @@ BYTE					BitsPerSample=16;
 	    if(!mi->buffer)
 			ERROR_OFI("MP4GetTrackESConfiguration");
 
-		AudioSpecificConfig(mi->buffer, &timeScale, &channels, &sf, &mi->type, &dummy1,
-            &dummy2, &dummy3, &dummy4);
-		if(memcmp(mpeg4AudioNames[mi->type],"AAC",3))
-			ERROR_OFI(0);
+		AudioSpecificConfig(mi->buffer, &timeScale, &channels, &sf, &mi->type, &dummy1, &dummy2,
+            &dummy3, &dummy4);
+        if (mi->type <= 16)
+        {
+            if(memcmp(mpeg4AudioNames[mi->type],"AAC",3))
+                ERROR_OFI(0);
+        } else
+            ERROR_OFI(0);
 		if(faacDecInit2(mi->hDecoder, mi->buffer, buffer_size, &samplerate, &channels) < 0)
 			ERROR_OFI("Error initializing decoder library");
 
-	    free(mi->buffer);
+	    FREE(mi->buffer);
 
 		length = MP4GetTrackDuration(mi->mp4File, track);
 		mi->len_ms=(DWORD) MP4ConvertFromTrackDuration(mi->mp4File, track, length, MP4_MSECS_TIME_SCALE);
@@ -377,7 +421,7 @@ BYTE					BitsPerSample=16;
 		{
 			if(get_AAC_format(lpstrFilename, &(mi->file_info), seek_table)<0)
 				ERROR_OFI("Error retrieving information form input file");
-			free(seek_table);
+			FREE(seek_table);
 		}
 		if(mi->file_info.headertype==0)
 		{
@@ -437,7 +481,7 @@ BYTE					BitsPerSample=16;
 #define ERROR_RFI(msg) \
 { \
 	if(msg) \
-		MessageBox(0, msg, "FAAD plugin", MB_OK); \
+		MessageBox(0, msg, APP_NAME " plugin", MB_OK); \
 	if(hInput) \
 		GlobalUnlock(hInput); \
 	return 0; \
@@ -445,6 +489,9 @@ BYTE					BitsPerSample=16;
 
 __declspec(dllexport) DWORD FAR PASCAL ReadFilterInput(HANDLE hInput, unsigned char far *bufout, long lBytes)
 {
+	if(!hInput)
+		ERROR_RFI("Memory allocation error: hInput");
+
 DWORD				read,
 					tmp,
 					shorts_decoded=0;
@@ -453,8 +500,6 @@ faacDecFrameInfo	frameInfo;
 char				*sample_buffer=0;
 MYINPUT				*mi;
 
-	if(!hInput)
-		ERROR_RFI("Memory allocation error: hInput");
 	mi=(MYINPUT *)GlobalLock(hInput);
 
 	if(!mi->IsAAC) // MP4 file --------------------------------------------------------------------------
@@ -471,14 +516,14 @@ MYINPUT				*mi;
 			rc=MP4ReadSample(mi->mp4File, mi->track, mi->sampleId++, &buffer, &buffer_size, NULL, NULL, NULL, NULL);
 			if(rc==0 || buffer==NULL)
 			{
-				if(buffer) free(buffer);
+				FREE(buffer);
 				ERROR_RFI("MP4ReadSample")
 			}
 
 			sample_buffer=(char *)faacDecDecode(mi->hDecoder,&frameInfo,buffer);
 			shorts_decoded=frameInfo.samples*sizeof(short);
 			memcpy(bufout,sample_buffer,shorts_decoded);
-			if (buffer) free(buffer);
+			FREE(buffer);
 		}while(!shorts_decoded && !frameInfo.error);
 	}
 	else // AAC file --------------------------------------------------------------------------

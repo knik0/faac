@@ -1,0 +1,3 @@
+#define APP_NAME "MPEG4-AAC"
+#define APP_VER "v2.0 beta2"
+#define REGISTRY_PROGRAM_NAME "SOFTWARE\\4N\\CoolEdit\\AAC-MPEG4"

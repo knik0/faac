@@ -14,4 +14,4 @@ EXPORTS
 	FilterGetFirstSpecialData	@31
 	FilterGetNextSpecialData	@32
 	FilterWriteSpecialData		@33
-
+	GetSuggestedSampleType
