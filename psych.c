@@ -632,7 +632,7 @@ void EncTf_psycho_acoustic(
 
 			} else if (channelInfo[chanNum].lfe) { /* LFE */
 
-				// LFE psych ratios are set to -24 dB
+				// LFE psych ratios are set to -24 dB for low frequencies
 				for (i = 0; i < 4; i++) {
 					psy_stvar_long[chanNum].ismr[i] = 0.004; /* -24 dB */
 				}

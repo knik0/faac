@@ -59,15 +59,6 @@ Ch_Info channelInfo[MAX_TIME_CHANNELS];
 /* AAC shorter windows 960-480-120 */
 int useShortWindows=0;  /* don't use shorter windows */
 
-// TEMPORARY HACK
-
-int srate_idx;
-
-int sampling_rate;
-int bit_rate;
-
-// END OF HACK
-
 
 /* EncTfFree() */
 /* Free memory allocated by t/f-based encoder core. */
@@ -112,15 +103,13 @@ void EncTfInit (faacAACStream *as)
 {
   int chanNum, i;
   int SampleRates[] = { 96000,88200,64000,48000,44100,32000,24000,22050,16000,12000,11025,8000,0};
+  int srate_idx;
 //	int BitRates[] = {
 //		64000,80000,96000,112000,128000,160000,192000,224000,256000,0
 //	};
 
-  sampling_rate = as->out_sampling_rate;
-  bit_rate = as->bit_rate;
-
   for (i = 0; ; i++) {
-    if (SampleRates[i] == sampling_rate) {
+    if (SampleRates[i] == as->out_sampling_rate) {
       srate_idx = i;
       break;
     }
@@ -170,7 +159,7 @@ void EncTfInit (faacAACStream *as)
 
   /* Init TNS */
   for (chanNum=0;chanNum<MAX_TIME_CHANNELS;chanNum++) {
-    TnsInit(sampling_rate,profile,&tnsInfo[chanNum]);
+    TnsInit(as->out_sampling_rate,profile,&tnsInfo[chanNum]);
     quantInfo[chanNum].tnsInfo = &tnsInfo[chanNum];         /* Set pointer to TNS data */
   }
 
@@ -301,7 +290,7 @@ int EncTfFrame (faacAACStream *as, BsBitStream  *fixed_stream)
   /* psychoacoustics */
   /*****************************************************************************/
   EncTf_psycho_acoustic(
-	  sampling_rate,
+	  as->out_sampling_rate,
 	  max_ch,
 	  channelInfo,
 	  DTimeSigLookAheadBuf,
@@ -368,7 +357,7 @@ int EncTfFrame (faacAACStream *as, BsBitStream  *fixed_stream)
         case ONLY_SHORT_WINDOW  :
 //      no_sub_win   = short_win_in_long;
 //      sub_win_size = block_size_samples/short_win_in_long;
-        quantInfo[chanNum].max_sfb = max_sfb_s[srate_idx];
+        quantInfo[chanNum].max_sfb = max_sfb_s[quantInfo[chanNum].srate_idx];
 #if 0
         quantInfo[chanNum].num_window_groups = 4;
         quantInfo[chanNum].window_group_length[0] = 1;
@@ -391,7 +380,7 @@ int EncTfFrame (faacAACStream *as, BsBitStream  *fixed_stream)
         default:
 //      no_sub_win   = 1;
 //      sub_win_size = block_size_samples;
-        quantInfo[chanNum].max_sfb = max_sfb_l[srate_idx];
+        quantInfo[chanNum].max_sfb = max_sfb_l[quantInfo[chanNum].srate_idx];
         quantInfo[chanNum].num_window_groups = 1;
         quantInfo[chanNum].window_group_length[0]=1;
         break;

@@ -1,7 +1,7 @@
 /**********************************************************************
 audio sample rate converter
 
-$Id: rateconv.c,v 1.3 2000/02/18 09:18:27 lenox Exp $
+$Id: rateconv.c,v 1.5 2000/10/04 19:45:33 menno Exp $
 
 Source file: rateconv.c
 
@@ -591,14 +591,14 @@ RCBuf *RateConvInit (
     {
       if ( fd<0.0 )
 	{
-	  fc=1.0/d1-trw2;
-	  if ( fc<0.5-0.5*trw2 ) { numode=1; fc=2.0/d1-trw2; }
-	  if ( fc>1.0-trw2 ) fc=1.0-trw2;
+	  fc=(float)(1.0/d1-trw2);
+	  if ( fc<0.5-0.5*trw2 ) { numode=1; fc=(float)(2.0/d1-trw2); }
+	  if ( fc>1.0-trw2 ) fc=(float)(1.0-trw2);
 	}
       else
 	{
-	  fc=fd-trw2;
-	  if ( fd<=0.5 ) { numode=1; fc=2.0*fd-trw2; }
+	  fc=(float)(fd-trw2);
+	  if ( fd<=0.5 ) { numode=1; fc=(float)(2.0*fd-trw2); }
 	}
     }
   else

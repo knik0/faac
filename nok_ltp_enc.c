@@ -34,9 +34,9 @@ Copyright (c)1997.
 /**************************************************************************
   Version Control Information			Method: CVS
   Identifiers:
-  $Revision: 1.10 $
-  $Date: 2000/02/28 12:18:36 $ (check in)
-  $Author: lenox $
+  $Revision: 1.12 $
+  $Date: 2000/10/04 19:45:33 $ (check in)
+  $Author: menno $
   *************************************************************************/
 
 
@@ -296,9 +296,9 @@ nok_ltp_reconstruct(double *p_spectrum, enum WINDOW_TYPE win_type,
 		for (i = 0; i < BLOCK_LEN_LONG; i++)
 		{
 			lt_status->buffer[i + j] =
-				double_to_int (predicted_samples[i] + lt_status->buffer[i + j]);
+				(short)double_to_int (predicted_samples[i] + lt_status->buffer[i + j]);
 			lt_status->buffer[NOK_LT_BLEN - BLOCK_LEN_LONG + i] =
-				double_to_int (predicted_samples[i + BLOCK_LEN_LONG]);
+				(short)double_to_int (predicted_samples[i + BLOCK_LEN_LONG]);
 		}
 		break;
 

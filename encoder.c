@@ -118,13 +118,13 @@ int faac_EncodeInit(faacAACStream *as, char *in_file, char *out_file)
       return -4;
   }
 
-  if((as->bit_rate % 1000)||(as->bit_rate < 16000))
+  if((as->bit_rate % 1000)||(as->bit_rate < 8000))
     return -5;
   if (as->channels != 2)
       if(as->channels == 1)
         as->use_MS=-1;
-      else
-        return -6;
+//      else
+//        return -6;
   if ((as->profile != MAIN_PROFILE)&&(as->profile != LOW_PROFILE))
     return -7;
 
@@ -145,7 +145,7 @@ int faac_EncodeInit(faacAACStream *as, char *in_file, char *out_file)
 
   as->samplesToRead = frameNumSample * as->channels;
 
-  as->frame_bits = (int)(as->bit_rate*frameNumSample/as->out_sampling_rate+0.5);
+  as->frame_bits = (int)((as->bit_rate*as->channels)*frameNumSample/as->out_sampling_rate+0.5);
   as->bitBufferSize = (int)(((as->frame_bits * 5) + 7)/8);
 
 
@@ -256,7 +256,7 @@ int faac_EncodeFrameCore(faacAACStream *as, int Samples)
     continue;
   }
 
-  bitBuf = BsOpenWrite(as->frame_bits * 10);
+  bitBuf = BsOpenWrite(as->frame_bits * as->channels * 10);
 
   /* compute available number of bits */
   /* frameAvailNumBit contains number of bits in reservoir */
@@ -265,7 +265,7 @@ int faac_EncodeFrameCore(faacAACStream *as, int Samples)
     as->available_bits = 8184;
 
   /* Add to frameAvailNumBit the number of bits for this frame */
-  as->available_bits += as->frame_bits;
+  as->available_bits += (as->frame_bits * as->channels);
 
   /* Encode frame */
   error = EncTfFrame(as, bitBuf);
@@ -390,7 +390,7 @@ void faac_InitParams(faacAACStream *as)
   as->use_PNS = 0;
   as->lfePresent = 0;
   as->cut_off = 0;
-  as->bit_rate = 128000;
+  as->bit_rate = 64000;
   as->out_sampling_rate = 0;
   as->raw_audio = 0;
 }

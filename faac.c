@@ -56,7 +56,7 @@ void usage(void)
   printf("Options:\n");
   printf(" -?    Shows this help screen.\n");
   printf(" -pX   AAC profile (X can be LOW, or MAIN (default).\n");
-  printf(" -bX   Bitrate in kbps (in steps of 1kbps, min. 16kbps)\n");
+  printf(" -bX   Bitrate in kbps/channel (in steps of 1kbps, min. 16kbps)\n");
   printf(" -pns  Use PNS (Perceptual Noise Substitution).\n");
   printf(" -nt   Don't use TNS (Temporal Noise Shaping).\n");
   printf(" -ms   Use mid/side stereo coding.\n");
@@ -240,7 +240,7 @@ void printConf(faacAACStream *as)
   printf("AAC configuration:\n");
   printf("----------------------------------------------\n");
   printf("AAC profile: %s.\n", (as->profile==MAIN_PROFILE)?"MAIN":"LOW");
-  printf("Bitrate: %dkbps.\n", as->bit_rate/1000);
+  printf("Bitrate: %dkbps/ch.\n", as->bit_rate/1000);
   printf("Mid/Side (MS) stereo coding: %s.\n",
  	(as->use_MS==1)?"Always (If CPE)":((as->use_MS==0)?"Switching (If CPE)":"Off"));
   printf("Temporal Noise Shaping: %s.\n", as->use_TNS?"On":"Off");

@@ -108,7 +108,7 @@ enum WIN_SWITCH_MODE {
 /* if static memory allocation is used, this value tells the max. nr of
    audio channels to be supported */
 /*#define MAX_TIME_CHANNELS (MAX_CHANNELS)*/
-#define MAX_TIME_CHANNELS 2 //6
+#define MAX_TIME_CHANNELS 6
 
 /* max. number of scale factor bands */
 #define MAX_SCFAC_BANDS ((NSFB_SHORT+1)*MAX_SHORT_IN_LONG_BLOCK)
