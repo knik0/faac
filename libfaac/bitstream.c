@@ -24,7 +24,7 @@ copyright notice must be included in all copies or derivative works.
 Copyright (c) 1997.
 **********************************************************************/
 /*
- * $Id: bitstream.c,v 1.30 2004/07/13 17:56:37 corrados Exp $
+ * $Id: bitstream.c,v 1.31 2005/02/02 16:48:01 sur Exp $
  */
 
 #include <stdio.h>
@@ -170,8 +170,11 @@ int WriteBitstream(faacEncHandle hEncoder,
         bits = 0; // compilier will remove it, byt anyone will see that current size of bitstream is 0
     }
 
+/* sur: faad2 complains about scalefactor error if we are writing FAAC String */
+#ifndef DRM
     if (hEncoder->frameNum == 4)
       WriteFAACStr(bitStream, hEncoder->config.name, 1);
+#endif
 
     for (channel = 0; channel < numChannel; channel++) {
 
@@ -257,8 +260,11 @@ static int CountBitstream(faacEncHandle hEncoder,
         bits = 0; // compilier will remove it, byt anyone will see that current size of bitstream is 0
     }
 
+/* sur: faad2 complains about scalefactor error if we are writing FAAC String */
+#ifndef DRM
     if (hEncoder->frameNum == 4)
       bits += WriteFAACStr(bitStream, hEncoder->config.name, 0);
+#endif
 
     for (channel = 0; channel < numChannel; channel++) {
 
