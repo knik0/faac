@@ -18,7 +18,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: main.c,v 1.58 2004/03/24 11:00:40 danchr Exp $
+ * $Id: main.c,v 1.59 2004/03/24 11:09:06 danchr Exp $
  */
 
 #ifdef _MSC_VER
@@ -76,8 +76,8 @@ volatile int running = 1;
 #endif
 
 enum stream_format {
-  ADTS_STREAM,
-  RAW_STREAM,
+  RAW_STREAM = 0,
+  ADTS_STREAM = 1,
 };
 
 enum container_format {
@@ -562,7 +562,7 @@ int main(int argc, char *argv[])
     myFormat->bandWidth = cutOff;
     if (quantqual > 0)
         myFormat->quantqual = quantqual;
-    myFormat->outputFormat = stream == ADTS_STREAM;
+    myFormat->outputFormat = stream;
     myFormat->inputFormat = FAAC_INPUT_FLOAT;
     if (!faacEncSetConfiguration(hEncoder, myFormat)) {
         fprintf(stderr, "Unsupported output format!\n");
@@ -829,6 +829,9 @@ int main(int argc, char *argv[])
 
 /*
 $Log: main.c,v $
+Revision 1.59  2004/03/24 11:09:06  danchr
+prettify the way stream format is handled - this just *might* fix a bug
+
 Revision 1.58  2004/03/24 11:00:40  danchr
 silence a few warnings and fix a few mem. leaks
 make it possible to disable stripping (needed for profiling and debugging)
