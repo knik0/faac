@@ -24,7 +24,7 @@ copyright notice must be included in all copies or derivative works.
 Copyright (c) 1997.
 **********************************************************************/
 /*
- * $Id: bitstream.c,v 1.23 2001/12/07 08:40:52 menno Exp $
+ * $Id: bitstream.c,v 1.24 2002/08/19 16:35:20 knik Exp $
  */
 
 #include <stdlib.h>
@@ -35,6 +35,71 @@ Copyright (c) 1997.
 #include "bitstream.h"
 #include "ltp.h"
 #include "util.h"
+
+static int CountBitstream(faacEncHandle hEncoder,
+                          CoderInfo *coderInfo,
+                          ChannelInfo *channelInfo,
+                          BitStream *bitStream,
+                          int numChannels);
+static int WriteADTSHeader(faacEncHandle hEncoder,
+                           BitStream *bitStream,
+                           int writeFlag);
+static int WriteCPE(CoderInfo *coderInfoL,
+                    CoderInfo *coderInfoR,
+                    ChannelInfo *channelInfo,
+                    BitStream* bitStream,
+                    int objectType,
+                    int writeFlag);
+static int WriteSCE(CoderInfo *coderInfo,
+                    ChannelInfo *channelInfo,
+                    BitStream *bitStream,
+                    int objectType,
+                    int writeFlag);
+static int WriteLFE(CoderInfo *coderInfo,
+                    ChannelInfo *channelInfo,
+                    BitStream *bitStream,
+                    int objectType,
+                    int writeFlag);
+static int WriteICSInfo(CoderInfo *coderInfo,
+                        BitStream *bitStream,
+                        int objectType,
+                        int common_window,
+                        int writeFlag);
+static int WriteICS(CoderInfo *coderInfo,
+                    BitStream *bitStream,
+                    int commonWindow,
+                    int objectType,
+                    int writeFlag);
+static int WriteLTPPredictorData(CoderInfo *coderInfo,
+                                 BitStream *bitStream,
+                                 int writeFlag);
+static int WritePredictorData(CoderInfo *coderInfo,
+                              BitStream *bitStream,
+                              int writeFlag);
+static int WritePulseData(CoderInfo *coderInfo,
+                          BitStream *bitStream,
+                          int writeFlag);
+static int WriteTNSData(CoderInfo *coderInfo,
+                        BitStream *bitStream,
+                        int writeFlag);
+static int WriteGainControlData(CoderInfo *coderInfo,
+                                BitStream *bitStream,
+                                int writeFlag);
+static int WriteSpectralData(CoderInfo *coderInfo,
+                             BitStream *bitStream,
+                             int writeFlag);
+static int WriteAACFillBits(BitStream* bitStream,
+                            int numBits,
+                            int writeFlag);
+static int FindGroupingBits(CoderInfo *coderInfo);
+static long BufferNumBit(BitStream *bitStream);
+static int WriteByte(BitStream *bitStream,
+                     unsigned long data,
+                     int numBit);
+static int ByteAlign(BitStream* bitStream,
+                     int writeFlag);
+
+
 
 int WriteBitstream(faacEncHandle hEncoder,
                    CoderInfo *coderInfo,
