@@ -1,7 +1,10 @@
-#!/bin/sh
+#! /bin/sh
 
-aclocal
+aclocal -I .
+autoheader
 libtoolize --automake
 automake --add-missing
 autoconf
-
+./configure
+make -j2
+echo Install with 'make install'
