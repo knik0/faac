@@ -52,9 +52,9 @@ Copyright (c) 1997.
 
 Source file:
 
-$Id: psych.c,v 1.41 2000/02/07 18:57:47 menno Exp $
-$Id: psych.c,v 1.41 2000/02/07 18:57:47 menno Exp $
-$Id: psych.c,v 1.41 2000/02/07 18:57:47 menno Exp $
+$Id: psych.c,v 1.42 2000/02/07 19:27:08 menno Exp $
+$Id: psych.c,v 1.42 2000/02/07 19:27:08 menno Exp $
+$Id: psych.c,v 1.42 2000/02/07 19:27:08 menno Exp $
 
 **********************************************************************/
 
@@ -670,8 +670,7 @@ void psy_step2(double sample[][BLOCK_LEN_LONG*2],
 
 		for(w = 0; w < BLOCK_LEN_SHORT; w++){
 			psy_stvar_short->fft_r[l][w] = data[w] * sqrtN;
-			if (w < 60)
-				psy_stvar_short->fft_f[l][w] = data[w+BLOCK_LEN_SHORT];
+			psy_stvar_short->fft_f[l][w] = data[w+BLOCK_LEN_SHORT];
 		}
     }
 }
