@@ -1,6 +1,7 @@
 /*
  * FAAC - Freeware Advanced Audio Coder
  * Copyright (C) 2001 Menno Bakker
+ * Copyright (C) 2002 Krzysztof Nikiel
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -16,7 +17,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: aacquant.c,v 1.12 2002/08/30 16:21:44 knik Exp $
+ * $Id: aacquant.c,v 1.13 2002/11/23 17:31:52 knik Exp $
  */
 
 #include <math.h>
@@ -32,6 +33,30 @@
 #define XRPOW_FTOI(src,dest) ((dest) = (int)(src))
 #define QUANTFAC(rx)  adj43[rx]
 #define ROUNDFAC 0.4054
+
+static int FixNoise(CoderInfo *coderInfo,
+		    const double *xr,
+		    double *xr_pow,
+		    int *xi,
+		    double *xmin);
+
+static int SortForGrouping(CoderInfo* coderInfo,
+                           PsyInfo *psyInfo,
+                           ChannelInfo *channelInfo,
+                           int *sfb_width_table,
+                           double *xr);
+
+static int SearchStepSize(CoderInfo *coderInfo,
+                          const int desired_rate,
+                          const double *xr,
+                          int *xi);
+
+static void CalcAllowedDist(PsyInfo *psyInfo, int *cb_offset, int num_cb,
+			    double *xr, double *xmin, int bits);
+
+static int CountBits(CoderInfo *coderInfo, int *ix, const double *xr);
+
+static int CountBitsLong(CoderInfo *coderInfo, int *xi);
 
 
 double *pow43;
@@ -79,6 +104,73 @@ void AACQuantizeEnd(CoderInfo *coderInfo, unsigned int numChannels)
     }
 }
 
+static void BalanceEnergy(CoderInfo *coderInfo,
+			  const double *xr, const int *xi)
+{
+  const double ifqstep = pow(2.0, 0.25);
+  const double logstep_1 = 1.0 / log(ifqstep);
+  const int sfcmax = 40;
+  const int sfcmin = -10;
+  int sb;
+  int nsfb = coderInfo->nr_of_sfb;
+  int start, end;
+  int l;
+  double en0, enq;
+  int shift;
+
+  for (sb = 0; sb < nsfb; sb++)
+  {
+    double qfac_1 = pow(2.0, -0.25*(coderInfo->scale_factor[sb] - coderInfo->global_gain));
+
+    start = coderInfo->sfb_offset[sb];
+    end   = coderInfo->sfb_offset[sb+1];
+
+    en0 = 0.0;
+    enq = 0.0;
+    for (l = start; l < end; l++)
+    {
+      double xq = pow43[xi[l]];
+
+      en0 += xr[l] * xr[l];
+      enq += xq * xq;
+    }
+
+    if (enq == 0.0)
+      continue;
+
+    enq *= qfac_1 * qfac_1;
+
+    shift = log(sqrt(enq / en0)) * logstep_1 + 1000.5;
+    shift -= 1000;
+
+    shift += coderInfo->scale_factor[sb];
+
+    if (shift < sfcmin)
+      shift = sfcmin;
+    if (shift > sfcmax)
+      shift = sfcmax;
+    coderInfo->scale_factor[sb] = shift;
+  }
+}
+
+static void UpdateRequant(CoderInfo *coderInfo, int *xi)
+{
+  double *requant_xr = coderInfo->requantFreq;
+  int sb;
+  int i;
+
+  for (sb = 0; sb < coderInfo->nr_of_sfb; sb++)
+  {
+    double invQuantFac =
+      pow(2.0, -0.25*(coderInfo->scale_factor[sb] - coderInfo->global_gain));
+    int start = coderInfo->sfb_offset[sb];
+    int end = coderInfo->sfb_offset[sb + 1];
+
+    for (i = start; i < end; i++)
+      requant_xr[i] = pow43[xi[i]] * invQuantFac;
+  }
+}
+
 int AACQuantize(CoderInfo *coderInfo,
                 PsyInfo *psyInfo,
                 ChannelInfo *channelInfo,
@@ -89,16 +181,12 @@ int AACQuantize(CoderInfo *coderInfo,
 {
     int sb, i, do_q = 0;
     int bits, sign;
-    double *xr_pow, *xmin;
-    int *xi;
+    double xr_pow[FRAME_LEN];
+    double xmin[MAX_SCFAC_BANDS];
+    int xi[FRAME_LEN];
 
     /* Use local copy's */
     int *scale_factor = coderInfo->scale_factor;
-
-
-    xr_pow = (double*)AllocMemory(FRAME_LEN*sizeof(double));
-    xmin = (double*)AllocMemory(MAX_SCFAC_BANDS*sizeof(double));
-    xi = (int*)AllocMemory(FRAME_LEN*sizeof(int));
 
 
     if (coderInfo->block_type == ONLY_SHORT_WINDOW) {
@@ -126,12 +214,18 @@ int AACQuantize(CoderInfo *coderInfo,
     }
 
     if (do_q) {
-        bits = SearchStepSize(coderInfo, desired_rate, xr_pow, xi);
-        coderInfo->old_value = coderInfo->global_gain;
-
         CalcAllowedDist(psyInfo, coderInfo->sfb_offset,
-            coderInfo->nr_of_sfb, xr, xmin);
-        OuterLoop(coderInfo, xr, xr_pow, xi, xmin, desired_rate);
+			coderInfo->nr_of_sfb, xr, xmin, desired_rate);
+	bits = SearchStepSize(coderInfo, 0.8 * desired_rate, xr_pow, xi);
+	FixNoise(coderInfo, xr, xr_pow, xi, xmin);
+	BalanceEnergy(coderInfo, xr, xi);
+	UpdateRequant(coderInfo, xi);
+
+#if 0
+	printf("global gain: %d\n", coderInfo->global_gain);
+	for (i = 0; i < coderInfo->nr_of_sfb; i++)
+	  printf("sf %d: %d\n", i, coderInfo->scale_factor[i]);
+#endif
 
         for ( i = 0; i < FRAME_LEN; i++ )  {
             sign = (xr[i] < 0) ? -1 : 1;
@@ -165,11 +259,6 @@ int AACQuantize(CoderInfo *coderInfo,
             coderInfo->sfb_offset[i+1]-coderInfo->sfb_offset[i]);
     }
 
-
-    if (xmin) FreeMemory(xmin);
-    if (xr_pow) FreeMemory(xr_pow);
-    if (xi) FreeMemory(xi);
-
     return bits;
 }
 
@@ -179,10 +268,21 @@ static int SearchStepSize(CoderInfo *coderInfo,
                           int *xi)
 {
     int flag_GoneOver = 0;
-    int CurrentStep = coderInfo->CurrentStep;
+    int CurrentStep = coderInfo->CurrentStep & 0xf;
+    int lastshort = coderInfo->CurrentStep & 0x10;
+    int thisshort = (coderInfo->block_type == ONLY_SHORT_WINDOW) ? 0x10 : 0;
     int nBits;
     int StepSize = coderInfo->old_value;
     int Direction = 0;
+    int blockshift = 0;
+
+    if (thisshort > lastshort)
+      blockshift = -7;
+    if (thisshort < lastshort)
+      blockshift = +7;
+
+    if (blockshift && (StepSize + blockshift) >= 0)
+      StepSize += blockshift;
 
     do
     {
@@ -212,10 +312,20 @@ static int SearchStepSize(CoderInfo *coderInfo,
         } else break;
     } while (1);
 
+    while (nBits > desired_rate)
+    {
+      StepSize++;
+      coderInfo->global_gain = StepSize;
+      nBits = CountBits(coderInfo, xi, xr);
+    }
+
     CurrentStep = coderInfo->old_value - StepSize;
+    CurrentStep += blockshift;
 
     coderInfo->CurrentStep = CurrentStep/4 != 0 ? 4 : 2;
     coderInfo->old_value = coderInfo->global_gain;
+
+    coderInfo->CurrentStep |= thisshort;
 
     return nBits;
 }
@@ -261,6 +371,30 @@ static void Quantize(const double *xp, int *pi, double istep)
         fi += 4;
         xp += 4;
     }
+}
+
+static double QuantizeBand(const double *xp, int *pi, double istep,
+			   int offset, int end)
+{
+  int j;
+  double energy = 0.0;
+  double xtmp;
+  fi_union *fi;
+
+  fi = (fi_union *)pi;
+  for (j = offset; j < end; j++)
+  {
+    double x0 = istep * xp[j];
+
+    x0 += MAGIC_FLOAT; fi[j].f = x0;
+    fi[j].f = x0 + (adj43asm - MAGIC_INT)[fi[j].i];
+    fi[j].i -= MAGIC_INT;
+
+    xtmp = pow43[pi[j]];
+    energy += xtmp * xtmp;
+  }
+
+  return energy;
 }
 #else
 static void Quantize(const double *xr, int *ix, double istep)
@@ -352,255 +486,122 @@ static int CountBits(CoderInfo *coderInfo, int *ix, const double *xr)
     return bits;
 }
 
-static int InnerLoop(CoderInfo *coderInfo,
-                     double *xr_pow,
-                     int *xi,
-                     int max_bits)
-{
-    int bits;
-
-    /*  count bits */
-    bits = CountBits(coderInfo, xi, xr_pow);
-
-    /*  increase quantizer stepsize until needed bits are below maximum */
-    while (bits > max_bits) {
-        coderInfo->global_gain += 1;
-        bits = CountBits(coderInfo, xi, xr_pow);
-    }
-
-    return bits;
-}
-
 static void CalcAllowedDist(PsyInfo *psyInfo, int *cb_offset, int num_cb,
-                            double *xr, double *xmin)
+                            double *xr, double *xmin, int bits)
 {
-    int sfb, start, end, i;
-    double en0, xmin0;
+    int sfb, start, end;
+    double xmin0;
+    double amp = pow(2.0, 3.5 / 1420.0 * (double)bits) * 0.08;
 
-    end = 0;
     for (sfb = 0; sfb < num_cb; sfb++)
     {
         start = cb_offset[sfb];
         end = cb_offset[sfb + 1];
 
-        for (en0 = 0.0, i = start; i < end; i++)
-        {
-            en0 += xr[i] * xr[i];
-        }
-        en0 /= (end - start);
-
-        xmin0 = psyInfo->maskEn[sfb];
+        xmin0 = psyInfo->maskThr[sfb];
         if (xmin0 > 0.0)
-            xmin0 = en0 * psyInfo->maskThr[sfb] / xmin0;
-        xmin[sfb] = xmin0;
+	  xmin0 = psyInfo->maskEn[sfb] / xmin0;
+
+	xmin[sfb] = xmin0 * amp;
     }
 }
 
-static int OuterLoop(CoderInfo *coderInfo,
-                     double *xr,
-                     double *xr_pow,
-                     int *xi,
-                     double *xmin,
-                     int target_bits)
+static double AmpBand(CoderInfo *coderInfo, double *xr_pow, int *xi,
+		      int sfb, double origen, double enmin)
 {
-    int sb;
-    int notdone, over, better;
-    int store_global_gain, outer_loop_count;
-    int best_global_gain, age;
+  double ifqstep;
+  const double logstep_1 = 1.0 / log(pow(2.0, 0.25));
+  double amp0 = sqrt(origen / enmin);
+  double quanten;
+  int i;
+  int sfac, sfacadd;
+  int start = coderInfo->sfb_offset[sfb];
+  int end = coderInfo->sfb_offset[sfb + 1];
+  const int sfacmax = 30;
 
-    calcNoiseResult noiseInfo;
-    calcNoiseResult bestNoiseInfo;
-
-    double sfQuantFac = pow(2.0, 0.1875);
-    int *scale_factor = coderInfo->scale_factor;
-
-    int *best_scale_factor;
-    int *save_xi;
-    double *distort;
-
-    distort = (double*)AllocMemory(MAX_SCFAC_BANDS*sizeof(double));
-    best_scale_factor = (int*)AllocMemory(MAX_SCFAC_BANDS*sizeof(int));
-
-    save_xi = (int*)AllocMemory(FRAME_LEN*sizeof(int));
-
-    notdone = 1;
-    outer_loop_count = 0;
-
-    do { /* outer iteration loop */
-
-        over = 0;
-        outer_loop_count++;
-
-        InnerLoop(coderInfo, xr_pow, xi, target_bits);
-
-        store_global_gain = coderInfo->global_gain;
-
-        over = CalcNoise(coderInfo, xr, xi, coderInfo->requantFreq, distort, xmin, &noiseInfo);
-
-        if (outer_loop_count == 1)
-            better = 1;
-        else
-            better = QuantCompare(&bestNoiseInfo, &noiseInfo);
-
-        if (better) {
-            bestNoiseInfo = noiseInfo;
-            best_global_gain = store_global_gain;
-
-            for (sb = 0; sb < coderInfo->nr_of_sfb; sb++) {
-                best_scale_factor[sb] = scale_factor[sb];
-            }
-            memcpy(save_xi, xi, sizeof(int)*BLOCK_LEN_LONG);
-            age = 0;
-        } else
-            age++;
-
-	if ((age > 3) || ((bestNoiseInfo.over_count == 0) && (age > 0)))
-            break;
-
-        notdone = BalanceNoise(coderInfo, distort, xr_pow);
-
-        for (sb = 0; sb < coderInfo->nr_of_sfb; sb++)
-            if (scale_factor[sb] > 30)
-                notdone = 0;
-
-        if (notdone == 0)
-            break;
-
-    } while (1);
-
-    coderInfo->global_gain = best_global_gain;
-    for (sb = 0; sb < coderInfo->nr_of_sfb; sb++) {
-        scale_factor[sb] = best_scale_factor[sb];
-    }
-    memcpy(xi, save_xi, sizeof(int)*BLOCK_LEN_LONG);
-
-    if (best_scale_factor) FreeMemory(best_scale_factor);
-    if (save_xi) FreeMemory(save_xi);
-    if (distort) FreeMemory(distort);
-
+  if (amp0 < 1e-3) // 1e-3 = -60dB
     return 0;
-}
+  amp0 = 1.0 / amp0;
+  sfacadd = log(amp0) * logstep_1 + 0.5;
+  sfac = coderInfo->scale_factor[sfb] + sfacadd;
 
-static int CalcNoise(CoderInfo *coderInfo,
-                     double *xr,
-                     int *xi,
-                     double *requant_xr,
-                     double *error_energy,
-                     double *xmin,
-                     calcNoiseResult *res
-                     )
-{
-    int i, sb, sbw;
-    int over = 0, count = 0;
-    double invQuantFac;
-    double linediff, noise;
+  if (sfac > sfacmax)
+  {
+    sfac = sfacmax;
+    sfacadd = sfac - coderInfo->scale_factor[sfb];
+    }
+  if (sfacadd < 1)
+    return 0;
 
-    double over_noise = 1;
-    double tot_noise = 1;
-    double max_noise = 1E-20;
+  ifqstep = pow(2.0, sfacadd * 0.1875);
 
-    for (sb = 0; sb < coderInfo->nr_of_sfb; sb++) {
+l0:
+  for (i = start; i < end; i++)
+    xr_pow[i] *= ifqstep;
 
-        sbw = coderInfo->sfb_offset[sb+1] - coderInfo->sfb_offset[sb];
+  ifqstep = pow(2.0, 0.1875);
 
-        invQuantFac = pow(2.0, -0.25*(coderInfo->scale_factor[sb] - coderInfo->global_gain));
-
-        error_energy[sb] = 0.0;
-
-        for (i = coderInfo->sfb_offset[sb]; i < coderInfo->sfb_offset[sb+1]; i++){
-            requant_xr[i] = pow43[xi[i]] * invQuantFac;
-
-            /* measure the distortion in each scalefactor band */
-            linediff = fabs(xr[i]) - requant_xr[i];
-            error_energy[sb] += linediff * linediff;
+  if ((quanten =
+      QuantizeBand(xr_pow, xi, IPOW20(coderInfo->global_gain), start, end))
+      < enmin)
+  {
+    if (sfac < sfacmax)
+    {
+      sfac++;
+      goto l0;
         }
-        error_energy[sb] = error_energy[sb] / sbw;
-
-        noise = error_energy[sb] / xmin[sb];
-
-        /* multiplying here is adding in dB */
-        tot_noise *= max(noise, 1E-20);
-        if (noise>1) {
-            over++;
-            /* multiplying here is adding in dB */
-            over_noise *= noise;
-        }
-        max_noise = max(max_noise,noise);
-        error_energy[sb] = noise;
-        count++;
     }
 
-    res->tot_count  = count;
-    res->over_count = over;
-    res->tot_noise   = 10.*log10(max(1e-20,tot_noise ));
-    res->over_noise  = 10.*log10(max(1e+00,over_noise));
-    res->max_noise   = 10.*log10(max(1e-20,max_noise ));
+  sfacadd = sfac - coderInfo->scale_factor[sfb];
+  coderInfo->scale_factor[sfb] = sfac;
 
-    return over;
+  return quanten;
 }
 
-
-static int QuantCompare(calcNoiseResult *best,
-                        calcNoiseResult *calc)
+static int FixNoise(CoderInfo *coderInfo,
+		    const double *xr,
+		    double *xr_pow,
+		    int *xi,
+		    double *xmin)
 {
-    int better;
-
-    better = calc->over_count  < best->over_count
-        ||  ( calc->over_count == best->over_count  &&
-        calc->over_noise  < best->over_noise )
-        ||  ( calc->over_count == best->over_count  &&
-        calc->over_noise == best->over_noise  &&
-        calc->tot_noise   < best->tot_noise  );
-
-    return better;
-}
-
-static int BalanceNoise(CoderInfo *coderInfo,
-                        double *distort,
-                        double *xrpow)
-{
-    int status = 0, sb;
-
-    AmpScalefacBands(coderInfo, distort, xrpow);
+    int i, sb;
+    int start, end;
+    double quanten, origen;
+    double quantfac;
+    double noise = 0.0;
+    double tmp;
+    int notdone = 0;
 
     for (sb = 0; sb < coderInfo->nr_of_sfb; sb++)
-        if (coderInfo->scale_factor[sb] == 0)
-            status = 1;
+    {
+      if (!xmin[sb])
+        continue;
 
-    return status;
-}
+      start = coderInfo->sfb_offset[sb];
+      end = coderInfo->sfb_offset[sb+1];
 
-static void AmpScalefacBands(CoderInfo *coderInfo,
-                             double *distort,
-                             double *xr_pow)
-{
-    int start, end, l, sfb;
-    double ifqstep, distort_thresh;
+      quantfac = pow(2.0, 0.25*(coderInfo->scale_factor[sb] - coderInfo->global_gain));
 
-    ifqstep = pow(2.0, 0.1875);
+      quanten = 0.0;
+      origen = 0.0;
+      for (i = start; i < end; i++)
+      {
+	tmp = pow43[xi[i]];
+	quanten += tmp * tmp;
 
-    distort_thresh = -900;
-    for (sfb = 0; sfb < coderInfo->nr_of_sfb; sfb++) {
-        distort_thresh = max(distort[sfb], distort_thresh);
+	tmp = xr[i] * quantfac;
+	origen += tmp * tmp;
     }
 
-    if (distort_thresh>1.0)
-        distort_thresh=1.0;
+      if (quanten < xmin[sb]) // band energy to low
+        noise += AmpBand(coderInfo, xr_pow, xi, sb, origen, xmin[sb]) - origen;
     else
-        distort_thresh *= .95;
-
-    for ( sfb = 0; sfb < coderInfo->nr_of_sfb; sfb++ ) {
-        if (distort[sfb] > distort_thresh) {
-            coderInfo->scale_factor[sfb]++;
-            start = coderInfo->sfb_offset[sfb];
-            end   = coderInfo->sfb_offset[sfb+1];
-            for ( l = start; l < end; l++ ) {
-                xr_pow[l] *= ifqstep;
+	notdone++;
+      //printf("%d: %g - %g(%d)\n", sb, quanten, xmin[sb], coderInfo->scale_factor[sb]);
             }
-        }
-    }
-}
 
+    return notdone;
+}
 
 static int SortForGrouping(CoderInfo* coderInfo,
                            PsyInfo *psyInfo,
