@@ -16,7 +16,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: aacinfo.c,v 1.3 2001/10/29 10:01:31 menno Exp $
+ * $Id: aacinfo.c,v 1.4 2002/04/17 18:43:24 menno Exp $
  */
 
 #include <windows.h>
@@ -25,7 +25,7 @@
 #define ADIF_MAX_SIZE 30 /* Should be enough */
 #define ADTS_MAX_SIZE 10 /* Should be enough */
 
-const int sample_rates[] = {96000,88200,64000,48000,44100,32000,24000,22050,16000,12000,11025,8000};
+static const int sample_rates[] = {96000,88200,64000,48000,44100,32000,24000,22050,16000,12000,11025,8000};
 
 static int read_ADIF_header(HANDLE file, faadAACInfo *info)
 {

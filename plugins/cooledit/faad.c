@@ -172,7 +172,8 @@ faacDecHandle hDecoder;
 DWORD  tmp;
 //int    shift;
 FILE   *infile;
-DWORD  samplerate, channels;
+DWORD  samplerate;
+unsigned char channels;
 DWORD  pos; // into the file. Needed to obtain length of file
 DWORD  read;
 int    *seek_table;
@@ -269,6 +270,7 @@ faacDecConfigurationPtr config;
   config = faacDecGetCurrentConfiguration(hDecoder);
 //  config->defObjectType = MAIN;
   config->defSampleRate = 44100;
+  config->outputFormat=FAAD_FMT_16BIT;
   faacDecSetConfiguration(hDecoder, config);
 
   if((mi->bytes_consumed=faacDecInit(hDecoder, buffer, &samplerate, &channels)) < 0)
@@ -310,7 +312,7 @@ faacDecConfigurationPtr config;
     return 0;
    }
 
-  mi->len_ms=1000*((mi->lSize*8)/mi->file_info.bitrate);
+  mi->len_ms=(DWORD)((1000*((float)mi->lSize*8))/mi->file_info.bitrate);
   if(mi->len_ms)
    mi->full_size=(DWORD)(mi->len_ms*((float)mi->dwSamprate/1000)*mi->wChannels*(16/8));
   else
@@ -342,8 +344,9 @@ __declspec(dllexport) DWORD FAR PASCAL ReadFilterInput(HANDLE hInput, unsigned c
 DWORD	read,
 		tmp,
 		shorts_decoded=0;
-long	result=0;
 unsigned char *buffer;
+faacDecFrameInfo frameInfo;
+char *sample_buffer=0;
 
 	if(hInput)
 	{   
@@ -354,7 +357,7 @@ unsigned char *buffer;
 
 		do
 		{
-			if(mi->bytes_consumed>0 && mi->bytes_into_buffer>=0)
+			if(mi->bytes_consumed>0)
 			{
 				if(mi->bytes_into_buffer)
 					memcpy(buffer,buffer+mi->bytes_consumed,mi->bytes_into_buffer);
@@ -375,6 +378,8 @@ unsigned char *buffer;
 				else
 					if(mi->bytes_into_buffer)
 						memset(buffer+mi->bytes_into_buffer, 0, mi->bytes_consumed);
+
+				mi->bytes_consumed=0;
 			}
 
 			if(mi->bytes_into_buffer<1)
@@ -383,17 +388,18 @@ unsigned char *buffer;
 				else
 					return 0;
 
-			result=faacDecDecode(mi->hDecoder, buffer, &(mi->bytes_consumed), (short*)bufout, &shorts_decoded);
+			sample_buffer=(char *)faacDecDecode(mi->hDecoder,&frameInfo,buffer);
+			shorts_decoded=frameInfo.samples*sizeof(short);
+			memcpy(bufout,sample_buffer,shorts_decoded);
+		    mi->bytes_consumed +=frameInfo.bytesconsumed;
 			mi->bytes_into_buffer-=mi->bytes_consumed;
-		}while(!shorts_decoded || result==FAAD_OK_CHUPDATE);
+		}while(!shorts_decoded && !frameInfo.error);
 
 		GlobalUnlock(hInput);
 	}
 
-	if(result==FAAD_FATAL_ERROR || result==FAAD_ERROR)
-		ERROR_ReadFilterInput("ReadFilterInput: FAAD_FATAL_ERROR or FAAD_ERROR");
+	if(frameInfo.error)
+		ERROR_ReadFilterInput(faacDecGetErrorMessage(frameInfo.error));
 
-/*    if(shorts_decoded>1024*MAX_CHANNELS)
-		return 0;*/
-	return shorts_decoded*sizeof(short);
+	return shorts_decoded;
 }
