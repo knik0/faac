@@ -255,6 +255,9 @@ int EncTfFrame (faacAACStream *as, BsBitStream  *fixed_stream)
 	static int ps = 1;
 	ps = !ps;
 
+	if (as->header_type==ADTS_HEADER)
+		available_bitreservoir_bits += 58;
+
 	{
 		/* store input data in look ahead buffer which may be necessary for the window switching decision */
 		int i;
