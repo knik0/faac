@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: psychkni.c,v 1.4 2002/11/27 17:20:34 knik Exp $
+ * $Id: psychkni.c,v 1.5 2002/12/28 09:22:46 knik Exp $
  */
 #include <stdio.h>
 #include <stdlib.h>
@@ -77,31 +77,26 @@ static void PsyThreshold(GlobalPsyInfo * gpsyInfo, PsyInfo * psyInfo, int *cb_wi
   double volb[8][NSFB_SHORT];	// band volume in each window
   double totchg;
   int lastband;
-  int offset;
   psydata_t *psydata = psyInfo->data;
-  const double globalthr = 140;
+  static const double longthr = 0.32;
+  static const double shortthr = longthr * 0.20;
+  static const int firstband = 1;
 
 
   /* Long window */
-  offset = 0;
   for (b = 0; b < num_cb_long; b++)
   {
-    offset += cb_width_long[b];
-
     psyInfo->maskEn[b] = 1.0;
-    psyInfo->maskThr[b] = offset / globalthr;
+    psyInfo->maskThr[b] = longthr;
   }
 
   /* Short windows */
-  offset = 0;
   for (j = 0; j < 8; j++)
   {
     for (b = 0; b < num_cb_short; b++)
     {
-      offset += cb_width_short[b];
-
       psyInfo->maskEnS[j][b] = 1.0;
-      psyInfo->maskThrS[j][b] = offset / globalthr;
+      psyInfo->maskThrS[j][b] = shortthr;
     }
   }
 
@@ -110,7 +105,7 @@ static void PsyThreshold(GlobalPsyInfo * gpsyInfo, PsyInfo * psyInfo, int *cb_wi
   for (j = 0; j < 8; j++)
   {
     int l = 0;
-    for (b = 2; b < num_cb_short; b++)
+    for (b = firstband; b < num_cb_short; b++)
     {
       int last = l + cb_width_short[b];
       double e = 0;
@@ -131,7 +126,7 @@ static void PsyThreshold(GlobalPsyInfo * gpsyInfo, PsyInfo * psyInfo, int *cb_wi
 
   // compare volume levels in each band of short widows
   totchg = 0.0;
-  for (b = 2; b < lastband; b++)
+  for (b = firstband; b < lastband; b++)
   {
     double maxdif = 0;
 
@@ -151,11 +146,22 @@ static void PsyThreshold(GlobalPsyInfo * gpsyInfo, PsyInfo * psyInfo, int *cb_wi
   }
   totchg = totchg / lastband;
 
-  psyInfo->block_type = (totchg > 1.0) ? ONLY_SHORT_WINDOW : ONLY_LONG_WINDOW;
+  psyInfo->block_type = (totchg > 0.8) ? ONLY_SHORT_WINDOW : ONLY_LONG_WINDOW;
 
 #if 0
-  printf("totchg: %s %g\n", (psyInfo->block_type == ONLY_SHORT_WINDOW)
-	 ? "****" : "    ", totchg);
+  {
+    static int total = 0, shorts = 0;
+    char *flash = "    ";
+
+    total++;
+    if (psyInfo->block_type == ONLY_SHORT_WINDOW)
+    {
+      flash = "****";
+      shorts++;
+    }
+
+    printf("totchg: %s %g\t%g\n", flash, totchg, (double)shorts/total);
+  }
 #endif
 }
 
