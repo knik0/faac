@@ -449,11 +449,11 @@ int calc_noise(AACQuantInfo *quantInfo,
 	return over;
 }
 
-//int quant_compare(int best_over, double best_tot_noise, double best_over_noise,
-//				  double best_max_noise, int over, double tot_noise, double over_noise,
-//				  double max_noise)
-int quant_compare(double best_tot_noise, double best_over_noise,
-		  double tot_noise, double over_noise)
+int quant_compare(int best_over, double best_tot_noise, double best_over_noise,
+				  double best_max_noise, int over, double tot_noise, double over_noise,
+				  double max_noise)
+//int quant_compare(double best_tot_noise, double best_over_noise,
+//		  double tot_noise, double over_noise)
 {
 	/*
 	noise is given in decibals (db) relative to masking thesholds.
@@ -465,46 +465,27 @@ int quant_compare(double best_tot_noise, double best_over_noise,
 	*/
 	int better;
 
-#if 0
 	better = ((over < best_over) ||
 			((over==best_over) && (over_noise<best_over_noise)) ) ;
-#else
-#if 0
-	better = max_noise < best_max_noise;
-#else
-#if 0
-	better = tot_noise < best_tot_noise;
-#else
-#if 0
-	better = (tot_noise < best_tot_noise) &&
-		(max_noise < best_max_noise + 2);
-#else
-#if 0
-	better = ( ( (0>=max_noise) && (best_max_noise>2)) ||
+	better = min(better, max_noise < best_max_noise);
+	better = min(better, tot_noise < best_tot_noise);
+	better = min(better, (tot_noise < best_tot_noise) &&
+		(max_noise < best_max_noise + 2));
+	better = min(better, ( ( (0>=max_noise) && (best_max_noise>2)) ||
 		( (0>=max_noise) && (best_max_noise<0) && ((best_max_noise+2)>max_noise) && (tot_noise<best_tot_noise) ) ||
 		( (0>=max_noise) && (best_max_noise>0) && ((best_max_noise+2)>max_noise) && (tot_noise<(best_tot_noise+best_over_noise)) ) ||
 		( (0<max_noise) && (best_max_noise>-0.5) && ((best_max_noise+1)>max_noise) && ((tot_noise+over_noise)<(best_tot_noise+best_over_noise)) ) ||
-		( (0<max_noise) && (best_max_noise>-1) && ((best_max_noise+1.5)>max_noise) && ((tot_noise+over_noise+over_noise)<(best_tot_noise+best_over_noise+best_over_noise)) ) );
-#else
-#if 1
-	better =   (over_noise <  best_over_noise)
-		|| ((over_noise == best_over_noise)&&(tot_noise < best_tot_noise));
-#if 0
-	better = (over_noise < best_over_noise)
+		( (0<max_noise) && (best_max_noise>-1) && ((best_max_noise+1.5)>max_noise) && ((tot_noise+over_noise+over_noise)<(best_tot_noise+best_over_noise+best_over_noise)) ) ));
+	better = min(better, (over_noise <  best_over_noise)
+		|| ((over_noise == best_over_noise)&&(tot_noise < best_tot_noise)));
+	better = min(better, (over_noise < best_over_noise)
 		||( (over_noise == best_over_noise)
 		&&( (max_noise < best_max_noise)
 		||( (max_noise == best_max_noise)
 		&&(tot_noise <= best_tot_noise)
 		)
 		)
-		);
-#endif
-#endif
-#endif
-#endif
-#endif
-#endif
-#endif
+		));
 
 	return better;
 }
@@ -614,14 +595,14 @@ int tf_encode_spectrum_aac(
 
 	int outer_loop_count, notdone;
 	int over, better;
-//      int best_over = 100;
+	int best_over = 100;
 //	int sfb_overflow;
 	int best_common_scalefac;
 	double noise_thresh;
 	double sfQuantFac;
 	double over_noise, tot_noise, max_noise;
 	double noise[SFB_NUM_MAX];
-//	double best_max_noise = 0;
+	double best_max_noise = 0;
 	double best_over_noise = 0;
 	double best_tot_noise = 0;
 //	static int init = -1;
@@ -809,10 +790,10 @@ int tf_encode_spectrum_aac(
 			over = calc_noise(quantInfo, p_spectrum[0], quant, requant, noise, allowed_dist[0],
 				&over_noise, &tot_noise, &max_noise);
 
-//			better = quant_compare(best_over, best_tot_noise, best_over_noise,
-//				best_max_noise, over, tot_noise, over_noise, max_noise);
-			better = quant_compare(best_tot_noise, best_over_noise,
-				               tot_noise, over_noise);
+			better = quant_compare(best_over, best_tot_noise, best_over_noise,
+				best_max_noise, over, tot_noise, over_noise, max_noise);
+//			better = quant_compare(best_tot_noise, best_over_noise,
+//				               tot_noise, over_noise);
 
 			for (sb = 0; sb < quantInfo->nr_of_sfb; sb++) {
 				if (scale_factor[sb] > 59) {
