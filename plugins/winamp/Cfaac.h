@@ -36,7 +36,7 @@ ntnfrn_email-temp@yahoo.it
 	#undef LTP
 #endif
 #include <faac.h>
-#include <win32_ver.h>	// mpeg4ip version
+//#include <win32_ver.h>	// mpeg4ip version
 #include "CRegistry.h"
 #include "CTag.h"
 #include "Defines.h"	// my defines
