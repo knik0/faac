@@ -16,7 +16,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: maingui.c,v 1.17 2001/06/08 18:01:09 menno Exp $
+ * $Id: maingui.c,v 1.18 2001/10/26 11:21:23 menno Exp $
  */
 
 #include <windows.h>
@@ -157,6 +157,7 @@ static DWORD WINAPI EncodeFile(LPVOID pParam)
             config->allowMidside = IsDlgButtonChecked(hWnd, IDC_ALLOWMIDSIDE) == BST_CHECKED ? 1 : 0;
             config->useTns = IsDlgButtonChecked(hWnd, IDC_USETNS) == BST_CHECKED ? 1 : 0;
             config->useLfe = IsDlgButtonChecked(hWnd, IDC_USELFE) == BST_CHECKED ? 1 : 0;
+            config->outputFormat = IsDlgButtonChecked(hWnd, IDC_USERAW) == BST_CHECKED ? 0 : 1;
 
             config->mpegVersion = SendMessage(GetDlgItem(hWnd, IDC_MPEGVERSION), CB_GETCURSEL, 0, 0);
             config->aacObjectType = SendMessage(GetDlgItem(hWnd, IDC_OBJECTTYPE), CB_GETCURSEL, 0, 0);
@@ -307,6 +308,7 @@ static BOOL WINAPI DialogProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 
         CheckDlgButton(hWnd, IDC_ALLOWMIDSIDE, TRUE);
         CheckDlgButton(hWnd, IDC_USELFE, FALSE);
+        CheckDlgButton(hWnd, IDC_USERAW, FALSE);
         CheckDlgButton(hWnd, IDC_USETNS, TRUE);
         SetDlgItemText(hWnd, IDC_BITRATE, "64000");
         SetDlgItemText(hWnd, IDC_BANDWIDTH, "18000");

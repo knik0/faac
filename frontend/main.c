@@ -16,7 +16,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: main.c,v 1.22 2001/06/25 07:45:33 menno Exp $
+ * $Id: main.c,v 1.23 2001/10/26 11:21:23 menno Exp $
  */
 
 #ifdef _WIN32
@@ -62,7 +62,7 @@ int StringCompI(char const *str1, char const *str2, unsigned long len)
 
 int main(int argc, char *argv[])
 {
-    int i, frames, currentFrame;
+    int frames, currentFrame;
     faacEncHandle hEncoder;
     SNDFILE *infile;
     SF_INFO sfinfo;
@@ -75,6 +75,7 @@ int main(int argc, char *argv[])
     unsigned int objectType = LOW;
     unsigned int useMidSide = 1;
     unsigned int useTns = 0;
+    unsigned int useAdts = 1;
     unsigned int cutOff = 18000;
     unsigned long bitRate = 64000;
 
@@ -112,13 +113,14 @@ int main(int argc, char *argv[])
         static struct option long_options[] = {
             { "mpeg", 0, 0, 'm' },
             { "objecttype", 0, 0, 'o' },
+            { "raw", 0, 0, 'r' },
             { "nomidside", 0, 0, 'n' },
             { "usetns", 0, 0, 't' },
             { "cutoff", 1, 0, 'c' },
             { "bitrate", 1, 0, 'b' }
         };
 
-        c = getopt_long(argc, argv, "m:o:ntc:b:",
+        c = getopt_long(argc, argv, "m:o:rntc:b:",
             long_options, &option_index);
 
         if (c == -1)
@@ -157,6 +159,10 @@ int main(int argc, char *argv[])
             } else {
                 objectType = LOW;
             }
+            break;
+        }
+        case 'r': {
+            useAdts = 0;
             break;
         }
         case 'n': {
@@ -201,6 +207,7 @@ int main(int argc, char *argv[])
         fprintf(stderr, "  -m X   AAC MPEG version, X can be 2 or 4.\n");
         fprintf(stderr, "  -o X   AAC object type, X can be LC, MAIN or LTP.\n");
         fprintf(stderr, "  -n     Don\'t use mid/side coding.\n");
+        fprintf(stderr, "  -r     RAW AAC output file.\n");
         fprintf(stderr, "  -t     Use TNS coding.\n");
         fprintf(stderr, "  -c X   Set the bandwidth, X in Hz.\n");
         fprintf(stderr, "  -b X   Set the bitrate per channel, X in bps.\n\n");
@@ -245,6 +252,7 @@ int main(int argc, char *argv[])
     myFormat->allowMidside = useMidSide;
     myFormat->bitRate = bitRate;
     myFormat->bandWidth = cutOff;
+    myFormat->outputFormat = useAdts;
     if (!faacEncSetConfiguration(hEncoder, myFormat)) {
         fprintf(stderr, "Unsupported output format!\n");
         return 1;

@@ -85,8 +85,8 @@ BEGIN
     LTEXT           "Bitrate:",IDC_STATIC,98,73,37,8
     LTEXT           "bps/ch",IDC_STATIC,151,85,24,8
     LTEXT           "Hz",IDC_STATIC,152,112,10,8
-    CONTROL         "Use LFE channel",IDC_USELFE,"Button",BS_AUTOCHECKBOX | 
-                    BS_LEFTTEXT | WS_DISABLED | WS_TABSTOP,14,103,71,10
+    CONTROL         "Use RAW output",IDC_USERAW,"Button",BS_AUTOCHECKBOX | 
+                    BS_LEFTTEXT | WS_TABSTOP,14,103,71,10
     CONTROL         "Use TNS",IDC_USETNS,"Button",BS_AUTOCHECKBOX | 
                     BS_LEFTTEXT | WS_TABSTOP,14,92,71,10
     RTEXT           "-",IDC_COMPILEDATE,194,170,63,8
@@ -96,6 +96,8 @@ BEGIN
                     WS_VSCROLL | WS_TABSTOP
     LTEXT           "MPEG Verion",IDC_STATIC,183,73,44,8
     LTEXT           "AAC Object Type",IDC_STATIC,183,100,56,8
+    CONTROL         "Use LFE channel",IDC_USELFE,"Button",BS_AUTOCHECKBOX | 
+                    BS_LEFTTEXT | WS_DISABLED | WS_TABSTOP,14,114,71,10
 END
 
 
