@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: psych.h,v 1.10 2002/08/07 18:13:09 knik Exp $
+ * $Id: psych.h,v 1.11 2003/06/26 19:20:42 knik Exp $
  */
 
 #ifndef PSYCH_H
@@ -42,17 +42,6 @@ typedef struct {
 	double *prevSamplesS;
 
 	int block_type;
-
-	/* Final threshold values */
-	double *maskThr;
-	double *maskEn;
-	double *maskThrS[8];
-	double *maskEnS[8];
-
-	double *maskThrMS;
-	double *maskEnMS;
-	double *maskThrSMS[8];
-	double *maskEnSMS[8];
 
         void *data;
 } PsyInfo;
@@ -84,7 +73,6 @@ typedef struct {
 		       unsigned int numChannels);
 } psymodel_t;
 
-extern psymodel_t psymodel1;
 extern psymodel_t psymodel2;
 
 #ifdef __cplusplus
