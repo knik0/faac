@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: main.c,v 1.6 2001/02/28 19:09:56 menno Exp $
+ * $Id: main.c,v 1.7 2001/03/01 08:44:17 menno Exp $
  */
 
 #ifdef _WIN32
@@ -204,12 +204,14 @@ int main(int argc, char *argv[])
 		printf("Encoding %s took:\t%d:%.2d\t\n", argv[argc-2], nMins, nSecs);
 #else
 #ifdef __unix__
-		usage=malloc(sizeof(struct rusage*));
+		/*usage=malloc(sizeof(struct rusage*));*/
 		getrusage(RUSAGE_SELF,usage);
-		totalSecs=usage->ru_utime.tv_sec;
-		free(usage);
-		mins = totalSecs/60;
-		printf("Encoding %s took: %i min, %.2f sec. of cpu-time\n", argv[argc-2], mins, totalSecs - (60 * mins));
+		if (usage) {
+			totalSecs=usage->ru_utime.tv_sec;
+			free(usage);
+			mins = totalSecs/60;
+			printf("Encoding %s took: %i min, %.2f sec. of cpu-time\n", argv[argc-2], mins, totalSecs - (60 * mins));
+		}
 #else
 		totalSecs = (float)(clock())/(float)CLOCKS_PER_SEC;
 		mins = totalSecs/60;
