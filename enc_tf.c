@@ -16,7 +16,7 @@
 #include "aac_qc.h"
 #include "all.h"
 #include "aac_se_enc.h"
-
+#define SQRT2 sqrt(2)
 
 /* AAC tables */
 
@@ -243,11 +243,11 @@ int EncTfFrame (faacAACStream *as, BsBitStream  *fixed_stream)
 		for (chanNum=2;chanNum<4;chanNum++) {
 			if (chanNum == 2) {
 				for(i = 0; i < block_size_samples; i++){
-					DTimeSigLookAheadBuf[chanNum][i] = (DTimeSigLookAheadBuf[0][i]+DTimeSigLookAheadBuf[1][i])*0.5;
+					DTimeSigLookAheadBuf[chanNum][i] = (DTimeSigLookAheadBuf[0][i]+DTimeSigLookAheadBuf[1][i])/SQRT2;
 				}
 			} else {
 				for(i = 0; i < block_size_samples; i++){
-					DTimeSigLookAheadBuf[chanNum][i] = (DTimeSigLookAheadBuf[0][i]-DTimeSigLookAheadBuf[1][i])*0.5;
+					DTimeSigLookAheadBuf[chanNum][i] = (DTimeSigLookAheadBuf[0][i]-DTimeSigLookAheadBuf[1][i])/SQRT2;
 				}
 			}
 		}
@@ -298,7 +298,6 @@ int EncTfFrame (faacAACStream *as, BsBitStream  *fixed_stream)
 	{
 		int chanNum;
 		for (chanNum=0;chanNum<max_ch;chanNum++) {
-
 			/* A few definitions:                                                      */
 			/*   block_type:  Initially, the block_type used in the previous frame.    */
 			/*                Will be set to the block_type to use this frame.         */
