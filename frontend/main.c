@@ -18,7 +18,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: main.c,v 1.69 2004/04/22 14:07:14 danchr Exp $
+ * $Id: main.c,v 1.70 2004/05/03 11:39:05 danchr Exp $
  */
 
 #ifdef _MSC_VER
@@ -130,22 +130,26 @@ const char *long_help =
   "Usage: %s [options] infiles ...\n"
   "\n"
   "Quality-related options:\n"
-  "  -q <quality>\tSet default variable bitrate (VBR) quantizer quality in percent\n"
-  "\t\t(default: 100, averages at approx. 120 kbps VBR for a normal \n"
+  "  -q <quality>\tSet default variable bitrate (VBR) quantizer quality in percent.\n"
+  "\t\t(default: 100, averages at approx. 120 kbps VBR for a normal\n"
   "\t\tstereo input file with 16 bit and 44.1 kHz sample rate; max.\n"
-  "\t\tvalue 500, min. 10).Set quantizer quality.\n"
+  "\t\tvalue 500, min. 10).\n"
   "  -b <bitrate>\tSet average bitrate (ABR) to approximately <bitrate> kbps.\n"
+"\t\t(max. value 152 kbps/stereo with a 16 kHz cutoff, can be raised\n"
+  "\t\twith a higher -c setting).\n"
   "  -c <freq>\tSet the bandwidth in Hz (default: automatic, i.e. adapts\n"
   "\t\tmaximum value to input sample rate).\n"
   "\n"
   "Input/output options:\n"
-  "  - <stdin>\tIf you simply use a hyphen/minus sign instead of an input\n"
-  "\t\tfile name, FAAC can encode directly from stdin, thus enabling\n"
-  "\t\tpiping within other applications like foobar2000 (see example\n"
-  "\t\tbelow). The same works for stdout as well, so FAAC can pipe its\n"
-  "\t\toutput to other apps such as mp4live (streaming live AAC\n"
-  "\t\tcontent).\n"
+  "  -\t\t<stdin/stdout>: If you simply use a hyphen/minus sign instead\n"
+  "\t\tof an input file name, FAAC can encode directly from stdin,\n"
+  "\t\tthus enabling piping from other applications and utilities. The\n"
+  "\t\tsame works for stdout as well, so FAAC can pipe its output to\n"
+  "\t\tother apps such as a server.\n"
   "  -o X\t\tSet output file to X (only for one input file)\n"
+  "\t\tonly for one input file; you can use *.aac, *.mp4 or *.m4a as\n"
+  "\t\tfile extension, and the file format will be set automatically\n"
+  "\t\tto ADTS or MP4).\n"
   "  -P\t\tRaw PCM input mode (default: off, i.e. expecting a WAV header;\n"
   "\t\tnecessary for input files or bitstreams without a header; using\n"
   "\t\tonly -P assumes the default values for -R, -B and -C in the\n"
@@ -160,41 +164,41 @@ const char *long_help =
   "\t\thave to specify a different position of these two mono channels\n"
   "\t\tin your multichannel input files if they haven't been reordered\n"
   "\t\talready).\n"
-  "  -r\t\taw AAC output mode (i.e. without ADTS headers, needed when\n"
-  "\t\tdirectly using the AAC bitstream in a MP4 container like e.g.\n"
-  "\t\tmp4live does; -w uses this mode automatically).\n"
   "\n"
   "MP4 specific options:\n"
 #ifdef HAVE_LIBMP4V2
   "  -w\t\tWrap AAC data in MP4 container. (default for *.mp4 and *.m4a)\n"
   "  --artist X\tSet artist to X\n"
-  "  --writer X\tSet writer to X\n"
-  "  --title X\tSet title to X\n"
+  "  --writer X\tSet writer/composer to X\n"
+  "  --title X\tSet title/track name to X\n"
   "  --genre X\tSet genre to X\n"
-  "  --album X\tSet album to X\n"
-  "  --compilation\tSet compilation\n"
+  "  --album X\tSet album/performer to X\n"
+  "  --compilation\tMark as compilation\n"
   "  --track X\tSet track to X (number/total)\n"
   "  --disc X\tSet disc to X (number/total)\n"
   "  --year X\tSet year to X\n"
   "  --cover-art X\tRead cover art from file X\n"
-  "\t\tSupported image formats are gif, jpg, and png.\n"
+  "\t\tSupported image formats are GIF, JPEG, and PNG.\n"
   "  --comment X\tSet comment to X\n"
 #else
   "  MP4 support unavailable.\n"
 #endif
   "\n"
-  "Expert options:\n"
+  "Expert options, only for testing purposes:\n"
 #if !DEFAULT_TNS
-  "  --tns  \tEnable TNS, temporal noise shaping, coding.\n"
+  "  --tns  \tEnable coding of TNS, temporal noise shaping.\n"
 #else
-  "  --no-tns\tDisable TNS, temporal noise shaping, coding.\n"
+  "  --no-tns\tDisable coding of TNS, temporal noise shaping.\n"
 #endif
   "  --no-midside\tDon\'t use mid/side coding.\n"
-  "  --mpeg-vers X\tAAC MPEG version, X can be 2 or 4.\n"
+  "  --mpeg-vers X\tForce AAC MPEG version, X can be 2 or 4\n"
   "  --obj-type X\tAAC object type. (LC (Low Complexity, default), Main or LTP\n"
   "\t\t(Long Term Prediction)\n"
-  "  --shortctl X\tEnforce block type (default: both; 1 = short only; 2 = long\n"
+  "  --shortctl X\tEnforce block type (default: both; 1 = long only; 2 = short\n"
   "\t\tonly).\n"
+  "  -r\t\tGenerate raw AAC bitstream (i.e. without any headers, needed\n"
+  "\t\twhen directly using the AAC bitstream in a MP4 container like\n"
+  "\t\te.g. mp4live does; used automatically for MP4).\n"
   "\n"
   "Documentation:\n"
   "  --license\tShow the FAAC license.\n"
@@ -404,6 +408,7 @@ int main(int argc, char *argv[])
     char *audioFileName = NULL;
     char *aacFileName = NULL;
     char *aacFileExt = NULL;
+    int aacFileNameGiven = 0;
 
     float *pcmbuf;
     int *chanmap = NULL;
@@ -518,6 +523,7 @@ int main(int argc, char *argv[])
 		aacFileName = malloc(l+1);
 		memcpy(aacFileName, optarg, l);
 		aacFileName[l] = '\0';
+		aacFileNameGiven = 1;
 	    }
 	    break;
         case 'r': {
@@ -713,23 +719,23 @@ int main(int argc, char *argv[])
     }
 
     /* check that we have at least one non-option arguments */
-    if ((argc - optind) > 1 && aacFileName)
+    if ((argc - optind) > 1 && aacFileNameGiven)
         dieMessage = "Cannot encode several input files to one output file.\n";
-    else if ((argc - optind) > 1)
-        dieMessage = "Multiple input files not supported yet.\n";
 
-    if ((argc - optind) < 1 || dieMessage)
+    if (argc - optind < 1 || dieMessage)
     {
       fprintf(stderr, dieMessage ? dieMessage : usage,
 	       progName, progName, progName, progName);
         return 1;
     }
 
+    while (argc - optind > 0) {
+
     /* get the input file name */
     audioFileName = argv[optind++];
 
     /* generate the output file name, if necessary */
-    if (!aacFileName) {
+    if (!aacFileNameGiven) {
         char *t = strrchr(audioFileName, '.');
 	int l = t ? strlen(audioFileName) - strlen(t) : strlen(audioFileName);
 
@@ -943,7 +949,7 @@ int main(int argc, char *argv[])
         fprintf(stderr, " + M/S");
     fprintf(stderr, "\n");
 
-    fprintf(stderr, "File format: ");
+    fprintf(stderr, "Container format: ");
     switch(container)
     {
     case NO_CONTAINER:
@@ -953,7 +959,7 @@ int main(int argc, char *argv[])
 	  fprintf(stderr, "Headerless AAC (RAW)\n");
 	  break;
 	case ADTS_STREAM:
-	  fprintf(stderr, "MPEG-2 AAC (ADTS)\n");
+	  fprintf(stderr, "Transport Stream (ADTS)\n");
 	  break;
 	}
         break;
@@ -1121,12 +1127,19 @@ int main(int argc, char *argv[])
 
     if (pcmbuf) free(pcmbuf);
     if (bitbuf) free(bitbuf);
+    if (aacFileNameGiven) free(aacFileName);
+
+    }
 
     return 0;
 }
 
 /*
 $Log: main.c,v $
+Revision 1.70  2004/05/03 11:39:05  danchr
+fix documentation bugs (per Hans-Jürgen's suggestions)
+enable (preliminary) multiple output file support
+
 Revision 1.69  2004/04/22 14:07:14  danchr
 set copyright notice to my full name
 
