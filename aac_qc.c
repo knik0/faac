@@ -97,7 +97,7 @@ void tf_init_encode_spectrum_aac( int quality )
 #  define QUANTFAC(rx)  adj_quant_asm[rx]
 #  define XRPOW_FTOI(src, dest) \
      asm ("fistpl %0 " : "=m"(dest) : "t"(src) : "st")
-#elif defined (_MSC_VER)
+#elif 0 //defined (_MSC_VER)
 #  define QUANTFAC(rx)  adj_quant_asm[rx]
 #  define XRPOW_FTOI(src, dest) do { \
      double src_ = (src); \
@@ -109,7 +109,7 @@ void tf_init_encode_spectrum_aac( int quality )
      (dest) = dest_; \
    } while (0)
 #else
-#  define QUANTFAC(rx)  adj_quant[rx]
+#  define QUANTFAC(rx)  adj_quant[min(rx,8999)]
 #  define XRPOW_FTOI(src,dest) ((dest) = (int)(src))
 #endif
 
@@ -125,14 +125,13 @@ void tf_init_encode_spectrum_aac( int quality )
  *    Acy Stapp <AStapp@austin.rr.com> 11/1999
  *    Takehiro Tominaga <tominaga@isoternet.org> 11/1999
  *********************************************************************/
-int quantize(AACQuantInfo *quantInfo,
-			 double *p_spectrum,
-			 double *pow_spectrum,
-			 int quant[NUM_COEFF])
+void quantize(AACQuantInfo *quantInfo,
+			  double *pow_spectrum,
+			  int *quant)
 {
 	const double istep = pow(2.0, -0.1875*quantInfo->common_scalefac);
 
-#ifndef _MSC_VER
+#if 1 //ndef _MSC_VER
 	{
 		double x;
 		int j, rx;
@@ -239,7 +238,7 @@ int inner_loop(AACQuantInfo *quantInfo,
 	do
 	{
 		quantInfo->common_scalefac += 1;
-		quantize(quantInfo, p_spectrum, pow_spectrum, quant);
+		quantize(quantInfo, pow_spectrum, quant);
 		bits = count_bits(quantInfo, quant, quantInfo->book_vector); 
 	} while ( bits > max_bits );
 
@@ -260,7 +259,7 @@ int search_common_scalefac(AACQuantInfo *quantInfo,
 	do
 	{
 		quantInfo->common_scalefac = StepSize;
-		quantize(quantInfo, p_spectrum, pow_spectrum, quant);
+		quantize(quantInfo, pow_spectrum, quant);
 		nBits = count_bits(quantInfo, quant, quantInfo->book_vector);  
 
 		if (CurrentStep == 1 ) {
@@ -325,7 +324,7 @@ int calc_noise(AACQuantInfo *quantInfo,
 		error_energy[sb] = 0.0;
 
 		for (i = quantInfo->sfb_offset[sb]; i < quantInfo->sfb_offset[sb+1]; i++){
-			requant[i] =  pow_quant[ABS(quant[i])] * invQuantFac; 
+			requant[i] =  pow_quant[min(ABS(quant[i]),8999)] * invQuantFac; 
 
 			/* measure the distortion in each scalefactor band */
 			linediff = (double)(ABS(p_spectrum[i]) - ABS(requant[i]));
@@ -643,7 +642,7 @@ int tf_encode_spectrum_aac(
 
 	/* Compute allowed distortion */
 	for(sb = 0; sb < quantInfo->nr_of_sfb; sb++) {
-		allowed_dist[MONO_CHAN][sb] = energy[MONO_CHAN][sb] * SigMaskRatio[sb];
+		allowed_dist[MONO_CHAN][sb] = energy[MONO_CHAN][sb] * SigMaskRatio[sb] * 2;
 //		if (allowed_dist[MONO_CHAN][sb] < ATH[sb]) {
 //			printf("%d Yes\n", sb);
 //			allowed_dist[MONO_CHAN][sb] = ATH[sb];
@@ -662,11 +661,9 @@ int tf_encode_spectrum_aac(
 		}
 	}
 
-	if (old_startsf == 0) {
-		if (max_dct_line!=0.0) {
-			old_startsf = 30 + (int)(16/3 * (log(ABS(pow(max_dct_line,0.75)/MAX_QUANT)/log(2.0))));
-		} else {
-			old_startsf = 40;
+	if (max_dct_line!=0.0) {
+		if ((int)(16/3 * (log(ABS(pow(max_dct_line,0.75)/MAX_QUANT)/log(2.0)))) > old_startsf) {
+			old_startsf = (int)(16/3 * (log(ABS(pow(max_dct_line,0.75)/MAX_QUANT)/log(2.0))));
 		}
 		if ((old_startsf > 200) || (old_startsf < 40))
 			old_startsf = 40;
@@ -899,7 +896,7 @@ int sort_for_grouping(AACQuantInfo* quantInfo,        /* ptr to quantization inf
 			double worstISMR = PsySigMaskRatio[bandNum];
 			int w=0;
 			for (w=0;w<window_group_length[i];w++) {
-				bandNum=w*NSFB_SHORT + k;
+				bandNum=(w+windowOffset)*NSFB_SHORT + k;
 				if (PsySigMaskRatio[bandNum]<worstISMR) {
 					worstISMR = (PsySigMaskRatio[bandNum] > 0)?PsySigMaskRatio[bandNum]:worstISMR;
 				}

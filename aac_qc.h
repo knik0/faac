@@ -71,11 +71,10 @@ typedef struct {
 
 void PulseCoder(AACQuantInfo *quantInfo, int *quant);
 void PulseDecoder(AACQuantInfo *quantInfo, int *quant);
-int quantize(AACQuantInfo *quantInfo,
-			 double *p_spectrum,
-			 double *pow_spectrum,
-			 int quant[NUM_COEFF]
-			 );
+void quantize(AACQuantInfo *quantInfo,
+			  double *pow_spectrum,
+			  int quant[NUM_COEFF]
+			  );
 void dequantize(AACQuantInfo *quantInfo,
 				double *p_spectrum,
 				int quant[NUM_COEFF],
