@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: frame.h,v 1.2 2001/01/17 15:51:15 menno Exp $
+ * $Id: frame.h,v 1.3 2001/01/23 13:46:18 menno Exp $
  */
 
 #ifndef FRAME_H
@@ -66,6 +66,9 @@ typedef struct {
 	/* samplerate of AAC file */
 	unsigned long sampleRate;
 	unsigned int sampleRateIdx;
+
+	unsigned int aacProfile;
+	unsigned int usedBytes;
 
 	/* frame number */
 	unsigned int frameNum;

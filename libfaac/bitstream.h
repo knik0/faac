@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: bitstream.h,v 1.1 2001/01/17 11:21:40 menno Exp $
+ * $Id: bitstream.h,v 1.2 2001/01/23 13:46:18 menno Exp $
  */
 
 #ifndef BITSTREAM_H
@@ -26,6 +26,7 @@
 extern "C" {
 #endif /* __cplusplus */
 
+#include "frame.h"
 #include "coder.h"
 #include "channels.h"
 
@@ -113,15 +114,21 @@ typedef struct
 
 
 
-int WriteBitstream(CoderInfo *coderInfo,
+int WriteBitstream(faacEncHandle hEncoder,
+				   CoderInfo *coderInfo,
 				   ChannelInfo *channelInfo,
 				   BitStream *bitStream,
 				   int numChannels);
 
-int CountBitstream(CoderInfo *coderInfo,
-				   ChannelInfo *channelInfo,
-				   BitStream *bitStream,
-				   int numChannels);
+static int CountBitstream(faacEncHandle hEncoder,
+						  CoderInfo *coderInfo,
+						  ChannelInfo *channelInfo,
+						  BitStream *bitStream,
+						  int numChannels);
+
+static int WriteADTSHeader(faacEncHandle hEncoder,
+						   BitStream *bitStream,
+						   int writeFlag);
 
 static int WriteCPE(CoderInfo *coderInfoL,
 					CoderInfo *coderInfoR,

@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: bitstream.c,v 1.1 2001/01/17 11:21:40 menno Exp $
+ * $Id: bitstream.c,v 1.2 2001/01/23 13:46:18 menno Exp $
  */
 
 #include <stdlib.h>
@@ -28,7 +28,8 @@
 #include "bitstream.h"
 
 
-int WriteBitstream(CoderInfo *coderInfo,
+int WriteBitstream(faacEncHandle hEncoder,
+				   CoderInfo *coderInfo,
 				   ChannelInfo *channelInfo,
 				   BitStream *bitStream,
 				   int numChannel)
@@ -36,6 +37,10 @@ int WriteBitstream(CoderInfo *coderInfo,
 	int channel;
 	int bits = 0;
 	int bitsLeftAfterFill, numFillBits;
+
+	CountBitstream(hEncoder, coderInfo, channelInfo, bitStream, numChannel);
+
+	bits += WriteADTSHeader(hEncoder, bitStream, 1);
 
 	for (channel = 0; channel < numChannel; channel++) {
 
@@ -96,14 +101,17 @@ int WriteBitstream(CoderInfo *coderInfo,
 	return bits;
 }
 
-int CountBitstream(CoderInfo *coderInfo,
-				   ChannelInfo *channelInfo,
-				   BitStream *bitStream,
-				   int numChannel)
+static int CountBitstream(faacEncHandle hEncoder,
+						  CoderInfo *coderInfo,
+						  ChannelInfo *channelInfo,
+						  BitStream *bitStream,
+						  int numChannel)
 {
 	int channel;
 	int bits = 0;
 	int bitsLeftAfterFill, numFillBits;
+
+	bits += WriteADTSHeader(hEncoder, bitStream, 0);
 
 	for (channel = 0; channel < numChannel; channel++) {
 
@@ -160,7 +168,37 @@ int CountBitstream(CoderInfo *coderInfo,
 	/* Now byte align the bitstream */
 	bits += ByteAlign(bitStream, 0);
 
+	hEncoder->usedBytes = bit2byte(bits);
+
 	return bits;
+}
+
+static int WriteADTSHeader(faacEncHandle hEncoder,
+						   BitStream *bitStream,
+						   int writeFlag)
+{
+	if (writeFlag) {
+		/* Fixed ADTS header */
+		PutBit(bitStream, 0xFFFF, 12); // 12 bit Syncword
+		PutBit(bitStream, 1, 1); // ID
+		PutBit(bitStream, 0, 2); // layer
+		PutBit(bitStream, 1, 1); // protection absent
+		PutBit(bitStream, hEncoder->aacProfile, 2); // profile
+		PutBit(bitStream, hEncoder->sampleRateIdx, 4); // sampling rate
+		PutBit(bitStream, 0, 1); // private bit
+		PutBit(bitStream, 1, 3); // ch. config (must be > 0)
+		PutBit(bitStream, 0, 1); // original/copy
+		PutBit(bitStream, 0, 1); // home
+		PutBit(bitStream, 0, 2); // emphasis
+
+		/* Variable ADTS header */
+		PutBit(bitStream, 0, 1); // copyr. id. bit
+		PutBit(bitStream, 0, 1); // copyr. id. start
+		PutBit(bitStream, hEncoder->usedBytes, 13);
+		PutBit(bitStream, 0x7FF, 11); // buffer fullness (0x7FF for VBR)
+		PutBit(bitStream, 0, 2); // raw data blocks (0+1=1)
+	}
+	return 58;
 }
 
 static int WriteCPE(CoderInfo *coderInfoL,

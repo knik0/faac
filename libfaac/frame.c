@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: frame.c,v 1.2 2001/01/17 15:51:15 menno Exp $
+ * $Id: frame.c,v 1.3 2001/01/23 13:46:18 menno Exp $
  */
 
 /*
@@ -74,6 +74,7 @@ faacEncHandle FAACAPI faacEncOpen(unsigned long sampleRate,
 	/* Initialize variables to default values */
 	hEncoder->frameNum = 0;
 	hEncoder->flushFrame = 0;
+	hEncoder->aacProfile = 0; /* MAIN = 0, LOW = 1, SSR = 2 */
 	hEncoder->config.allowMidside = 1;
 	hEncoder->config.useLfe = 0;
 	hEncoder->config.bitRate = 64000; /* default bitrate / channel */
@@ -280,7 +281,7 @@ int FAACAPI faacEncEncode(faacEncHandle hEncoder,
 	/* Write the AAC bitstream */
 	bitStream = OpenBitStream(bufferSize, outputBuffer);
 
-	WriteBitstream(coderInfo, channelInfo, bitStream, numChannels);
+	WriteBitstream(hEncoder, coderInfo, channelInfo, bitStream, numChannels);
 
 	/* Close the bitstream and return the number of bytes written */
 	frameBytes = CloseBitStream(bitStream);
