@@ -320,7 +320,7 @@ int calc_noise(AACQuantInfo *quantInfo,
 
 		sbw = quantInfo->sfb_offset[sb+1] - quantInfo->sfb_offset[sb];
 
-		invQuantFac = pow(2.0, -0.25*quantInfo->scale_factor[sb] - quantInfo->common_scalefac);
+		invQuantFac = pow(2.0, -0.25*(quantInfo->scale_factor[sb] - quantInfo->common_scalefac));
 
 		error_energy[sb] = 0.0;
 
@@ -536,7 +536,7 @@ int tf_encode_spectrum_aac(
 	sfQuantFac = pow(2.0, 0.1875);
 
 	/** create the sfb_offset tables **/
-	if (quantInfo -> block_type == ONLY_SHORT_WINDOW) {
+	if (quantInfo->block_type == ONLY_SHORT_WINDOW) {
 
 		/* Now compute interleaved sf bands and spectrum */
 		sort_for_grouping(
@@ -770,6 +770,7 @@ int tf_encode_spectrum_aac(
 		*common_scalefac = best_common_scalefac;
 		for (sb = 0; sb < quantInfo->nr_of_sfb; sb++) {
 			scale_factor[sb] = best_scale_factor[sb];
+//			printf("%d\t%d\n", sb, scale_factor[sb]);
 		}
 		for (i = 0; i < 1024; i++)
 			quant[i] = s_quant[i]*sign[i];
@@ -886,19 +887,19 @@ int sort_for_grouping(AACQuantInfo* quantInfo,        /* ptr to quantization inf
 
 	/* now calc the new sfb_offset table for the whole p_spectrum vector*/
 	index = 0;
-	sfb_offset[index++] = 0;	  
+	sfb_offset[index] = 0;
+	index++;
 	windowOffset = 0;
 	for (i=0; i < num_window_groups; i++) {
 		for (k=0 ; k <*nr_of_sfb; k++) {
 			/* for this window group and this band, find worst case inverse sig-mask-ratio */
 			int bandNum=windowOffset*NSFB_SHORT + k;
 			double worstISMR = PsySigMaskRatio[bandNum];
-			int w;
-			for (w=1;w<window_group_length[i];w++) {
-				bandNum=(w+windowOffset)*NSFB_SHORT + k;
+			int w=0;
+			for (w=0;w<window_group_length[i];w++) {
+				bandNum=w*NSFB_SHORT + k;
 				if (PsySigMaskRatio[bandNum]<worstISMR) {
-				//if (PsySigMaskRatio[bandNum]>worstISMR) {
-					worstISMR = PsySigMaskRatio[bandNum];
+					worstISMR = (PsySigMaskRatio[bandNum] > 0)?PsySigMaskRatio[bandNum]:worstISMR;
 				}
 			}
 			SigMaskRatio[k+ i* *nr_of_sfb]=worstISMR;
