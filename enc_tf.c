@@ -376,8 +376,10 @@ int EncTfFrame (faacAACStream *as, BsBitStream  *fixed_stream)
     for (chanNum=0;chanNum<max_ch;chanNum++) {
       /* Set window shape paremeter in quantInfo */
       quantInfo[chanNum].prev_window_shape = quantInfo[chanNum].window_shape;
-//    quantInfo[chanNum].window_shape = WS_KBD;
-      quantInfo[chanNum].window_shape = WS_SIN;
+      if (block_type[chanNum] == ONLY_SHORT_WINDOW)
+		  quantInfo[chanNum].window_shape = WS_KBD;
+	  else
+		  quantInfo[chanNum].window_shape = WS_SIN;
 
       switch( block_type[chanNum] ) {
         case ONLY_SHORT_WINDOW  :

@@ -678,7 +678,7 @@ int tf_encode_spectrum_aac(
 					int bandNum = (w+windowOffset)*maxBand + b;
 					sum += energy[MONO_CHAN][bandNum];
 				}
-				energy[MONO_CHAN][sfb_index] = sum;
+				energy[MONO_CHAN][sfb_index] = sum/numWindowsThisGroup;
 				sfb_index++;
 			}
 			windowOffset += numWindowsThisGroup;

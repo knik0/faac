@@ -52,9 +52,9 @@ Copyright (c) 1997.
 
 Source file:
 
-$Id: psych.c,v 1.52 2000/02/28 12:18:36 lenox Exp $
-$Id: psych.c,v 1.52 2000/02/28 12:18:36 lenox Exp $
-$Id: psych.c,v 1.52 2000/02/28 12:18:36 lenox Exp $
+$Id: psych.c,v 1.53 2000/03/29 17:48:02 menno Exp $
+$Id: psych.c,v 1.53 2000/03/29 17:48:02 menno Exp $
+$Id: psych.c,v 1.53 2000/03/29 17:48:02 menno Exp $
 
 **********************************************************************/
 
@@ -590,9 +590,9 @@ void EncTf_psycho_acoustic(
 		psy_step11andahalf(&part_tbl_long, &part_tbl_short, psy_stvar_long, psy_stvar_short, no_of_chan);
 //		psy_step11(&part_tbl_long, &part_tbl_short, &psy_stvar_long[no_of_chan], &psy_stvar_short[no_of_chan], ch);
 		psy_step11(&part_tbl_long, &part_tbl_short, &psy_stvar_long[no_of_chan], &psy_stvar_short[no_of_chan]);
-//		psy_step12(&part_tbl_long, &part_tbl_short, &psy_stvar_long[no_of_chan], &psy_stvar_short[no_of_chan],
-//			&psy_var_long, &psy_var_short, ch);
-		psy_step12(&part_tbl_long, &psy_stvar_long[no_of_chan], &psy_var_long);
+		psy_step12(&part_tbl_long, &part_tbl_short, &psy_stvar_long[no_of_chan], &psy_stvar_short[no_of_chan],
+			&psy_var_long, &psy_var_short/*, ch*/);
+//		psy_step12(&part_tbl_long, &psy_stvar_long[no_of_chan], &psy_var_long);
 //		psy_step13(&psy_var_long, block_type, ch);
 		psy_step13(&psy_var_long, block_type);
 		psy_step14(p_sri, &part_tbl_long, &part_tbl_short, &psy_stvar_long[no_of_chan],
@@ -1178,15 +1178,15 @@ void psy_step11andahalf(PARTITION_TABLE_LONG *part_tbl_long,
 
 void psy_step12(
                 PARTITION_TABLE_LONG *part_tbl_long,
-//		PARTITION_TABLE_SHORT *part_tbl_short,
+		PARTITION_TABLE_SHORT *part_tbl_short,
 		PSY_STATVARIABLE_LONG *psy_stvar_long,
-//		PSY_STATVARIABLE_SHORT *psy_stvar_short,
+		PSY_STATVARIABLE_SHORT *psy_stvar_short,
 		PSY_VARIABLE_LONG *psy_var_long
-//		,PSY_VARIABLE_SHORT *psy_var_short
+		,PSY_VARIABLE_SHORT *psy_var_short
 //		,int ch
 		)
 {
-#if 0
+#if 1
 	int b,i,shb;
 	double temp;
 	double mn, mx, estot[8];
@@ -1205,6 +1205,7 @@ void psy_step12(
 		estot[i]=0;
 		for ( b = 0; b < BLOCK_LEN_SHORT; b++)
 			estot[i] += psy_var_short->e[i][b];
+		estot[i] /= BLOCK_LEN_SHORT;
 	}
 
 	mn = mx = estot[0];
@@ -1216,13 +1217,13 @@ void psy_step12(
 	shb = 0;
 
 	/* tuned for t1.wav.  doesnt effect most other samples */
-	if (psy_var_long->pe > 4000) shb = 1;
+	if (psy_var_long->pe > 1500) shb = 1;
 
 	/* big surge of energy - always use short blocks */
-	if (  mx > 45*mn) shb = 1;
+	if (  mx > 10*mn) shb = 1;
 	
 	/* medium surge, medium pe - use short blocks */
-	if ((mx > 15*mn) && (psy_var_long->pe > 1500)) shb = 1; 
+//	if ((mx > 15*mn) && (psy_var_long->pe > 1500)) shb = 1; 
 	if (shb) psy_var_long->pe = 1;
 	else psy_var_long->pe = 0;
 #else
@@ -1248,7 +1249,7 @@ void psy_step13(PSY_VARIABLE_LONG *psy_var_long,
 //				,int ch
 				)
 {
-#if 1
+#if 0
 	if(psy_var_long->pe > 1500) {
 #else
 	if(psy_var_long->pe == 1) {
