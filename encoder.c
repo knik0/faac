@@ -111,7 +111,6 @@ int faac_EncodeInit(faacAACStream *as, char *in_file, char *out_file)
   if (as->out_file == NULL)
     return -2;
 
-
   if ((as->inputBuffer = (double**)malloc( as->channels*sizeof(double*))) == NULL)
     return -3;
   for (ch=0; ch < as->channels; ch++){
@@ -122,7 +121,10 @@ int faac_EncodeInit(faacAACStream *as, char *in_file, char *out_file)
   if((as->bit_rate % 1000)||(as->bit_rate < 16000))
     return -5;
   if (as->channels != 2)
-    return -6;
+      if(as->channels == 1)
+        as->use_MS=-1;
+      else
+        return -6;
   if ((as->profile != MAIN_PROFILE)&&(as->profile != LOW_PROFILE))
     return -7;
 

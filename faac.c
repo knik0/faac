@@ -242,7 +242,7 @@ void printConf(faacAACStream *as)
   printf("AAC profile: %s.\n", (as->profile==MAIN_PROFILE)?"MAIN":"LOW");
   printf("Bitrate: %dkbps.\n", as->bit_rate/1000);
   printf("Mid/Side (MS) stereo coding: %s.\n",
- 	(as->use_MS==1)?"Always":((as->use_MS==0)?"Switching":"Off"));
+ 	(as->use_MS==1)?"Always (If CPE)":((as->use_MS==0)?"Switching (If CPE)":"Off"));
   printf("Intensity stereo (IS) coding: %s.\n", as->use_IS?"On":"Off");
   printf("Temporal Noise Shaping: %s.\n", as->use_TNS?"On":"Off");
   printf("Long Term Prediction: %s.\n", as->use_LTP?"On":"Off");
