@@ -16,7 +16,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: faac.h,v 1.26 2003/04/29 08:45:27 menno Exp $
+ * $Id: faac.h,v 1.27 2003/06/26 19:18:02 knik Exp $
  */
 
 #ifndef FAACLIB_H
@@ -37,7 +37,7 @@ extern "C" {
   #endif
 #endif
 
-#define FAAC_CFG_VERSION 100
+#define FAAC_CFG_VERSION 101
 
 /* MPEG ID's */
 #define MPEG2 1
@@ -56,6 +56,9 @@ typedef struct faacEncConfiguration
 
     /* library version */
     /*const*/ char *name;
+
+    /* copyright string */
+    char *copyright;
 
 	/* MPEG version, 2 or 4 */
 	unsigned int mpegVersion;
