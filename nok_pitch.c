@@ -34,8 +34,8 @@ Copyright (c)1997.
 /**************************************************************************
   Version Control Information			Method: CVS
   Identifiers:
-  $Revision: 1.1 $
-  $Date: 2000/01/05 21:41:37 $ (check in)
+  $Revision: 1.2 $
+  $Date: 2000/01/06 10:16:11 $ (check in)
   $Author: menno $
   *************************************************************************/
 
@@ -371,7 +371,8 @@ pitch (double *sb_samples,
 	for (i = 0; i < LPC; i++)
 		weight[i] = 0.0;
 
-	weight[(LPC - 1) / 2] = r[(LPC - 1) / 2][LPC] / r[(LPC - 1) / 2][(LPC - 1) / 2];
+	if (r[(LPC - 1) / 2][(LPC - 1) / 2] != 0.0)
+		weight[(LPC - 1) / 2] = r[(LPC - 1) / 2][LPC] / r[(LPC - 1) / 2][(LPC - 1) / 2];
 
 	lnqgj (r);
 
