@@ -253,6 +253,7 @@ int main(int argc, char *argv[])
   int		nMins;
 #else
 	float	totalSecs;
+	int		mins;
 #endif
 
   /* create main aacstream object */
@@ -303,8 +304,12 @@ int main(int argc, char *argv[])
     printf("Encoding %s took:\t%d:%.2d\t\n", InFileNames[i], nMins, nSecs);
 #else
 		totalSecs = (float)(clock())/(float)CLOCKS_PER_SEC;
-		printf("Encoding %s took:\t%d:%.2d\t\n", InFileNames[i],
-			totalSecs/(float)60, totalSecs - ((float)60 * (totalSecs/(float)60)));
+		printf("Encoding %s took: %5.2f sec.\n", InFileNames[i],
+			(float)(clock())/(float)CLOCKS_PER_SEC);
+		mins = totalSecs/60;
+		printf("Blah: %i\n", mins); 
+		printf("Encoding %s took: %i min, %.2f sec.\n", InFileNames[i],
+			mins, totalSecs - (60 * mins));
 #endif
     if(InFileNames[i]) free(InFileNames[i]);
     if(OutFileNames[i]) free(OutFileNames[i]);
