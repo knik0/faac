@@ -545,7 +545,7 @@ int main(int argc, char *argv[])
 				bit_rate = atoi(&argv[i][2]);
 				break;
 			case 's': case 'S':
-				cut_off = atoi(&argv[i][2]);
+				out_rate = atoi(&argv[i][2]);
 				break;
 			case 'c': case 'C':
 				cut_off = atoi(&argv[i][2]);
