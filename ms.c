@@ -275,7 +275,8 @@ void MSEnergy(double *spectral_line_vector[MAX_TIME_CHANNELS],
 					for(sfb=0; sfb< quantInfo[chanNum].max_sfb; sfb++ ) {
 						/* calculate scale factor band energy */
 						int width,i;
-						energy[chanNum][bandNumber] = 0.0;
+						energy[leftChan][bandNumber] = 0.0;
+						energy[rightChan][bandNumber] = 0.0;
 						width=sfb_width_table[chanNum][sfb];
 						for(i=offset; i<(offset+width); i++ ) {
 							if ((p_use_ms[sfb]||(use_ms==1))&&(use_ms!=-1)) {

@@ -1350,10 +1350,10 @@ void psy_step12(
 	
 	for (i=0; i < MAX_SHORT_WINDOWS; i++) {
 		estot[i]=0;
-		for ( b = 0; b < BLOCK_LEN_SHORT; b++)
+		for ( b = 0; b < NPART_SHORT; b++)
 			estot[i] += psy_var_short->e[i][b];
 		if (estot[i] != 0.0)
-			estot[i] /= BLOCK_LEN_SHORT;
+			estot[i] /= NPART_SHORT;
 	}
 
 	tot = mx = estot[0];
