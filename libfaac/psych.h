@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: psych.h,v 1.3 2001/02/04 17:50:47 oxygene2000 Exp $
+ * $Id: psych.h,v 1.4 2001/02/12 14:39:14 menno Exp $
  */
 
 #ifndef PSYCH_H
@@ -73,6 +73,7 @@ typedef struct {
 	int block_type;
 
 	/* Final threshold values */
+	double pe;
 	double *nb;
 	double *nbS[8];
 	double *maskThr;

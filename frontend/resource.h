@@ -8,7 +8,6 @@
 #define IDC_OUTPUTFILENAME              1002
 #define IDC_SELECT_OUTPUTFILE           1003
 #define IDC_INPUTPARAMS                 1004
-#define IDC_OUTPUTFORMAT                1005
 #define IDC_PROGRESS                    1006
 #define IDC_ALLOWMIDSIDE                1007
 #define IDC_TIME                        1008

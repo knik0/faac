@@ -16,8 +16,16 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: util.c,v 1.3 2001/02/10 12:28:54 menno Exp $
+ * $Id: util.c,v 1.4 2001/02/12 14:39:14 menno Exp $
  */
+
+
+#ifndef max
+#define max(a, b) (((a) > (b)) ? (a) : (b))
+#endif
+#ifndef min
+#define min(a, b) (((a) < (b)) ? (a) : (b))
+#endif
 
 /* Returns the sample rate index */
 int GetSRIndex(unsigned int sampleRate)
@@ -43,21 +51,37 @@ unsigned int MaxBitrate(unsigned long sampleRate)
 	/*
 	 *  Maximum of 6144 bit for a channel
 	 */
-	return (int)(6144.0 * (double)sampleRate/1024.0 + .5);
+	return (unsigned int)(6144.0 * (double)sampleRate/1024.0 + .5);
 }
 
 /* Returns the minimum bitrate per channel for that sampling frequency */
-unsigned int MinBitrate(unsigned long sampleRate)
+unsigned int MinBitrate()
 {
 	return 8000;
 }
 
-int max(a, b)
+/* Calculate bit_allocation based on PE */
+unsigned int BitAllocation(double pe, int short_block)
 {
-	return (((a) > (b)) ? (a) : (b));
+	double pew1;
+	double pew2;
+	double bit_allocation;
+
+	if (short_block) {
+		pew1 = 0.6;
+		pew2 = 24.0;
+	} else {
+		pew1 = 0.3;
+		pew2 = 6.0;
+	}
+	bit_allocation = pew1 * pe + pew2 * sqrt(pe);
+	bit_allocation = min(max(0.0, bit_allocation), 6144.0);
+
+	return (unsigned int)(bit_allocation+0.5);
 }
 
-int min(a, b)
+/* Returns the maximum bit reservoir size */
+unsigned int MaxBitresSize(unsigned long bitRate, unsigned long sampleRate)
 {
-	return (((a) < (b)) ? (a) : (b));
+	return 6144 - (unsigned int)((double)bitRate/(double)sampleRate*1024.0);
 }

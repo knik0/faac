@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: maingui.c,v 1.4 2001/01/25 15:57:55 menno Exp $
+ * $Id: maingui.c,v 1.5 2001/02/12 14:39:14 menno Exp $
  */
 
 #include <windows.h>
@@ -132,9 +132,6 @@ static void AwakeDialogControls(HWND hWnd)
 	{
 		faacEncConfigurationPtr config;
 
-		SendDlgItemMessage (hWnd, IDC_OUTPUTFORMAT, CB_RESETCONTENT, 0, 0L);
-
-		EnableWindow(GetDlgItem(hWnd, IDC_OUTPUTFORMAT), TRUE);
 		EnableWindow(GetDlgItem(hWnd, IDOK), TRUE);
 
 		config = faacEncGetCurrentConfiguration(hEncoder);
@@ -192,6 +189,11 @@ static DWORD WINAPI EncodeFile(LPVOID pParam)
 				sf_close(infile);
 
 				MessageBox (hWnd, "faacEncSetConfiguration failed!", "Error", MB_OK | MB_ICONSTOP);
+
+				SendMessage(hWnd,WM_SETTEXT,0,(long)"FAAC GUI");
+				Encoding = FALSE;
+				SetDlgItemText(hWnd, IDOK, "Encode");
+
 				return 0;
 			}
 

@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: util.h,v 1.2 2001/02/10 12:28:54 menno Exp $
+ * $Id: util.h,v 1.3 2001/02/12 14:39:14 menno Exp $
  */
 
 #ifndef UTIL_H
@@ -30,7 +30,9 @@ extern "C" {
 
 int GetSRIndex(unsigned int sampleRate);
 unsigned int MaxBitrate(unsigned long sampleRate);
-unsigned int MinBitrate(unsigned long sampleRate);
+unsigned int MinBitrate();
+unsigned int MaxBitresSize(unsigned long bitRate, unsigned long sampleRate);
+unsigned int BitAllocation(double pe, int short_block);
 
 
 #ifdef __cplusplus

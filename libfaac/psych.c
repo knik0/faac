@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: psych.c,v 1.5 2001/02/04 17:50:47 oxygene2000 Exp $
+ * $Id: psych.c,v 1.6 2001/02/12 14:39:14 menno Exp $
  */
 
 #include <stdlib.h>
@@ -753,10 +753,12 @@ static void PsyThreshold(GlobalPsyInfo *gpsyInfo, PsyInfo *psyInfo, int *cb_widt
 	} else if (psyInfo->threeInARow >= 3) {
 		psyInfo->block_type = ONLY_SHORT_WINDOW;
 		psyInfo->threeInARow = 0;
-	} else
+	} else {
 		psyInfo->block_type = ONLY_LONG_WINDOW;
+	}
 
  	psyInfo->lastEnr = mx/tot;
+	psyInfo->pe = psyInfo->lastPe;
 	psyInfo->lastPe = pe;
 }
 
@@ -779,7 +781,7 @@ static void PsyThresholdMS(ChannelInfo *channelInfoL, GlobalPsyInfo *gpsyInfo,
 	double cM[MAX_NPART];
 	double cS[MAX_NPART];
 
-	double x1, x2, db, mld;
+	double mld;
 
 #ifdef _DEBUG
 	int ms_used = 0;
@@ -931,24 +933,11 @@ static void PsyThresholdMS(ChannelInfo *channelInfoL, GlobalPsyInfo *gpsyInfo,
 
 			psyInfoL->maskThrMS[b] = min(thmM,psyInfoL->maskThrMS[b]);
 			psyInfoR->maskThrMS[b] = min(thmS,psyInfoR->maskThrMS[b]);
-			channelInfoL->msInfo.ms_used[b] = 1;
+			if (psyInfoL->maskThr[b] * psyInfoR->maskThr[b] < psyInfoL->maskThrMS[b] * psyInfoR->maskThrMS[b])
+				channelInfoL->msInfo.ms_used[b] = 0;
+			else
+				channelInfoL->msInfo.ms_used[b] = 1;
 		}
-
-#if 0
-		x1 = min(npartM, npartS);
-		x2 = max(npartM, npartS);
-		/* thresholds difference in db */
-		if (x2 >= 1000*x1) db=3;
-		else db = log10(x2/x1);  
-		if (db < 0.05) {
-#ifdef _DEBUG
-			ms_used++;
-#endif
-			channelInfoL->msInfo.ms_used[b] = 1;
-		} else {
-			channelInfoL->msInfo.ms_used[b] = 0;
-		}
-#endif
 	}
 
 
@@ -1093,24 +1082,12 @@ static void PsyThresholdMS(ChannelInfo *channelInfoL, GlobalPsyInfo *gpsyInfo,
 
 				psyInfoL->maskThrSMS[j][b] = min(thmM,psyInfoL->maskThrSMS[j][b]);
 				psyInfoR->maskThrSMS[j][b] = min(thmS,psyInfoR->maskThrSMS[j][b]);
-				channelInfoL->msInfo.ms_usedS[j][b] = 1;
+				if (psyInfoL->maskThrS[j][b] * psyInfoR->maskThrS[j][b] < 
+					psyInfoL->maskThrSMS[j][b] * psyInfoR->maskThrSMS[j][b])
+					channelInfoL->msInfo.ms_usedS[j][b] = 0;
+				else
+					channelInfoL->msInfo.ms_usedS[j][b] = 1;
 			}
-
-#if 0
-			x1 = min(npartM, npartS);
-			x2 = max(npartM, npartS);
-			/* thresholds difference in db */
-			if (x2 >= 1000*x1) db = 3;
-			else db = log10(x2/x1);
-			if (db < 0.05) {
-#ifdef _DEBUG
-				ms_usedS++;
-#endif
-				channelInfoL->msInfo.ms_usedS[j][b] = 1;
-			} else {
-				channelInfoL->msInfo.ms_usedS[j][b] = 0;
-			}
-#endif
 		}
 	}
 

@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: frame.c,v 1.8 2001/02/10 12:28:54 menno Exp $
+ * $Id: frame.c,v 1.9 2001/02/12 14:39:14 menno Exp $
  */
 
 /*
@@ -57,7 +57,7 @@ int FAACAPI faacEncSetConfiguration(faacEncHandle hEncoder,
 	/* Check for correct bitrate */
 	if (config->bitRate > MaxBitrate(hEncoder->sampleRate))
 		return 0;
-	if (config->bitRate < MinBitrate(hEncoder->sampleRate))
+	if (config->bitRate < MinBitrate())
 		return 0;
 
 	/* Bitrate check passed */
@@ -278,7 +278,7 @@ int FAACAPI faacEncEncode(faacEncHandle hEncoder,
 	MSEncode(coderInfo, channelInfo, hEncoder->freqBuff, numChannels, allowMidside);
 
 	/* Quantize and code the signal */
-	bitsToUse = (int)((bitRate)*FRAME_LEN/sampleRate+0.5);
+	bitsToUse = (int)(bitRate*FRAME_LEN/sampleRate+0.5);
 	for (channel = 0; channel < numChannels; channel++) {
 		if (coderInfo[channel].block_type == ONLY_SHORT_WINDOW) {
 			AACQuantize(&coderInfo[channel], &hEncoder->psyInfo[channel],
