@@ -16,7 +16,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: main.c,v 1.27 2002/08/19 16:33:54 knik Exp $
+ * $Id: main.c,v 1.28 2002/08/30 16:20:45 knik Exp $
  */
 
 #ifdef _WIN32
@@ -363,8 +363,8 @@ int main(int argc, char *argv[])
 		sprintf(percent, "%.2f%% encoding %s",
 			100.0 * currentFrame / frames, audioFileName);
             SetConsoleTitle(percent);
-	      }
 #endif
+	      }
       }
 
             /* all done, bail out */
@@ -398,6 +398,9 @@ int main(int argc, char *argv[])
 
 /*
 $Log: main.c,v $
+Revision 1.28  2002/08/30 16:20:45  knik
+misplaced #endif
+
 Revision 1.27  2002/08/19 16:33:54  knik
 automatic bitrate setting
 more advanced status line
