@@ -7,13 +7,13 @@
 
 
 #define MAX_CHANNELS 2
-
+#define QWORD __int32
 
 typedef struct input_tag // any special vars associated with input file
 {
  FILE	*fFile;
  DWORD	lSize;    
- DWORD	len_ms;
+ QWORD	len_ms;
  WORD	wChannels;
  DWORD	dwSamprate;
  WORD	wBitsPerSample;
@@ -310,7 +310,7 @@ faacDecConfigurationPtr config;
     return 0;
    }
 
-   mi->len_ms=1000*(mi->lSize*8)/mi->file_info.bitrate;
+  mi->len_ms=1000*((mi->lSize*8)/mi->file_info.bitrate);
   if(mi->len_ms)
    mi->full_size=(DWORD)(mi->len_ms*((float)mi->dwSamprate/1000)*mi->wChannels*(16/8));
   else
@@ -328,6 +328,14 @@ faacDecConfigurationPtr config;
 
  return hInput;
 }
+
+#define ERROR_ReadFilterInput(msg) \
+	{ \
+		if(msg) \
+			MessageBox(0, msg, "FAAD interface", MB_OK); \
+		GlobalUnlock(hInput); \
+		return 0; \
+	} \
 
 __declspec(dllexport) DWORD FAR PASCAL ReadFilterInput(HANDLE hInput, unsigned char far *bufout, long lBytes)
 {
@@ -348,7 +356,8 @@ unsigned char *buffer;
 		{
 			if(mi->bytes_consumed>0 && mi->bytes_into_buffer>=0)
 			{
-				memcpy(buffer,buffer+mi->bytes_consumed,mi->bytes_into_buffer);
+				if(mi->bytes_into_buffer)
+					memcpy(buffer,buffer+mi->bytes_consumed,mi->bytes_into_buffer);
 
 				if(mi->bytes_read<mi->lSize)
 				{
@@ -364,15 +373,15 @@ unsigned char *buffer;
 					}	
 				}
 				else
-					memset(buffer+mi->bytes_into_buffer, 0, mi->bytes_consumed);
+					if(mi->bytes_into_buffer)
+						memset(buffer+mi->bytes_into_buffer, 0, mi->bytes_consumed);
 			}
 
 			if(mi->bytes_into_buffer<1)
-			{
-//				MessageBox(0, "ReadFilterInput: buffer empty", "FAAD interface", MB_OK);
-				GlobalUnlock(hInput);
-				return 0;
-			}
+				if(mi->bytes_read<mi->lSize)
+					ERROR_ReadFilterInput("ReadFilterInput: buffer empty!")
+				else
+					return 0;
 
 			result=faacDecDecode(mi->hDecoder, buffer, &(mi->bytes_consumed), (short*)bufout, &shorts_decoded);
 			mi->bytes_into_buffer-=mi->bytes_consumed;
@@ -382,11 +391,8 @@ unsigned char *buffer;
 	}
 
 	if(result==FAAD_FATAL_ERROR || result==FAAD_ERROR)
-	{
-		MessageBox(0, "ReadFilterInput: FAAD_FATAL_ERROR or FAAD_ERROR", "FAAD interface", MB_OK);
-		GlobalUnlock(hInput);
-		return 0;
-	}
+		ERROR_ReadFilterInput("ReadFilterInput: FAAD_FATAL_ERROR or FAAD_ERROR");
+
 /*    if(shorts_decoded>1024*MAX_CHANNELS)
 		return 0;*/
 	return shorts_decoded*sizeof(short);
