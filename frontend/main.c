@@ -16,13 +16,19 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: main.c,v 1.44 2003/09/07 17:44:36 ca5e Exp $
+ * $Id: main.c,v 1.45 2003/09/08 16:28:21 knik Exp $
  */
 
-#include <mp4.h>
+#ifdef _MSC_VER
+# define HAVE_LIBMP4V2	1
+#endif
 
 #ifdef HAVE_CONFIG_H
 #include "config.h"
+#endif
+
+#ifdef HAVE_LIBMP4V2
+# include <mp4.h>
 #endif
 
 #define DEFAULT_TNS     0
@@ -135,7 +141,7 @@ int main(int argc, char *argv[])
     char *audioFileName;
     char *aacFileName;
 
-    float *floatbuf;
+    float *pcmbuf;
     int *chanmap = NULL;
 
     unsigned char *bitbuf;
@@ -148,6 +154,7 @@ int main(int argc, char *argv[])
 
     FILE *outfile;
 
+#ifdef HAVE_LIBMP4V2
     MP4FileHandle MP4hFile = MP4_INVALID_FILE_HANDLE;
     MP4TrackId MP4track = 0;
     int mp4 = 0;
@@ -155,6 +162,7 @@ int main(int argc, char *argv[])
     u_int64_t encoded_samples = 0;
     unsigned int delay_samples;
     unsigned int frameSize;
+#endif
 
     // get faac version
     hEncoder = faacEncOpen(44100, 2, &samplesInput, &maxBytesOutput);
@@ -189,14 +197,19 @@ int main(int argc, char *argv[])
             { "pcmsamplerate", 1, 0, 'R'},
             { "pcmsamplebits", 1, 0, 'B'},
             { "pcmchannels", 1, 0, 'C'},
+#ifdef HAVE_LIBMP4V2
             { "createmp4", 0, 0, 'w'},
+#endif
             { 0, 0, 0, 0}
         };
         int c = -1;
         int option_index = 0;
 
-        c = getopt_long(argc, argv, "a:m:o:rnwc:q:PR:B:C:I:",
-            long_options, &option_index);
+        c = getopt_long(argc, argv, "a:m:o:rnc:q:PR:B:C:I:"
+#ifdef HAVE_LIBMP4V2
+                        "w"
+#endif
+            ,long_options, &option_index);
 
         if (c == -1)
             break;
@@ -304,9 +317,11 @@ int main(int argc, char *argv[])
                 rawChans = i;
             break;
         }
+#ifdef HAVE_LIBMP4V2
         case 'w':
             mp4 = 1;
             break;
+#endif
         case '?':
             break;
         default:
@@ -337,7 +352,9 @@ int main(int argc, char *argv[])
         printf("  -B     Raw PCM input sample size (8, 16 (default), 24 or 32bits).\n");
         printf("  -C     Raw PCM input channels.\n");
         printf("  -I <C,LF> Input channel config, default is 3,4 (Center third, LF fourth)\n");
+#ifdef HAVE_LIBMP4V2
         printf("  -w     Wrap AAC data in MP4 container\n");
+#endif
         //printf("More details on FAAC usage can be found in the faac.html file.\n");
         printf("More tips on FAAC usage can be found in Knowledge base at www.audiocoding.com\n");
 
@@ -368,19 +385,21 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    if (mp4)
-    {
-        mpegVersion = MPEG4;
-        useAdts = 0;
-    }
 
     /* open the encoder library */
     hEncoder = faacEncOpen(infile->samplerate, infile->channels,
         &samplesInput, &maxBytesOutput);
 
+#ifdef HAVE_LIBMP4V2
+    if (mp4)
+    {
+        mpegVersion = MPEG4;
+        useAdts = 0;
+    }
     frameSize = samplesInput/infile->channels;
     delay_samples = frameSize; // encoder delay 1024 samples
-    floatbuf = (float *)malloc(samplesInput*sizeof(float));
+#endif
+    pcmbuf = (float *)malloc(samplesInput*sizeof(float));
     bitbuf = (unsigned char*)malloc(maxBytesOutput*sizeof(unsigned char));
     chanmap = mkChanMap(infile->channels, chanC, chanLF);
     if (chanmap)
@@ -416,10 +435,13 @@ int main(int argc, char *argv[])
     myFormat->inputFormat = FAAC_INPUT_FLOAT;
     if (!faacEncSetConfiguration(hEncoder, myFormat)) {
         fprintf(stderr, "Unsupported output format!\n");
+#ifdef HAVE_LIBMP4V2
         if (mp4) MP4Close(MP4hFile);
+#endif
         return 1;
     }
 
+#ifdef HAVE_LIBMP4V2
     /* initialize MP4 creation */
     if (mp4) {
         u_int8_t *ASC = 0;
@@ -439,6 +461,7 @@ int main(int argc, char *argv[])
     }
     else
     {
+#endif
         /* open the aac output file */
         outfile = fopen(aacFileName, "wb");
         if (!outfile)
@@ -446,7 +469,9 @@ int main(int argc, char *argv[])
             fprintf(stderr, "Couldn't create output file %s\n", aacFileName);
             return 1;
         }
+#ifdef HAVE_LIBMP4V2
     }
+#endif
 
     cutOff = myFormat->bandWidth;
     quantqual = myFormat->quantqual;
@@ -475,7 +500,11 @@ int main(int argc, char *argv[])
         fprintf(stderr, " + M/S");
     fprintf(stderr, "\n");
 
-    if (outfile || MP4hFile != MP4_INVALID_FILE_HANDLE)
+    if (outfile
+#ifdef HAVE_LIBMP4V2
+        || MP4hFile != MP4_INVALID_FILE_HANDLE
+#endif
+       )
     {
         int showcnt = 0;
 #ifdef _WIN32
@@ -498,13 +527,15 @@ int main(int argc, char *argv[])
         {
             int bytesWritten;
 
-            samplesRead = wav_read_float32(infile, floatbuf, samplesInput, chanmap);
+            samplesRead = wav_read_float32(infile, pcmbuf, samplesInput, chanmap);
 
+#ifdef HAVE_LIBMP4V2
             total_samples += samplesRead / infile->channels;
+#endif
 
             /* call the actual encoding routine */
             bytesWritten = faacEncEncode(hEncoder,
-                (int32_t *)floatbuf,
+                (int32_t *)pcmbuf,
                 samplesRead,
                 bitbuf,
                 maxBytesOutput);
@@ -579,6 +610,7 @@ int main(int argc, char *argv[])
 
             if (bytesWritten > 0)
             {
+#ifdef HAVE_LIBMP4V2
                 u_int64_t samples = (total_samples - encoded_samples) < frameSize
                     ? (total_samples - encoded_samples) : frameSize;
 
@@ -595,19 +627,24 @@ int main(int argc, char *argv[])
                 }
                 else
                 {
+#endif
                     /* write bitstream to aac file */
                     fwrite(bitbuf, 1, bytesWritten, outfile);
+#ifdef HAVE_LIBMP4V2
                 }
 
                 encoded_samples += samples;
+#endif
             }
         }
         fprintf(stderr, "\n\n");
 
+#ifdef HAVE_LIBMP4V2
         /* clean up */
         if (mp4)
             MP4Close(MP4hFile);
         else
+#endif
             fclose(outfile);
     }
 
@@ -615,7 +652,7 @@ int main(int argc, char *argv[])
 
     wav_close(infile);
 
-    if (floatbuf) free(floatbuf);
+    if (pcmbuf) free(pcmbuf);
     if (bitbuf) free(bitbuf);
 
     return 0;
@@ -623,11 +660,10 @@ int main(int argc, char *argv[])
 
 /*
 $Log: main.c,v $
-Revision 1.44  2003/09/07 17:44:36  ca5e
-length calculations/silence padding changed to match current libfaac behavior
-changed tabs to spaces, fixes to indentation
+Revision 1.45  2003/09/08 16:28:21  knik
+conditional libmp4v2 compilation
 
-Revision 1.44  2003/09/07 19:38:15  ca5e
+Revision 1.44  2003/09/07 17:44:36  ca5e
 length calculations/silence padding changed to match current libfaac behavior
 changed tabs to spaces, fixes to indentation
 
