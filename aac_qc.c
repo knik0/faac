@@ -546,10 +546,14 @@ int tf_encode_spectrum_aac(
 
 		amp_over = 0;
 
+#if 1
+		noise_thresh = 0.0;
+#else
 		noise_thresh = -900;
 		for ( sb = 0; sb < quantInfo->nr_of_sfb; sb++ )
 			noise_thresh = max(1.05*noise[sb], noise_thresh);
 		noise_thresh = min(noise_thresh, 0.0);
+#endif
 
 		for (sb = 0; sb < quantInfo->nr_of_sfb; sb++) {
 			if ((noise[sb] > noise_thresh)&&(quantInfo->book_vector[sb]!=INTENSITY_HCB)&&(quantInfo->book_vector[sb]!=INTENSITY_HCB2)) {
