@@ -118,26 +118,29 @@ void freq2buffer(
   double           p_out_data[],
   double           p_overlap[],
   enum WINDOW_TYPE block_type,
-//  int              nlong,            /* shift length for long windows   */
-  Mdct_in	   overlap_select);    /* select imdct output *TK*	*/
+  Window_shape     wfun_select,      
+  Window_shape     wfun_select_prev,   
+  Mdct_in	   overlap_select
+);
 
-void buffer2freq(                    /* Input: Time signal              */
-  double           p_in_data[],      /* Output: MDCT cofficients        */
+void buffer2freq(                    
+  double           p_in_data[],      
   double           p_out_mdct[],
   double           p_overlap[],
   enum WINDOW_TYPE block_type,
-//  Window_shape     wfun_select,      /* offers the possibility to select different window functions */
-  Mdct_in        overlap_select      /* YT 970615 for Son_PP */
+  Window_shape     wfun_select,      
+  Window_shape     wfun_select_prev,   
+  Mdct_in          overlap_select      
 );
 
 void make_MDCT_windows(void);
 
 void specFilter (double p_in[],
-				 double p_out[],
-				 int  samp_rate,
-				 int lowpass_freq,
-				 int    specLen
-				 );
+		 double p_out[],
+		 int  samp_rate,
+		 int lowpass_freq,
+		 int    specLen
+);
 
 #endif	/* #ifndef _TF_MAIN_H_INCLUDED */
 

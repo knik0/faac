@@ -34,8 +34,8 @@ Copyright (c)1997.
 /**************************************************************************
   Version Control Information			Method: CVS
   Identifiers:
-  $Revision: 1.4 $
-  $Date: 2000/01/29 17:11:25 $ (check in)
+  $Revision: 1.5 $
+  $Date: 2000/02/07 07:45:00 $ (check in)
   $Author: lenox $
   *************************************************************************/
 
@@ -82,7 +82,7 @@ short double_to_int (double sig_in);
                         - weight_idx : 
                           3 bit number indicating the LTP coefficient in 
                           the codebook 
-                        - sbk_prediction_used: 
+                        - sbk_prediction_used:
                           1 bit for each subblock indicating wheather
                           LTP is used in that subblock 
                         - sfb_prediction_used:
@@ -174,14 +174,14 @@ nok_init_lt_pred (NOK_LT_PRED_STATUS *lt_status)
   *************************************************************************/
 
 int
-nok_ltp_enc(double *p_spectrum, double *p_time_signal, enum WINDOW_TYPE win_type, 
+nok_ltp_enc(double *p_spectrum, double *p_time_signal, enum WINDOW_TYPE win_type,
             Window_shape win_shape, int block_size_long, int block_size_medium,
 	    int block_size_short, int *sfb_offset, int num_of_sfb,
             NOK_LT_PRED_STATUS *lt_status)
 {
     int i;
     int last_band;
-	double num_bit[MAX_SHORT_WINDOWS];
+    double num_bit[MAX_SHORT_WINDOWS];
     double predicted_samples[2 * NOK_MAX_BLOCK_LEN_LONG];
 
     lt_status->global_pred_flag = 0;
@@ -198,19 +198,16 @@ nok_ltp_enc(double *p_spectrum, double *p_time_signal, enum WINDOW_TYPE win_type
 
 //		fprintf(stderr, "(LTP) lag : %i ", lt_status->delay[0]);
 
-		pitch (p_time_signal, predicted_samples, lt_status->buffer, 
+		pitch (p_time_signal, predicted_samples, lt_status->buffer,
 			&lt_status->weight_idx, lt_status->delay[0], 2 * block_size_long);
 
 		/* Transform prediction to frequency domain and save it for subsequent use. */
-//		buffer2freq (predicted_samples, lt_status->pred_mdct, NULL, win_type,
-//			win_shape, block_size_long, block_size_medium,
-//			block_size_short, MNON_OVERLAPPED);
-		buffer2freq (predicted_samples, lt_status->pred_mdct, NULL, win_type, MNON_OVERLAPPED);
+		buffer2freq (predicted_samples, lt_status->pred_mdct, NULL, win_type, win_shape, WS_SIN, MNON_OVERLAPPED);
 
 		lt_status->side_info = LEN_LTP_DATA_PRESENT + last_band + LEN_LTP_LAG + LEN_LTP_COEF;
-    
+
 		num_bit[0] = snr_pred (p_spectrum, lt_status->pred_mdct,
-			lt_status->sfb_prediction_used, sfb_offset, 
+			lt_status->sfb_prediction_used, sfb_offset,
 			win_type, lt_status->side_info, last_band);
 
 //		if (num_bit[0] > 0) {
@@ -230,7 +227,7 @@ nok_ltp_enc(double *p_spectrum, double *p_time_signal, enum WINDOW_TYPE win_type
 	case ONLY_SHORT_WINDOW:
 		break;
     }
-    
+
     return (lt_status->global_pred_flag);
 }
 
@@ -253,7 +250,7 @@ nok_ltp_enc(double *p_spectrum, double *p_time_signal, enum WINDOW_TYPE win_type
 
   Output:	p_spectrum    - reconstructed spectrum
                 lt_status     - buffer: history buffer
-                           
+
   References:	1.) buffer2freq
                 2.) freq2buffer
                 3.) double_to_int
@@ -281,16 +278,13 @@ nok_ltp_reconstruct(double *p_spectrum, enum WINDOW_TYPE win_type,
 	case LONG_SHORT_WINDOW:
 	case SHORT_LONG_WINDOW:
 		last_band = (num_of_sfb < NOK_MAX_LT_PRED_LONG_SFB) ? num_of_sfb : NOK_MAX_LT_PRED_LONG_SFB;
-		
+
 		if(lt_status->global_pred_flag)
 			for (i = 0; i < sfb_offset[last_band]; i++)
 				p_spectrum[i] += lt_status->pred_mdct[i];
 
 		/* Finally update the time domain history buffer. */
-//		freq2buffer (p_spectrum, predicted_samples, overlap_buffer, win_type,
-//			block_size_long, block_size_medium, block_size_short,
-//			win_shape, MNON_OVERLAPPED);
-		freq2buffer (p_spectrum, predicted_samples, overlap_buffer, win_type, MNON_OVERLAPPED);
+		freq2buffer (p_spectrum, predicted_samples, overlap_buffer, win_type, WS_SIN, WS_SIN, MNON_OVERLAPPED);
 
 		for (i = 0; i < NOK_LT_BLEN - block_size_long; i++)
 			lt_status->buffer[i] = lt_status->buffer[i + block_size_long];
@@ -304,12 +298,12 @@ nok_ltp_reconstruct(double *p_spectrum, enum WINDOW_TYPE win_type,
 				double_to_int (predicted_samples[i + block_size_long]);
 		}
 		break;
-	
+
     case ONLY_SHORT_WINDOW:
 #if 0
 		for (i = 0; i < NOK_LT_BLEN - block_size_long; i++)
 			lt_status->buffer[i] = lt_status->buffer[i + block_size_long];
-		
+
 		for (i = NOK_LT_BLEN - block_size_long; i < NOK_LT_BLEN; i++)
 			lt_status->buffer[i] = 0;
 
@@ -317,7 +311,7 @@ nok_ltp_reconstruct(double *p_spectrum, enum WINDOW_TYPE win_type,
 			overlap_buffer[i] = 0;
 
 		/* Finally update the time domain history buffer. */
-		freq2buffer (p_spectrum, predicted_samples, overlap_buffer, win_type, block_size_long, 
+		freq2buffer (p_spectrum, predicted_samples, overlap_buffer, win_type, block_size_long,
 			block_size_medium, block_size_short, win_shape, MNON_OVERLAPPED);
 
 		for(sw = 0; sw < MAX_SHORT_WINDOWS; sw++)

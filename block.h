@@ -26,20 +26,12 @@ Copyright(c)1996.
 #ifndef BLOCK_H
 #define BLOCK_H 1
 
-#include "dolby_def.h"
-
-
 #define IN_DATATYPE  double
 #define OUT_DATATYPE double
 
 #define BLOCK_LEN_LONG	   1024
 #define BLOCK_LEN_MEDIUM   512
 #define BLOCK_LEN_SHORT    128
-#define BLOCK_LEN_LONG_S   960
-#define BLOCK_LEN_MEDIUM_S 480
-#define BLOCK_LEN_SHORT_S  120
-#define BLOCK_LEN_LONG_SSR	  256 /* 980129 added for SSR */
-#define BLOCK_LEN_SHORT_SSR   32  /* 980129 added for SSR */
 
 #define NWINLONG	(BLOCK_LEN_LONG)
 #define ALFALONG	4.0
@@ -53,7 +45,7 @@ Copyright(c)1996.
 
 
 typedef enum {
-    WS_FHG, WS_DOLBY, N_WINDOW_SHAPES
+    WS_SIN, WS_KBD, N_WINDOW_SHAPES
 } 
 Window_shape;
 

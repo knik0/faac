@@ -2,6 +2,7 @@
 #include <string.h>
 #include "all.h"
 #include "transfo.h"
+#include "kbd_win.h"
 
 #ifndef M_PI
 #define M_PI        3.14159265358979323846
@@ -13,8 +14,8 @@
 
 #define NFLAT_LS 448  // (BLOCK_LEN_LONG - BLOCK_LEN_SHORT) / 2
 
-double       fhg_window_long[BLOCK_LEN_LONG];
-double       fhg_window_short[BLOCK_LEN_SHORT];
+double       sin_window_long[BLOCK_LEN_LONG];
+double       sin_window_short[BLOCK_LEN_SHORT];
 int sizedouble; // temp value
 
 /*******************************************************************************
@@ -201,9 +202,9 @@ void make_MDCT_windows(void)
 {
 int i;
 for( i=0; i<BLOCK_LEN_LONG; i++ )
-	fhg_window_long[i] = sin((M_PI/(2*BLOCK_LEN_LONG)) * (i + 0.5));
+	sin_window_long[i] = sin((M_PI/(2*BLOCK_LEN_LONG)) * (i + 0.5));
 for( i=0; i<BLOCK_LEN_SHORT; i++ )
-	fhg_window_short[i] = sin((M_PI/(2*BLOCK_LEN_SHORT)) * (i + 0.5));
+	sin_window_short[i] = sin((M_PI/(2*BLOCK_LEN_SHORT)) * (i + 0.5));
 sizedouble = sizeof (double);
 }
 /*******************************************************************************
@@ -213,19 +214,19 @@ void buffer2freq(double           p_in_data[],
 		 double           p_out_mdct[],
 		 double           p_overlap[],
 		 enum WINDOW_TYPE block_type,
-//		 Window_shape     wfun_select,      /* offers the possibility to select different window functions */
-		 Mdct_in      overlap_select     /*  YT 970615 for son_PP */
+		 Window_shape     wfun_select,      /*  current window shape */
+		 Window_shape     wfun_select_prev, /*  previous window shape */
+		 Mdct_in          overlap_select
 		 )
 {
 	double         transf_buf[ 2*BLOCK_LEN_LONG ];
-	double         *p_o_buf;
+	double         *p_o_buf, *first_window, *second_window;
 	int            k,i;
 
 	static int firstTime=1;
 
 	/* create / shift old values */
 	/* We use p_overlap here as buffer holding the last frame time signal*/
-	/* YT 970615 for son_pp */
 	if(overlap_select != MNON_OVERLAPPED){
 		if (firstTime){
 			firstTime=0;
@@ -240,37 +241,71 @@ void buffer2freq(double           p_in_data[],
                 memcpy(transf_buf,p_in_data,2*BLOCK_LEN_LONG*sizedouble);
 	}
 
+        /*  Window shape processing */
+        switch (wfun_select_prev){
+                case WS_SIN:  if ( (block_type == ONLY_LONG_WINDOW) || (block_type == LONG_SHORT_WINDOW))
+                                          first_window = sin_window_long;
+                                     else
+                                          first_window = sin_window_short;
+                                break;
+                case WS_KBD:  if ( (block_type == ONLY_LONG_WINDOW) || (block_type == LONG_SHORT_WINDOW))
+                                          first_window = kbd_window_long;
+                                     else
+                                          first_window = kbd_window_short;
+                                break;
+                }
+
+        switch (wfun_select){
+                case WS_SIN:  if ( (block_type == ONLY_LONG_WINDOW) || (block_type == SHORT_LONG_WINDOW))
+                                          second_window = sin_window_long;
+                                     else
+                                          second_window = sin_window_short;
+                                break;
+                case WS_KBD:  if ( (block_type == ONLY_LONG_WINDOW) || (block_type == SHORT_LONG_WINDOW))
+                                          second_window = kbd_window_long;
+                                     else
+                                          second_window = kbd_window_short;
+                                break;
+                }
+
 	/* Set ptr to transf-Buffer */
 	p_o_buf = transf_buf;
-
 
 	/* Separate action for each Block Type */
 	switch( block_type ) {
 	case ONLY_LONG_WINDOW :
                 for ( i = 0 ; i < BLOCK_LEN_LONG ; i++){
-                        p_out_mdct[i] = p_o_buf[i] * fhg_window_long[i];
-                        p_out_mdct[i+BLOCK_LEN_LONG] = p_o_buf[i+BLOCK_LEN_LONG] * fhg_window_long[BLOCK_LEN_LONG-i-1];
+                        p_out_mdct[i] = p_o_buf[i] * first_window[i];
+                        p_out_mdct[i+BLOCK_LEN_LONG] = p_o_buf[i+BLOCK_LEN_LONG] * second_window[BLOCK_LEN_LONG-i-1];
                         }
 		MDCT( p_out_mdct, 2*BLOCK_LEN_LONG );
 		break;
 
 	case LONG_SHORT_WINDOW :
-                for ( i = 0 ; i < BLOCK_LEN_LONG ; i++)
-                        p_out_mdct[i] = p_o_buf[i] * fhg_window_long[i];
+//                for ( i = 0 ; i < BLOCK_LEN_LONG ; i++)
+//                        p_out_mdct[i] = p_o_buf[i] * first_window[i];
                 memcpy(p_out_mdct+BLOCK_LEN_LONG,p_o_buf+BLOCK_LEN_LONG,NFLAT_LS*sizedouble);
+//                for ( ; i < NFLAT_LS + BLOCK_LEN_LONG; i++){
+//                        p_out_mdct[i] = 1.0;
+//                        p_out_mdct[i+NFLAT_LS+BLOCK_LEN_SHORT] = 0.0;
+//                        }
                 for ( i = 0 ; i < BLOCK_LEN_SHORT ; i++)
-                        p_out_mdct[i+BLOCK_LEN_LONG+NFLAT_LS] = p_o_buf[i+BLOCK_LEN_LONG+NFLAT_LS] * fhg_window_short[BLOCK_LEN_SHORT-i-1];
+                        p_out_mdct[i+BLOCK_LEN_LONG+NFLAT_LS] = p_o_buf[i+BLOCK_LEN_LONG+NFLAT_LS] * second_window[BLOCK_LEN_SHORT-i-1];
                 memset(p_out_mdct+BLOCK_LEN_LONG+NFLAT_LS+BLOCK_LEN_SHORT,0,NFLAT_LS*sizedouble);
 		MDCT( p_out_mdct, 2*BLOCK_LEN_LONG );
 		break;
 
 	case SHORT_LONG_WINDOW :
                 memset(p_out_mdct,0,NFLAT_LS*sizedouble);
+//                for ( i = 0 ; i < NFLAT_LS ; i++){
+//                        p_out_mdct[i] = 0.0;
+//                        p_out_mdct[i+NFLAT_LS+BLOCK_LEN_SHORT] = 1.0;
+//                        }
                 for ( i = 0 ; i < BLOCK_LEN_SHORT ; i++)
-                        p_out_mdct[i+NFLAT_LS] = p_o_buf[i+NFLAT_LS] * fhg_window_short[i];
+                        p_out_mdct[i+NFLAT_LS] = p_o_buf[i+NFLAT_LS] * first_window[i];
                 memcpy(p_out_mdct+NFLAT_LS+BLOCK_LEN_SHORT,p_o_buf+NFLAT_LS+BLOCK_LEN_SHORT,NFLAT_LS*sizedouble);
                 for ( i = 0 ; i < BLOCK_LEN_LONG ; i++)
-                        p_out_mdct[i+BLOCK_LEN_LONG] = p_o_buf[i+BLOCK_LEN_LONG] * fhg_window_long[BLOCK_LEN_LONG-i-1];
+                        p_out_mdct[i+BLOCK_LEN_LONG] = p_o_buf[i+BLOCK_LEN_LONG] * second_window[BLOCK_LEN_LONG-i-1];
 		MDCT( p_out_mdct, 2*BLOCK_LEN_LONG );
 		break;
 
@@ -280,15 +315,15 @@ void buffer2freq(double           p_in_data[],
 		}
 		for ( k=0; k < MAX_SHORT_WINDOWS; k++ ) {
                         for ( i = 0 ; i < BLOCK_LEN_SHORT ; i++ ){
-                                p_out_mdct[i] = p_o_buf[i] * fhg_window_short[i];
-                                p_out_mdct[i+BLOCK_LEN_SHORT] = p_o_buf[i+BLOCK_LEN_SHORT] * fhg_window_short[BLOCK_LEN_SHORT-i-1];
+                                p_out_mdct[i] = p_o_buf[i] * first_window[i];
+                                p_out_mdct[i+BLOCK_LEN_SHORT] = p_o_buf[i+BLOCK_LEN_SHORT] * second_window[BLOCK_LEN_SHORT-i-1];
                                 }
 			MDCT( p_out_mdct, 2*BLOCK_LEN_SHORT );
 
 			p_out_mdct += BLOCK_LEN_SHORT;
-			/* YT 970615 for sonPP*/
 			if(overlap_select != MNON_OVERLAPPED) p_o_buf += BLOCK_LEN_SHORT;
         			else 	p_o_buf += 2*BLOCK_LEN_SHORT;
+                        first_window = second_window;
 		}
 		break;
 	}
@@ -298,15 +333,43 @@ void freq2buffer(double           p_in_data[],
 		 double           p_out_data[],
 		 double           p_overlap[],
 		 enum WINDOW_TYPE block_type,
-//		 Window_shape     wfun_select,      /* offers the possibility to select different window functions */
-		 Mdct_in	   overlap_select		/* select imdct output *TK*	*/
+		 Window_shape     wfun_select,      /*  current window shape */
+		 Window_shape     wfun_select_prev, /*  previous window shape */
+		 Mdct_in	  overlap_select
 		 )
 {
 	double           *o_buf, transf_buf[ 2*BLOCK_LEN_LONG ];
-	double           overlap_buf[ 2*BLOCK_LEN_LONG ];
+	double           overlap_buf[ 2*BLOCK_LEN_LONG ], *first_window, *second_window;
 
 	double  *fp;
 	int     k,i;
+
+        /*  Window shape processing */
+        switch (wfun_select_prev){
+                case WS_SIN:  if ( (block_type == ONLY_LONG_WINDOW) || (block_type == LONG_SHORT_WINDOW))
+                                          first_window = sin_window_long;
+                                     else
+                                          first_window = sin_window_short;
+                                break;
+                case WS_KBD:  if ( (block_type == ONLY_LONG_WINDOW) || (block_type == LONG_SHORT_WINDOW))
+                                          first_window = kbd_window_long;
+                                     else
+                                          first_window = kbd_window_short;
+                                break;
+                }
+
+        switch (wfun_select){
+                case WS_SIN:  if ( (block_type == ONLY_LONG_WINDOW) || (block_type == SHORT_LONG_WINDOW))
+                                          second_window = sin_window_long;
+                                     else
+                                          second_window = sin_window_short;
+                                break;
+                case WS_KBD:  if ( (block_type == ONLY_LONG_WINDOW) || (block_type == SHORT_LONG_WINDOW))
+                                          second_window = kbd_window_long;
+                                     else
+                                          second_window = kbd_window_short;
+                                break;
+                }
 
 	/* Assemble overlap buffer */
         memcpy(overlap_buf,p_overlap,BLOCK_LEN_LONG*sizedouble);
@@ -318,16 +381,16 @@ void freq2buffer(double           p_in_data[],
                 memcpy(transf_buf, p_in_data,BLOCK_LEN_LONG*sizedouble);
 		IMDCT( transf_buf, 2*BLOCK_LEN_LONG );
                 for ( i = 0 ; i < BLOCK_LEN_LONG ; i++)
-                        transf_buf[i] *= fhg_window_long[i];
+                        transf_buf[i] *= first_window[i];
 		if (overlap_select != MNON_OVERLAPPED) {
                         for ( i = 0 ; i < BLOCK_LEN_LONG; i++ ){
                             o_buf[i] += transf_buf[i];
-                            o_buf[i+BLOCK_LEN_LONG] = transf_buf[i+BLOCK_LEN_LONG] * fhg_window_long[BLOCK_LEN_LONG-i-1];
+                            o_buf[i+BLOCK_LEN_LONG] = transf_buf[i+BLOCK_LEN_LONG] * second_window[BLOCK_LEN_LONG-i-1];
                             }
 		}
 		else { /* overlap_select == NON_OVERLAPPED */
                         for ( i = 0 ; i < BLOCK_LEN_LONG; i++ )
-                            transf_buf[i+BLOCK_LEN_LONG] *= fhg_window_long[BLOCK_LEN_LONG-i-1];
+                            transf_buf[i+BLOCK_LEN_LONG] *= second_window[BLOCK_LEN_LONG-i-1];
 		}
 		break;
 
@@ -335,18 +398,18 @@ void freq2buffer(double           p_in_data[],
                 memcpy(transf_buf, p_in_data,BLOCK_LEN_LONG*sizedouble);
 		IMDCT( transf_buf, 2*BLOCK_LEN_LONG );
                 for ( i = 0 ; i < BLOCK_LEN_LONG ; i++)
-                        transf_buf[i] *= fhg_window_long[i];
+                        transf_buf[i] *= first_window[i];
 		if (overlap_select != MNON_OVERLAPPED) {
                         for ( i = 0 ; i < BLOCK_LEN_LONG; i++ )
                             o_buf[i] += transf_buf[i];
                         memcpy(o_buf+BLOCK_LEN_LONG,transf_buf+BLOCK_LEN_LONG,NFLAT_LS*sizedouble);
                         for ( i = 0 ; i < BLOCK_LEN_SHORT ; i++)
-                                o_buf[i+BLOCK_LEN_LONG+NFLAT_LS] = transf_buf[i+BLOCK_LEN_LONG+NFLAT_LS] * fhg_window_short[BLOCK_LEN_SHORT-i-1];
+                                o_buf[i+BLOCK_LEN_LONG+NFLAT_LS] = transf_buf[i+BLOCK_LEN_LONG+NFLAT_LS] * second_window[BLOCK_LEN_SHORT-i-1];
                         memset(o_buf+BLOCK_LEN_LONG+NFLAT_LS+BLOCK_LEN_SHORT,0,NFLAT_LS*sizedouble);
 		}
 		else { /* overlap_select == NON_OVERLAPPED */
                         for ( i = 0 ; i < BLOCK_LEN_SHORT ; i++)
-                                transf_buf[i+BLOCK_LEN_LONG+NFLAT_LS] *= fhg_window_short[BLOCK_LEN_SHORT-i-1];
+                                transf_buf[i+BLOCK_LEN_LONG+NFLAT_LS] *= second_window[BLOCK_LEN_SHORT-i-1];
                         memset(transf_buf+BLOCK_LEN_LONG+NFLAT_LS+BLOCK_LEN_SHORT,0,NFLAT_LS*sizedouble);
 		}
 		break;
@@ -355,18 +418,18 @@ void freq2buffer(double           p_in_data[],
                 memcpy(transf_buf, p_in_data,BLOCK_LEN_LONG*sizedouble);
 		IMDCT( transf_buf, 2*BLOCK_LEN_LONG );
                 for ( i = 0 ; i < BLOCK_LEN_SHORT ; i++)
-                        transf_buf[i+NFLAT_LS] *= fhg_window_short[i];
+                        transf_buf[i+NFLAT_LS] *= first_window[i];
 		if (overlap_select != MNON_OVERLAPPED) {
                         for ( i = 0 ; i < BLOCK_LEN_SHORT; i++ )
                             o_buf[i+NFLAT_LS] += transf_buf[i+NFLAT_LS];
                         memcpy(o_buf+BLOCK_LEN_SHORT+NFLAT_LS,transf_buf+BLOCK_LEN_SHORT+NFLAT_LS,NFLAT_LS*sizedouble);
                         for ( i = 0 ; i < BLOCK_LEN_LONG ; i++)
-                                o_buf[i+BLOCK_LEN_LONG] = transf_buf[i+BLOCK_LEN_LONG] * fhg_window_long[BLOCK_LEN_LONG-i-1];
+                                o_buf[i+BLOCK_LEN_LONG] = transf_buf[i+BLOCK_LEN_LONG] * second_window[BLOCK_LEN_LONG-i-1];
 		}
 		else { /* overlap_select == NON_OVERLAPPED */
                         memset(transf_buf,0,NFLAT_LS*sizedouble);
                 for ( i = 0 ; i < BLOCK_LEN_LONG ; i++)
-                        transf_buf[i+BLOCK_LEN_LONG] *= fhg_window_long[BLOCK_LEN_LONG-i-1];
+                        transf_buf[i+BLOCK_LEN_LONG] *= second_window[BLOCK_LEN_LONG-i-1];
 		}
 		break;
 
@@ -383,20 +446,21 @@ void freq2buffer(double           p_in_data[],
 			p_in_data += BLOCK_LEN_SHORT;
 			if (overlap_select != MNON_OVERLAPPED) {
                                 for ( i = 0 ; i < BLOCK_LEN_SHORT ; i++){
-                                        transf_buf[i] *= fhg_window_short[i];
+                                        transf_buf[i] *= first_window[i];
                                         fp[i] += transf_buf[i];
-                                        fp[i+BLOCK_LEN_SHORT] = transf_buf[i+BLOCK_LEN_SHORT] * fhg_window_short[BLOCK_LEN_SHORT-i-1];
+                                        fp[i+BLOCK_LEN_SHORT] = transf_buf[i+BLOCK_LEN_SHORT] * second_window[BLOCK_LEN_SHORT-i-1];
                                         }
 				fp    += BLOCK_LEN_SHORT;
 			}
 			else { /* overlap_select == NON_OVERLAPPED */
                                 for ( i = 0 ; i < BLOCK_LEN_SHORT ; i++){
-                                        fp[i] *= fhg_window_short[i];
-                                        fp[i+BLOCK_LEN_SHORT] *= fhg_window_short[BLOCK_LEN_SHORT-i-1];
+                                        fp[i] *= first_window[i];
+                                        fp[i+BLOCK_LEN_SHORT] *= second_window[BLOCK_LEN_SHORT-i-1];
                                         }
 				fp    += 2*BLOCK_LEN_SHORT;
 			}
-		}
+                        first_window = second_window;
+                }
                 memset(o_buf+BLOCK_LEN_LONG+NFLAT_LS+BLOCK_LEN_SHORT,0,NFLAT_LS*sizedouble);
 		break;
 	}

@@ -403,8 +403,8 @@ int EncTfFrame (faacAACStream *as, BsBitStream  *fixed_stream)
 		for (chanNum=0;chanNum<max_ch;chanNum++) {
 
 			/* Set window shape paremeter in quantInfo */
-//			quantInfo[chanNum].window_shape = WS_DOLBY;
-			quantInfo[chanNum].window_shape = WS_FHG;
+//			quantInfo[chanNum].window_shape = WS_KBD;
+			quantInfo[chanNum].window_shape = WS_SIN;
 
 			switch( block_type[chanNum] ) {
 			case ONLY_SHORT_WINDOW  :
@@ -469,9 +469,8 @@ int EncTfFrame (faacAACStream *as, BsBitStream  *fixed_stream)
 				overlap_buffer[chanNum],
 				block_type[chanNum],
 //				quantInfo[chanNum].window_shape,
-//				block_size_samples,
-//				block_size_samples/2,
-//				block_size_samples/short_win_in_long,
+                                WS_SIN,
+                                WS_SIN,
 				MOVERLAPPED
 				);
 
@@ -607,7 +606,7 @@ int EncTfFrame (faacAACStream *as, BsBitStream  *fixed_stream)
 						nok_ltp_enc(spectral_line_vector[leftChan], 
 							nok_tmp_DTimeSigBuf[leftChan], 
 							block_type[leftChan], 
-							WS_FHG,
+							WS_SIN,
 							block_size_samples,
 							1,
 							block_size_samples/short_win_in_long, 
@@ -630,7 +629,7 @@ int EncTfFrame (faacAACStream *as, BsBitStream  *fixed_stream)
 							nok_ltp_enc(spectral_line_vector[rightChan],
 							nok_tmp_DTimeSigBuf[rightChan], 
 							block_type[rightChan], 
-							WS_FHG,
+							WS_SIN,
 							block_size_samples,
 							1,
 							block_size_samples/short_win_in_long, 
@@ -644,7 +643,7 @@ int EncTfFrame (faacAACStream *as, BsBitStream  *fixed_stream)
 					nok_ltp_enc(spectral_line_vector[chanNum], 
 					nok_tmp_DTimeSigBuf[chanNum], 
 					block_type[chanNum], 
-					WS_FHG,
+					WS_SIN,
 					block_size_samples,
 					1,
 					block_size_samples/short_win_in_long, 
@@ -740,7 +739,7 @@ int EncTfFrame (faacAACStream *as, BsBitStream  *fixed_stream)
                   for (chanNum=0;chanNum<max_ch;chanNum++) {
 			nok_ltp_reconstruct(reconstructed_spectrum[chanNum],
 				block_type[chanNum],
-				WS_FHG, block_size_samples,
+				WS_SIN, block_size_samples,
 				block_size_samples/2,
 				block_size_samples/short_win_in_long,
 				&sfb_offset_table[chanNum][0],

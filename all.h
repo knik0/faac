@@ -60,11 +60,5 @@ typedef struct
     MS_Info ms_info;    /* MS information */
 } Ch_Info;
 
-#ifdef MPEG4V1
-#define _WINDOW_TYPE_EXT
-typedef byte WINDOW_TYPE_EXT;
-#include "nok_lt_prediction.h"
-#endif /* MPEG4V1 */
-
 #endif	/* _all_h_ */
 
