@@ -139,7 +139,7 @@ typedef faacVersion* (*FAACENCODEVERSION) (void);
 
 #else
 
-__declspec(dllexport) faacAACStream *faacEncodeInit(faacAACStream *as, int *samplesToRead, int *bitBufferSize, int *headerSize);
+__declspec(dllexport) int faacEncodeInit(faacAACStream *as, int *samplesToRead, int *bitBufferSize, int *headerSize);
 __declspec(dllexport) int faacEncodeFrame(faacAACStream *as, short *Buffer, int Samples, unsigned char *bitBuffer, int *bitBufSize);
 __declspec(dllexport) int faacEncodeFree(faacAACStream *as, unsigned char *headerBuf);
 __declspec(dllexport) int faacEncodeFinish(faacAACStream *as, unsigned char *bitBuffer, int *bitBufSize);
