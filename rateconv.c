@@ -1,7 +1,7 @@
 /**********************************************************************
 audio sample rate converter
 
-$Id: rateconv.c,v 1.1 2000/01/17 21:53:04 menno Exp $
+$Id: rateconv.c,v 1.2 2000/01/31 08:00:38 lenox Exp $
 
 Source file: rateconv.c
 
@@ -98,7 +98,7 @@ struct RCBufStruct		/* buffer handle */
 
 /* ---------- variables ---------- */
 
-static int RCdebugLevel = 0;	/* debug level */
+int RCdebugLevel = 0;	/* debug level */
 
 
 #define deftaps1	485
@@ -119,7 +119,7 @@ static int RCdebugLevel = 0;	/* debug level */
 /* ---------- local functions ---------- */
 
 
-static void mkeiwutab(real *st,long fn)
+void mkeiwutab(real *st,long fn)
 {
 	register int	i,k;
 	register double	phi;
@@ -132,7 +132,7 @@ static void mkeiwutab(real *st,long fn)
 	}
 }
 
-static void r4fftstep(register real *x0,register long n,register real *t)
+void r4fftstep(register real *x0,register long n,register real *t)
 {
 	register long		n4 = n/4;
 	register real		*x1 = x0+2*n4;
@@ -201,7 +201,7 @@ static void r4fftstep(register real *x0,register long n,register real *t)
 }
 
 
-static void r4ifftstep(register real *x0,register long n,register real *t)
+void r4ifftstep(register real *x0,register long n,register real *t)
 {
 	register long		n4 = n/4;
 	register real		*x1 = x0+2*n4;
@@ -269,7 +269,7 @@ static void r4ifftstep(register real *x0,register long n,register real *t)
 }
 
 
-static void perm4(real *x,long p)
+void perm4(real *x,long p)
 {
 	register real	a,b,c,d;
 	register long	i,j,k,l;
@@ -286,7 +286,7 @@ static void perm4(real *x,long p)
 	}
 }
 
-static void perm42(real *x,long p)
+void perm42(real *x,long p)
 {
 	register real	*y,*z;
 	register long	i,n;
@@ -313,7 +313,7 @@ static void perm42(real *x,long p)
 	}
 }
 
-static void r4fft(real *t,real *x,long p)
+void r4fft(real *t,real *x,long p)
 {
 	register long	n  = 1<<p;
 
@@ -321,7 +321,7 @@ static void r4fft(real *t,real *x,long p)
 	r4fftstep(x,n,t);
 }
 
-static void r4ifft(real *t,real *x,long p)
+void r4ifft(real *t,real *x,long p)
 {
 	register long	n  = 1<<p;
 
@@ -330,7 +330,7 @@ static void r4ifft(real *t,real *x,long p)
 }
 
 
-static double bessel(double x)
+double bessel(double x)
 {
   register double	p,s,ds,k;
 
@@ -349,7 +349,7 @@ static double bessel(double x)
   return s;
 }
 
-static void mktp1(complex *y,double fg,double a,long fn,long htaps1)
+void mktp1(complex *y,double fg,double a,long fn,long htaps1)
 {
   register long	i;
   register double	f,g,x,px;
@@ -372,7 +372,7 @@ static void mktp1(complex *y,double fg,double a,long fn,long htaps1)
   for (; i<fn-htaps1; i++) y[i].re=y[i].im=0.0;
 }
 
-static void mktp2(real *y,double fg,double a)
+void mktp2(real *y,double fg,double a)
 {
   register long	i;
   register double	f,g,x,px;
@@ -392,7 +392,7 @@ static void mktp2(real *y,double fg,double a)
   for (; i<(htaps2+2)*ov2fac; i++) y[i]=0.0;
 }
 
-static void ctp2_m(real *x,double p,real *k,float **out)
+void ctp2_m(real *x,double p,real *k,float **out)
 {
   register long	n,i,j;
   register double	h,l,r;
@@ -426,7 +426,7 @@ static void ctp2_m(real *x,double p,real *k,float **out)
   *(*out)++ = (float) (l+h*(r-l));
 }
 
-static void ctp2_s(complex *x,double p,real *k,float **out)
+void ctp2_s(complex *x,double p,real *k,float **out)
 {
   register long	n,i,j;
   register double	h,l0,l1,r0,r1;
@@ -462,7 +462,7 @@ static void ctp2_s(complex *x,double p,real *k,float **out)
   *(*out)++ = (float) (l1+h*(r1-l1));
 }
 
-static void ctp1_1(complex *x,real *tp1,real *wtab,long fm)
+void ctp1_1(complex *x,real *tp1,real *wtab,long fm)
 {
   register long	i,fn2;
 
@@ -478,7 +478,7 @@ static void ctp1_1(complex *x,real *tp1,real *wtab,long fm)
   r4ifft(wtab,(real *) x,fm);
 }
 
-static void ctp1_2(complex *x,real *tp1,real *wtab,long fm)
+void ctp1_2(complex *x,real *tp1,real *wtab,long fm)
 {
   register long	i,fn2;
 
