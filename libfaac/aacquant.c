@@ -1,7 +1,7 @@
 /*
  * FAAC - Freeware Advanced Audio Coder
  * Copyright (C) 2001 Menno Bakker
- * Copyright (C) 2002 Krzysztof Nikiel
+ * Copyright (C) 2002, 2003 Krzysztof Nikiel
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -17,7 +17,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: aacquant.c,v 1.16 2003/03/27 17:06:50 knik Exp $
+ * $Id: aacquant.c,v 1.17 2003/04/13 08:37:47 knik Exp $
  */
 
 #include <math.h>
@@ -46,17 +46,8 @@ static int SortForGrouping(CoderInfo* coderInfo,
                            int *sfb_width_table,
                            double *xr);
 
-static int SearchStepSize(CoderInfo *coderInfo,
-                          const int desired_rate,
-                          const double *xr,
-                          int *xi);
-
 static void CalcAllowedDist(PsyInfo *psyInfo, int *cb_offset, int num_cb,
 			    double *xr, double *xmin, int quality);
-
-static int CountBits(CoderInfo *coderInfo, int *ix, const double *xr);
-
-static int CountBitsLong(CoderInfo *coderInfo, int *xi);
 
 
 double *pow43;
@@ -109,8 +100,6 @@ static void BalanceEnergy(CoderInfo *coderInfo,
 {
   const double ifqstep = pow(2.0, 0.25);
   const double logstep_1 = 1.0 / log(ifqstep);
-  const int sfcmax = 40;
-  const int sfcmin = -10;
   int sb;
   int nsfb = coderInfo->nr_of_sfb;
   int start, end;
@@ -120,16 +109,23 @@ static void BalanceEnergy(CoderInfo *coderInfo,
 
   for (sb = 0; sb < nsfb; sb++)
   {
-    double qfac_1 = pow(2.0, -0.25*(coderInfo->scale_factor[sb] - coderInfo->global_gain));
+    double qfac_1;
 
     start = coderInfo->sfb_offset[sb];
     end   = coderInfo->sfb_offset[sb+1];
+
+    qfac_1 = pow(2.0, -0.25*(coderInfo->scale_factor[sb] - coderInfo->global_gain));
 
     en0 = 0.0;
     enq = 0.0;
     for (l = start; l < end; l++)
     {
-      double xq = pow43[xi[l]];
+      double xq;
+
+      if (!sb && !xi[l])
+	continue;
+
+      xq = pow43[xi[l]];
 
       en0 += xr[l] * xr[l];
       enq += xq * xq;
@@ -144,11 +140,6 @@ static void BalanceEnergy(CoderInfo *coderInfo,
     shift -= 1000;
 
     shift += coderInfo->scale_factor[sb];
-
-    if (shift < sfcmin)
-      shift = sfcmin;
-    if (shift > sfcmax)
-      shift = sfcmax;
     coderInfo->scale_factor[sb] = shift;
   }
 }
@@ -215,16 +206,10 @@ int AACQuantize(CoderInfo *coderInfo,
     if (do_q) {
         CalcAllowedDist(psyInfo, coderInfo->sfb_offset,
 			coderInfo->nr_of_sfb, xr, xmin, quality);
-	bits = SearchStepSize(coderInfo, 9 * quality, xr_pow, xi);
+	coderInfo->global_gain = 0;
 	FixNoise(coderInfo, xr, xr_pow, xi, xmin);
 	BalanceEnergy(coderInfo, xr, xi);
 	UpdateRequant(coderInfo, xi);
-
-#if 0
-	printf("global gain: %d\n", coderInfo->global_gain);
-	for (i = 0; i < coderInfo->nr_of_sfb; i++)
-	  printf("sf %d: %d\n", i, coderInfo->scale_factor[i]);
-#endif
 
         for ( i = 0; i < FRAME_LEN; i++ )  {
             sign = (xr[i] < 0) ? -1 : 1;
@@ -236,7 +221,7 @@ int AACQuantize(CoderInfo *coderInfo,
         SetMemory(xi, 0, FRAME_LEN*sizeof(int));
     }
 
-    CountBitsLong(coderInfo, xi);
+    BitSearch(coderInfo, xi);
 
     /* offset the difference of common_scalefac and scalefactors by SF_OFFSET  */
     for (i = 0; i < coderInfo->nr_of_sfb; i++) {
@@ -245,6 +230,11 @@ int AACQuantize(CoderInfo *coderInfo,
         }
     }
     coderInfo->global_gain = scale_factor[0];
+#if 0
+	printf("global gain: %d\n", coderInfo->global_gain);
+	for (i = 0; i < coderInfo->nr_of_sfb; i++)
+	  printf("sf %d: %d\n", i, coderInfo->scale_factor[i]);
+#endif
 
     /* place the codewords and their respective lengths in arrays data[] and len[] respectively */
     /* there are 'counter' elements in each array, and these are variable length arrays depending on the input */
@@ -261,73 +251,6 @@ int AACQuantize(CoderInfo *coderInfo,
     return bits;
 }
 
-static int SearchStepSize(CoderInfo *coderInfo,
-                          const int desired_rate,
-                          const double *xr,
-                          int *xi)
-{
-    int flag_GoneOver = 0;
-    int CurrentStep = coderInfo->CurrentStep & 0xf;
-    int lastshort = coderInfo->CurrentStep & 0x10;
-    int thisshort = (coderInfo->block_type == ONLY_SHORT_WINDOW) ? 0x10 : 0;
-    int nBits;
-    int StepSize = coderInfo->old_value;
-    int Direction = 0;
-    int blockshift = 0;
-
-    if (thisshort > lastshort)
-      blockshift = -7;
-    if (thisshort < lastshort)
-      blockshift = +7;
-
-    if (blockshift && (StepSize + blockshift) >= 0)
-      StepSize += blockshift;
-
-    do
-    {
-        coderInfo->global_gain = StepSize;
-        nBits = CountBits(coderInfo, xi, xr);
-
-        if (CurrentStep == 1 ) {
-            break; /* nothing to adjust anymore */
-        }
-        if (flag_GoneOver) {
-            CurrentStep /= 2;
-        }
-        if (nBits > desired_rate) { /* increase Quantize_StepSize */
-            if (Direction == -1 && !flag_GoneOver) {
-                flag_GoneOver = 1;
-                CurrentStep /= 2; /* late adjust */
-            }
-            Direction = 1;
-            StepSize += CurrentStep;
-        } else if (nBits < desired_rate) {
-            if (Direction == 1 && !flag_GoneOver) {
-                flag_GoneOver = 1;
-                CurrentStep /= 2; /* late adjust */
-            }
-            Direction = -1;
-            StepSize -= CurrentStep;
-        } else break;
-    } while (1);
-
-    while (nBits > desired_rate)
-    {
-      StepSize++;
-      coderInfo->global_gain = StepSize;
-      nBits = CountBits(coderInfo, xi, xr);
-    }
-
-    CurrentStep = coderInfo->old_value - StepSize;
-    CurrentStep += blockshift;
-
-    coderInfo->CurrentStep = CurrentStep/4 != 0 ? 4 : 2;
-    coderInfo->old_value = coderInfo->global_gain;
-
-    coderInfo->CurrentStep |= thisshort;
-
-    return nBits;
-}
 
 #if 1 /* TAKEHIRO_IEEE754_HACK */
 
@@ -433,68 +356,39 @@ static void Quantize(const double *xr, int *ix, double istep)
 }
 #endif
 
-static int CountBitsLong(CoderInfo *coderInfo, int *xi)
-{
-    int i, bits = 0;
-
-    /* find a good method to section the scalefactor bands into huffman codebook sections */
-    BitSearch(coderInfo, xi);
-
-    /* calculate the amount of bits needed for encoding the huffman codebook numbers */
-    bits += SortBookNumbers(coderInfo, NULL, 0);
-
-    /* calculate the amount of bits needed for the spectral values */
-    coderInfo->spectral_count = 0;
-    for(i = 0; i < coderInfo->nr_of_sfb; i++) {
-        bits += CalcBits(coderInfo,
-            coderInfo->book_vector[i],
-            xi,
-            coderInfo->sfb_offset[i],
-            coderInfo->sfb_offset[i+1] - coderInfo->sfb_offset[i]);
-    }
-
-    /* the number of bits for the scalefactors */
-    bits += WriteScalefactors(coderInfo, NULL, 0);
-
-    /* the total amount of bits required */
-    return bits;
-}
-
-static int CountBits(CoderInfo *coderInfo, int *ix, const double *xr)
-{
-    int bits = 0, i;
-
-    /* since quantize uses table lookup, we need to check this first: */
-    double w = (IXMAX_VAL) / IPOW20(coderInfo->global_gain);
-    for ( i = 0; i < FRAME_LEN; i++ )  {
-        if (xr[i] > w)
-            return LARGE_BITS;
-    }
-
-    Quantize(xr, ix, IPOW20(coderInfo->global_gain));
-
-    bits = CountBitsLong(coderInfo, ix);
-
-    return bits;
-}
-
 static void CalcAllowedDist(PsyInfo *psyInfo, int *cb_offset, int num_cb,
                             double *xr, double *xmin, int quality)
 {
-    int sfb, start, end;
-    double xmin0;
-    const double globalthr = 12.0 / (double)quality;
+  int sfb, start, end, l;
+  const double globalthr = 38.0 / (double)quality;
+  int last = cb_offset[num_cb];
+  double mid = 0.5 * 5.0 / cb_offset[num_cb];
+  double totnrg = 0.0;
+  static const double minfix = 1.5;
+
+  for (l = 0; l < last; l++)
+    totnrg += xr[l] * xr[l];
+
+  totnrg /= last;
 
     for (sfb = 0; sfb < num_cb; sfb++)
     {
+    double thr, tmp;
+    double enrg = 0.0;
+
         start = cb_offset[sfb];
         end = cb_offset[sfb + 1];
 
-        xmin0 = psyInfo->maskEn[sfb];
-        if (xmin0 > 0.0)
-	  xmin0 = psyInfo->maskThr[sfb] * pow(end, 0.6) * globalthr / xmin0;
+    for (l = start; l < end; l++)
+      enrg += xr[l]*xr[l];
 
-	xmin[sfb] = xmin0;
+    thr = pow((double)(end-start)*totnrg/enrg, 0.5*(num_cb-sfb)/num_cb + 0.0);
+
+    tmp = minfix * pow((double)(start + 400) / (double)last, 0.6);
+    if (tmp < thr)
+      thr = tmp;
+
+    xmin[sfb] = psyInfo->maskThr[sfb] * globalthr * thr;
     }
 }
 
@@ -509,17 +403,47 @@ static int FixNoise(CoderInfo *coderInfo,
     double quantvol, diffvol;
     double quantfac;
     double tmp;
-    int done = 0;
     const double ifqstep = pow(2.0, 0.1875);
-    const int sfacmax = 30;
+    const double log_ifqstep = 1.0 / log(ifqstep);
+    const double maxstep = 0.05;
 
     for (sb = 0; sb < coderInfo->nr_of_sfb; sb++)
     {
+      double sfacfix;
+      double fixstep = 0.25;
+      int sfac;
+      double fac;
+      int dist;
+
       if (!xmin[sb])
         continue;
 
       start = coderInfo->sfb_offset[sb];
       end = coderInfo->sfb_offset[sb+1];
+
+      tmp = 0.0;
+      for (i = start; i < end; i++)
+      {
+	if (xr_pow[i] > tmp)
+	  tmp = xr_pow[i];
+      }
+
+      //printf("band %d: tmp: %f\n", sb, tmp);
+      if (tmp < 10.0)
+      {
+	for (i = start; i < end; i++)
+	  xi[i] = 0;
+	coderInfo->scale_factor[sb] = 10;
+	continue;
+      }
+
+      sfacfix = 1.0 / tmp;
+      sfac = log(sfacfix) * log_ifqstep - 0.5;
+      for (i = start; i < end; i++)
+	xr_pow[i] *= sfacfix;
+      coderInfo->scale_factor[sb] = sfac;
+      QuantizeBand(xr_pow, xi, IPOW20(coderInfo->global_gain), start, end);
+      //printf("\tsfac: %d\n", sfac);
 
     calcdist:
       quantfac = pow(2.0, 0.25*(coderInfo->scale_factor[sb] - coderInfo->global_gain));
@@ -529,28 +453,46 @@ static int FixNoise(CoderInfo *coderInfo,
       for (i = start; i < end; i++)
       {
 	tmp = pow43[xi[i]];
-	quantvol += tmp;
+	quantvol += tmp * tmp;
 
 	diffvol += fabs(fabs(xr[i]) * quantfac - tmp);
     }
 
-      if (diffvol / quantvol > xmin[sb]) // distorion to high
+      quantvol = sqrt(quantvol/(double)(end-start)) * (double)(end-start);
+      //printf("\tdiffvol: %f, qvol: %f\n", diffvol, quantvol);
+
+      dist = (diffvol / quantvol) > xmin[sb];
+      fac = 0.0;
+      if (fabs(fixstep) > maxstep)
       {
-	if (coderInfo->scale_factor[sb] < sfacmax)
+	if ((dist && (fixstep < 0))
+	    || (!dist && (fixstep > 0)))
+	{
+	  fixstep = -0.5 * fixstep;
+	}
+
+	fac = 1.0 + fixstep;
+      }
+      else if (dist)
+      {
+	fac = 1.0 + fabs(fixstep);
+      }
+
+      if (fac != 0.0)
+      {
+	if (coderInfo->scale_factor[sb] < -10)
 	{
 	  for (i = start; i < end; i++)
-	    xr_pow[i] *= ifqstep;
-	  coderInfo->scale_factor[sb]++;
+	    xr_pow[i] *= fac;
+          sfacfix *= fac;
+	  coderInfo->scale_factor[sb] = log(sfacfix) * log_ifqstep - 0.5;
 	  QuantizeBand(xr_pow, xi, IPOW20(coderInfo->global_gain), start, end);
 	  goto calcdist;
 	}
       }
-    else
-	done++;
       //printf("%d: %g\t%g - %g(%d)\n", sb, quantvol, diffvol/quantvol, xmin[sb], coderInfo->scale_factor[sb]);
             }
-
-    return done;
+    return 0;
 }
 
 static int SortForGrouping(CoderInfo* coderInfo,
