@@ -27,12 +27,14 @@ WriteRegStr HKEY_CLASSES_ROOT "FAAC.JoblistFile" "" "FAAC JoblistFile"
 WriteRegStr HKEY_CLASSES_ROOT "FAAC.JoblistFile\shell" "" "open"
 WriteRegStr HKEY_CLASSES_ROOT "FAAC.JoblistFile\DefaultIcon" "" $INSTDIR\faac_wingui.exe,0
 WriteRegStr HKEY_CLASSES_ROOT "FAAC.JoblistFile\shell\open\command" "" '$INSTDIR\faac_wingui.exe "%1"'
+SectionEnd
 
 Section -post
 WriteRegStr HKEY_LOCAL_MACHINE SOFTWARE\FAAC "" $INSTDIR
 WriteRegStr HKEY_LOCAL_MACHINE "Software\Microsoft\Windows\CurrentVersion\Uninstall\FAAC" "DisplayName" "FAAC Windows GUI"
 WriteRegStr HKEY_LOCAL_MACHINE "Software\Microsoft\Windows\CurrentVersion\Uninstall\FAAC" "UninstallString" '"$INSTDIR\uninst.exe"'
 CreateShortCut "$DESKTOP\faac_wingui.lnk" "$INSTDIR\faac_wingui.exe" "" "" 0
+SectionEnd
 
 Section Uninstall
 DeleteRegKey HKEY_LOCAL_MACHINE "Software\Microsoft\Windows\CurrentVersion\Uninstall\FAAC"
@@ -40,3 +42,4 @@ DeleteRegKey HKEY_LOCAL_MACHINE SOFTWARE\FAAC
 Delete $DESKTOP\faac_wingui.lnk
 Delete $INSTDIR\faac_wingui.exe
 RMDir $INSTDIR
+SectionEnd
