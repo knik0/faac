@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: frame.c,v 1.18 2001/04/19 13:20:34 menno Exp $
+ * $Id: frame.c,v 1.19 2001/05/02 05:39:14 menno Exp $
  */
 
 /*
@@ -24,6 +24,7 @@
  *  2001/01/17: menno: Added frequency cut off filter.
  *  2001/02/28: menno: Added Temporal Noise Shaping.
  *  2001/03/05: menno: Added Long Term Prediction.
+ *  2001/05/01: menno: Added backward prediction.
  *
  */
 
@@ -42,6 +43,7 @@
 #include "psych.h"
 #include "tns.h"
 #include "ltp.h"
+#include "backpred.h"
 
 
 faacEncConfigurationPtr FAACAPI faacEncGetCurrentConfiguration(faacEncHandle hEncoder)
@@ -60,8 +62,12 @@ int FAACAPI faacEncSetConfiguration(faacEncHandle hEncoder,
 	hEncoder->config.aacObjectType = config->aacObjectType;
 	hEncoder->config.mpegVersion = config->mpegVersion;
 
-	 /* No SSR / MAIN supported for now */
-	if ((hEncoder->config.aacObjectType != LTP)&&(hEncoder->config.aacObjectType != LOW))
+	/* No SSR supported for now */
+	if (hEncoder->config.aacObjectType == SSR)
+		return 0;
+
+	/* LTP only with MPEG4 */
+	if ((hEncoder->config.aacObjectType == LTP) && (hEncoder->config.mpegVersion != MPEG4))
 		return 0;
 
 	/* Re-init TNS for new profile */
@@ -121,6 +127,9 @@ faacEncHandle FAACAPI faacEncOpen(unsigned long sampleRate,
 		hEncoder->coderInfo[channel].num_window_groups = 1;
 		hEncoder->coderInfo[channel].window_group_length[0] = 1;
 
+		/* FIXME: Use sr_idx here */
+		hEncoder->coderInfo[channel].max_pred_sfb = GetMaxPredSfb(hEncoder->sampleRateIdx);
+
 		hEncoder->sampleBuff[channel] = NULL;
 		hEncoder->nextSampleBuff[channel] = NULL;
 		hEncoder->next2SampleBuff[channel] = NULL;
@@ -137,6 +146,8 @@ faacEncHandle FAACAPI faacEncOpen(unsigned long sampleRate,
     TnsInit(hEncoder);
 
 	LtpInit(hEncoder);
+
+	PredInit();
 
 	AACQuantizeInit(hEncoder->coderInfo, hEncoder->numChannels);
 
@@ -360,6 +371,24 @@ int FAACAPI faacEncEncode(faacEncHandle hEncoder,
 		}
 	}
 
+	for(channel = 0; channel < numChannels; channel++)
+	{
+		if ((aacObjectType == MAIN) && (!channelInfo[channel].lfe)) {
+			int numPredBands = min(coderInfo[channel].max_pred_sfb, coderInfo[channel].nr_of_sfb);
+			PredCalcPrediction(hEncoder->freqBuff[channel], 
+				coderInfo[channel].requantFreq,
+				coderInfo[channel].block_type,
+				numPredBands,
+				(coderInfo[channel].block_type==ONLY_SHORT_WINDOW)?
+				hEncoder->srInfo->cb_width_short:hEncoder->srInfo->cb_width_long,
+				coderInfo,
+				channelInfo,
+				channel); 
+		} else {
+			coderInfo[channel].pred_global_flag = 0;
+		}
+	}
+
 	MSEncode(coderInfo, channelInfo, hEncoder->freqBuff, numChannels, allowMidside);
 
 	/* Quantize and code the signal */
@@ -393,7 +422,7 @@ int FAACAPI faacEncEncode(faacEncHandle hEncoder,
 			else
 				tnsDecInfo = NULL;
 			
-			if ((!channelInfo[channel].lfe) && (mpegVersion == MPEG4) && (aacObjectType == LTP)) {  /* no reconstruction needed for LFE channel*/
+			if ((!channelInfo[channel].lfe) && (aacObjectType == LTP)) {  /* no reconstruction needed for LFE channel*/
 
 				LtpReconstruct(&coderInfo[channel], &(coderInfo[channel].ltpInfo),
 					coderInfo[channel].requantFreq);

@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: bitstream.h,v 1.5 2001/04/19 13:20:34 menno Exp $
+ * $Id: bitstream.h,v 1.6 2001/05/02 05:39:14 menno Exp $
  */
 
 #ifndef BITSTREAM_H
@@ -144,30 +144,39 @@ static int WriteCPE(CoderInfo *coderInfoL,
 					CoderInfo *coderInfoR,
 					ChannelInfo *channelInfo,
 					BitStream* bitStream,
+					int objectType,
 					int writeFlag);
 
 static int WriteSCE(CoderInfo *coderInfo,
 					ChannelInfo *channelInfo,
 					BitStream *bitStream,
+					int objectType,
 					int writeFlag);
 
 static int WriteLFE(CoderInfo *coderInfo,
 					ChannelInfo *channelInfo,
 					BitStream *bitStream,
+					int objectType,
 					int writeFlag);
 
 static int WriteICSInfo(CoderInfo *coderInfo,
 						BitStream *bitStream,
+						int objectType,
 						int writeFlag);
 
 static int WriteICS(CoderInfo *coderInfo,
 					BitStream *bitStream,
 					int commonWindow,
+					int objectType,
 					int writeFlag);
 
 static int WriteLTPPredictorData(CoderInfo *coderInfo,
 								 BitStream *bitStream,
 								 int writeFlag);
+
+static int WritePredictorData(CoderInfo *coderInfo,
+							  BitStream *bitStream,
+							  int writeFlag);
 
 static int WritePulseData(CoderInfo *coderInfo,
 						  BitStream *bitStream,

@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: bitstream.c,v 1.13 2001/04/19 13:20:34 menno Exp $
+ * $Id: bitstream.c,v 1.14 2001/05/02 05:39:14 menno Exp $
  */
 
 #include <stdlib.h>
@@ -54,12 +54,14 @@ int WriteBitstream(faacEncHandle hEncoder,
 					bits += WriteLFE(&coderInfo[channel],
 						&channelInfo[channel],
 						bitStream,
+						hEncoder->config.aacObjectType,
 						1);
 				} else {
 					/* Write out sce */
 					bits += WriteSCE(&coderInfo[channel],
 						&channelInfo[channel],
 						bitStream,
+						hEncoder->config.aacObjectType,
 						1);
 				}
 
@@ -71,6 +73,7 @@ int WriteBitstream(faacEncHandle hEncoder,
 						&coderInfo[channelInfo[channel].paired_ch],
 						&channelInfo[channel],
 						bitStream,
+						hEncoder->config.aacObjectType,
 						1);
 				}
 			}
@@ -130,12 +133,14 @@ static int CountBitstream(faacEncHandle hEncoder,
 					bits += WriteLFE(&coderInfo[channel],
 						&channelInfo[channel],
 						bitStream,
+						hEncoder->config.aacObjectType,
 						0);
 				} else {
 					/* Write out sce */
 					bits += WriteSCE(&coderInfo[channel],
 						&channelInfo[channel],
 						bitStream,
+						hEncoder->config.aacObjectType,
 						0);
 				}
 
@@ -147,6 +152,7 @@ static int CountBitstream(faacEncHandle hEncoder,
 						&coderInfo[channelInfo[channel].paired_ch],
 						&channelInfo[channel],
 						bitStream,
+						hEncoder->config.aacObjectType,
 						0);
 				}
 			}
@@ -230,6 +236,7 @@ static int WriteCPE(CoderInfo *coderInfoL,
 					CoderInfo *coderInfoR,
 					ChannelInfo *channelInfo,
 					BitStream* bitStream,
+					int objectType,
 					int writeFlag)
 {
 	int bits = 0;
@@ -253,7 +260,7 @@ static int WriteCPE(CoderInfo *coderInfoL,
 	if (channelInfo->common_window) {
 		int numWindows, maxSfb;
 
-		bits += WriteICSInfo(coderInfoL, bitStream, writeFlag);
+		bits += WriteICSInfo(coderInfoL, bitStream, objectType, writeFlag);
 		numWindows = coderInfoL->num_window_groups;
 		maxSfb = coderInfoL->max_sfb;
 
@@ -275,8 +282,8 @@ static int WriteCPE(CoderInfo *coderInfoL,
 	}
 
 	/* Write individual_channel_stream elements */
-	bits += WriteICS(coderInfoL, bitStream, channelInfo->common_window, writeFlag);
-	bits += WriteICS(coderInfoR, bitStream, channelInfo->common_window, writeFlag);
+	bits += WriteICS(coderInfoL, bitStream, channelInfo->common_window, objectType, writeFlag);
+	bits += WriteICS(coderInfoR, bitStream, channelInfo->common_window, objectType, writeFlag);
 
 	return bits;
 }
@@ -284,6 +291,7 @@ static int WriteCPE(CoderInfo *coderInfoL,
 static int WriteSCE(CoderInfo *coderInfo,
 					ChannelInfo *channelInfo,
 					BitStream *bitStream,
+					int objectType,
 					int writeFlag)
 {
 	int bits = 0;
@@ -300,7 +308,7 @@ static int WriteSCE(CoderInfo *coderInfo,
 	bits += LEN_TAG;
 
 	/* Write an Individual Channel Stream element */
-	bits += WriteICS(coderInfo, bitStream, 0, writeFlag);
+	bits += WriteICS(coderInfo, bitStream, 0, objectType, writeFlag);
 
 	return bits;
 }
@@ -308,6 +316,7 @@ static int WriteSCE(CoderInfo *coderInfo,
 static int WriteLFE(CoderInfo *coderInfo,
 					ChannelInfo *channelInfo,
 					BitStream *bitStream,
+					int objectType,
 					int writeFlag)
 {
 	int bits = 0;
@@ -324,13 +333,14 @@ static int WriteLFE(CoderInfo *coderInfo,
 	bits += LEN_TAG;
 
 	/* Write an individual_channel_stream element */
-	bits += WriteICS(coderInfo, bitStream, 0, writeFlag);
+	bits += WriteICS(coderInfo, bitStream, 0, objectType, writeFlag);
 
 	return bits;
 }
 
 static int WriteICSInfo(CoderInfo *coderInfo,
 						BitStream *bitStream,
+						int objectType,
 						int writeFlag)
 {
 	int grouping_bits;
@@ -365,8 +375,10 @@ static int WriteICSInfo(CoderInfo *coderInfo,
 			PutBit(bitStream, coderInfo->max_sfb, LEN_MAX_SFBL);
 		}
 		bits += LEN_MAX_SFBL;
-		bits += WriteLTPPredictorData(coderInfo, bitStream, writeFlag);
-		/* bits += WritePredictorData(coderInfo, bitStream, writeFlag); */
+		if (objectType == LTP)
+			bits += WriteLTPPredictorData(coderInfo, bitStream, writeFlag);
+		else
+			bits += WritePredictorData(coderInfo, bitStream, writeFlag);
 	}
 
 	return bits;
@@ -375,6 +387,7 @@ static int WriteICSInfo(CoderInfo *coderInfo,
 static int WriteICS(CoderInfo *coderInfo,
 					BitStream *bitStream,
 					int commonWindow,
+					int objectType,
 					int writeFlag)
 {
 	/* this function writes out an individual_channel_stream to the bitstream and */
@@ -388,7 +401,7 @@ static int WriteICS(CoderInfo *coderInfo,
 
 	/* Write ics information */
 	if (!commonWindow) {
-		bits += WriteICSInfo(coderInfo, bitStream, writeFlag);
+		bits += WriteICSInfo(coderInfo, bitStream, objectType, writeFlag);
 	}
 
 	bits += SortBookNumbers(coderInfo, bitStream, writeFlag);
@@ -446,6 +459,42 @@ static int WriteLTPPredictorData(CoderInfo *coderInfo, BitStream *bitStream, int
 	}
 
 	return (bits);
+}
+
+static int WritePredictorData(CoderInfo *coderInfo,
+							  BitStream *bitStream,
+							  int writeFlag)
+{
+	int bits = 0;
+
+	/* Write global predictor data present */
+	short predictorDataPresent = coderInfo->pred_global_flag;
+	int numBands = min(coderInfo->max_pred_sfb, coderInfo->nr_of_sfb);
+
+	if (writeFlag) {
+		PutBit(bitStream, predictorDataPresent, LEN_PRED_PRES);  /* predictor_data_present */
+		if (predictorDataPresent) {
+			int b;
+			if (coderInfo->reset_group_number == -1) {
+				PutBit(bitStream, 0, LEN_PRED_RST); /* No prediction reset */
+			} else {
+				PutBit(bitStream, 1, LEN_PRED_RST);
+				PutBit(bitStream, (unsigned long)coderInfo->reset_group_number,
+					LEN_PRED_RSTGRP);
+			}
+
+			for (b=0;b<numBands;b++) {
+				PutBit(bitStream, coderInfo->pred_sfb_flag[b], LEN_PRED_ENAB);
+			}
+		}
+	}
+	bits = LEN_PRED_PRES;
+	bits += (predictorDataPresent) ?
+		(LEN_PRED_RST + 
+		((coderInfo->reset_group_number)!=-1)*LEN_PRED_RSTGRP + 
+		numBands*LEN_PRED_ENAB) : 0;
+
+	return bits;
 }
 
 static int WritePulseData(CoderInfo *coderInfo,

@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: main.c,v 1.14 2001/04/19 13:20:33 menno Exp $
+ * $Id: main.c,v 1.15 2001/05/02 05:39:14 menno Exp $
  */
 
 #ifdef _WIN32
@@ -74,7 +74,7 @@ int main(int argc, char *argv[])
 	{
 		printf("USAGE: %s -options infile outfile\n", argv[0]);
 		printf("Options:\n");
-		printf("  -pX   AAC object type, X=LC2 gives MPEG2 LC,");
+		printf("  -pX   AAC object type, X=LC2 gives MPEG2 LC,\n");
 		printf("        X=LC4 gives MPEG4 LC and X=LTP gives LTP\n");
 		printf("  -nm   Don\'t use mid/side coding\n");
 		printf("  -tns  Use TNS coding\n");

@@ -89,6 +89,10 @@ SOURCE=.\aacquant.c
 # End Source File
 # Begin Source File
 
+SOURCE=.\backpred.c
+# End Source File
+# Begin Source File
+
 SOURCE=.\bitstream.c
 # End Source File
 # Begin Source File
@@ -138,6 +142,10 @@ SOURCE=.\util.c
 # Begin Source File
 
 SOURCE=.\aacquant.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\backpred.h
 # End Source File
 # Begin Source File
 

@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: coder.h,v 1.5 2001/04/11 13:50:31 menno Exp $
+ * $Id: coder.h,v 1.6 2001/05/02 05:39:14 menno Exp $
  */
 
 #ifndef CODER_H
@@ -52,7 +52,6 @@ enum WINDOW_TYPE {
 #define LEN_TNS_NFILTL 2
 #define LEN_TNS_NFILTS 1
 
-#define LPC 1
 #define DELAY 2048
 #define	LEN_LTP_DATA_PRESENT 1
 #define	LEN_LTP_LAG 11
@@ -146,6 +145,11 @@ typedef struct {
 
 	TnsInfo tnsInfo;
 	LtpInfo ltpInfo;
+
+	int max_pred_sfb;
+	int pred_global_flag;
+	int pred_sfb_flag[MAX_SCFAC_BANDS];
+	int reset_group_number;
 
 } CoderInfo;
 
