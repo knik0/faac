@@ -637,7 +637,7 @@ void EncTf_psycho_acoustic(
 					psy_stvar_long[chanNum].ismr[i] = 0.004; /* -24 dB */
 				}
 				for (i = 4; i < NSFB_LONG; i++) {
-					psy_stvar_long[chanNum].ismr[i] = 1.0; /* -24 dB */
+					psy_stvar_long[chanNum].ismr[i] = 1.0;
 				}
 				p_chpo_long[chanNum].p_ratio   = psy_stvar_long[chanNum].ismr;
 

@@ -493,10 +493,11 @@ int EncTfFrame (faacAACStream *as, BsBitStream  *fixed_stream)
    ************************************************************************/
   {
     int chanNum;
-    for (chanNum=0;chanNum<max_ch;chanNum++) { 
-      if (channelInfo[chanNum].lfe) {           
-        int i;    
-        for (i=13;i<sfb_offset_table[chanNum][nr_of_sfb[chanNum]];i++)      
+    for (chanNum=0;chanNum<max_ch;chanNum++) {
+      if (channelInfo[chanNum].lfe) {
+        int i;
+        for (i = sfb_offset_table[chanNum][4];
+			i < sfb_offset_table[chanNum][nr_of_sfb[chanNum]]; i++)
           spectral_line_vector[chanNum][i] = 0;
       }
     }
