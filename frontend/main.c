@@ -18,7 +18,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: main.c,v 1.61 2004/03/27 13:44:24 danchr Exp $
+ * $Id: main.c,v 1.62 2004/03/29 14:02:04 danchr Exp $
  */
 
 #ifdef _MSC_VER
@@ -188,7 +188,8 @@ int main(int argc, char *argv[])
     MP4FileHandle MP4hFile = MP4_INVALID_FILE_HANDLE;
     MP4TrackId MP4track = 0;
     int ntracks = 0, trackno = 0;
-    const char *artist = NULL, *title = NULL, *album = NULL, *date = NULL,
+    int ndiscs = 0, discno = 0;
+    const char *artist = NULL, *title = NULL, *album = NULL, *year = NULL,
       *genre = NULL, *comment = NULL;
     u_int64_t total_samples = 0;
     u_int64_t encoded_samples = 0;
@@ -240,8 +241,9 @@ int main(int argc, char *argv[])
             { "title", 1, 0, 'T'},
             { "album", 1, 0, 'L'},
             { "track", 1, 0, 'N'},
+            { "disc", 1, 0, 'D'},
             { "genre", 1, 0, 'G'},
-            { "date", 1, 0, 'D'},
+            { "year", 1, 0, 'Y'},
             { "comment", 1, 0, 'M'},
 #endif
 	    { "pcmswapbytes", 0, 0, 'X'},
@@ -252,7 +254,7 @@ int main(int argc, char *argv[])
 
         c = getopt_long(argc, argv, "a:m:o:rnc:q:PR:B:C:I:X"
 #ifdef HAVE_LIBMP4V2
-                        "wA:T:L:N:G:D:C:"
+                        "wA:T:L:N:G:D:Y:C:"
 #endif
             ,long_options, &option_index);
 
@@ -381,11 +383,14 @@ int main(int argc, char *argv[])
 	case 'N':
 	    sscanf(optarg, "%i/%i", &trackno, &ntracks);
 	    break;
+	case 'D':
+	    sscanf(optarg, "%i/%i", &discno, &ndiscs);
+	    break;
 	case 'G':
 	    genre = optarg;
 	    break;
-	case 'D':
-	    date = optarg;
+	case 'Y':
+	    year = optarg;
 	    break;
 	case 'M':
 	    comment = optarg;
@@ -410,16 +415,6 @@ int main(int argc, char *argv[])
           break;
         }
     }
-
-#ifdef HAVE_LIBMP4V2
-    if (container != MP4_CONTAINER && (ntracks || trackno || artist ||
-				       title ||  album || date ||
-				       genre || comment))
-    {
-      printf("\nERROR: Metadata requires MP4 output!");
-	dieUsage = 1;
-    }
-#endif
 
     /* check that we have at least two non-option arguments */
     if ((argc - optind) < 2 || dieUsage == 1)
@@ -448,14 +443,15 @@ int main(int argc, char *argv[])
 #ifdef HAVE_LIBMP4V2
         printf("\n");
         printf("MP4 specific options:\n");
-	printf("  -w     Wrap AAC data in MP4 container. (default for *.mp4 and *.m4a)\n");
-        printf("  -A X   Set artist to X\n");
-        printf("  -T X   Set title to X\n");
-        printf("  -G X   Set genre to X\n");
-        printf("  -L X   Set album to X\n");
-        printf("  -N X   Set track to X (number/total)\n");
-        printf("  -D X   Set date to X\n");
-        printf("  -M X   Set comment to X\n");
+	printf("  -w\t\tWrap AAC data in MP4 container. (default for *.mp4 and *.m4a)\n");
+        printf("  --artist X\tSet artist to X\n");
+        printf("  --title X\tSet title to X\n");
+        printf("  --genre X\tSet genre to X\n");
+        printf("  --album X\tSet album to X\n");
+        printf("  --number X\tSet track to X (number/total)\n");
+        printf("  --disc X\tSet disc to X (number/total)\n");
+        printf("  --year X\tSet year to X\n");
+        printf("  --comment X\tSet comment to X\n");
         printf("\n");
 #else
         printf("\n");
@@ -509,6 +505,16 @@ int main(int argc, char *argv[])
     {
         container = MP4_CONTAINER;
     }
+
+#ifdef HAVE_LIBMP4V2
+    if (container != MP4_CONTAINER && (ntracks || trackno || artist ||
+				       title ||  album || year ||
+				       genre || comment || discno || ndiscs))
+    {
+      printf("\nERROR: Metadata requires MP4 output!");
+	dieUsage = 1;
+    }
+#endif
 
     if (container == MP4_CONTAINER)
     {
@@ -579,7 +585,13 @@ int main(int argc, char *argv[])
         unsigned long ASCLength = 0;
 	char *version_string;
 
-        MP4hFile = MP4Create(aacFileName, 0, 0, 0);
+#ifdef MP4_CREATE_EXTENSIBLE_FORMAT
+	/* hack to compile against libmp4v2 >= 1.0RC3
+	 * why is there no version identifier in mp4.h? */
+        MP4hFile = MP4Create(aacFileName, 0, 0);
+#else
+	MP4hFile = MP4Create(aacFileName, 0, 0, 0);
+#endif
         if (MP4hFile == MP4_INVALID_FILE_HANDLE) {
             fprintf(stderr, "Couldn't create output file %s\n", aacFileName);
             return 1;
@@ -603,7 +615,8 @@ int main(int argc, char *argv[])
 	if (title) MP4SetMetadataName(MP4hFile, title);
 	if (album) MP4SetMetadataAlbum(MP4hFile, album);
 	if (trackno > 0) MP4SetMetadataTrack(MP4hFile, trackno, ntracks);
-	if (date) MP4SetMetadataYear(MP4hFile, date);
+	if (discno > 0) MP4SetMetadataDisk(MP4hFile, discno, ndiscs);
+	if (year) MP4SetMetadataYear(MP4hFile, year);
 	if (genre) MP4SetMetadataGenre(MP4hFile, genre);
 	if (comment) MP4SetMetadataComment(MP4hFile, genre);
     }
@@ -833,6 +846,10 @@ int main(int argc, char *argv[])
 
 /*
 $Log: main.c,v $
+Revision 1.62  2004/03/29 14:02:04  danchr
+MP4 bug fixes by Jordan Breeding (jordan breeding (a) mac com)
+Document long options for metadata - they are much more intuitive.
+
 Revision 1.61  2004/03/27 13:44:24  danchr
 minor compile-time bugfix for Win32
 
