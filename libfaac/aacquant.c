@@ -17,7 +17,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: aacquant.c,v 1.22 2003/08/11 09:52:20 menno Exp $
+ * $Id: aacquant.c,v 1.23 2003/08/17 14:44:40 knik Exp $
  */
 
 #include <math.h>
@@ -353,10 +353,10 @@ static void CalcAllowedDist(CoderInfo *coderInfo, PsyInfo *psyInfo,
                             double *xr, double *xmin, int quality)
 {
   int sfb, start, end, l;
-  const double globalthr = 29.7 / (double)quality;
+  const double globalthr = 39.0 / (double)quality;
   int last = coderInfo->lastx;
   int lastsb = 0;
-  static const double minfix = 1.5;
+  static const double minfix = 1.7;
   int *cb_offset = coderInfo->sfb_offset;
   int num_cb = coderInfo->nr_of_sfb;
   double avgenrg = coderInfo->avgenrg;
@@ -384,11 +384,19 @@ static void CalcAllowedDist(CoderInfo *coderInfo, PsyInfo *psyInfo,
     for (l = start; l < end; l++)
       enrg += xr[l]*xr[l];
 
-    thr = pow((double)(end-start)*avgenrg/enrg, 0.425*(lastsb-sfb)/lastsb + 0.075);
+    thr = (double)(end-start)*avgenrg/enrg;
+    if (sfb == 0)
+      thr = pow(thr, 0.4);
+    else if ((sfb == 1) && (coderInfo->block_type != ONLY_SHORT_WINDOW))
+      thr = pow(thr, 0.3);
+    else
+      thr = pow(thr, 0.2);
 
-    tmp = minfix * (double)(start + 400) / (double)last;
-    if (tmp < thr)
-      thr = tmp;
+    tmp = (double)start / (double)last - 0.1;
+    if (tmp < 0.0)
+      tmp = 0.0;
+    tmp = minfix * (tmp + 0.77);
+    thr = 1.0 / ((1.0 / thr) + (1.0 / tmp));
 
     xmin[sfb] = ((coderInfo->block_type == ONLY_SHORT_WINDOW) ? 0.7 : 1.0)
       * globalthr * thr;
