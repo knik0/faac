@@ -1,5 +1,11 @@
 #define OUT_VER 0x10
-
+/*
+#ifdef __cplusplus
+extern "C" {
+#endif
+*/
+	
+	
 typedef struct 
 {
 	int version;				// module version (OUT_VER)
@@ -50,3 +56,8 @@ typedef struct
 } Out_Module;
 
 
+/*
+#ifdef __cplusplus
+}
+#endif
+*/

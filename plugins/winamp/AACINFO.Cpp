@@ -16,7 +16,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: AACINFO.C,v 1.2 2001/10/16 13:24:23 menno Exp $
+ * $Id: AACINFO.Cpp,v 1.1 2002/05/26 18:31:22 menno Exp $
  */
 
 #include <windows.h>
@@ -144,7 +144,7 @@ static int f_id3v2_tag(HANDLE file)
 
 	ReadFile(file, buffer, 10, &tmp, 0);
 
-	if (StringComp(buffer, "ID3", 3) == 0) {
+	if (StringComp((const char *)buffer, "ID3", 3) == 0) {
 		unsigned long tagsize;
 
 		/* high bit is not used */
@@ -202,7 +202,7 @@ int get_AAC_format(char *filename, FAACAACInfo *info, int *seek_table)
 
 	info->length = 0;
 
-	if(StringComp(adxx_id, "ADIF", 4) == 0)
+	if(StringComp((const char *)adxx_id, "ADIF", 4) == 0)
 	{
 		read_ADIF_header(file, info);
 	}
