@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: frame.c,v 1.14 2001/03/12 16:58:37 menno Exp $
+ * $Id: frame.c,v 1.15 2001/03/12 20:12:37 menno Exp $
  */
 
 /*
@@ -81,10 +81,15 @@ int FAACAPI faacEncSetConfiguration(faacEncHandle hEncoder,
 }
 
 faacEncHandle FAACAPI faacEncOpen(unsigned long sampleRate,
-								  unsigned int numChannels)
+								  unsigned int numChannels,
+								  unsigned long *inputSamples,
+								  unsigned long *maxOutputBytes)
 {
 	unsigned int channel;
 	faacEncHandle hEncoder;
+
+	*inputSamples = 1024*numChannels;
+	*maxOutputBytes = (6144/8)*numChannels;
 
 	hEncoder = (faacEncStruct*)AllocMemory(sizeof(faacEncStruct));
 	SetMemory(hEncoder, 0, sizeof(faacEncStruct));

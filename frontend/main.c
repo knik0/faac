@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: main.c,v 1.10 2001/03/06 21:02:33 menno Exp $
+ * $Id: main.c,v 1.11 2001/03/12 20:12:37 menno Exp $
  */
 
 #ifdef _WIN32
@@ -38,9 +38,6 @@
 #include "faac.h"
 
 
-#define PCMBUFSIZE 1024
-#define BITBUFSIZE 8192
-
 int main(int argc, char *argv[])
 {
 	int i, frames, currentFrame;
@@ -49,6 +46,7 @@ int main(int argc, char *argv[])
 	SF_INFO sfinfo;
 
 	unsigned int sr, chan;
+	unsigned long samplesInput, maxBytesOutput;
 
 	short *pcmbuf;
 
@@ -105,11 +103,11 @@ int main(int argc, char *argv[])
 	sr = sfinfo.samplerate;
 	chan = sfinfo.channels;
 
-	pcmbuf = (short*)malloc(PCMBUFSIZE*chan*sizeof(short));
-	bitbuf = (unsigned char*)malloc(BITBUFSIZE*sizeof(unsigned char));
-
 	/* open the encoder library */
-	hEncoder = faacEncOpen(sr, chan);
+	hEncoder = faacEncOpen(sr, chan, &samplesInput, &maxBytesOutput);
+
+	pcmbuf = (short*)malloc(samplesInput*sizeof(short));
+	bitbuf = (unsigned char*)malloc(maxBytesOutput*sizeof(unsigned char));
 
 	/* set other options */
 	if (argc > 3)
@@ -177,14 +175,14 @@ int main(int argc, char *argv[])
 
 			currentFrame++;
 
-			bytesInput = sf_read_short(infile, pcmbuf, chan*PCMBUFSIZE) * sizeof(short);
+			bytesInput = sf_read_short(infile, pcmbuf, samplesInput) * sizeof(short);
 
 			/* call the actual encoding routine */
 			bytesWritten = faacEncEncode(hEncoder,
 				pcmbuf,
 				bytesInput/2,
 				bitbuf,
-				BITBUFSIZE);
+				maxBytesOutput);
 
 #ifndef _DEBUG
 			printf("%.2f%%\tBusy encoding %s.\r",

@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: frame.h,v 1.7 2001/03/06 14:01:36 menno Exp $
+ * $Id: frame.h,v 1.8 2001/03/12 20:12:37 menno Exp $
  */
 
 #ifndef FRAME_H
@@ -119,7 +119,9 @@ faacEncConfigurationPtr FAACAPI faacEncGetCurrentConfiguration(faacEncHandle hEn
 int FAACAPI faacEncSetConfiguration (faacEncHandle hEncoder, faacEncConfigurationPtr config);
 
 faacEncHandle FAACAPI faacEncOpen(unsigned long sampleRate,
-								  unsigned int numChannels);
+								  unsigned int numChannels,
+								  unsigned long *inputSamples,
+								  unsigned long *maxOutputBytes);
 
 int FAACAPI faacEncEncode(faacEncHandle hEncoder,
 						  short *inputBuffer,

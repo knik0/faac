@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: maingui.c,v 1.11 2001/03/12 16:58:36 menno Exp $
+ * $Id: maingui.c,v 1.12 2001/03/12 20:12:37 menno Exp $
  */
 
 #include <windows.h>
@@ -29,8 +29,6 @@
 #include "faac.h"
 #include "resource.h"
 
-#define PCMBUFSIZE 1024
-#define BITBUFSIZE 8192
 
 static HINSTANCE hInstance;
 
@@ -141,8 +139,13 @@ static DWORD WINAPI EncodeFile(LPVOID pParam)
 		unsigned int sampleRate = sfinfo.samplerate;
 		unsigned int numChannels = sfinfo.channels;
 
+		unsigned long inputSamples;
+		unsigned long maxOutputBytes;
+
 		/* open and setup the encoder */
-		faacEncHandle hEncoder = faacEncOpen(sampleRate, numChannels);
+		faacEncHandle hEncoder = faacEncOpen(sampleRate, numChannels,
+			&inputSamples, &maxOutputBytes);
+
 		if (hEncoder)
 		{
 			HANDLE hOutfile;
@@ -193,8 +196,8 @@ static DWORD WINAPI EncodeFile(LPVOID pParam)
 				char HeaderText[50];
 				char Percentage[5];
 
-				pcmbuf = (short*)LocalAlloc(0, PCMBUFSIZE*numChannels*sizeof(short));
-				bitbuf = (unsigned char*)LocalAlloc(0, BITBUFSIZE*sizeof(unsigned char));
+				pcmbuf = (short*)LocalAlloc(0, inputSamples*sizeof(short));
+				bitbuf = (unsigned char*)LocalAlloc(0, maxOutputBytes*sizeof(unsigned char));
 
 				SendDlgItemMessage(hWnd, IDC_PROGRESS, PBM_SETRANGE, 0, MAKELPARAM(0, 1024));
 				SendDlgItemMessage(hWnd, IDC_PROGRESS, PBM_SETPOS, 0, 0);
@@ -202,10 +205,9 @@ static DWORD WINAPI EncodeFile(LPVOID pParam)
 				for ( ;; )
 				{
 					int bytesWritten;
-					int samplesToRead = PCMBUFSIZE;
 					UINT timeElapsed, timeEncoded;
 
-					bytesInput = sf_read_short(infile, pcmbuf, numChannels*PCMBUFSIZE) * sizeof(short);
+					bytesInput = sf_read_short(infile, pcmbuf, inputSamples) * sizeof(short);
 					
 					SendDlgItemMessage (hWnd, IDC_PROGRESS, PBM_SETPOS, (unsigned long)((float)totalBytesRead * 1024.0f / (sfinfo.samples*2*numChannels)), 0);
 					
@@ -242,7 +244,7 @@ static DWORD WINAPI EncodeFile(LPVOID pParam)
 						pcmbuf,
 						bytesInput/2,
 						bitbuf,
-						BITBUFSIZE);
+						maxOutputBytes);
 
 					/* Stop Pressed */
 					if ( !Encoding ) 
