@@ -1,0 +1,759 @@
+2001-05-30  menno
+		Higher release version
+
+		Fixed linux compilation
+
+2001-05-29  menno
+		Fixed bit counting, file length calculation works again
+
+2001-05-28  menno
+		Small bugfix in backward predictor
+
+		Changes for ISO MPEG4 compatibility (sorry :(( )
+		Old MPEG4 files with ADTS header will not be playable anymore
+
+2001-05-18  menno
+		Cleaned up backward prediction code
+
+		Added encoder library interface documentation
+
+2001-05-11  oxygene2000
+		- new makefile for unix-like systems (should also work with cygwin)
+		  based on autoconf/-make and libtool
+
+2001-05-09  menno
+		Fixed NSIS install script to avoid warnings
+
+		Added libsndfile to the CVS tree, making compilation a lot easier
+
+2001-05-08  menno
+		Better support for main profile in frontends
+
+2001-05-02  menno
+		Added support for MAIN AAC object type
+
+2001-04-29  flyingfox
+		- disabled job list persistence (file format incompatibility)
+		- disabled job list multiple selection (property merging is not working properly anyway)
+		- added MPEG version support
+		- changed AAC profile to AAC object type
+		- disabled LTP under MPEG version 2 (if LTP selected it will go back to LC)
+
+2001-04-27  flyingfox
+		fixed debug build
+
+		fixed compile error
+
+2001-04-19  menno
+		Changes in MPEG4 file format, mainly comments for clarification
+
+2001-04-11  menno
+		Fixed MPEG4 object type problem
+
+2001-04-10  menno
+		Fixed another MPEG4/2 issue TNS order
+
+		Big update of GUI
+
+2001-04-03  menno
+		ADTS layer fixed for MPEG-4
+
+		Finally correct MPEG4 ADTS headers
+
+		Re: ADTS layer fixed for MPEG-4
+
+2001-04-01  xfhobbes
+		added general user input tracking during job list processing and
+		question for target directory creation where appropriate
+
+		improved progress counter; added general user input tracking
+		during job list processing; added column in the job list ctrl
+		to display the outcome of job processing
+
+2001-03-19  menno
+		Table data fix for 8kHz
+
+		Correct encoding of files other than 2 channel now
+
+2001-03-18  xfhobbes
+		Major update: roughly consolidated filter job functionality, 
+		added shell open support and several other things, cleaned up
+		scc files and ignore list
+
+		Moved beep after completed processing from individual beep for
+		every job to a global one per processing command.
+
+		Rewrote DoProcessing() method to comply to rules of Hungarian
+		Notation and to common C++ code styles.
+
+2001-03-18  menno
+		Changed NSIS installation script
+		now it supports opening of .jbl (joblist) files automatically
+
+		Added NSIS (www.nullsoft.com) installation script
+
+2001-03-17  menno
+		Added MPEG2 AAC support (compile with MPEG2AAC defined)
+		make sure you don't use LTP when using MPEG2 AAC, because it is not supported in MPEG2 AAC
+
+2001-03-15  menno
+		Small bugfix
+
+2001-03-14  menno
+		New GUI application
+
+2001-03-13  menno
+		Updated .cvsignore
+
+2001-03-12  menno
+		cleanup
+
+		Small change in API
+
+2001-03-06  menno
+		Fix in reconstruction of spectrum before LTP buffer update
+
+		-added profile selection
+		-some cleanup
+
+2001-03-05  menno
+		Added LTP
+		Needs some more refinement, but it works
+
+		LTP speedup
+
+2001-03-05  oxygene
+		Updated for LTP
+
+		Included math.h for math functions in linux.
+
+2001-03-02  menno
+		unix fix
+
+2001-03-01  menno
+		unix fix
+
+2001-03-01  oxygene
+		Added support for TNS, fixed a typo
+
+		Install and uninstall target added. Small change
+
+2001-02-28  menno
+		- added TNS support
+		- some other cleanups
+
+		Support for TNS in frontends
+
+2001-02-26  oxygene
+		Added min() function for unix
+
+		Added min() and max() functions for unix
+
+		Included math.h to make unix compiler happy
+
+		Added min() function for unix.
+
+2001-02-25  menno
+		Added calculation of KBD window
+
+2001-02-12  menno
+		Different MS switching model
+
+2001-02-10  menno
+		- Fixed scalefactor bandwidths (Thanks again to Ivan)
+		- Better checking of configuration
+
+2001-02-09  menno
+		Scalefactor bandwidth update (Thanks to Ivan)
+
+2001-02-08  menno
+		Fixed scalefactorband data (thanks to Ivan)
+
+2001-02-05  menno
+		changed LINUX -> __unix__
+
+2001-02-04  oxygene2000
+		- new Makefiles
+		- .cvsignore for a cleaner cvs-output
+		- // xyz -> /* xyz */ for ansi-c compliance
+		- minor fixes to work on linux
+
+2001-02-01  menno
+		Fixed memory leakage
+
+2001-01-31  menno
+		Completely new psychoacoustic model
+
+2001-01-25  menno
+		Encoding now done in a thread. Plus some other small changes.
+
+		Small changes
+
+2001-01-24  menno
+		Minor changes to GUI
+
+2001-01-23  menno
+		Fix to remove compiler warnings
+
+		Added graphical user interface
+
+		ADTS headers supported
+
+2001-01-19  menno
+		Changed ATH formula
+
+		Speedup in huffman coder
+
+2001-01-17  menno
+		Added frequency cut off filter
+
+2000-12-04  menno
+		Changed usage message a bit
+
+2000-11-10  menno
+		Bugfix in psychoacoustics and window shape switching changed
+
+2000-11-07  menno
+		Quantizer update. No more quantizer crashes
+
+2000-11-01  menno
+		Code reorganisation
+
+2000-10-31  menno
+		Cleanup: more sensible organisation
+
+2000-10-08  menno
+		Bugfixed and commented psychoacoustic module
+
+		Removed unused file
+
+2000-10-06  menno
+		Code cleanup
+
+2000-10-05  menno
+		Big code cleanup
+
+		Copyright message cleanup. CVS keywords added
+
+2000-10-04  menno
+		Wrong bits per frame got calculated
+
+		LFE is now also working correctly
+
+2000-10-03  menno
+		Multichannel fixes. All working now, except LFE channels
+
+2000-10-01  menno
+		Small fix in LFE frequency cut-off
+
+		Encoder LFE fixup. Should be working now, but no way to test it
+		yet.
+
+2000-09-30  menno
+		Some variable names changed (purely cosmetic)
+
+2000-09-28  menno
+		Release updates
+
+2000-09-25  menno
+		Small changes
+
+		Added VBR quantizer (but not working yet)
+
+2000-08-24  menno
+		Cleanup and small quality update
+
+		Fixed a bug in MS threshold calculation
+
+2000-08-23  menno
+		Different bark formula
+
+2000-08-20  menno
+		Fixed Makefile
+
+2000-08-11  menno
+		Bugfixes and multichannel updates
+
+		removed some redundant code
+
+2000-08-10  menno
+		Cleanup
+
+		bugfix
+
+		removed IS
+
+2000-08-08  menno
+		Removed IS. It is useless
+
+		Changed for multichannel support. And big cleanup
+
+		Changed for multichannel support
+
+2000-07-22  prkoat
+		Support for SCE (mono files)
+
+2000-05-18  menno
+		Tuned short block switching
+
+2000-05-16  menno
+		First go at multichannel support (not working at all, yet)
+
+2000-04-05  oxygene2000
+		- Cosmetic change (gcc complains about missing newline at EOF)
+
+		- Made it compile with gcc/linux again
+
+		 With -DLINUX faac shows the cpu-time needed to encode not real
+		time, therefore better measurement is possible
+
+2000-03-29  menno
+		Quality update
+
+2000-03-28  menno
+		Separated quantization and noiseless coding
+
+		Made TNS default again
+
+		Moved a function
+
+		Small change
+
+2000-03-23  lenox
+		restored gain control bits in the stream
+
+2000-03-22  lenox
+		added new parameters for 'block' mode
+
+2000-03-17  lenox
+		removed function faac_EncodeFinish()
+
+2000-03-13  lenox
+		added support for block input (for DLL interface without input
+		files)
+
+2000-03-12  lenox
+		removed gain control & changed win32 defines
+
+2000-03-02  lenox
+		new quantizer code for other than VC and BCB compilers
+
+		added gcc asm code
+
+2000-02-28  lenox
+		huge cleanup (for unused parameters and vars)
+
+		slightly changed arg parsing
+
+		improved readability of the code
+
+		removed unused parameters
+
+		added BC asm compatibility
+
+2000-02-28  menno
+		Bugfix
+
+2000-02-27  menno
+		Changed short block quantization
+
+2000-02-24  menno
+		Now using LAME's mid/side threshold calculation
+
+2000-02-24  thebard
+		Removed remainign thread and semephore code
+
+		After more compilation, there is not any function thats taking
+		more than 10% of the total time (see the profile graph) For fun
+		I added threads to psy6, but since its only 7 seconds, the
+		constant rebuilds of the threads gain little improvement, and
+		will suck on non multiple cpu boxes, so I removed it.
+
+2000-02-23  lenox
+		fixed wildcards processing
+
+2000-02-23  thebard
+		Now encoding faster than realtime with suggested compiler
+		options in Makefile. Still alot of room left for assembler and
+		or thread tweaking.
+
+		Alterations so that we can thread functions for multiple CPU's
+
+		Got run time down 100%. It looks like gcc is starving registers or causing
+		mosterous cache misses. More to come.
+
+2000-02-23  menno
+		Quality update
+
+		Removed winswitch.c
+
+2000-02-22  thebard
+		Added the profiling text file.
+
+		inlined output_bits, not that it matters much in performance...
+
+		Macroized double_to_int. Shaved off a few seconds (avoided all
+		the function call overhead)
+
+		Makefile changes for default compile and nots on options, Also
+		added an include so that faac.c links.
+
+		Changes the ending return to an exit so we can profile.
+
+		Timer now works correctly for unix.
+
+2000-02-22  menno
+		Made ADTS quality same as other files quality
+
+2000-02-19  lenox
+		restructure
+
+		added faac.c
+
+2000-02-19  oxygene
+		Uninstall target added
+
+2000-02-18  lenox
+		cleanup
+
+		new interface functions
+
+2000-02-18  menno
+		Added libsndfile.lib
+
+2000-02-17  lenox
+		added support for all headers
+
+2000-02-17  menno
+		Removed some debug code
+
+		Bugfixes for bit counting
+
+2000-02-16  oxygene
+		Install target added.
+
+2000-02-15  lenox
+		restructure (aacconfig eliminated)
+
+		new parsing function
+
+2000-02-15  menno
+		Made DLL compile
+
+		Fixed DLL
+
+		Added ADTS header writing
+
+2000-02-14  lenox
+		new rft (reference to fftw removed, sorry :) )
+
+		removed rdft due to new real fft
+
+		removed rdft stuff
+
+2000-02-09  lenox
+		fix to use without fttw
+
+2000-02-09  oxygene2000
+		Added additional implementation of rdft using fftw (from rank 1 to rank
+		>20 in my profiler = a lot faster)
+
+		Added fixed fftw-stuff. Use rdft_spectrum2.c instead of rdft_spectrum.c
+		and set -DUSE_FFTW in Makefile to enable it..
+		Be sure that you have libfftw installed
+		fftw_init() and fftw_destroy() have to be placed elsewhere
+		(should only be run once in the program -> speed)
+
+		Another mistake, argh!
+
+		Placed fftw_init/destroy where they have to be
+		Removed transfo.h as it isn't needed
+		Added rdft.h
+
+2000-02-09  menno
+		Restored small mistakes.
+
+2000-02-08  lenox
+		removed old FFT & some restucture
+
+2000-02-08  menno
+		Made advantage of Oxygene2000's optimization, to use more
+		accurate delay estimation
+
+		Better quantization of short blocks
+
+2000-02-08  oxygene2000
+		really small speed-up in psy_step6
+
+		Why calculating sqrt(2) if it is present as constant?
+
+2000-02-07  oxygene2000
+		Another speedup by solving calculations into something more
+		simple but equivalent
+
+		Fixed missing dependency rateconv.c
+
+		Speeded up estimate_delay
+
+		Commented out unused loop
+
+		Made more variables to tune gcc
+
+2000-02-07  lenox
+		some cleanup
+
+		cleanup
+
+		added support for different window shapes
+
+		bugfix
+
+		fixed bug with atan2()
+
+		added kbd window tables
+
+2000-02-07  menno
+		Changed last changes back, they made no difference
+
+		Bug fix
+
+		Change in window switching parameters
+
+		Changed command line (TNS is now off by default)
+
+		One step closer to window shape switching
+
+		Bugs fixed in psych
+
+		Same change to short blocks as oxy2000 made to long blocks
+
+2000-02-06  menno
+		Quite some bug fixes
+
+		Speedup
+
+2000-02-05  menno
+		Psych changed and pulse coding updated
+
+		SMR values were one frame ahead of data. Big quality
+		improvement.
+
+		Bugfixes
+
+		Fixed lower bitrates (continued)
+
+		More fixes
+
+		Fixed lower bitrate encoding
+
+2000-02-04  menno
+		Psycho speedup
+
+		Fixed mistake. This caused a very bad sound
+
+		Bugs fixed
+
+		Window switching back to old
+
+2000-02-03  menno
+		Printing options to screen
+
+		bugfix for blocks with only 0's
+
+2000-02-02  menno
+		Bug fixes
+
+		Serious bugfixes and speedups
+
+		Big quantizer change
+
+2000-01-31  lenox
+		cleanup
+
+		bugfix & cleanup
+
+2000-01-31  menno
+		Reduced psycho complexity (same result)
+
+2000-01-30  menno
+		FFT change (cleanup)
+
+2000-01-29  lenox
+		removed imdct.c
+
+		changed T/F transformation
+
+2000-01-27  menno
+		New block switching (sounds bad for now)
+
+2000-01-24  lenox
+		removed unneeded stuff for LTP off
+
+2000-01-24  menno
+		Unneeded calls to functions removed
+
+		Command line parsing fixed
+
+2000-01-21  menno
+		Updated readme
+
+		Bug fix
+
+		Version upgraded
+
+2000-01-19  menno
+		LTP fixed and some other bugs.
+
+2000-01-18  menno
+		Fixed encoding of some samplerates
+
+		Oops
+
+		Added frequency cut-off option (-c)
+
+2000-01-17  menno
+		Added sampling rate conversion (-s), buggy with some sample rates
+
+2000-01-14  menno
+		First attempt at doing PNS (use -pns). Also every bitrate
+		higher than 16kbps is now supported in step of 1kbps
+
+2000-01-12  menno
+		Cleanup
+
+2000-01-10  menno
+		Small fix
+
+		Added support for all sampling rates
+
+		All psycho values now calculated by formulas
+
+		Full support of all sample rates, and some other fixes
+
+2000-01-09  lenox
+		new dirs for output
+
+2000-01-09  menno
+		Bugfix
+
+		restored previous change
+
+2000-01-08  lenox
+		some cleanup
+
+2000-01-07  lenox
+		fixed bug in block switching (was since 1.16)
+
+2000-01-07  menno
+		Added option to disable LTP (-nl)
+
+2000-01-06  menno
+		Cleanup
+
+		Updated delay detection in LTP
+
+		Added support for PNS (but it is not used at the moment)
+
+		Small quality fixes
+
+		Divide by zero bugfix
+
+		Mistake fixed
+
+		Fix
+
+2000-01-06  lenox
+		new restructured mdct and fft
+
+2000-01-05  menno
+		Added Long Term Prediction (LTP), new decoder is needed for this
+
+		Changed block switching
+
+		Removed backward prediction
+
+2000-01-03  lenox
+		Added 2048 FFT
+
+1999-12-30  menno
+		Structure cleanup
+
+1999-12-29  menno
+		Restored old FFT due to some serious bugs
+
+1999-12-23  menno
+		New fft in psycho model (fast) and new unpredictabilty measure calculation
+
+		Quick bugfix after latest update
+
+		Quality fix, in MS protection ratio calculation
+
+		Removed the need for 4 channel buffers. Now there are 2
+
+		Little fix
+
+		Fix in Mid/Side calculation
+
+		Added fft.c
+
+1999-12-22  menno
+		Changed the DLL interface version.
+
+		Streamlined spreading function. Big speedup
+
+1999-12-20  menno
+		Ooops, quick bugfix after latest changes gave an extra bug
+
+		Very big speedup
+
+		Changed TNS switching
+
+1999-12-20  lenox
+		some cleanup
+
+1999-12-19  menno
+		Bugfix preventing memory overflow
+
+		Bugfix: MS first gave some distortion in the right channel. 
+		Because the Side channel was incorrectly formed.
+
+		Changed InputBuffer into double instead of float (less
+		conversions)
+
+		Added some extra options
+
+1999-12-19  lenox
+		new FFT code
+
+		added fastfft.c
+
+		new FFT code & converted vars to double
+
+		removed reference to transfo.h
+
+1999-12-17  lenox
+		removed util.c
+
+1999-12-16  menno
+		New and cleaner energy calculation in ms.c
+
+		Serious bugfix in psych.c and removed all global statics, they
+		are just normal global variables now.
+
+		Code cleanup and one bugfix
+
+		Fixed bug with bitBuffer and better ADIF header writing
+
+		Fixed bug with calculating number of bytes from the number of
+		bits.
+
+		Put MSEnergy() after MSPreprocess(). Off course.
+
+1999-12-15  lenox
+		Removed util.c
+
+		some speed optimization and restructure
+
+1999-12-13  menno
+		some bugfixes
+
