@@ -16,7 +16,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: filtbank.h,v 1.10 2003/11/24 18:06:57 knik Exp $
+ * $Id: filtbank.h,v 1.11 2005/02/02 07:51:49 sur Exp $
  */
 
 #ifndef FILTBANK_H
@@ -28,8 +28,11 @@ extern "C" {
 
 #include "frame.h"
 
+#ifdef DRM
+#define NFLAT_LS (( BLOCK_LEN_LONG - BLOCK_LEN_SHORT ) / 2)
+#else
 #define NFLAT_LS 448
-
+#endif
 
 #define MOVERLAPPED     0
 #define MNON_OVERLAPPED 1
