@@ -52,13 +52,10 @@ typedef struct {
   int    cb_width_short[NSFB_SHORT];
 } SR_INFO;
 
-/* added by T. Araki (1997.10.17) */
 #define OFFSET_FOR_SHORT 448
 #define NPART_LONG 100
 #define NPART_SHORT 100
-/* added by T. Araki (1997.10.17) end */
 
-/* added by T. Araki (1997.07.10) */
 typedef struct {
   double hw[BLOCK_LEN_LONG*2];     /* Hann window table */
 } FFT_TABLE_LONG;
@@ -161,7 +158,6 @@ typedef struct {
   double npart[MAX_SHORT_WINDOWS][NSFB_SHORT];
   double pe[MAX_SHORT_WINDOWS];
 } PSY_VARIABLE_SHORT;
-/* added by T. Araki (1997.07.10) end */
 
 typedef struct {
   double *p_ratio;
@@ -191,8 +187,6 @@ void EncTf_psycho_acoustic(
   double *p_time_signal[],
   enum WINDOW_TYPE block_type[],
   int use_MS,
-//  int qcSelect,
-//  int frameLength,
   /* output */
   CH_PSYCH_OUTPUT_LONG p_chpo_long[],
   CH_PSYCH_OUTPUT_SHORT p_chpo_short[][MAX_SHORT_WINDOWS]
@@ -238,14 +232,12 @@ void psy_step3(PSY_STATVARIABLE_LONG *psy_stvar_long,
                PSY_STATVARIABLE_SHORT *psy_stvar_short, 
                PSY_VARIABLE_LONG *psy_var_long, 
                PSY_VARIABLE_SHORT *psy_var_short
-//               ,int ch
 	       );
 
 void psy_step4(PSY_STATVARIABLE_LONG *psy_stvar_long,
                PSY_STATVARIABLE_SHORT *psy_stvar_short,
 	       PSY_VARIABLE_LONG *psy_var_long,
 	       PSY_VARIABLE_SHORT *psy_var_short
-//	       ,int ch
 	       );
 
 void psy_step5(PARTITION_TABLE_LONG *part_tbl_long,
@@ -254,12 +246,7 @@ void psy_step5(PARTITION_TABLE_LONG *part_tbl_long,
                            PSY_STATVARIABLE_SHORT *psy_stvar_short,
 			   PSY_VARIABLE_LONG *psy_var_long,
 			   PSY_VARIABLE_SHORT *psy_var_short
-//			   ,int ch
 			   );
-
-//void psy_step6_step1(void *inData);
-
-//void psy_step6_step1(void *inData);
 
 void psy_step6(PARTITION_TABLE_LONG *part_tbl_long,
 			   PARTITION_TABLE_SHORT *part_tbl_short,
@@ -293,21 +280,13 @@ void psy_step10(PARTITION_TABLE_LONG *part_tbl_long,
 		PSY_STATVARIABLE_SHORT *psy_stvar_short,
 		PSY_VARIABLE_LONG *psy_var_long,
 		PSY_VARIABLE_SHORT *psy_var_short
-//		,int ch
 		);
 
 void psy_step11(PARTITION_TABLE_LONG *part_tbl_long,
 		PARTITION_TABLE_SHORT *part_tbl_short,
 		PSY_STATVARIABLE_LONG *psy_stvar_long,
 		PSY_STATVARIABLE_SHORT *psy_stvar_short
-//		,int ch
 		);
-
-void psy_step11andahalf(PARTITION_TABLE_LONG *part_tbl_long,
-						PARTITION_TABLE_SHORT *part_tbl_short,
-						PSY_STATVARIABLE_LONG *psy_stvar_long,
-						PSY_STATVARIABLE_SHORT *psy_stvar_short,
-						int ch);
 
 void psy_step12(
                 PARTITION_TABLE_LONG *part_tbl_long,
@@ -316,12 +295,10 @@ void psy_step12(
 		PSY_STATVARIABLE_SHORT *psy_stvar_short,
 		PSY_VARIABLE_LONG *psy_var_long
 		,PSY_VARIABLE_SHORT *psy_var_short
-//		,int ch
 		);
 
 void psy_step13(PSY_VARIABLE_LONG *psy_var_long,
 		enum WINDOW_TYPE *block_type
-//		,int ch
 		);
 
 void psy_step14(SR_INFO *p_sri,
@@ -331,7 +308,6 @@ void psy_step14(SR_INFO *p_sri,
 		PSY_STATVARIABLE_SHORT *psy_stvar_short,
 		PSY_VARIABLE_LONG *psy_var_long,
 		PSY_VARIABLE_SHORT *psy_var_short
-//		,int ch
                 );
 
 void psy_step15(SR_INFO *p_sri,
@@ -356,11 +332,12 @@ void psy_step7MS(PSY_VARIABLE_LONG *psy_var_long,
 				 int leftChan, int rightChan,
 				 int midChan, int sideChan);
 
-void psy_step11MS(PARTITION_TABLE_LONG *part_tbl_long, 
-						PARTITION_TABLE_SHORT *part_tbl_short, 
-						PSY_STATVARIABLE_LONG *psy_stvar_long, 
-						PSY_STATVARIABLE_SHORT *psy_stvar_short, 
-						int ch);
+void psy_step11MS(PARTITION_TABLE_LONG *part_tbl_long,
+						PARTITION_TABLE_SHORT *part_tbl_short,
+						PSY_STATVARIABLE_LONG *psy_stvar_long,
+						PSY_STATVARIABLE_SHORT *psy_stvar_short,
+						int leftChan, int rightChan,
+						int midChan, int sideChan);
 
 #ifdef __cplusplus
 }

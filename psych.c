@@ -570,9 +570,10 @@ void EncTf_psycho_acoustic(
 						&psy_var_long[2], &psy_var_short[2]);
 					psy_step10(&part_tbl_long, &part_tbl_short, &psy_stvar_long[sideChan], &psy_stvar_short[sideChan], 
 						&psy_var_long[3], &psy_var_short[3]);
-				}
 
-				psy_step11MS(&part_tbl_long, &part_tbl_short, psy_stvar_long, psy_stvar_short, no_of_chan);
+					psy_step11MS(&part_tbl_long, &part_tbl_short, psy_stvar_long, psy_stvar_short,
+						leftChan, rightChan, midChan, sideChan);
+				}
 
 				psy_step11(&part_tbl_long, &part_tbl_short, &psy_stvar_long[leftChan], &psy_stvar_short[leftChan]);
 				psy_step11(&part_tbl_long, &part_tbl_short, &psy_stvar_long[rightChan], &psy_stvar_short[rightChan]);
@@ -1170,38 +1171,37 @@ void psy_step11(PARTITION_TABLE_LONG *part_tbl_long,
 	}
 }
 
-void psy_step11MS(PARTITION_TABLE_LONG *part_tbl_long, 
-						PARTITION_TABLE_SHORT *part_tbl_short, 
-						PSY_STATVARIABLE_LONG *psy_stvar_long, 
-						PSY_STATVARIABLE_SHORT *psy_stvar_short, 
-						int ch)
+void psy_step11MS(PARTITION_TABLE_LONG *part_tbl_long,
+						PARTITION_TABLE_SHORT *part_tbl_short,
+						PSY_STATVARIABLE_LONG *psy_stvar_long,
+						PSY_STATVARIABLE_SHORT *psy_stvar_short,
+						int leftChan, int rightChan,
+						int midChan, int sideChan)
 {
 #if 1 // LAME's version
 	int b, i, p1;
 	double tempM, tempS;
 
-    p1 = psy_stvar_long->p_nb;
+    p1 = psy_stvar_long[leftChan].p_nb;
 
-	if (ch==3) {
-		for(b = 0; b < part_tbl_long->len; b++) {
-			tempM = max(psy_stvar_long[2].nb[p1+b], min(part_tbl_long->dyn->bmax[b]*psy_stvar_long[3].en[b], psy_stvar_long[3].nb[p1+b]));
-			tempS = max(psy_stvar_long[3].nb[p1+b], min(part_tbl_long->dyn->bmax[b]*psy_stvar_long[2].en[b], psy_stvar_long[2].nb[p1+b]));
+	for(b = 0; b < part_tbl_long->len; b++) {
+		tempM = max(psy_stvar_long[midChan].nb[p1+b], min(part_tbl_long->dyn->bmax[b]*psy_stvar_long[sideChan].en[b], psy_stvar_long[sideChan].nb[p1+b]));
+		tempS = max(psy_stvar_long[sideChan].nb[p1+b], min(part_tbl_long->dyn->bmax[b]*psy_stvar_long[midChan].en[b], psy_stvar_long[midChan].nb[p1+b]));
 
-			if ((psy_stvar_long[0].nb[p1+b] <= 1.58*psy_stvar_long[1].nb[p1+b])&&(psy_stvar_long[1].nb[p1+b] <= 1.58*psy_stvar_long[0].nb[p1+b])) {
-				psy_stvar_long[2].nb[p1+b] = tempM;
-				psy_stvar_long[3].nb[p1+b] = tempS;
-			}
+		if ((psy_stvar_long[leftChan].nb[p1+b] <= 1.58*psy_stvar_long[rightChan].nb[p1+b])&&(psy_stvar_long[rightChan].nb[p1+b] <= 1.58*psy_stvar_long[leftChan].nb[p1+b])) {
+			psy_stvar_long[midChan].nb[p1+b] = tempM;
+			psy_stvar_long[sideChan].nb[p1+b] = tempS;
 		}
+	}
 
-		for (i = 0; i < MAX_SHORT_WINDOWS; i++) {
-			for(b = 0; b < part_tbl_short->len; b++) {
-				tempM = max(psy_stvar_short[2].nb[i][b], min(part_tbl_short->dyn->bmax[b]*psy_stvar_short[3].en[i][b], psy_stvar_short[3].nb[i][b]));
-				tempS = max(psy_stvar_short[3].nb[i][b], min(part_tbl_short->dyn->bmax[b]*psy_stvar_short[2].en[i][b], psy_stvar_short[2].nb[i][b]));
+	for (i = 0; i < MAX_SHORT_WINDOWS; i++) {
+		for(b = 0; b < part_tbl_short->len; b++) {
+			tempM = max(psy_stvar_short[midChan].nb[i][b], min(part_tbl_short->dyn->bmax[b]*psy_stvar_short[sideChan].en[i][b], psy_stvar_short[sideChan].nb[i][b]));
+			tempS = max(psy_stvar_short[sideChan].nb[i][b], min(part_tbl_short->dyn->bmax[b]*psy_stvar_short[midChan].en[i][b], psy_stvar_short[midChan].nb[i][b]));
 
-				if ((psy_stvar_short[0].nb[i][b] <= 1.58*psy_stvar_short[1].nb[i][b])&&(psy_stvar_short[1].nb[i][b] <= 1.58*psy_stvar_short[0].nb[i][b])) {
-					psy_stvar_short[2].nb[i][b] = tempM;
-					psy_stvar_short[3].nb[i][b] = tempS;
-				}
+			if ((psy_stvar_short[leftChan].nb[i][b] <= 1.58*psy_stvar_short[rightChan].nb[i][b])&&(psy_stvar_short[rightChan].nb[i][b] <= 1.58*psy_stvar_short[leftChan].nb[i][b])) {
+				psy_stvar_short[midChan].nb[i][b] = tempM;
+				psy_stvar_short[sideChan].nb[i][b] = tempS;
 			}
 		}
 	}
@@ -1210,52 +1210,51 @@ void psy_step11MS(PARTITION_TABLE_LONG *part_tbl_long,
 	double t;
 	double tempL, tempR, tempM, tempS;
 
-    p1 = psy_stvar_long->p_nb;
+    p1 = psy_stvar_long[leftChan].p_nb;
 
-	if (ch==3) {
-		for(b = 0; b < part_tbl_long->len; b++) {
-			if (psy_stvar_long[3].nb[p1+b] != 0.0)
-				t = psy_stvar_long[2].nb[p1+b]/psy_stvar_long[3].nb[p1+b];
+	for(b = 0; b < part_tbl_long->len; b++) {
+
+		if (psy_stvar_long[sideChan].nb[p1+b] != 0.0)
+			t = psy_stvar_long[midChan].nb[p1+b]/psy_stvar_long[sideChan].nb[p1+b];
+		else
+			t = 0;
+		if (t>1)
+			t = 1/t;
+		tempL = max(psy_stvar_long[leftChan].nb[p1+b]*t, min(psy_stvar_long[leftChan].nb[p1+b], part_tbl_long->dyn->bmax[b]*psy_stvar_long[leftChan].en[b]));
+		tempR = max(psy_stvar_long[rightChan].nb[p1+b]*t, min(psy_stvar_long[rightChan].nb[p1+b], part_tbl_long->dyn->bmax[b]*psy_stvar_long[rightChan].en[b]));
+
+		t = min(tempL,tempR);
+		tempM = min(t, max(psy_stvar_long[midChan].nb[p1+b], min(part_tbl_long->dyn->bmax[b]*psy_stvar_long[sideChan].en[b], psy_stvar_long[sideChan].nb[p1+b])));
+		tempS = min(t, max(psy_stvar_long[sideChan].nb[p1+b], min(part_tbl_long->dyn->bmax[b]*psy_stvar_long[midChan].en[b], psy_stvar_long[midChan].nb[p1+b])));
+
+		if ((psy_stvar_long[leftChan].nb[p1+b] >= 1.58*psy_stvar_long[rightChan].nb[p1+b])&&(psy_stvar_long[rightChan].nb[p1+b] >= 1.58*psy_stvar_long[leftChan].nb[p1+b])) {
+			psy_stvar_long[midChan].nb[p1+b] = tempM;
+			psy_stvar_long[sideChan].nb[p1+b] = tempS;
+			psy_stvar_long[leftChan].nb[p1+b] = tempL;
+			psy_stvar_long[rightChan].nb[p1+b] = tempR;
+		}
+	}
+
+	for (i = 0; i < MAX_SHORT_WINDOWS; i++) {
+		for(b = 0; b < part_tbl_short->len; b++) {
+			if (psy_stvar_short[sideChan].nb[i][b] != 0.0)
+				t = psy_stvar_short[midChan].nb[i][b]/psy_stvar_short[sideChan].nb[i][b];
 			else
 				t = 0;
 			if (t>1)
 				t = 1/t;
-			tempL = max(psy_stvar_long[0].nb[p1+b]*t, min(psy_stvar_long[0].nb[p1+b], part_tbl_long->dyn->bmax[b]*psy_stvar_long[0].en[b]));
-			tempR = max(psy_stvar_long[1].nb[p1+b]*t, min(psy_stvar_long[1].nb[p1+b], part_tbl_long->dyn->bmax[b]*psy_stvar_long[1].en[b]));
+			tempL = max(psy_stvar_short[leftChan].nb[i][b]*t, min(psy_stvar_short[leftChan].nb[i][b], part_tbl_short->dyn->bmax[b]*psy_stvar_short[leftChan].en[i][b]));
+			tempR = max(psy_stvar_short[rightChan].nb[i][b]*t, min(psy_stvar_short[rightChan].nb[i][b], part_tbl_short->dyn->bmax[b]*psy_stvar_short[rightChan].en[i][b]));
 
 			t = min(tempL,tempR);
-			tempM = min(t, max(psy_stvar_long[2].nb[p1+b], min(part_tbl_long->dyn->bmax[b]*psy_stvar_long[3].en[b], psy_stvar_long[3].nb[p1+b])));
-			tempS = min(t, max(psy_stvar_long[3].nb[p1+b], min(part_tbl_long->dyn->bmax[b]*psy_stvar_long[2].en[b], psy_stvar_long[2].nb[p1+b])));
+			tempM = min(t, max(psy_stvar_short[midChan].nb[i][b], min(part_tbl_short->dyn->bmax[b]*psy_stvar_short[sideChan].en[i][b], psy_stvar_short[sideChan].nb[i][b])));
+			tempS = min(t, max(psy_stvar_short[sideChan].nb[i][b], min(part_tbl_short->dyn->bmax[b]*psy_stvar_short[midChan].en[i][b], psy_stvar_short[midChan].nb[i][b])));
 
-			if ((psy_stvar_long[0].nb[p1+b] >= 1.58*psy_stvar_long[1].nb[p1+b])&&(psy_stvar_long[1].nb[p1+b] >= 1.58*psy_stvar_long[0].nb[p1+b])) {
-				psy_stvar_long[2].nb[p1+b] = tempM;
-				psy_stvar_long[3].nb[p1+b] = tempS;
-				psy_stvar_long[0].nb[p1+b] = tempL;
-				psy_stvar_long[1].nb[p1+b] = tempR;
-			}
-		}
-
-		for (i = 0; i < MAX_SHORT_WINDOWS; i++) {
-			for(b = 0; b < part_tbl_short->len; b++) {
-				if (psy_stvar_short[3].nb[i][b] != 0.0)
-					t = psy_stvar_short[2].nb[i][b]/psy_stvar_short[3].nb[i][b];
-				else
-					t = 0;
-				if (t>1)
-					t = 1/t;
-				tempL = max(psy_stvar_short[0].nb[i][b]*t, min(psy_stvar_short[0].nb[i][b], part_tbl_short->dyn->bmax[b]*psy_stvar_short[0].en[i][b]));
-				tempR = max(psy_stvar_short[1].nb[i][b]*t, min(psy_stvar_short[1].nb[i][b], part_tbl_short->dyn->bmax[b]*psy_stvar_short[1].en[i][b]));
-
-				t = min(tempL,tempR);
-				tempM = min(t, max(psy_stvar_short[2].nb[i][b], min(part_tbl_short->dyn->bmax[b]*psy_stvar_short[3].en[i][b], psy_stvar_short[3].nb[i][b])));
-				tempS = min(t, max(psy_stvar_short[3].nb[i][b], min(part_tbl_short->dyn->bmax[b]*psy_stvar_short[2].en[i][b], psy_stvar_short[2].nb[i][b])));
-
-				if ((psy_stvar_short[0].nb[i][b] >= 1.58*psy_stvar_short[1].nb[i][b])&&(psy_stvar_short[1].nb[i][b] >= 1.58*psy_stvar_short[0].nb[i][b])) {
-					psy_stvar_short[2].nb[i][b] = tempM;
-					psy_stvar_short[3].nb[i][b] = tempS;
-					psy_stvar_short[0].nb[i][b] = tempL;
-					psy_stvar_short[1].nb[i][b] = tempR;
-				}
+			if ((psy_stvar_short[leftChan].nb[i][b] >= 1.58*psy_stvar_short[rightChan].nb[i][b])&&(psy_stvar_short[rightChan].nb[i][b] >= 1.58*psy_stvar_short[leftChan].nb[i][b])) {
+				psy_stvar_short[midChan].nb[i][b] = tempM;
+				psy_stvar_short[sideChan].nb[i][b] = tempS;
+				psy_stvar_short[leftChan].nb[i][b] = tempL;
+				psy_stvar_short[rightChan].nb[i][b] = tempR;
 			}
 		}
 	}
