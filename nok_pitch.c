@@ -34,9 +34,9 @@ Copyright (c)1997.
 /**************************************************************************
   Version Control Information			Method: CVS
   Identifiers:
-  $Revision: 1.5 $
-  $Date: 2000/02/07 06:52:41 $ (check in)
-  $Author: oxygene2000 $
+  $Revision: 1.6 $
+  $Date: 2000/02/08 07:47:59 $ (check in)
+  $Author: menno $
   *************************************************************************/
 
 
@@ -296,7 +296,12 @@ int estimate_delay (double *sb_samples,
 			delay = 0;
 		}
 
-	for (i = 1; i < DELAY; i+=16)
+	/* Used to look like this:
+	   for (i = 1; i < DELAY; i+=16)
+	   Because the new code by Oxygene2000 is so fast, we can now look for the
+	   delay in steps of 1, instead of 16. Thus giving a more accurate delay estimation
+	*/
+	for (i = 1; i < DELAY; i++)
 	{
 //NOK_LT_BLEN=4096
 		energy -= x_buffer[NOK_LT_BLEN - i] * x_buffer[NOK_LT_BLEN - i]; 
