@@ -1,9 +1,9 @@
-# Recomended compile options for gcc with a PentII or better for maximum speed
-# are: -O6 -fomit-frame-pointer -march=i686 -funroll-loops -finline-functions
-# Note: for fastest compilation, -funroll-loops -finline-function
-# -fomit-frame-pointer and the highest -O that is safe with your compiler
-# is STRONGLY recommended!
-
+# On X86 machines it is HIGHLY Recomended that you compile only with 
+# -march=i686 -finline-functions -funroll-loops -fomit-frame-pointer
+# Do NOT Compile with -O of ANY kind. It looks like gcc's optimizations are
+# either starving registers, or causing huge cache misses for Intel Processors.
+# Its currently twice as fast with no -O than any -O.
+# 
 prefix = /usr/local
 
 DESTDIR = 
