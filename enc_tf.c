@@ -584,16 +584,13 @@ int EncTfFrame (faacAACStream *as, BsBitStream  *fixed_stream)
 							nok_tmp_DTimeSigBuf[leftChan], 
 							block_type[leftChan], 
 							WS_SIN,
-							block_size_samples,
-							1,
-							block_size_samples/short_win_in_long, 
 							&sfb_offset_table[leftChan][0], 
 							nr_of_sfb[leftChan],
 							&nok_lt_status[leftChan]);
 
 						nok_lt_status[rightChan].global_pred_flag = 
 							nok_lt_status[leftChan].global_pred_flag;
-						for(i = 0; i < NOK_MAX_BLOCK_LEN_LONG; i++)
+						for(i = 0; i < BLOCK_LEN_LONG; i++)
 							nok_lt_status[rightChan].pred_mdct[i] = 
 							nok_lt_status[leftChan].pred_mdct[i];
 						for(i = 0; i < MAX_SCFAC_BANDS; i++)
@@ -607,9 +604,6 @@ int EncTfFrame (faacAACStream *as, BsBitStream  *fixed_stream)
 							nok_tmp_DTimeSigBuf[rightChan], 
 							block_type[rightChan], 
 							WS_SIN,
-							block_size_samples,
-							1,
-							block_size_samples/short_win_in_long, 
 							&sfb_offset_table[rightChan][0], 
 							nr_of_sfb[rightChan],
 							&nok_lt_status[rightChan]);
@@ -621,9 +615,6 @@ int EncTfFrame (faacAACStream *as, BsBitStream  *fixed_stream)
 					nok_tmp_DTimeSigBuf[chanNum], 
 					block_type[chanNum], 
 					WS_SIN,
-					block_size_samples,
-					1,
-					block_size_samples/short_win_in_long, 
 					&sfb_offset_table[chanNum][0], 
 					nr_of_sfb[chanNum],
 					&nok_lt_status[chanNum]);
@@ -716,9 +707,7 @@ int EncTfFrame (faacAACStream *as, BsBitStream  *fixed_stream)
 			for (chanNum=0;chanNum<max_ch;chanNum++) {
 				nok_ltp_reconstruct(reconstructed_spectrum[chanNum],
 					block_type[chanNum],
-					WS_SIN, block_size_samples,
-					block_size_samples/2,
-					block_size_samples/short_win_in_long,
+					WS_SIN,
 					&sfb_offset_table[chanNum][0],
 					nr_of_sfb[chanNum],
 					&nok_lt_status[chanNum]);

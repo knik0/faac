@@ -116,7 +116,7 @@ int TnsEncode(int numberOfBands,       /* Number of bands per window */
 
 	default:
 		numberOfWindows = 1;
-		windowSize = LN2;
+		windowSize = BLOCK_LEN_LONG;
 		startBand = tnsInfo->tnsMinBandNumberLong;
 		stopBand = numberOfBands;
 		lengthInBands = stopBand - startBand;

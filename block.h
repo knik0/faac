@@ -30,7 +30,6 @@ Copyright(c)1996.
 #define OUT_DATATYPE double
 
 #define BLOCK_LEN_LONG	   1024
-#define BLOCK_LEN_MEDIUM   512
 #define BLOCK_LEN_SHORT    128
 
 #define NWINLONG	(BLOCK_LEN_LONG)

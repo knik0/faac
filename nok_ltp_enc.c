@@ -34,9 +34,9 @@ Copyright (c)1997.
 /**************************************************************************
   Version Control Information			Method: CVS
   Identifiers:
-  $Revision: 1.8 $
-  $Date: 2000/02/22 18:54:44 $ (check in)
-  $Author: thebard $
+  $Revision: 1.9 $
+  $Date: 2000/02/28 08:19:03 $ (check in)
+  $Author: lenox $
   *************************************************************************/
 
 
@@ -120,7 +120,7 @@ nok_init_lt_pred (NOK_LT_PRED_STATUS *lt_status)
 	for (i = 0; i < NOK_LT_BLEN; i++)
 		lt_status->buffer[i] = 0;
 
-	for (i = 0; i < NOK_MAX_BLOCK_LEN_LONG; i++)
+	for (i = 0; i < BLOCK_LEN_LONG; i++)
 		lt_status->pred_mdct[i] = 0;
 
 	lt_status->weight_idx = 0;
@@ -180,14 +180,13 @@ nok_init_lt_pred (NOK_LT_PRED_STATUS *lt_status)
 
 int
 nok_ltp_enc(double *p_spectrum, double *p_time_signal, enum WINDOW_TYPE win_type,
-            Window_shape win_shape, int block_size_long, int block_size_medium,
-	    int block_size_short, int *sfb_offset, int num_of_sfb,
+            Window_shape win_shape, int *sfb_offset, int num_of_sfb,
             NOK_LT_PRED_STATUS *lt_status)
 {
     int i;
     int last_band;
     double num_bit[MAX_SHORT_WINDOWS];
-    double predicted_samples[2 * NOK_MAX_BLOCK_LEN_LONG];
+    double predicted_samples[2 * BLOCK_LEN_LONG];
 
     lt_status->global_pred_flag = 0;
     lt_status->side_info = 1;
@@ -199,12 +198,12 @@ nok_ltp_enc(double *p_spectrum, double *p_time_signal, enum WINDOW_TYPE win_type
 	case SHORT_LONG_WINDOW:
 		last_band = (num_of_sfb < NOK_MAX_LT_PRED_LONG_SFB) ? num_of_sfb : NOK_MAX_LT_PRED_LONG_SFB;
 
-		lt_status->delay[0] = estimate_delay (p_time_signal, lt_status->buffer, 2 * block_size_long);
+		lt_status->delay[0] = estimate_delay (p_time_signal, lt_status->buffer, 2 * BLOCK_LEN_LONG);
 
 //		fprintf(stderr, "(LTP) lag : %i ", lt_status->delay[0]);
 
 		pitch (p_time_signal, predicted_samples, lt_status->buffer,
-			&lt_status->weight_idx, lt_status->delay[0], 2 * block_size_long);
+			&lt_status->weight_idx, lt_status->delay[0], 2 * BLOCK_LEN_LONG);
 
 		/* Transform prediction to frequency domain and save it for subsequent use. */
 		buffer2freq (predicted_samples, lt_status->pred_mdct, NULL, win_type, WS_SIN, WS_SIN, MNON_OVERLAPPED);
@@ -267,14 +266,12 @@ nok_ltp_enc(double *p_spectrum, double *p_time_signal, enum WINDOW_TYPE win_type
 
 void
 nok_ltp_reconstruct(double *p_spectrum, enum WINDOW_TYPE win_type, 
-                    Window_shape win_shape,
-		    int block_size_long, int block_size_medium,
-                    int block_size_short, int *sfb_offset, int num_of_sfb,
+                    Window_shape win_shape, int *sfb_offset, int num_of_sfb,
                     NOK_LT_PRED_STATUS *lt_status)
 {
 	int i, j, last_band;
-	double predicted_samples[2 * NOK_MAX_BLOCK_LEN_LONG];
-	double overlap_buffer[2 * NOK_MAX_BLOCK_LEN_LONG];
+	double predicted_samples[2 * BLOCK_LEN_LONG];
+	double overlap_buffer[2 * BLOCK_LEN_LONG];
 
     
 	switch(win_type)
@@ -291,16 +288,16 @@ nok_ltp_reconstruct(double *p_spectrum, enum WINDOW_TYPE win_type,
 		/* Finally update the time domain history buffer. */
 		freq2buffer (p_spectrum, predicted_samples, overlap_buffer, win_type, WS_SIN, WS_SIN, MNON_OVERLAPPED);
 
-		for (i = 0; i < NOK_LT_BLEN - block_size_long; i++)
-			lt_status->buffer[i] = lt_status->buffer[i + block_size_long];
+		for (i = 0; i < NOK_LT_BLEN - BLOCK_LEN_LONG; i++)
+			lt_status->buffer[i] = lt_status->buffer[i + BLOCK_LEN_LONG];
 
-		j = NOK_LT_BLEN - 2 * block_size_long;
-		for (i = 0; i < block_size_long; i++)
+		j = NOK_LT_BLEN - 2 * BLOCK_LEN_LONG;
+		for (i = 0; i < BLOCK_LEN_LONG; i++)
 		{
 			lt_status->buffer[i + j] =
 				double_to_int (predicted_samples[i] + lt_status->buffer[i + j]);
-			lt_status->buffer[NOK_LT_BLEN - block_size_long + i] =
-				double_to_int (predicted_samples[i + block_size_long]);
+			lt_status->buffer[NOK_LT_BLEN - BLOCK_LEN_LONG + i] =
+				double_to_int (predicted_samples[i + BLOCK_LEN_LONG]);
 		}
 		break;
 

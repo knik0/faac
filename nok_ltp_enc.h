@@ -33,13 +33,11 @@ extern void nok_init_lt_pred (NOK_LT_PRED_STATUS * lt_status);
 
 extern int nok_ltp_enc(double *p_spectrum, double *p_time_signal,
 		       enum WINDOW_TYPE win_type, Window_shape win_shape,
-		       int block_size_long, int block_size_medium,
-		       int block_size_short, int *sfb_offset, int num_of_sfb,
+		       int *sfb_offset, int num_of_sfb,
 		       NOK_LT_PRED_STATUS *lt_status);
 
 extern void nok_ltp_reconstruct(double *p_spectrum, enum WINDOW_TYPE win_type, 
-                                Window_shape win_shape, int block_size_long, 
-                                int block_size_medium, int block_size_short, 
+                                Window_shape win_shape, 
                                 int *sfb_offset, int num_of_sfb,
                                 NOK_LT_PRED_STATUS *lt_status);
 

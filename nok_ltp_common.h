@@ -47,27 +47,11 @@ Copyright (c) 1997.
 #endif
 
 /*
-  Macro:	BLOCK_LEN_LONG
-  Purpose:	Length of one long window
-  Explanation:	-  */
-#ifndef BLOCK_LEN_LONG
-#define BLOCK_LEN_LONG LN2
-#endif
-
-
-/*
-  Macro:	NOK_MAX_BLOCK_LEN_LONG
-  Purpose:	Informs the routine of the maximum block size used.
-  Explanation:	This is needed since the TwinVQ long window
-  		is different from the AAC long window.  */
-#define	NOK_MAX_BLOCK_LEN_LONG BLOCK_LEN_LONG //(2 * BLOCK_LEN_LONG) 
-
-/*
   Macro:	NOK_LT_BLEN
   Purpose:	Length of the history buffer.
   Explanation:	Has to hold two long windows of time domain data.  */
 #ifndef	NOK_LT_BLEN
-#define NOK_LT_BLEN (4 * NOK_MAX_BLOCK_LEN_LONG)
+#define NOK_LT_BLEN (4 * BLOCK_LEN_LONG)
 #endif
 
 /*
@@ -77,7 +61,7 @@ Copyright (c) 1997.
 typedef struct
   {
     short buffer[NOK_LT_BLEN];
-    double pred_mdct[2 * NOK_MAX_BLOCK_LEN_LONG];
+    double pred_mdct[2 * BLOCK_LEN_LONG];
     int weight_idx;
     double weight;
     int sbk_prediction_used[MAX_SHORT_WINDOWS];
