@@ -1,3 +1,208 @@
+2003-08-23  knik
+	* libfaac/frame.c, frontend/faac.c:
+		last frame moved back to the library
+
+2003-08-18  knik
+	* libfaac/version.h:
+		1.20.1 beta
+
+	* libfaac/aacquant.c:
+		gave less distortion to short blocks
+
+	* libfaac/psychkni.c:
+		fixed a nasty sample shift causing the block switch to fail in some cases
+
+	* frontend/: Makefile.am, faac.c:
+		second CLI frontend cloned from main.c
+
+2003-08-17  menno
+	* plugins/foo_faac/: foo_faac.cpp, foo_faac.dsp, foo_faac.dsw,
+	foo_faac.rc, resource.h:
+		foo_faac plugin
+
+	* frontend/: input.c, input.h, main.c:
+		fixes to MP4 files by Case
+
+2003-08-17  knik
+	* libfaac/version.h:
+		1.20 beta
+
+	* libfaac/aacquant.c:
+		improved noise allocation
+
+2003-08-16  menno
+	* frontend/: faac.dsp, faac.dsw, input.c, input.h, main.c:
+		Case:
+		- More input options
+		- MP4 output
+
+2003-08-15  knik
+	* frontend/main.c:
+		Option to add a number of silent frames at the end of output.
+		Small TNS option fix.
+
+	* libfaac/frame.c:
+		removed single silent flush frame
+
+2003-08-11  menno
+	* libfaac/aacquant.c:
+		correct aacquant.c
+
+	* libfaac/: aacquant.c, aacquant.h, frame.c, frame.h:
+		thread safety, some tables added to the encoder context
+
+2003-08-09  knik
+	* libfaac/frame.c:
+		LFE support enabled by default
+
+2003-08-08  menno
+	* libfaac/frame.c:
+		Small fix
+
+2003-08-07  knik
+	* docs/libfaac.html:
+		libfaac.pdf replacement
+
+	* frontend/main.c:
+		fixed win32 crash with long filenames
+
+	* libfaac/: frame.c, psychkni.c:
+		Better LFE support (reduced bandwidth)
+
+2003-08-03  knik
+	* libfaac/version.h:
+		1.19 beta
+
+	* plugins/winamp/Out_faac.cpp:
+		corrected faac library version print
+
+2003-08-02  stux
+	* include/faac.h, libfaac/frame.c, libfaac/frame.h,
+	libfaac/libfaac.def, libfaac/libfaac_dll.dsp:
+		added config.inputFormat, and associated defines and code, faac now handles native endian 16bit, 24bit and float input. Added faacEncGetDecoderSpecificInfo to the dll exports, needed for MP4. Updated DLL .dsp to compile without error. Updated CFG_VERSION to 102. Version number might need to be updated as the API has technically changed. Did not update libfaac.pdf
+
+2003-07-29  menno
+	* plugins/: cooledit/CRegistry.cpp, cooledit/FAAC.def,
+	cooledit/FAAC.dsp, cooledit/FAAC.rc, cooledit/Faac.cpp,
+	cooledit/Faad.cpp, cooledit/Main.cpp, cooledit/Structs.h,
+	cooledit/TypeDef.h, cooledit/aacInfoLib.dsp, cooledit/defines.h,
+	cooledit/resource.h, winamp/CRegistry.cpp, winamp/FAAC.rc,
+	winamp/Out_faac.cpp, winamp/RESOURCE.H, winamp/defines.h,
+	winamp/out_FAAC.dsp:
+		updated plugins to work with new faac
+
+2003-07-28  menno
+	* frontend/input.c, libfaac/libfaac.dsp:
+		compile fix for win32
+
+2003-07-21  knik
+	* frontend/main.c:
+		Fixed LFE channel mapping.
+
+2003-07-16  knik
+	* libfaac/bitstream.c:
+		Used ID_FIL element to write libfaac info.
+
+2003-07-13  knik
+	* frontend/main.c:
+		Fixed -o, -m and -I option.
+		Print object type setting.
+
+2003-07-10  knik
+	* configure.in:
+		more types check
+
+	* frontend/main.c:
+		Input channel remapping and 24-bit support.
+
+	* frontend/input.h:
+		Updated to match input.c.
+		Better integer types support.
+
+	* frontend/input.c:
+		24-bit input support.
+		Multichannel input remapping.
+		WAVEFORMATEXTENSIBLE support.
+
+	* include/faac.h, libfaac/frame.c, libfaac/frame.h:
+		24-bit input
+
+2003-07-07  knik
+	* docs/faac.html:
+		more links
+
+	* libfaac/psychkni.c:
+		division by zero fixed
+
+2003-06-26  knik
+	* docs/faac.html:
+		new faac readme
+
+	* frontend/main.c:
+		TNS disabled by default.
+		Copyright info moved to library.
+		Print help to standard output.
+
+	* libfaac/midside.h:
+		midside.c header
+
+	* libfaac/midside.c:
+		new Mid/Side control
+
+	* libfaac/: joint.c, joint.h, psychiso.c:
+		removed unused files
+
+	* libfaac/Makefile.am:
+		joint.c renamed to midside.c
+
+	* libfaac/version.h:
+		1.18 beta
+
+	* libfaac/psychkni.c:
+		New block type switch.
+		Removed M/S threshold support.
+
+	* libfaac/psych.h:
+		PsyInfo: removed unused fields.
+
+	* libfaac/ltp.c:
+		Fixed memory leak.
+
+	* libfaac/frame.h:
+		faacEncConfiguration: added new field.
+
+	* libfaac/frame.c:
+		Mid/Side support.
+		Copyright info moved from frontend.
+		Fixed memory leak.
+
+	* libfaac/coder.h:
+		CoderInfo: added new fields.
+
+	* libfaac/channels.h:
+		MSInfo: removed unused field.
+
+	* libfaac/aacquant.h:
+		Added new functions.
+
+	* libfaac/aacquant.c:
+		New mid/side support.
+		Short block sorting reorganized.
+
+	* include/faac.h:
+		Copyright info moved from frontend.
+
+2003-06-21  knik
+	* frontend/main.c:
+		raw input support moved to input.c
+
+	* frontend/: input.c, input.h:
+		improved raw input support with bigendian byteorder
+
+2003-05-26  knik
+	* ChangeLog:
+		More complete ChangeLog regenerated from CVS
+
 2003-05-12  knik
 	* libfaac/version.h:
 		1.17 beta
