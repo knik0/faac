@@ -16,12 +16,14 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: main.c,v 1.40 2003/08/07 11:28:06 knik Exp $
+ * $Id: main.c,v 1.41 2003/08/15 11:43:14 knik Exp $
  */
 
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
+
+#define DEFAULT_TNS     0
 
 #ifdef WIN32
 #include <windows.h>
@@ -120,13 +122,14 @@ int main(int argc, char *argv[])
     unsigned int mpegVersion = MPEG2;
     unsigned int objectType = LOW;
     unsigned int useMidSide = 1;
-    static unsigned int useTns = 0;
+    static unsigned int useTns = DEFAULT_TNS;
     unsigned int useAdts = 1;
     int cutOff = -1;
     int bitRate = 0;
     unsigned long quantqual = 0;
     int chanC = 3;
     int chanLF = 4;
+    int addsilent = 1;
 
     char *audioFileName;
     char *aacFileName;
@@ -177,6 +180,7 @@ int main(int argc, char *argv[])
             { "pcmsamplerate", 1, 0, 'R'},
             { "pcmsamplebits", 1, 0, 'B'},
             { "pcmchannels", 1, 0, 'C'},
+            { "addsilent", 1, 0, 300},
             { 0, 0, 0, 0}
         };
       int c = -1;
@@ -291,6 +295,9 @@ int main(int argc, char *argv[])
 	      rawChans = i;
        break;
        }
+	case 300:
+	  sscanf(optarg, "%u", &addsilent);
+	  break;
         case '?':
             break;
         default:
@@ -307,8 +314,11 @@ int main(int argc, char *argv[])
 	printf("  -a <x>\tSet average bitrate to approximately x kbps/channel.\n");
 	printf("  -c <bandwidth>\tSet the bandwidth in Hz. (default=automatic)\n");
 	printf("  -q <quality>\tSet quantizer quality.\n");
+#if !DEFAULT_TNS
 	printf("  --tns  \tEnable TNS coding.\n");
+#else
 	printf("  --notns\tDisable TNS coding.\n");
+#endif
 	printf("  -n     Don\'t use mid/side coding.\n");
 	printf("  -m X   AAC MPEG version, X can be 2 or 4.\n");
 	printf("  -o X   AAC object type. (0=Low Complexity (default), 1=Main, 2=LTP)\n");
@@ -318,7 +328,10 @@ int main(int argc, char *argv[])
 	printf("  -B     Raw PCM input sample size (16 default or 8bits).\n");
 	printf("  -C     Raw PCM input channels.\n");
 	printf("  -I <C,LF> Input channel config, default is 3,4 (Center third, LF fourth)\n");
-	printf("More details on FAAC usage can be found in the faac.html file.\n");
+	printf("  --addsilent <n> Add n silent frames at the end of output (default=%d)\n",
+	       addsilent);
+	//printf("More details on FAAC usage can be found in the faac.html file.\n");
+	printf("More tips on FAAC usage can be found in Knowledge base at www.audiocoding.com\n");
 
         return 1;
     }
@@ -429,7 +442,7 @@ int main(int argc, char *argv[])
     long begin = GetTickCount();
 #endif
    if (infile->samples)
-     frames = (int)infile->samples / 1024 + 2;
+     frames = (int)infile->samples / 1024 + 1 + addsilent;
    else
      frames = 0;
         currentFrame = 0;
@@ -447,6 +460,16 @@ int main(int argc, char *argv[])
             int bytesWritten;
 
 	    samplesRead = wav_read_int24(infile, pcmbuf, samplesInput, chanmap);
+
+	    if (!samplesRead)
+	    {
+	      if (addsilent)
+	      {
+		addsilent--;
+		memset(pcmbuf, 0, samplesInput * sizeof(*pcmbuf));
+		samplesRead = samplesInput;
+	      }
+	    }
 
             /* call the actual encoding routine */
             bytesWritten = faacEncEncode(hEncoder,
@@ -544,6 +567,10 @@ int main(int argc, char *argv[])
 
 /*
 $Log: main.c,v $
+Revision 1.41  2003/08/15 11:43:14  knik
+Option to add a number of silent frames at the end of output.
+Small TNS option fix.
+
 Revision 1.40  2003/08/07 11:28:06  knik
 fixed win32 crash with long filenames
 
