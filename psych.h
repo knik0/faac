@@ -113,6 +113,9 @@ typedef struct {
   double save_npart_l[NSFB_LONG];
   int    p_nb; /* pointer for nb */
   double ismr[NSFB_LONG]; /* 1/SMR in each swb */
+  double save_tb[NPART_LONG];
+  double save_cw[NPART_LONG];
+  int use_ms[NSFB_LONG];
 } PSY_STATVARIABLE_LONG;
 
 typedef struct {
@@ -144,6 +147,9 @@ typedef struct {
   double save_npart_s[MAX_SHORT_WINDOWS][NSFB_SHORT];
   double last7_nb[NPART_SHORT];
   double ismr[MAX_SHORT_WINDOWS][NSFB_SHORT]; /* 1/SMR in each swb */
+  double save_tb[MAX_SHORT_WINDOWS][NPART_SHORT];
+  double save_cw[MAX_SHORT_WINDOWS][NPART_SHORT];
+  int use_ms[MAX_SHORT_WINDOWS][NSFB_SHORT];
 } PSY_STATVARIABLE_SHORT;
 
 typedef struct {
