@@ -1199,7 +1199,6 @@ int noiseless_bit_count(int quant[NUM_COEFF],
 
 			}
 			else {  /* if the section does have non-zero coefficients */
-				/* Changed all the else's to else if's, big speed up. Hardly any loss in coding. */
 				if(max_sb_coeff < 2){
 					quantInfo->spectralCount = 0; /* just for debugging : using data and len vectors */
 					book_choice[j][0] = output_bits(quantInfo,1,quant,offset,length,write_flag);
@@ -1207,32 +1206,44 @@ int noiseless_bit_count(int quant[NUM_COEFF],
 					quantInfo->spectralCount = 0; /* just for debugging : using data and len vectors */
 					book_choice[j][0] = output_bits(quantInfo,2,quant,offset,length,write_flag);
 					book_choice[j++][1] = 2;
+					quantInfo->spectralCount = 0; /* just for debugging : using data and len vectors */
+					book_choice[j][0] = output_bits(quantInfo,3,quant,offset,length,write_flag);
+					book_choice[j++][1] = 3;
 				}
-				/*else*/ if (max_sb_coeff < 3){
+				else if (max_sb_coeff < 3){
 					quantInfo->spectralCount = 0; /* just for debugging : using data and len vectors */
 					book_choice[j][0] = output_bits(quantInfo,3,quant,offset,length,write_flag);
 					book_choice[j++][1] = 3;
 					quantInfo->spectralCount = 0; /* just for debugging : using data and len vectors */
 					book_choice[j][0] = output_bits(quantInfo,4,quant,offset,length,write_flag);
 					book_choice[j++][1] = 4;
+					quantInfo->spectralCount = 0; /* just for debugging : using data and len vectors */
+					book_choice[j][0] = output_bits(quantInfo,5,quant,offset,length,write_flag);
+					book_choice[j++][1] = 5;
 				}
-				/*else*/ if (max_sb_coeff < 5){
+				else if (max_sb_coeff < 5){
 					quantInfo->spectralCount = 0; /* just for debugging : using data and len vectors */
 					book_choice[j][0] = output_bits(quantInfo,5,quant,offset,length,write_flag);
 					book_choice[j++][1] = 5;
 					quantInfo->spectralCount = 0; /* just for debugging : using data and len vectors */
 					book_choice[j][0] = output_bits(quantInfo,6,quant,offset,length,write_flag);
 					book_choice[j++][1] = 6;
+					quantInfo->spectralCount = 0; /* just for debugging : using data and len vectors */
+					book_choice[j][0] = output_bits(quantInfo,7,quant,offset,length,write_flag);
+					book_choice[j++][1] = 7;
 				}
-				/*else*/ if (max_sb_coeff < 8){
+				else if (max_sb_coeff < 8){
 					quantInfo->spectralCount = 0; /* just for debugging : using data and len vectors */
 					book_choice[j][0] = output_bits(quantInfo,7,quant,offset,length,write_flag);
 					book_choice[j++][1] = 7;
 					quantInfo->spectralCount = 0; /* just for debugging : using data and len vectors */
 					book_choice[j][0] = output_bits(quantInfo,8,quant,offset,length,write_flag);
 					book_choice[j++][1] = 8;
+					quantInfo->spectralCount = 0; /* just for debugging : using data and len vectors */
+					book_choice[j][0] = output_bits(quantInfo,9,quant,offset,length,write_flag);
+					book_choice[j++][1] = 9;
 				}
-				/*else*/ if (max_sb_coeff < 13){
+				else if (max_sb_coeff < 13){
 					quantInfo->spectralCount = 0; /* just for debugging : using data and len vectors */
 					book_choice[j][0] = output_bits(quantInfo,9,quant,offset,length,write_flag);
 					book_choice[j++][1] = 9;
