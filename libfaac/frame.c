@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: frame.c,v 1.15 2001/03/12 20:12:37 menno Exp $
+ * $Id: frame.c,v 1.16 2001/03/19 13:19:29 menno Exp $
  */
 
 /*
@@ -529,7 +529,7 @@ static SR_INFO srInfo[12+1] =
 		{
 			12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 16, 
 			16, 16, 16, 16, 16, 16, 20, 20, 20, 20, 24, 24, 24, 28, 
-			28, 32, 32, 36, 40, 44, 48, 52, 56, 60, 64, 80
+			28, 32, 36, 36, 40, 44, 48, 52, 56, 60, 64, 80
 		}, {
 			4, 4, 4, 4, 4, 4, 4, 8, 8, 8, 8, 12, 16, 20, 20
 		}
