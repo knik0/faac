@@ -16,7 +16,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: input.c,v 1.3 2002/12/23 19:02:05 knik Exp $
+ * $Id: input.c,v 1.4 2003/02/23 16:52:02 menno Exp $
  */
 
 #ifdef HAVE_CONFIG_H
@@ -28,6 +28,8 @@
 #include <sys/types.h>
 #ifdef WIN32
 #include <fcntl.h>
+#define u_int32_t unsigned __int32
+#define u_int16_t unsigned __int16
 #endif
 
 #include "input.h"
