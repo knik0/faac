@@ -16,6 +16,8 @@ double adj_quant[9000];
 int sign[1024];
 int g_Count;
 int old_startsf;
+int pns_sfb_start = 1000;         /* lower border for Perceptual Noise Substitution 
+                                      (off by default) */
 
 double ATH[SFB_NUM_MAX];
 
@@ -248,6 +250,15 @@ int count_bits(AACQuantInfo* quantInfo,
 	bit_search(quant,              /* Quantized spectral values */
 		quantInfo);         /* Quantization information */
 
+    /* Set special codebook for bands coded via PNS  */
+    if (quantInfo->block_type != ONLY_SHORT_WINDOW) {     /* long blocks only */
+		for(i=0;i<quantInfo->nr_of_sfb;i++) {
+			if (quantInfo->pns_sfb_flag[i]) {
+				quantInfo->book_vector[i] = PNS_HCB;
+			}
+		}
+    }
+
 	/* calculate the amount of bits needed for encoding the huffman codebook numbers */
 	bits += sort_book_numbers(quantInfo,             /* Quantization information */
 		output_book_vector,    /* Output codebook vector, formatted for bitstream */
@@ -386,6 +397,10 @@ int tf_encode_spectrum_aac(
     /* Take into account bits for TNS data */
     extra_bits += WriteTNSData(quantInfo,fixed_stream,0);    /* Count but don't write */
 
+    if(quantInfo->block_type!=ONLY_SHORT_WINDOW)
+		/* Take into account bits for LTP data */
+		extra_bits += WriteLTP_PredictorData(quantInfo, fixed_stream, 0); /* Count but don't write */
+
     /* for short windows, compute interleaved energy here */
     if (quantInfo->block_type==ONLY_SHORT_WINDOW) {
 		int numWindowGroups = quantInfo->num_window_groups;
@@ -410,9 +425,31 @@ int tf_encode_spectrum_aac(
 		}
     } 
 
+	/* PNS prepare */
+    for(sb=0; sb < quantInfo->nr_of_sfb; sb++ )
+		quantInfo->pns_sfb_flag[sb] = 0;
+
+    if (block_type[MONO_CHAN] != ONLY_SHORT_WINDOW) {     /* long blocks only */
+		for(sb = pns_sfb_start; sb < quantInfo->nr_of_sfb; sb++ ) {
+			/* Calc. pseudo scalefactor */
+			if (energy[0][sb] == 0.0) {
+				quantInfo->pns_sfb_flag[sb] = 0;
+				continue;
+			}
+			
+			quantInfo->pns_sfb_flag[sb] = 1;
+			quantInfo->pns_sfb_nrg[sb] = (int) (2.0 * log(energy[0][sb]*sfb_width_table[0][sb]+1e-60) / log(2.0) + 0.5) + PNS_SF_OFFSET;
+			
+			/* Erase spectral lines */
+			for( i=sfb_offset[sb]; i<sfb_offset[sb+1]; i++ ) {
+				p_spectrum[0][i] = 0.0;
+			}
+		}
+    }
+
 	/* Compute allowed distortion */
 	for(sb = 0; sb < quantInfo->nr_of_sfb; sb++) {
-		if (10*log10(energy[MONO_CHAN][sb]+1e-15)>70) {
+		if (10*log10(energy[MONO_CHAN][sb]*sfb_width_table[0][sb]+1e-60)>70) {
 			allowed_dist[MONO_CHAN][sb] = energy[MONO_CHAN][sb] * SigMaskRatio[sb];
 //			if (allowed_dist[MONO_CHAN][sb] < ATH[sb]) {
 //				printf("%d Yes\n", sb);
@@ -1430,6 +1467,9 @@ int write_scalefactor_bitstream(BsBitStream* fixed_stream,             /* Bitstr
 	int group_offset = 0;
 	int nr_of_sfb_per_group=0;
 
+	int pns_pcm_flag = 1;
+	int previous_noise_nrg = quantInfo->common_scalefac ;
+
 	/* set local pointer to quantInfo elements */
 	int* scale_factors = quantInfo->scale_factor;
 	
@@ -1459,6 +1499,26 @@ int write_scalefactor_bitstream(BsBitStream* fixed_stream,             /* Bitstr
 				previous_is_factor = scale_factors[index];
 				if (write_flag == 1 ) {   
 					codeword = huff12[diff+60][LASTINTAB];
+					BsPutBit(fixed_stream,codeword,length); 
+				}
+			} else if (quantInfo-> book_vector[index] == PNS_HCB){
+				diff = quantInfo->pns_sfb_nrg[index] - previous_noise_nrg;
+				if (pns_pcm_flag) {
+					pns_pcm_flag = 0;
+					length = PNS_PCM_BITS;
+					codeword = diff + PNS_PCM_OFFSET;
+				} else {
+					if (diff<-60  ||  diff>60) {
+						length = 0;
+						codeword = 0;
+					} else {
+						length = huff12[diff+60][FIRSTINTAB];    
+						codeword = huff12[diff+60][LASTINTAB];
+					}
+				}
+				k += length;
+				previous_noise_nrg = quantInfo->pns_sfb_nrg[index];
+				if (write_flag == 1 ) {   
 					BsPutBit(fixed_stream,codeword,length); 
 				}
 			} else if (quantInfo->book_vector[index]) {

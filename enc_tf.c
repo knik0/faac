@@ -138,6 +138,8 @@ void EncTfInit (faacAACConfig *ac, int VBR_setting)
 		qc_select = AAC_QC;          /* disable prediction */
 	}
 
+	pns_sfb_start = 60;
+
 	/* set the return values */
 	max_ch = ac->channels;
 
@@ -658,7 +660,7 @@ int EncTfFrame (faacAACStream *as, BsBitStream  *fixed_stream)
 		/**********************************************************/
 		/* Reconstruct Intensity Stereo bands for prediction     */
 		/**********************************************************/
-		if (as->use_IS) {
+		if (as->use_IS && (pns_sfb_start > 51)) {  /* do intensity only if pns is off  */
 			ISReconstruct(reconstructed_spectrum,
 				channelInfo,
 				sfb_offset_table,

@@ -26,6 +26,12 @@ extern "C" {
 #define sgn(A) ((A) > 0 ? (1) : (-1))
 #define SFB_NUM_MAX MAX_SCFAC_BANDS     /* now using MAX_SCFAC_BANDS of tf_main.h */
 
+#define PNS_HCB 13                               /* reserved codebook for flagging PNS */
+#define PNS_PCM_BITS 9                           /* size of first (PCM) PNS energy */
+#define PNS_PCM_OFFSET (1 << (PNS_PCM_BITS-1))   /* corresponding PCM transmission offset */
+#define PNS_SF_OFFSET 90                         /* transmission offset for PNS energies */
+
+extern int pns_sfb_start;                        /* lower border for PNS */
 
 // Huffman tables
 #define MAXINDEX 289
@@ -58,6 +64,8 @@ typedef struct {
   TNS_INFO* tnsInfo;                    /* Ptr to tns data */
   AACPulseInfo pulseInfo;
   NOK_LT_PRED_STATUS *ltpInfo;          /* Prt to LTP data */
+  int pns_sfb_nrg[SFB_NUM_MAX];
+  int pns_sfb_flag[SFB_NUM_MAX];
 } AACQuantInfo;
 
 
