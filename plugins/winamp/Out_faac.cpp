@@ -1,6 +1,6 @@
 /*
-FAAC - encoder plugin for Winamp 2
-Copyright (C) 2002 Antonio Foranna
+FAAC - codec plugin for Cooledit
+Copyright (C) 2002-2004 Antonio Foranna
 
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -16,28 +16,22 @@ along with this program; if not, write to the Free Software
 Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 			
 The author can be contacted at:
-kreel@interfree.it
+ntnfrn_email-temp@yahoo.it
 */
 
 #include <windows.h>
 #include <shlobj.h>
-#include <stdio.h>  // FILE *
+#include <stdio.h>		// FILE *
+#include <shellapi.h>	// ShellExecute
 #include "resource.h"
 #include "out.h"
-#include <mp4.h>
+/*#include <mp4.h>
 #include <faac.h>
 #include "CRegistry.h"
 #include "defines.h"
-
-#define RAW  0
-#define ADTS 1
-
-#define FREE(ptr) \
-{ \
-	if(ptr) \
-		free(ptr); \
-	ptr=0; \
-}
+*/
+#include "defines.h"
+#include "Cfaac.h"
 
 
 
@@ -59,49 +53,13 @@ int GetWrittenTime();
 
 
 
-typedef struct output_tag  // any special vars associated with output file
-{
-FILE  *aacFile;         
-DWORD lSize;
-long  lSamprate;
-WORD  wBitsPerSample;
-WORD  wChannels;
-// DWORD dwDataOffset;
-//BOOL  bWrittenHeader;
-char  szNAME[256];
+Cfaac			*Cpcmaac;
+char			OutDir[MAX_PATH]="";
 
-faacEncHandle hEncoder;
-int32_t			*buffer;
-unsigned char	*bitbuf;
-DWORD maxBytesOutput;
-long  samplesInput;
-BYTE  bStopEnc;
-
-unsigned char *bufIn;
-DWORD full_size; // size of decoded file needed to set the length of progress bar
-DWORD tagsize;
-DWORD bytes_read;		// from file
-DWORD bytes_consumed;	// by faadDecDecode
-DWORD bytes_into_buffer;
-DWORD bytes_Enc;
-} MYOUTPUT;
-
-
-
-typedef struct mc
-{
-bool					AutoCfg;
-bool					UseQuality;
-faacEncConfiguration	EncCfg;
-char					OutDir[MAX_PATH];
-} MY_ENC_CFG;
-
-
-
-static MYOUTPUT mo0,
-				*mo=&mo0; // this is done to copy'n'paste code from CoolEdit plugin
+HINSTANCE		hInstance=NULL;
 static			HBITMAP hBmBrowse=NULL;
 char			config_AACoutdir[MAX_PATH]="";
+
 static int		srate, numchan, bps;
 volatile int	writtentime, w_offset;
 static int		last_pause=0;
@@ -126,7 +84,7 @@ Out_Module out = {
     SetVolume,
     SetPan,
     Flush,
-    GetWrittenTime,
+    GetOutputTime,
     GetWrittenTime
 };
 
@@ -142,179 +100,159 @@ Out_Module *winampGetOutModule()
 }
 // *********************************************************************************************
 
-BOOL WINAPI DllMain (HANDLE hInst, DWORD ulReason, LPVOID lpReserved)
+BOOL WINAPI DllMain (HINSTANCE hInst, DWORD ulReason, LPVOID lpReserved)
 {
-   switch(ulReason)
-   {
-      case DLL_PROCESS_ATTACH:
-           DisableThreadLibraryCalls((struct HINSTANCE__ *)hInst);
-           if(!hBmBrowse)
-            hBmBrowse=LoadBitmap((struct HINSTANCE__ *)hInst, MAKEINTRESOURCE(IDB_BROWSE));
-         /* Code from LibMain inserted here.  Return TRUE to keep the
-            DLL loaded or return FALSE to fail loading the DLL.
- 
-            You may have to modify the code in your original LibMain to
-            account for the fact that it may be called more than once.
-            You will get one DLL_PROCESS_ATTACH for each process that
-            loads the DLL. This is different from LibMain which gets
-            called only once when the DLL is loaded. The only time this
-            is critical is when you are using shared data sections.
-            If you are using shared data sections for statically
-            allocated data, you will need to be careful to initialize it
-            only once. Check your code carefully.
- 
-            Certain one-time initializations may now need to be done for
-            each process that attaches. You may also not need code from
-            your original LibMain because the operating system may now
-            be doing it for you.
-         */
-         break;
- 
-      case DLL_THREAD_ATTACH:
-         /* Called each time a thread is created in a process that has
-            already loaded (attached to) this DLL. Does not get called
-            for each thread that exists in the process before it loaded
-            the DLL.
- 
-            Do thread-specific initialization here.
-         */
-         break;
- 
-      case DLL_THREAD_DETACH:
-         /* Same as above, but called when a thread in the process
-            exits.
- 
-            Do thread-specific cleanup here.
-         */
-         break;
- 
-      case DLL_PROCESS_DETACH:
-           if(hBmBrowse)
-           {
+	switch(ulReason)
+	{
+	case DLL_PROCESS_ATTACH:
+		hInstance=hInst;
+		DisableThreadLibraryCalls((struct HINSTANCE__ *)hInst);
+		if(!hBmBrowse)
+			hBmBrowse=(HBITMAP)LoadImage(hInst,MAKEINTRESOURCE(IDB_BROWSE),IMAGE_BITMAP,0,0,/*LR_CREATEDIBSECTION|*/LR_LOADTRANSPARENT|LR_LOADMAP3DCOLORS);
+		
+		/*	Code from LibMain inserted here.  Return TRUE to keep the
+			DLL loaded or return FALSE to fail loading the DLL.
+
+			You may have to modify the code in your original LibMain to
+			account for the fact that it may be called more than once.
+			You will get one DLL_PROCESS_ATTACH for each process that
+			loads the DLL. This is different from LibMain which gets
+			called only once when the DLL is loaded. The only time this
+			is critical is when you are using shared data sections.
+			If you are using shared data sections for statically
+			allocated data, you will need to be careful to initialize it
+			only once. Check your code carefully.
+
+			Certain one-time initializations may now need to be done for
+			each process that attaches. You may also not need code from
+			your original LibMain because the operating system may now
+			be doing it for you.
+		*/
+		break;
+		
+	case DLL_THREAD_ATTACH:
+		/*	Called each time a thread is created in a process that has
+			already loaded (attached to) this DLL. Does not get called
+			for each thread that exists in the process before it loaded
+			the DLL.
+	
+			Do thread-specific initialization here.
+		*/
+		break;
+		
+	case DLL_THREAD_DETACH:
+		/*	Same as above, but called when a thread in the process
+			exits.
+		
+			Do thread-specific cleanup here.
+		*/
+		break;
+		
+	case DLL_PROCESS_DETACH:
+		hInstance=NULL;
+		if(hBmBrowse)
+		{
             DeleteObject(hBmBrowse);
             hBmBrowse=NULL;
-           }
-         /* Code from _WEP inserted here.  This code may (like the
-            LibMain) not be necessary.  Check to make certain that the
-            operating system is not doing it for you.
-         */
-         break;
-   }
- 
-   /* The return value is only used for DLL_PROCESS_ATTACH; all other
-      conditions are ignored.  */
-   return TRUE;   // successful DLL_PROCESS_ATTACH
+		}
+		/*	Code from _WEP inserted here.  This code may (like the
+			LibMain) not be necessary.  Check to make certain that the
+			operating system is not doing it for you.
+		*/
+		break;
+	}
+	
+	/*	The return value is only used for DLL_PROCESS_ATTACH; all other
+		conditions are ignored.
+	*/
+	return TRUE;   // successful DLL_PROCESS_ATTACH
 }
+
+// *********************************************************************************************
+//										Interface
 // *********************************************************************************************
 
-#define SWAP32(x) (((x & 0xff) << 24) | ((x & 0xff00) << 8) \
-	| ((x & 0xff0000) >> 8) | ((x & 0xff000000) >> 24))
-#define SWAP16(x) (((x & 0xff) << 8) | ((x & 0xff00) >> 8))
-
-inline void To32bit(int32_t *buf, BYTE *bufi, int size, BYTE samplebytes, BYTE bigendian)
+static BOOL CALLBACK DialogMsgProcAbout(HWND hWndDlg, UINT Message, WPARAM wParam, LPARAM lParam)
 {
-int i;
-
-	switch(samplebytes)
+	switch(Message)
 	{
-	case 1:
-		// this is endian clean
-		for (i = 0; i < size; i++)
-			buf[i] = (bufi[i] - 128) * 65536;
-		break;
-		
-	case 2:
-#ifdef WORDS_BIGENDIAN
-		if (!bigendian)
-#else
-			if (bigendian)
-#endif
-			{
-				// swap bytes
-				for (i = 0; i < size; i++)
-				{
-					int16_t s = ((int16_t *)bufi)[i];
-					
-					s = SWAP16(s);
-					
-					buf[i] = ((u_int32_t)s) << 8;
-				}
-			}
-			else
-			{
-				// no swap
-				for (i = 0; i < size; i++)
-				{
-					int s = ((int16_t *)bufi)[i];
-					
-					buf[i] = s << 8;
-				}
-			}
-			break;
-			
-	case 3:
-		if (!bigendian)
+	case WM_INITDIALOG:
 		{
-			for (i = 0; i < size; i++)
-			{
-				int s = bufi[3 * i] | (bufi[3 * i + 1] << 8) | (bufi[3 * i + 2] << 16);
-				
-				// fix sign
-				if (s & 0x800000)
-					s |= 0xff000000;
-				
-				buf[i] = s;
-			}
-		}
-		else // big endian input
-		{
-			for (i = 0; i < size; i++)
-			{
-				int s = (bufi[3 * i] << 16) | (bufi[3 * i + 1] << 8) | bufi[3 * i + 2];
-				
-				// fix sign
-				if (s & 0x800000)
-					s |= 0xff000000;
-				
-				buf[i] = s;
-			}
+		  char buf[512];
+		  unsigned long samplesInput, maxBytesOutput;
+
+		  faacEncHandle hEncoder =
+		    faacEncOpen(44100, 2, &samplesInput, &maxBytesOutput);
+		  faacEncConfigurationPtr myFormat =
+		    faacEncGetCurrentConfiguration(hEncoder);
+
+			sprintf(buf,
+					APP_NAME " plugin " APP_VER " by Antonio Foranna\n\n"
+					"Engines used:\n"
+					"\tlibfaac v%s\n"
+//					"\tFAAD2 v" FAAD2_VERSION "\n"
+					"\t" PACKAGE " v" VERSION "\n\n"
+					"This code is given with FAAC package and does not contain executables.\n"
+					"This program is free software and can be distributed/modifyed under the terms of the GNU General Public License.\n"
+					"This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY.\n\n"
+					"Compiled on %s\n",
+					(myFormat->version == FAAC_CFG_VERSION) ? myFormat->name : " bad version",
+					__DATE__
+					);
+			SetDlgItemText(hWndDlg, IDC_L_ABOUT, buf);
+			faacEncClose(hEncoder);
 		}
 		break;
-		
-	case 4:		
-#ifdef WORDS_BIGENDIAN
-		if (!bigendian)
-#else
-			if (bigendian)
-#endif
-			{
-				// swap bytes
-				for (i = 0; i < size; i++)
-				{
-					int s = bufi[i];
-					
-					buf[i] = SWAP32(s);
-				}
-			}
-			else
-				memcpy(buf,bufi,size*sizeof(u_int32_t));
-		/*
-		int exponent, mantissa;
-		float *bufo=(float *)buf;
-			
-			for (i = 0; i < size; i++)
-			{
-				exponent=bufi[(i<<2)+3]<<1;
-				if(bufi[i*4+2] & 0x80)
-					exponent|=0x01;
-				exponent-=126;
-				mantissa=(DWORD)bufi[(i<<2)+2]<<16;
-				mantissa|=(DWORD)bufi[(i<<2)+1]<<8;
-				mantissa|=bufi[(i<<2)];
-				bufo[i]=(float)ldexp(mantissa,exponent);
-			}*/
+	case WM_COMMAND:
+		switch(LOWORD(wParam))
+		{
+		case IDOK:
+			EndDialog(hWndDlg, TRUE);
 			break;
+        case IDCANCEL:
+			// Ignore data values entered into the controls and dismiss the dialog window returning FALSE
+			EndDialog(hWndDlg, FALSE);
+			break;
+		case IDC_AUDIOCODING:
+			ShellExecute(hWndDlg, NULL, "http://www.audiocoding.com", NULL, NULL, SW_SHOW);
+			break;
+		case IDC_MPEG4IP:
+			ShellExecute(hWndDlg, NULL, "http://www.mpeg4ip.net", NULL, NULL, SW_SHOW);
+			break;
+		case IDC_EMAIL:
+			ShellExecute(hWndDlg, NULL, "mailto:ntnfrn_email-temp@yahoo.it", NULL, NULL, SW_SHOW);
+			break;
+		}
+		break;
+	default: 
+		return FALSE;
 	}
+
+	return TRUE;
+}
+// -----------------------------------------------------------------------------------------------
+
+void About(HWND hWndDlg)
+{
+	DialogBox(out.hDllInstance, MAKEINTRESOURCE(IDD_ABOUT), hWndDlg, DialogMsgProcAbout);
+
+/*char buf[256];
+  unsigned long samplesInput, maxBytesOutput;
+  faacEncHandle hEncoder =
+    faacEncOpen(44100, 2, &samplesInput, &maxBytesOutput);
+  faacEncConfigurationPtr myFormat =
+    faacEncGetCurrentConfiguration(hEncoder);
+
+	sprintf(buf,
+			APP_NAME " %s by Antonio Foranna\n\n"
+			"This plugin uses FAAC encoder engine v%s\n\n"
+			"Compiled on %s\n",
+			 APP_VER,
+			 myFormat->name,
+			 __DATE__
+			 );
+	faacEncClose(hEncoder);
+	MessageBox(hWndDlg, buf, "About", MB_OK);*/
 }
 // *********************************************************************************************
 
@@ -327,53 +265,29 @@ static int CALLBACK WINAPI BrowseCallbackProc( HWND hwnd, UINT uMsg, LPARAM lPar
 	}
 	return 0;
 }
+// -----------------------------------------------------------------------------------------------
 
-void ReadCfgEnc(MY_ENC_CFG *cfg) 
+void ReadCfgEnc()
 { 
 CRegistry reg;
 
 	if(reg.openCreateReg(HKEY_LOCAL_MACHINE,REGISTRY_PROGRAM_NAME))
-	{
-		cfg->AutoCfg=reg.getSetRegDword("Auto",true) ? true : false; 
-		cfg->EncCfg.mpegVersion=reg.getSetRegDword("MPEG version",MPEG2); 
-		cfg->EncCfg.aacObjectType=reg.getSetRegDword("Profile",LOW); 
-		cfg->EncCfg.allowMidside=reg.getSetRegDword("MidSide",true); 
-		cfg->EncCfg.useTns=reg.getSetRegDword("TNS",true); 
-		cfg->EncCfg.useLfe=reg.getSetRegDword("LFE",false);
-		cfg->UseQuality=reg.getSetRegDword("Use quality",false) ? true : false;
-		cfg->EncCfg.quantqual=reg.getSetRegDword("Quality",100); 
-		cfg->EncCfg.bitRate=reg.getSetRegDword("BitRate",128000); 
-		cfg->EncCfg.bandWidth=reg.getSetRegDword("BandWidth",0); 
-		cfg->EncCfg.outputFormat=reg.getSetRegDword("Header",1); 
-		reg.getSetRegStr("OutDir","",cfg->OutDir,MAX_PATH); 
-	}
+		reg.getSetRegStr("OutDir","",OutDir,MAX_PATH); 
 	else
 		MessageBox(0,"Can't open registry!",0,MB_OK|MB_ICONSTOP);
 }
 // -----------------------------------------------------------------------------------------------
 
-void WriteCfgEnc(MY_ENC_CFG *cfg) 
+void WriteCfgEnc()
 { 
 CRegistry reg;
 
 	if(reg.openCreateReg(HKEY_LOCAL_MACHINE,REGISTRY_PROGRAM_NAME))
-	{
-		reg.setRegDword("Auto",cfg->AutoCfg); 
-		reg.setRegDword("MPEG version",cfg->EncCfg.mpegVersion); 
-		reg.setRegDword("Profile",cfg->EncCfg.aacObjectType); 
-		reg.setRegDword("MidSide",cfg->EncCfg.allowMidside); 
-		reg.setRegDword("TNS",cfg->EncCfg.useTns); 
-		reg.setRegDword("LFE",cfg->EncCfg.useLfe); 
-		reg.setRegDword("Use quality",cfg->UseQuality); 
-		reg.setRegDword("Quality",cfg->EncCfg.quantqual); 
-		reg.setRegDword("BitRate",cfg->EncCfg.bitRate); 
-		reg.setRegDword("BandWidth",cfg->EncCfg.bandWidth); 
-		reg.setRegDword("Header",cfg->EncCfg.outputFormat); 
-		reg.setRegStr("OutDir",cfg->OutDir); 
-	}
+		reg.setRegStr("OutDir",OutDir); 
 	else
 		MessageBox(0,"Can't open registry!",0,MB_OK|MB_ICONSTOP);
 }
+// -----------------------------------------------------------------------------------------------
 
 #define INIT_CB(hWnd,nID,list,IdSelected) \
 { \
@@ -392,26 +306,32 @@ CRegistry reg;
 	} \
     EnableWindow(GetDlgItem(hWndDlg, IDC_RADIO_LTP), FALSE); \
 }
+// -----------------------------------------------------------------------------------------------
 
 #define DISABLE_CTRL(Enabled) \
 { \
-		CheckDlgButton(hWndDlg,IDC_CHK_AUTOCFG, !Enabled); \
-        EnableWindow(GetDlgItem(hWndDlg, IDC_RADIO_MPEG4), Enabled); \
-        EnableWindow(GetDlgItem(hWndDlg, IDC_RADIO_MPEG2), Enabled); \
-        EnableWindow(GetDlgItem(hWndDlg, IDC_RADIO_MAIN), Enabled); \
-        EnableWindow(GetDlgItem(hWndDlg, IDC_RADIO_LOW), Enabled); \
-        EnableWindow(GetDlgItem(hWndDlg, IDC_RADIO_LTP), Enabled); \
-        EnableWindow(GetDlgItem(hWndDlg, IDC_RADIO_RAW), Enabled); \
-        EnableWindow(GetDlgItem(hWndDlg, IDC_RADIO_ADTS), Enabled); \
-        EnableWindow(GetDlgItem(hWndDlg, IDC_ALLOWMIDSIDE), Enabled); \
-        EnableWindow(GetDlgItem(hWndDlg, IDC_USETNS), Enabled); \
-        EnableWindow(GetDlgItem(hWndDlg, IDC_CB_BITRATE), Enabled); \
-        EnableWindow(GetDlgItem(hWndDlg, IDC_CB_BANDWIDTH), Enabled); \
-		if(IsDlgButtonChecked(hWndDlg,IDC_RADIO_MPEG4)) \
-			EnableWindow(GetDlgItem(hWndDlg, IDC_RADIO_LTP), Enabled); \
-		else \
-			DISABLE_LTP \
+	CheckDlgButton(hWndDlg,IDC_CHK_AUTOCFG, !Enabled); \
+	EnableWindow(GetDlgItem(hWndDlg, IDC_RADIO_MPEG4), Enabled); \
+	EnableWindow(GetDlgItem(hWndDlg, IDC_RADIO_MPEG2), Enabled); \
+	EnableWindow(GetDlgItem(hWndDlg, IDC_RADIO_RAW), Enabled); \
+	EnableWindow(GetDlgItem(hWndDlg, IDC_RADIO_ADTS), Enabled); \
+	EnableWindow(GetDlgItem(hWndDlg, IDC_CHK_ALLOWMIDSIDE), Enabled); \
+	EnableWindow(GetDlgItem(hWndDlg, IDC_CHK_USETNS), Enabled); \
+	EnableWindow(GetDlgItem(hWndDlg, IDC_CHK_USELFE), Enabled); \
+	EnableWindow(GetDlgItem(hWndDlg, IDC_CB_QUALITY), Enabled); \
+	EnableWindow(GetDlgItem(hWndDlg, IDC_CB_BITRATE), Enabled); \
+	EnableWindow(GetDlgItem(hWndDlg, IDC_CB_BANDWIDTH), Enabled); \
+	EnableWindow(GetDlgItem(hWndDlg, IDC_RADIO_QUALITY), Enabled); \
+	EnableWindow(GetDlgItem(hWndDlg, IDC_RADIO_BITRATE), Enabled); \
+    EnableWindow(GetDlgItem(hWndDlg, IDC_RADIO_MAIN), Enabled); \
+    EnableWindow(GetDlgItem(hWndDlg, IDC_RADIO_LOW), Enabled); \
+    EnableWindow(GetDlgItem(hWndDlg, IDC_RADIO_LTP), Enabled); \
+	if(IsDlgButtonChecked(hWndDlg,IDC_RADIO_MPEG4)) \
+		EnableWindow(GetDlgItem(hWndDlg, IDC_RADIO_LTP), Enabled); \
+	else \
+		DISABLE_LTP \
 }
+// -----------------------------------------------------------------------------------------------
 
 static BOOL CALLBACK DIALOGMsgProc(HWND hWndDlg, UINT Message, WPARAM wParam, LPARAM lParam)
 {
@@ -425,16 +345,17 @@ static BOOL CALLBACK DIALOGMsgProc(HWND hWndDlg, UINT Message, WPARAM wParam, LP
 		char *BandWidth[]={"Auto","Full","4000","8000","11025","16000","22050","24000","32000","44100","48000",0};
 		MY_ENC_CFG cfg;
 			
-			ReadCfgEnc(&cfg);
+			ReadCfgEnc();
+			Cfaac::getFaacCfg(&cfg);
 			
 			INIT_CB(hWndDlg,IDC_CB_QUALITY,Quality,0);
 			INIT_CB(hWndDlg,IDC_CB_BITRATE,BitRate,0);
 			INIT_CB(hWndDlg,IDC_CB_BANDWIDTH,BandWidth,0);
 			
 			SendMessage(GetDlgItem(hWndDlg, IDC_BTN_BROWSE), BM_SETIMAGE, IMAGE_BITMAP, (LPARAM) hBmBrowse);
-			if(!*cfg.OutDir)
-				GetCurrentDirectory(MAX_PATH,cfg.OutDir);
-			SetDlgItemText(hWndDlg, IDC_E_BROWSE, cfg.OutDir);
+			if(!*OutDir)
+				GetCurrentDirectory(MAX_PATH,OutDir);
+			SetDlgItemText(hWndDlg, IDC_E_BROWSE, OutDir);
 			
 			if(cfg.EncCfg.mpegVersion==MPEG4)
 				CheckDlgButton(hWndDlg,IDC_RADIO_MPEG4,TRUE);
@@ -515,6 +436,8 @@ static BOOL CALLBACK DIALOGMsgProc(HWND hWndDlg, UINT Message, WPARAM wParam, LP
 				break;
 			}
 			
+			CheckDlgButton(hWndDlg, IDC_CHK_WRITEMP4, cfg.SaveMP4);
+
 			CheckDlgButton(hWndDlg,IDC_CHK_AUTOCFG, cfg.AutoCfg);
 			
 			DISABLE_CTRL(!cfg.AutoCfg);
@@ -588,9 +511,12 @@ static BOOL CALLBACK DIALOGMsgProc(HWND hWndDlg, UINT Message, WPARAM wParam, LP
 					cfg.EncCfg.quantqual=GetDlgItemInt(hWndDlg, IDC_CB_QUALITY, 0, FALSE);
 				}
 				cfg.EncCfg.outputFormat=IsDlgButtonChecked(hWndDlg,IDC_RADIO_RAW) ? RAW : ADTS;
-				GetDlgItemText(hWndDlg, IDC_E_BROWSE, cfg.OutDir, MAX_PATH);
+				GetDlgItemText(hWndDlg, IDC_E_BROWSE, OutDir, MAX_PATH);
 				
-				WriteCfgEnc(&cfg);
+				cfg.SaveMP4=IsDlgButtonChecked(hWndDlg, IDC_CHK_WRITEMP4) ? TRUE : FALSE;
+
+				WriteCfgEnc();
+				Cfaac::setFaacCfg(&cfg);
 				EndDialog(hWndDlg, (DWORD)hCfg);
 			}
 			break;
@@ -647,38 +573,9 @@ void Config(HWND hWnd)
 	DialogBox(out.hDllInstance, MAKEINTRESOURCE(IDD_ENCODER), hWnd, DIALOGMsgProc);
 //	dwOptions=DialogBoxParam((HINSTANCE)out.hDllInstance,(LPCSTR)MAKEINTRESOURCE(IDD_ENCODER), (HWND)hWnd, (DLGPROC)DIALOGMsgProc, dwOptions);
 }
+
 // *********************************************************************************************
-
-void About(HWND hwnd)
-{
-char buf[256];
-  unsigned long samplesInput, maxBytesOutput;
-  faacEncHandle hEncoder =
-    faacEncOpen(44100, 2, &samplesInput, &maxBytesOutput);
-  faacEncConfigurationPtr myFormat =
-    faacEncGetCurrentConfiguration(hEncoder);
-
-	sprintf(buf,
-			APP_NAME " %s by Antonio Foranna\n\n"
-			"This plugin uses FAAC encoder engine v%s\n\n"
-			"Compiled on %s\n",
-			 APP_VER,
-			 myFormat->name,
-			 __DATE__
-			 );
-	faacEncClose(hEncoder);
-	MessageBox(hwnd, buf, "About", MB_OK);
-}
-// *********************************************************************************************
-
-void Init()
-{
-}
-// *********************************************************************************************
-
-void Quit()
-{
-}
+//									Utilities
 // *********************************************************************************************
 
 static char *scanstr_back(char *str, char *toscan, char *defval)
@@ -753,6 +650,20 @@ char *t,*p;
 		wsprintf(lpstrFilename,"%s\\%s.aac",config_AACoutdir,temp2);
 }
 
+// *********************************************************************************************
+//									Main functions
+// *********************************************************************************************
+
+void Init()
+{
+}
+// *********************************************************************************************
+
+void Quit()
+{
+}
+// *********************************************************************************************
+
 #define ERROR_O(msg) \
 { \
 	if(msg) \
@@ -763,11 +674,7 @@ char *t,*p;
 
 int Open(int lSamprate, int wChannels, int wBitsPerSample, int bufferlenms, int prebufferms)
 {
-MY_ENC_CFG			cfg;
-DWORD			maxBytesOutput;
-unsigned long	samplesInput;
-int				bytesEncoded;
-int				tmp;
+MY_ENC_CFG		cfg;
 char			lpstrFilename[MAX_PATH];
 
 	w_offset = writtentime = 0;
@@ -775,172 +682,38 @@ char			lpstrFilename[MAX_PATH];
 	srate = lSamprate;
 	bps = wBitsPerSample;
 
-	ReadCfgEnc(&cfg);
+	ReadCfgEnc();
+	Cfaac::getFaacCfg(&cfg);
 
-	strcpy(config_AACoutdir,cfg.OutDir);
+	strcpy(config_AACoutdir,OutDir);
 	GetNewFileName(lpstrFilename);
 
-	memset(mo,0,sizeof(MYOUTPUT));
-	
-	// open the aac output file
-	if(!(mo->aacFile=fopen(lpstrFilename, "wb")))
-		ERROR_O("Can't create file");
-	
-	// use bufferized stream
-	setvbuf(mo->aacFile,NULL,_IOFBF,32767);
+	Cpcmaac=new Cfaac();
+	if(!Cpcmaac->Init(lpstrFilename,lSamprate,wBitsPerSample,wChannels,-1))
+		ERROR_O(0);
 
-	// open the encoder library
-	if(!(mo->hEncoder=faacEncOpen(lSamprate, wChannels, &samplesInput, &maxBytesOutput)))
-		ERROR_O("Can't init library");
-	
-	if(!(mo->bitbuf=(unsigned char*)malloc(maxBytesOutput*sizeof(unsigned char))))
-		ERROR_O("Memory allocation error: output buffer");
-	
-	if(!(mo->bufIn=(unsigned char*)malloc(samplesInput*(wBitsPerSample>>3))))
-		ERROR_O("Memory allocation error: input buffer");
-
-	if(!(mo->buffer=(int32_t *)malloc(samplesInput*sizeof(int32_t))))
-		ERROR_O("Memory allocation error: input buffer");
-	
-//	ReadCfgEnc(&cfg);
-	if(!cfg.AutoCfg)
-	{
-	faacEncConfigurationPtr myFormat=&cfg.EncCfg;
-	faacEncConfigurationPtr CurFormat=faacEncGetCurrentConfiguration(mo->hEncoder);
-		
-		if(cfg.UseQuality)
-		{
-			myFormat->quantqual=cfg.EncCfg.quantqual;
-			myFormat->bitRate=CurFormat->bitRate;
-		}
-		else
-			if(!myFormat->bitRate)
-				myFormat->bitRate=CurFormat->bitRate;
-		
-		switch(myFormat->bandWidth)
-		{
-		case 0:
-			myFormat->bandWidth=CurFormat->bandWidth;
-			break;
-		case 0xffffffff:
-			myFormat->bandWidth=lSamprate/2;
-			break;
-		default: break;
-		}
-		
-		if(!faacEncSetConfiguration(mo->hEncoder, myFormat))
-			ERROR_O("Unsupported parameters");
-	}
-	
-	mo->lSamprate=lSamprate;
-	mo->wBitsPerSample=wBitsPerSample;
-	mo->wChannels=wChannels;
-	strcpy(mo->szNAME,lpstrFilename);
-	
-	mo->maxBytesOutput=maxBytesOutput;
-	mo->samplesInput=samplesInput;
-	mo->bStopEnc=0;
-	
-	// init flushing process
-    bytesEncoded=faacEncEncode(mo->hEncoder, 0, 0, mo->bitbuf, maxBytesOutput); // initializes the flushing process
-    if(bytesEncoded>0)
-	{
-		tmp=fwrite(mo->bitbuf, 1, bytesEncoded, mo->aacFile);
-		if(tmp!=bytesEncoded)
-			ERROR_O("fwrite()");
-	}
-	
 	return 0;
 }
 // *********************************************************************************************
 
 void Close()
 {
-	if(mo->bytes_into_buffer)
+	if(Cpcmaac)
 	{
-	int bytesEncoded;
-	int32_t *buf=mo->buffer;
-
-		To32bit(buf,mo->bufIn,mo->samplesInput,mo->wBitsPerSample>>3,false);
-
-		// call the actual encoding routine
-		bytesEncoded=faacEncEncode(mo->hEncoder, (int32_t *)buf, mo->samplesInput, mo->bitbuf, mo->maxBytesOutput);
-		if(bytesEncoded>0)
-			fwrite(mo->bitbuf, 1, bytesEncoded, mo->aacFile);
+		delete Cpcmaac;
+		Cpcmaac=NULL;
 	}
-	
-	if(mo->aacFile)
-	{
-		fclose(mo->aacFile);
-		mo->aacFile=0;
-	}
-	
-	if(mo->hEncoder)
-		faacEncClose(mo->hEncoder);
-	
-	FREE(mo->bitbuf)
-	FREE(mo->bufIn)
-	FREE(mo->buffer)
-	
-//	CloseHandle(outfile);
 }
 // *********************************************************************************************
 
-#define ERROR_W(msg) \
-{ \
-	if(msg) \
-		MessageBox(0, msg, "FAAC plugin", MB_OK); \
-    mo->bStopEnc=1; \
-	return -1; \
-}
-
 int Write(char *wabuf, int len)
 {
-int32_t *buf=mo->buffer;
-BYTE	InputSize=mo->wBitsPerSample>>3;
-int bytesWritten;
-int bytesEncoded;
-int shift=0;
+	writtentime+=len;
 
-	writtentime += len;
+	if(Cpcmaac->processDataBufferized(Cpcmaac->hOutput,(BYTE *)wabuf,len)<0)
+		return -1;
 
-	if(!mo->bStopEnc)
-		do
-		{
-			if(mo->bytes_into_buffer+len<mo->samplesInput*InputSize)
-			{
-				memcpy(mo->bufIn+mo->bytes_into_buffer, wabuf, len);
-				mo->bytes_into_buffer+=len;
-				len=0;
-			}
-			else
-			{
-				shift=mo->samplesInput*InputSize-mo->bytes_into_buffer;
-				memcpy(mo->bufIn+mo->bytes_into_buffer, wabuf, shift);
-				mo->bytes_into_buffer+=shift;
-				wabuf+=shift;
-				len-=shift;
-				
-				To32bit(buf,mo->bufIn,mo->samplesInput,InputSize,false);
-
-				// call the actual encoding routine
-				bytesEncoded=faacEncEncode(mo->hEncoder, (int32_t *)buf, mo->samplesInput, mo->bitbuf, mo->maxBytesOutput);
-
-				mo->bytes_into_buffer=0;
-				if(bytesEncoded>0)
-				{
-					// write bitstream to aac file 
-					bytesWritten=fwrite(mo->bitbuf, 1, bytesEncoded, mo->aacFile);
-					if(bytesWritten!=bytesEncoded)
-						ERROR_W("bytesWritten and bytesEncoded are different");
-				}
-				else
-					if(bytesEncoded<0)
-						ERROR_W("faacEncEncode()");
-			}
-		}while(len);
-
-	Sleep(10);
+//	Sleep(10);
 	return 0;
 }
 // *********************************************************************************************
@@ -985,17 +758,38 @@ int a;
 	  w_offset=a;
 }
 // *********************************************************************************************
+
+int GetOutputTime()
+{
+int t=srate*numchan,
+	ms=writtentime,
+	l;
+
+	if(t)
+	{
+		l=ms%t;
+		ms /= t;
+		ms *= 1000;
+		ms += (l*1000)/t;
+		if (bps == 16) ms/=2;
+	}
+	return ms + w_offset;
+}
+// *********************************************************************************************
 	
 int GetWrittenTime()
 {
-int t=srate*numchan,l;
-int ms=writtentime;
+int t=srate*numchan,
+	ms=writtentime,
+	l;
 
-	l=ms%t;
-	ms /= t;
-	ms *= 1000;
-	ms += (l*1000)/t;
-	if (bps == 16) ms/=2;
-
+	if(t)
+	{
+		l=ms%t;
+		ms /= t;
+		ms *= 1000;
+		ms += (l*1000)/t;
+		if (bps == 16) ms/=2;
+	}
 	return ms + w_offset;
 }

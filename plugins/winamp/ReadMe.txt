@@ -12,7 +12,7 @@ but WITHOUT ANY WARRANTY.
 
 ----------------------------------------------------------------------------
 
-out_AAC is an encoder plugin for Winamp 2.
+out_AAC is an encoder plugin for Winamp 2 and 5.
 
 To use it:
 ----------
@@ -23,4 +23,4 @@ copy out_AAC.dll into Winamp\plugins folder.
 ----------------------------------------------------------------------------
 
 For suggestions, bugs report, etc., you can contact me at
-kreel@interfree.it
+ntnfrn_email-temp@yahoo.it
