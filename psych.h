@@ -163,6 +163,7 @@ typedef struct {
   double epart[MAX_SHORT_WINDOWS][NSFB_SHORT];
   double thr[MAX_SHORT_WINDOWS][BLOCK_LEN_SHORT];
   double npart[MAX_SHORT_WINDOWS][NSFB_SHORT];
+  double pe[MAX_SHORT_WINDOWS];
 } PSY_VARIABLE_SHORT;
 /* added by T. Araki (1997.07.10) end */
 

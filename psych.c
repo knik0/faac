@@ -52,9 +52,9 @@ Copyright (c) 1997.
 
 Source file:
 
-$Id: psych.c,v 1.53 2000/03/29 17:48:02 menno Exp $
-$Id: psych.c,v 1.53 2000/03/29 17:48:02 menno Exp $
-$Id: psych.c,v 1.53 2000/03/29 17:48:02 menno Exp $
+$Id: psych.c,v 1.54 2000/05/18 13:53:20 menno Exp $
+$Id: psych.c,v 1.54 2000/05/18 13:53:20 menno Exp $
+$Id: psych.c,v 1.54 2000/05/18 13:53:20 menno Exp $
 
 **********************************************************************/
 
@@ -1186,13 +1186,12 @@ void psy_step12(
 //		,int ch
 		)
 {
-#if 1
 	int b,i,shb;
 	double temp;
-	double mn, mx, estot[8];
+	double tot, mx, estot[8];
 
 	psy_var_long->pe = 0.0;
-	for(b = 0; b < part_tbl_long->len; ++b){
+	for(b = 0; b < part_tbl_long->len; b++){
 		temp = part_tbl_long->width[b]
 			* log((psy_stvar_long->nb[psy_stvar_long->p_nb + b] + 0.0000000001)
 			/ (psy_var_long->e[b] + 0.0000000001));
@@ -1205,43 +1204,24 @@ void psy_step12(
 		estot[i]=0;
 		for ( b = 0; b < BLOCK_LEN_SHORT; b++)
 			estot[i] += psy_var_short->e[i][b];
-		estot[i] /= BLOCK_LEN_SHORT;
+		if (estot[i] != 0.0)
+			estot[i] /= BLOCK_LEN_SHORT;
 	}
 
-	mn = mx = estot[0];
-	for (i=0; i < MAX_SHORT_WINDOWS; i++) {
-		mn = min(mn, estot[i]);
+	tot = mx = estot[0];
+	for (i=1; i < MAX_SHORT_WINDOWS; i++) {
+		tot += estot[i];
 		mx = max(mx, estot[i]);
 	}
 	
 	shb = 0;
 
-	/* tuned for t1.wav.  doesnt effect most other samples */
-	if (psy_var_long->pe > 1500) shb = 1;
+	if (psy_var_long->pe > 5600) shb = 1;
 
-	/* big surge of energy - always use short blocks */
-	if (  mx > 10*mn) shb = 1;
+	if ((mx/tot) > 0.3) shb = 1;
 	
-	/* medium surge, medium pe - use short blocks */
-//	if ((mx > 15*mn) && (psy_var_long->pe > 1500)) shb = 1; 
 	if (shb) psy_var_long->pe = 1;
 	else psy_var_long->pe = 0;
-#else
-	int b;
-	double temp;
-
-    psy_var_long->pe = 0.0;
-    for(b = 0; b < part_tbl_long->len; ++b){
-		temp = part_tbl_long->width[b]
-			* log((psy_stvar_long->nb[psy_stvar_long->p_nb + b] + 0.0000000001)
-			/ (psy_var_long->e[b] + 0.0000000001));
-		temp = min(0,temp);
-
-		psy_var_long->pe -= temp;
-    }
-//	if(psy_var_long->pe > 1800)
-//		printf("%f\t\n",psy_var_long->pe);
-#endif
 }
 
 void psy_step13(PSY_VARIABLE_LONG *psy_var_long,
@@ -1249,11 +1229,7 @@ void psy_step13(PSY_VARIABLE_LONG *psy_var_long,
 //				,int ch
 				)
 {
-#if 0
-	if(psy_var_long->pe > 1500) {
-#else
 	if(psy_var_long->pe == 1) {
-#endif
         *block_type = ONLY_SHORT_WINDOW;
 	} else {
         *block_type = ONLY_LONG_WINDOW;

@@ -333,6 +333,10 @@ int EncTfFrame (faacAACStream *as, BsBitStream  *fixed_stream)
   *****************************************************************************/
   {
     int chanNum;
+	
+	if (next_desired_block_type[1] == ONLY_SHORT_WINDOW)
+		next_desired_block_type[0] = ONLY_SHORT_WINDOW;
+
     for (chanNum=0;chanNum<max_ch;chanNum++) {
     /* A few definitions:                                                      */
     /*   block_type:  Initially, the block_type used in the previous frame.    */
