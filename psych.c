@@ -52,9 +52,9 @@ Copyright (c) 1997.
 
 Source file:
 
-$Id: psych.c,v 1.50 2000/02/24 02:42:15 thebard Exp $
-$Id: psych.c,v 1.50 2000/02/24 02:42:15 thebard Exp $
-$Id: psych.c,v 1.50 2000/02/24 02:42:15 thebard Exp $
+$Id: psych.c,v 1.51 2000/02/24 18:53:15 menno Exp $
+$Id: psych.c,v 1.51 2000/02/24 18:53:15 menno Exp $
+$Id: psych.c,v 1.51 2000/02/24 18:53:15 menno Exp $
 
 **********************************************************************/
 
@@ -400,10 +400,12 @@ void psy_part_table_init(double sampling_rate,
     /* added by T. Araki (1997.10.16) end */
 
 	for(b = 0; b < part_tbl_long->len; b++) {
-		dyn_long.bmax[b] = pow(10, -3*(0.5+0.5*(M_PI*(min(dyn_long.bval[b], 15.5)/15.5))));
+		dyn_long.bmax[b] = pow(10, 1.25*(1-cos(PI*b/part_tbl_long->len))-2.5);
+//		dyn_long.bmax[b] = pow(10, -3*(0.5+0.5*(M_PI*(min(dyn_long.bval[b], 15.5)/15.5))));
 	}
 	for(b = 0; b < part_tbl_short->len; b++) {
-		dyn_short.bmax[b] = pow(10, -3*(0.5+0.5*(M_PI*(min(dyn_short.bval[b], 15.5)/15.5))));
+		dyn_short.bmax[b] = pow(10, 1.25*(1-cos(PI*b/part_tbl_short->len))-2.5);
+//		dyn_short.bmax[b] = pow(10, -3*(0.5+0.5*(M_PI*(min(dyn_short.bval[b], 15.5)/15.5))));
 	}
 
 	part_tbl_long->dyn = &dyn_long;
@@ -1079,7 +1081,36 @@ void psy_step11andahalf(PARTITION_TABLE_LONG *part_tbl_long,
 						PSY_STATVARIABLE_SHORT *psy_stvar_short, 
 						int ch)
 {
+#if 1 // LAME's version
+	int b, i, p1;
+	double tempM, tempS;
 
+    p1 = psy_stvar_long->p_nb;
+
+	if (ch==3) {
+		for(b = 0; b < part_tbl_long->len; b++) {
+			tempM = max(psy_stvar_long[2].nb[p1+b], min(part_tbl_long->dyn->bmax[b]*psy_stvar_long[3].en[b], psy_stvar_long[3].nb[p1+b]));
+			tempS = max(psy_stvar_long[3].nb[p1+b], min(part_tbl_long->dyn->bmax[b]*psy_stvar_long[2].en[b], psy_stvar_long[2].nb[p1+b]));
+
+			if ((psy_stvar_long[0].nb[p1+b] <= 1.58*psy_stvar_long[1].nb[p1+b])&&(psy_stvar_long[1].nb[p1+b] <= 1.58*psy_stvar_long[0].nb[p1+b])) {
+				psy_stvar_long[2].nb[p1+b] = tempM;
+				psy_stvar_long[3].nb[p1+b] = tempS;
+			}
+		}
+
+		for (i = 0; i < MAX_SHORT_WINDOWS; i++) {
+			for(b = 0; b < part_tbl_short->len; b++) {
+				tempM = max(psy_stvar_short[2].nb[i][b], min(part_tbl_short->dyn->bmax[b]*psy_stvar_short[3].en[i][b], psy_stvar_short[3].nb[i][b]));
+				tempS = max(psy_stvar_short[3].nb[i][b], min(part_tbl_short->dyn->bmax[b]*psy_stvar_short[2].en[i][b], psy_stvar_short[2].nb[i][b]));
+
+				if ((psy_stvar_short[0].nb[i][b] <= 1.58*psy_stvar_short[1].nb[i][b])&&(psy_stvar_short[1].nb[i][b] <= 1.58*psy_stvar_short[0].nb[i][b])) {
+					psy_stvar_short[2].nb[i][b] = tempM;
+					psy_stvar_short[3].nb[i][b] = tempS;
+				}
+			}
+		}
+	}
+#else
 	int b, i,p1;
 	double t;
 	double tempL, tempR, tempM, tempS;
@@ -1133,6 +1164,7 @@ void psy_step11andahalf(PARTITION_TABLE_LONG *part_tbl_long,
 			}
 		}
 	}
+#endif
 }
 
 
