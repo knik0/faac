@@ -52,9 +52,9 @@ Copyright (c) 1997.
 
 Source file:
 
-$Id: psych.c,v 1.31 2000/02/04 17:03:55 menno Exp $
-$Id: psych.c,v 1.31 2000/02/04 17:03:55 menno Exp $
-$Id: psych.c,v 1.31 2000/02/04 17:03:55 menno Exp $
+$Id: psych.c,v 1.32 2000/02/04 21:24:20 menno Exp $
+$Id: psych.c,v 1.32 2000/02/04 21:24:20 menno Exp $
+$Id: psych.c,v 1.32 2000/02/04 21:24:20 menno Exp $
 
 **********************************************************************/
 
@@ -581,6 +581,9 @@ void EncTf_psycho_acoustic(
 			&psy_var_long, &psy_var_short, ch);
 		psy_step11andahalf(&part_tbl_long, &part_tbl_short, psy_stvar_long, psy_stvar_short, no_of_chan);
 		psy_step11(&part_tbl_long, &part_tbl_short, &psy_stvar_long[no_of_chan], &psy_stvar_short[no_of_chan], ch);
+		psy_step12(&part_tbl_long, &part_tbl_short, &psy_stvar_long[no_of_chan], &psy_stvar_short[no_of_chan], 
+			&psy_var_long, &psy_var_short, ch);
+		psy_step13(&psy_var_long, block_type, ch);
 		psy_step14(p_sri, &part_tbl_long, &part_tbl_short, &psy_stvar_long[no_of_chan],
 			&psy_stvar_short[no_of_chan], &psy_var_long, &psy_var_short, ch);
 		psy_step15(psy_stvar_long[no_of_chan].use_ms, psy_stvar_short[no_of_chan].use_ms, p_sri, &psy_stvar_long[0], &psy_stvar_short[0], &psy_var_long, &psy_var_short, no_of_chan);
@@ -1073,6 +1076,40 @@ void psy_step11andahalf(PARTITION_TABLE_LONG *part_tbl_long,
 				}
 			}
 		}
+	}
+}
+
+
+void psy_step12(PARTITION_TABLE_LONG *part_tbl_long, 
+				PARTITION_TABLE_SHORT *part_tbl_short, 
+				PSY_STATVARIABLE_LONG *psy_stvar_long, 
+				PSY_STATVARIABLE_SHORT *psy_stvar_short, 
+				PSY_VARIABLE_LONG *psy_var_long, 
+				PSY_VARIABLE_SHORT *psy_var_short,
+				int ch
+				)
+{
+    int b;
+
+    psy_var_long->pe = 0.0;
+    for(b = 0; b < part_tbl_long->len; ++b){
+		psy_var_long->pe -= part_tbl_long->width[b]
+			* log10(psy_stvar_long->nb[psy_stvar_long->p_nb + b]
+			/ (psy_var_long->e[b] + 0.0000000001)); 
+    }
+//	if(psy_var_long->pe > 1100)
+//		printf("%f\t\n",psy_var_long->pe);
+}
+
+void psy_step13(PSY_VARIABLE_LONG *psy_var_long, 
+				enum WINDOW_TYPE *block_type,
+				int ch
+				)
+{
+	if(psy_var_long->pe > 1100) {
+        *block_type = ONLY_SHORT_WINDOW;
+	} else {
+        *block_type = ONLY_LONG_WINDOW;
 	}
 }
 

@@ -46,8 +46,8 @@ double *nok_tmp_DTimeSigBuf[MAX_TIME_CHANNELS]; /* temporary fix to the buffer s
 enum QC_MOD_SELECT qc_select = AAC_QC;                   /* later f(encPara) */
 enum AAC_PROFILE profile = MAIN;
 enum WINDOW_TYPE block_type[MAX_TIME_CHANNELS];
-enum WINDOW_TYPE desired_block_type;
-enum WINDOW_TYPE next_desired_block_type;
+enum WINDOW_TYPE desired_block_type[MAX_TIME_CHANNELS];
+enum WINDOW_TYPE next_desired_block_type[MAX_TIME_CHANNELS+2];
 
 /* Additional variables for AAC */
 int aacAllowScalefacs = 1;              /* Allow AAC scalefactors to be nonconstant */
@@ -249,12 +249,12 @@ int EncTfFrame (faacAACStream *as, BsBitStream  *fixed_stream)
 		int chanNum;
 
 		for (chanNum=0;chanNum<max_ch;chanNum++) {
-                        if(as->use_LTP)
-			   for( i=0; i<block_size_samples; i++ ) {
-				/* temporary fix: a linear buffer for LTP containing the whole time frame */
-				nok_tmp_DTimeSigBuf[chanNum][i] = DTimeSigBuf[chanNum][i];
-				nok_tmp_DTimeSigBuf[chanNum][block_size_samples + i] = DTimeSigLookAheadBuf[chanNum][i];
-			   }
+			if(as->use_LTP)
+				for( i=0; i<block_size_samples; i++ ) {
+					/* temporary fix: a linear buffer for LTP containing the whole time frame */
+					nok_tmp_DTimeSigBuf[chanNum][i] = DTimeSigBuf[chanNum][i];
+					nok_tmp_DTimeSigBuf[chanNum][block_size_samples + i] = DTimeSigLookAheadBuf[chanNum][i];
+				}
 			for( i=0; i<block_size_samples; i++ ) {
 				/* last frame input data are encoded now */
 				DTimeSigBuf[chanNum][i] = DTimeSigLookAheadBuf[chanNum][i];
@@ -311,7 +311,7 @@ int EncTfFrame (faacAACStream *as, BsBitStream  *fixed_stream)
 				sampling_rate,
 				chanNum,
 				&DTimeSigLookAheadBuf[chanNum],
-				&next_desired_block_type,
+				&next_desired_block_type[chanNum],
 				(int)qc_select,
 				block_size_samples,
 				chpo_long,
@@ -325,6 +325,7 @@ int EncTfFrame (faacAACStream *as, BsBitStream  *fixed_stream)
 	* block_switch processing
 	*
 	******************************************************************************************************************************/
+#if 0
 	/* Window switching taken from the NTT source code in the MPEG4 VM. */
 	{
 		static int ntt_InitFlag = 1;
@@ -355,8 +356,38 @@ int EncTfFrame (faacAACStream *as, BsBitStream  *fixed_stream)
 		}
 		ntt_InitFlag = 0;
 	}
+#else
+	{
+		int chanNum;
+		for (chanNum=0;chanNum<max_ch;chanNum++) {
+			/* A few definitions:                                                      */
+			/*   block_type:  Initially, the block_type used in the previous frame.    */
+			/*                Will be set to the block_type to use this frame.         */
+			/*                A block type will be selected to ensure a meaningful     */
+			/*                window transition.                                       */
+			/*   next_desired_block_type:  Block_type (LONG or SHORT) which the psycho */
+			/*                model wants to use next frame.  The psycho model is      */
+			/*                using a look-ahead buffer.                               */
+			/*   desired_block_type:  Block_type (LONG or SHORT) which the psycho      */
+			/*                previously wanted to use.  It is the desired block_type  */
+			/*                for this frame.                                          */
+			if ( (block_type[chanNum]==ONLY_SHORT_WINDOW)||(block_type[chanNum]==LONG_SHORT_WINDOW) ) {
+				if ( (desired_block_type[chanNum]==ONLY_LONG_WINDOW)&&(next_desired_block_type[chanNum]==ONLY_LONG_WINDOW) ) {
+					block_type[chanNum]=SHORT_LONG_WINDOW;
+				} else {
+					block_type[chanNum]=ONLY_SHORT_WINDOW;
+				}
+			} else if (next_desired_block_type[chanNum]==ONLY_SHORT_WINDOW) {
+				block_type[chanNum]=LONG_SHORT_WINDOW;
+			} else {
+				block_type[chanNum]=ONLY_LONG_WINDOW;
+			}
+			desired_block_type[chanNum]=next_desired_block_type[chanNum];
+		}
+	}
+#endif
 
-//	printf("%d\n", block_type[0]);
+//	printf("%d\t\n", block_type[0]);
 //	block_type[0] = ONLY_LONG_WINDOW;
 //	block_type[1] = ONLY_LONG_WINDOW;
 //	block_type[0] = ONLY_SHORT_WINDOW;
