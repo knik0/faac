@@ -1,6 +1,6 @@
 /*
  * FAAC - Freeware Advanced Audio Coder
- * $Id: fft.h,v 1.5 2004/04/02 14:56:17 danchr Exp $
+ * $Id: fft.h,v 1.6 2005/02/02 07:50:35 sur Exp $
  * Copyright (C) 2002 Krzysztof Nikiel
  *
  * This library is free software; you can redistribute it and/or
@@ -24,12 +24,26 @@
 
 typedef float fftfloat;
 
+#if defined DRM && !defined DRM_1024
+
+#define MAX_FFT 10
+
+typedef struct
+{
+    /*      cfg[Max FFT][FFT and inverse FFT] */
+    void*   cfg[MAX_FFT][2];
+} FFT_Tables;
+
+#else  /* use own FFT */
+
 typedef struct
 {
     fftfloat **costbl;
     fftfloat **negsintbl;
     unsigned short **reordertbl;
 } FFT_Tables;
+
+#endif /* defined DRM && !defined DRM_1024 */
 
 void fft_initialize		( FFT_Tables *fft_tables );
 void fft_terminate	( FFT_Tables *fft_tables );

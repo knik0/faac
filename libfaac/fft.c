@@ -1,6 +1,6 @@
 /*
  * FAAC - Freeware Advanced Audio Coder
- * $Id: fft.c,v 1.11 2004/04/02 14:56:17 danchr Exp $
+ * $Id: fft.c,v 1.12 2005/02/02 07:49:55 sur Exp $
  * Copyright (C) 2002 Krzysztof Nikiel
  *
  * This library is free software; you can redistribute it and/or
@@ -28,6 +28,446 @@
 
 #define MAXLOGM 9
 #define MAXLOGR 8
+
+#if defined DRM && !defined DRM_1024
+
+#include "kiss_fft/kiss_fft.h"
+#include "kiss_fft/kiss_fftr.h"
+
+static const int logm_to_nfft[] = 
+{
+/*  0       1       2       3       */
+    0,      0,      0,      0,
+/*  4       5       6       7       */
+    0,      0,      60,     0,
+/*  8       9                       */
+    240,    480
+};
+
+void fft_initialize( FFT_Tables *fft_tables )
+{
+    memset( fft_tables->cfg, 0, sizeof( fft_tables->cfg ) );
+}
+void fft_terminate( FFT_Tables *fft_tables )
+{
+    unsigned int i;
+    for ( i = 0; i < sizeof( fft_tables->cfg ) / sizeof( fft_tables->cfg[0] ); i++ )
+    {
+        if ( fft_tables->cfg[i][0] )
+        {
+            free( fft_tables->cfg[i][0] );
+            fft_tables->cfg[i][0] = NULL;
+        }
+        if ( fft_tables->cfg[i][1] )
+        {
+            free( fft_tables->cfg[i][1] );
+            fft_tables->cfg[i][1] = NULL;
+        }
+    }
+}
+
+void rfft( FFT_Tables *fft_tables, double *x, int logm )
+{
+#if 0
+/* sur: do not use real-only optimized FFT */
+    double xi[1 << MAXLOGR];
+
+    int nfft;
+
+    if ( logm > MAXLOGR )
+	{
+		fprintf(stderr, "rfft size too big\n");
+		exit(1);
+	}
+
+    nfft = logm_to_nfft[logm];
+
+    if ( nfft )
+    {
+        //unsigned int i;
+        //for ( i = 0; i < nfft; i++ )
+        //{
+        //    xi[i] = 0.0;
+        //}
+	    memset( xi, 0, nfft * sizeof( xi[0] ) );
+
+	    fft( fft_tables, x, xi, logm );
+
+	    memcpy( x + nfft / 2, xi, ( nfft / 2 ) * sizeof(x[0]) );
+    }
+    else
+    {
+        fprintf( stderr, "bad config for logm = %d\n", logm);
+        exit( 1 );
+    }
+
+#else
+/* sur: use real-only optimized FFT */
+
+    int nfft = 0;
+
+    kiss_fft_scalar fin[1 << MAXLOGR];
+    kiss_fft_cpx    fout[1 << MAXLOGR];
+
+    if ( logm > MAXLOGR )
+	{
+		fprintf(stderr, "fft size too big\n");
+		exit(1);
+	}
+
+    nfft = logm_to_nfft[logm];
+
+    if ( fft_tables->cfg[logm][0] == NULL )
+    {
+        if ( nfft )
+        {
+            fft_tables->cfg[logm][0] = kiss_fftr_alloc( nfft, 0, NULL, NULL );
+        }
+        else
+        {
+	    	fprintf(stderr, "bad logm = %d\n", logm);
+            exit( 1 );
+        }
+    }
+
+    if ( fft_tables->cfg[logm][0] )
+    {
+        unsigned int i;
+        
+        for ( i = 0; i < nfft; i++ )
+        {
+            fin[i] = x[i];    
+        }
+        
+        kiss_fftr( (kiss_fftr_cfg)fft_tables->cfg[logm][0], fin, fout );
+
+        for ( i = 0; i < nfft / 2; i++ )
+        {
+            x[i]            = fout[i].r;
+            x[i + nfft / 2] = fout[i].i;
+        }
+    }
+    else
+    {
+        fprintf( stderr, "bad config for logm = %d\n", logm);
+        exit( 1 );
+    }
+#endif
+}
+
+void fft( FFT_Tables *fft_tables, double *xr, double *xi, int logm )
+{
+    int nfft = 0;
+
+    kiss_fft_cpx    fin[1 << MAXLOGM];
+    kiss_fft_cpx    fout[1 << MAXLOGM];
+
+    if ( logm > MAXLOGM )
+	{
+		fprintf(stderr, "fft size too big\n");
+		exit(1);
+	}
+
+    nfft = logm_to_nfft[logm];
+
+    if ( fft_tables->cfg[logm][0] == NULL )
+    {
+        if ( nfft )
+        {
+            fft_tables->cfg[logm][0] = kiss_fft_alloc( nfft, 0, NULL, NULL );
+        }
+        else
+        {
+	    	fprintf(stderr, "bad logm = %d\n", logm);
+            exit( 1 );
+        }
+    }
+
+    if ( fft_tables->cfg[logm][0] )
+    {
+        unsigned int i;
+        
+        for ( i = 0; i < nfft; i++ )
+        {
+            fin[i].r = xr[i];    
+            fin[i].i = xi[i];
+        }
+        
+        kiss_fft( (kiss_fft_cfg)fft_tables->cfg[logm][0], fin, fout );
+
+        for ( i = 0; i < nfft; i++ )
+        {
+            xr[i]   = fout[i].r;
+            xi[i]   = fout[i].i;
+        }
+    }
+    else
+    {
+        fprintf( stderr, "bad config for logm = %d\n", logm);
+        exit( 1 );
+    }
+}
+
+void ffti( FFT_Tables *fft_tables, double *xr, double *xi, int logm )
+{
+    int nfft = 0;
+
+    kiss_fft_cpx    fin[1 << MAXLOGM];
+    kiss_fft_cpx    fout[1 << MAXLOGM];
+
+    if ( logm > MAXLOGM )
+	{
+		fprintf(stderr, "fft size too big\n");
+		exit(1);
+	}
+
+    nfft = logm_to_nfft[logm];
+
+    if ( fft_tables->cfg[logm][1] == NULL )
+    {
+        if ( nfft )
+        {
+            fft_tables->cfg[logm][1] = kiss_fft_alloc( nfft, 1, NULL, NULL );
+        }
+        else
+        {
+	    	fprintf(stderr, "bad logm = %d\n", logm);
+            exit( 1 );
+        }
+    }
+    
+    if ( fft_tables->cfg[logm][1] )
+    {
+        unsigned int i;
+        double fac = 1.0 / (double)nfft;
+        
+        for ( i = 0; i < nfft; i++ )
+        {
+            fin[i].r = xr[i];    
+            fin[i].i = xi[i];
+        }
+        
+        kiss_fft( (kiss_fft_cfg)fft_tables->cfg[logm][1], fin, fout );
+
+        for ( i = 0; i < nfft; i++ )
+        {
+            xr[i]   = fout[i].r * fac;
+            xi[i]   = fout[i].i * fac;
+        }
+    }
+    else
+    {
+        fprintf( stderr, "bad config for logm = %d\n", logm);
+        exit( 1 );
+    }
+}
+
+/* sur: Trying to use cfft from libfaad2 -- it does not work 'from scratch' */
+//
+//#include "cfft/common.h"
+//
+//void fft_initialize( FFT_Tables *fft_tables )
+//{
+//    memset( fft_tables->cfft, 0, sizeof( fft_tables->cfft ) );
+//}
+//void fft_terminate( FFT_Tables *fft_tables )
+//{
+//    unsigned int i;
+//    for ( i = 0; i < sizeof( fft_tables->cfft ) / sizeof( fft_tables->cfft[0] ); i++ )
+//    {
+//        if ( fft_tables->cfft[i] )
+//        {
+//            cfftu( fft_tables->cfft[i] );
+//            fft_tables->cfft[i] = NULL;
+//        }
+//    }
+//}
+//
+//void rfft( FFT_Tables *fft_tables, double *x, int logm )
+//{
+//	double xi[1 << MAXLOGR];
+//
+//    int nfft;
+//
+//    if ( logm > MAXLOGR )
+//	{
+//		fprintf(stderr, "rfft size too big\n");
+//		exit(1);
+//	}
+//
+//    nfft = logm_to_nfft[logm];
+//
+//    if ( nfft )
+//    {
+//        unsigned int i;
+//
+//        for ( i = 0; i < nfft; i++ )
+//        {
+//            xi[i] = 0.0;
+//        }
+//	    //memset( xi, 0, nfft * sizeof( xi[0] ) );
+//
+//	    fft( fft_tables, x, xi, logm );
+//
+//	    memcpy( x + nfft / 2, xi, ( nfft / 2 ) * sizeof(x[0]) );
+//
+//#ifdef SUR_DEBUG_FFT
+//        {
+//            FILE* f = fopen( "fft.log", "at" );
+//            
+//            fprintf( f, "RFFT(%d)\n", nfft );
+//            
+//            for ( i = 0; i < nfft; i++ )
+//            {
+//                fprintf( f, ";%d;%g;%g\n", i, x[i], xi[i] );
+//            }
+//
+//            fclose( f );
+//        }
+//#endif
+//    }
+//    else
+//    {
+//        fprintf( stderr, "bad config for logm = %d\n", logm);
+//        exit( 1 );
+//    }
+//}
+//
+//void fft( FFT_Tables *fft_tables, double *xr, double *xi, int logm )
+//{
+//    int nfft;
+//
+//    complex_t c[1 << MAXLOGM];
+//
+//    if ( logm > MAXLOGM )
+//	{
+//		fprintf(stderr, "fft size too big\n");
+//		exit(1);
+//	}
+//
+//    nfft = logm_to_nfft[logm];
+//
+//    if ( fft_tables->cfft[logm] == NULL )
+//    {
+//        if ( nfft )
+//        {
+//            fft_tables->cfft[logm] = cffti( nfft );
+//        }
+//        else
+//        {
+//	    	fprintf(stderr, "bad logm = %d\n", logm);
+//            exit( 1 );
+//        }
+//    }
+//
+//    if ( fft_tables->cfft[logm] )
+//    {
+//        unsigned int i;
+//        
+//        for ( i = 0; i < nfft; i++ )
+//        {
+//            RE( c[i] ) = xr[i];    
+//            IM( c[i] ) = xi[i];
+//        }
+//        
+//        cfftf( fft_tables->cfft[logm], c );
+//
+//        for ( i = 0; i < nfft; i++ )
+//        {
+//            xr[i]   = RE( c[i] );
+//            xi[i]   = IM( c[i] );
+//        }
+//
+//#ifdef SUR_DEBUG_FFT
+//        {
+//            FILE* f = fopen( "fft.log", "at" );
+//            
+//            fprintf( f, "FFT(%d)\n", nfft );
+//            
+//            for ( i = 0; i < nfft; i++ )
+//            {
+//                fprintf( f, ";%d;%g;%g\n", i, xr[i], xi[i] );
+//            }
+//
+//            fclose( f );
+//        }
+//#endif
+//    }
+//    else
+//    {
+//        fprintf( stderr, "bad config for logm = %d\n", logm);
+//        exit( 1 );
+//    }
+//}
+//
+//void ffti( FFT_Tables *fft_tables, double *xr, double *xi, int logm )
+//{
+//    int nfft;
+//
+//    complex_t c[1 << MAXLOGM];
+//
+//    if ( logm > MAXLOGM )
+//	{
+//		fprintf(stderr, "fft size too big\n");
+//		exit(1);
+//	}
+//
+//    nfft = logm_to_nfft[logm];
+//
+//    if ( fft_tables->cfft[logm] == NULL )
+//    {
+//        if ( nfft )
+//        {
+//            fft_tables->cfft[logm] = cffti( nfft );
+//        }
+//        else
+//        {
+//	    	fprintf(stderr, "bad logm = %d\n", logm);
+//            exit( 1 );
+//        }
+//    }
+//    
+//    if ( fft_tables->cfft[logm] )
+//    {
+//        unsigned int i;
+//        
+//        for ( i = 0; i < nfft; i++ )
+//        {
+//            RE( c[i] )  = xr[i];    
+//            IM( c[i] )  = xi[i];
+//        }
+//        
+//        cfftb( fft_tables->cfft[logm], c );
+//
+//        for ( i = 0; i < nfft; i++ )
+//        {
+//            xr[i]   = RE( c[i] );
+//            xi[i]   = IM( c[i] );
+//        }
+//
+//#ifdef SUR_DEBUG_FFT
+//        {
+//            FILE* f = fopen( "fft.log", "at" );
+//            
+//            fprintf( f, "FFTI(%d)\n", nfft );
+//            
+//            for ( i = 0; i < nfft; i++ )
+//            {
+//                fprintf( f, ";%d;%g;%g\n", i, xr[i], xi[i] );
+//            }
+//
+//            fclose( f );
+//        }
+//#endif
+//    }
+//    else
+//    {
+//        fprintf( stderr, "bad config for logm = %d\n", logm);
+//        exit( 1 );
+//    }
+//}
+
+#else /* !defined DRM || defined DRM_1024 */
 
 void fft_initialize( FFT_Tables *fft_tables )
 {
@@ -236,8 +676,13 @@ void ffti( FFT_Tables *fft_tables, double *xr, double *xi, int logm)
 	}
 }
 
+#endif /* defined DRM && !defined DRM_1024 */
+
 /*
 $Log: fft.c,v $
+Revision 1.12  2005/02/02 07:49:55  sur
+Added interface to kiss_fft library to implement FFT for 960 transform length.
+
 Revision 1.11  2004/04/02 14:56:17  danchr
 fix name clash w/ libavcodec: fft_init -> fft_initialize
 bump version number to 1.24 beta
