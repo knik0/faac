@@ -155,16 +155,13 @@ int numTracks = MP4GetNumberOfTracks(infile, NULL, 0);
         {
         unsigned char *buff = NULL;
         unsigned __int32 buff_size = 0;
-        unsigned char dummy2_8, dummy3_8, dummy4_8, dummy5_8, dummy6_8,
-            dummy7_8, dummy8_8;
-        unsigned long dummy1_32;
+        mp4AudioSpecificConfig mp4ASC;
 
 			MP4GetTrackESConfiguration(infile, trackId, (unsigned __int8 **)&buff, &buff_size);
 
             if (buff)
             {
-                rc = AudioSpecificConfig(buff, buff_size, &dummy1_32, &dummy2_8, &dummy3_8,
-                    &dummy4_8, &dummy5_8, &dummy6_8, &dummy7_8, &dummy8_8);
+                rc = AudioSpecificConfig(buff, buff_size, &mp4ASC);
                 free(buff);
 
                 if (rc < 0)
@@ -480,7 +477,8 @@ start_point:
 	int					track;
 	unsigned __int32	buffer_size;
 	DWORD				timeScale;
-	BYTE				sf, dummy8;
+	BYTE				sf;
+    mp4AudioSpecificConfig mp4ASC;
 
 		if(!(mi->mp4File=MP4Read(lpstrFilename, 0)))
 		    ERROR_OFI("Error opening file");
@@ -494,7 +492,13 @@ start_point:
 		MP4GetTrackESConfiguration(mi->mp4File, track, (unsigned __int8 **)&mi->buffer, &buffer_size);
 	    if(!mi->buffer)
 			ERROR_OFI("MP4GetTrackESConfiguration");
-		AudioSpecificConfig(mi->buffer, buffer_size, &timeScale, &channels, &sf, &mi->type, &dummy8, &dummy8, &dummy8, &dummy8);
+		AudioSpecificConfig(mi->buffer, buffer_size, &mp4ASC);
+
+        timeScale = mp4ASC.samplingFrequency;
+        channels = mp4ASC.channelsConfiguration;
+        sf = mp4ASC.samplingFrequencyIndex;
+        mi->type = mp4ASC.objectTypeIndex;
+
 		if(faacDecInit2(mi->hDecoder, mi->buffer, buffer_size, &samplerate, &channels) < 0)
 			ERROR_OFI("Error initializing decoder library");
 	    FREE(mi->buffer);
