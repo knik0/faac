@@ -200,6 +200,20 @@ void EncTf_psycho_acoustic(
   CH_PSYCH_OUTPUT_SHORT p_chpo_short[][MAX_SHORT_WINDOWS]
 );
 
+#ifndef WIN32
+/* structs for the psy_step6 part1 and part2 threads */
+typedef struct {
+	PARTITION_TABLE_LONG *part_tbl_long;
+	PSY_STATVARIABLE_LONG *psy_stvar_long;
+	PSY_VARIABLE_LONG *psy_var_long;
+} PSY_STEP6_PART1_CONTAINER;
+
+typedef struct {
+	PARTITION_TABLE_SHORT *part_tbl_short;
+	PSY_STATVARIABLE_SHORT *psy_stvar_short;
+	PSY_VARIABLE_SHORT *psy_var_short;
+} PSY_STEP6_PART2_CONTAINER;
+#endif
 /* added by T. Okada( 1997.07.10 ) */
 /* Jul 10 */
 #define psy_max(x,y) ((x) > (y) ? (x) : (y))
@@ -258,6 +272,10 @@ void psy_step5(PARTITION_TABLE_LONG *part_tbl_long,
 			   PSY_VARIABLE_SHORT *psy_var_short,
 			   int ch
 			   );
+
+void psy_step6_step1(void *inData);
+
+void psy_step6_step1(void *inData);
 
 void psy_step6(PARTITION_TABLE_LONG *part_tbl_long, 
 			   PARTITION_TABLE_SHORT *part_tbl_short, 
