@@ -1,12 +1,11 @@
-
-
+#include <math.h>
+#include <string.h>
 #include "aacenc.h" 
 #include "bitstream.h"
 #include "tf_main.h"
 #include "pulse.h"
 #include "aac_qc.h"
 #include "aac_se_enc.h"
-#include <math.h>
 
 #include "hufftab5.h"
 

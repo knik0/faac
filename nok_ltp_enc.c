@@ -34,9 +34,9 @@ Copyright (c)1997.
 /**************************************************************************
   Version Control Information			Method: CVS
   Identifiers:
-  $Revision: 1.6 $
-  $Date: 2000/02/17 15:23:37 $ (check in)
-  $Author: menno $
+  $Revision: 1.7 $
+  $Date: 2000/02/18 09:19:16 $ (check in)
+  $Author: lenox $
   *************************************************************************/
 
 
@@ -202,7 +202,7 @@ nok_ltp_enc(double *p_spectrum, double *p_time_signal, enum WINDOW_TYPE win_type
 			&lt_status->weight_idx, lt_status->delay[0], 2 * block_size_long);
 
 		/* Transform prediction to frequency domain and save it for subsequent use. */
-		buffer2freq (predicted_samples, lt_status->pred_mdct, NULL, win_type, win_shape, WS_SIN, MNON_OVERLAPPED);
+		buffer2freq (predicted_samples, lt_status->pred_mdct, NULL, win_type, WS_SIN, WS_SIN, MNON_OVERLAPPED);
 
 		lt_status->side_info = LEN_LTP_DATA_PRESENT + last_band + LEN_LTP_LAG + LEN_LTP_COEF;
 
@@ -365,8 +365,8 @@ nok_ltp_encode (BsBitStream *bs, enum WINDOW_TYPE win_type, int num_of_sfb,
                 NOK_LT_PRED_STATUS *lt_status, int write_flag)
 {
 	int i, last_band;
-	int first_subblock;
-	int prev_subblock;
+//	int first_subblock;
+//	int prev_subblock;
 	int bit_count = 0;
 
 

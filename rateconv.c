@@ -1,7 +1,7 @@
 /**********************************************************************
 audio sample rate converter
 
-$Id: rateconv.c,v 1.2 2000/01/31 08:00:38 lenox Exp $
+$Id: rateconv.c,v 1.3 2000/02/18 09:18:27 lenox Exp $
 
 Source file: rateconv.c
 
@@ -514,7 +514,7 @@ RCBuf *RateConvInit (
 				/*      -1 = auto */
   float fd,			/* in: 100dB cutoff freq / input bandwidth */
 				/*      -1 = auto */
-  long *numSampleIn)		/* out: num input samples / frame */
+  int *numSampleIn)		/* out: num input samples / frame */
 				/* returns: */
 				/*  buffer (handle) */
 				/*  or NULL if error */
@@ -628,7 +628,7 @@ RCBuf *RateConvInit (
 
   mktp2(tp2,cutoff2,alpha2);
 
-  *numSampleIn = 2*adv;
+  *numSampleIn = (int) 2*adv;
   buf->outSize = (long)((2*adv+4)*ratio+4);
   buf->out=(float*)malloc(buf->outSize*sizeof(float));
 //  if (!(buf->out=(float*)malloc(buf->outSize*sizeof(float))))

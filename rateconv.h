@@ -1,7 +1,7 @@
 /**********************************************************************
 audio sample rate converter
 
-$Id: rateconv.h,v 1.1 2000/01/17 21:53:04 menno Exp $
+$Id: rateconv.h,v 1.2 2000/02/18 09:17:28 lenox Exp $
 
 Header file: rateconv.h
 
@@ -73,7 +73,7 @@ RCBuf *RateConvInit (
 				/*      -1 = auto */
   float fd,			/* in: 100dB cutoff freq / input bandwidth */
 				/*      -1 = auto */
-  long *numSampleIn);		/* out: num input samples / frame */
+  int *numSampleIn);		/* out: num input samples / frame */
 				/* returns: */
 				/*  buffer (handle) */
 				/*  or NULL if error */
