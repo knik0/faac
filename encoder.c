@@ -256,7 +256,7 @@ int faac_EncodeFrameCore(faacAACStream *as, int Samples)
     continue;
   }
 
-  bitBuf = BsOpenWrite(as->frame_bits * as->channels * 10);
+  bitBuf = BsOpenWrite(as->frame_bits * 10);
 
   /* compute available number of bits */
   /* frameAvailNumBit contains number of bits in reservoir */
@@ -265,7 +265,7 @@ int faac_EncodeFrameCore(faacAACStream *as, int Samples)
     as->available_bits = 8184;
 
   /* Add to frameAvailNumBit the number of bits for this frame */
-  as->available_bits += (as->frame_bits * as->channels);
+  as->available_bits += as->frame_bits;
 
   /* Encode frame */
   error = EncTfFrame(as, bitBuf);
