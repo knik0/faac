@@ -52,9 +52,9 @@ Copyright (c) 1997.
 
 Source file:
 
-$Id: psych.c,v 1.36 2000/02/06 22:37:09 menno Exp $
-$Id: psych.c,v 1.36 2000/02/06 22:37:09 menno Exp $
-$Id: psych.c,v 1.36 2000/02/06 22:37:09 menno Exp $
+$Id: psych.c,v 1.37 2000/02/07 16:43:48 oxygene2000 Exp $
+$Id: psych.c,v 1.37 2000/02/07 16:43:48 oxygene2000 Exp $
+$Id: psych.c,v 1.37 2000/02/07 16:43:48 oxygene2000 Exp $
 
 **********************************************************************/
 
@@ -763,11 +763,11 @@ void psy_step4(PSY_STATVARIABLE_LONG *psy_stvar_long,
 				psy_var_short->c[i][w] = 0.0; /* tmp */
 		}
     }
-	for(i = 0; i < MAX_SHORT_WINDOWS; i++){
-		for(w = 60; w < BLOCK_LEN_SHORT; w++){
+//	for(i = 0; i < MAX_SHORT_WINDOWS; i++){
+//		for(w = 60; w < BLOCK_LEN_SHORT; w++){
 //			psy_var_short->c[i][w] = 0.4;
-		}
-	}
+//		}
+//	}
 	/* added by T. Araki (1997.10.16) end */
 }
 
