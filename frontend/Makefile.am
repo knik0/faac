@@ -1,6 +1,6 @@
 bin_PROGRAMS = faac
 
-faac_SOURCES = faac.c input.c
+faac_SOURCES = main.c input.c
 
 CXXFLAGS = -O2
 CFLAGS = -O2 -Wall
