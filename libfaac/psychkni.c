@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: psychkni.c,v 1.8 2003/04/13 08:38:15 knik Exp $
+ * $Id: psychkni.c,v 1.9 2003/06/26 19:20:52 knik Exp $
  */
 #include <stdio.h>
 #include <stdlib.h>
@@ -73,80 +73,84 @@ static void Hann(GlobalPsyInfo * gpsyInfo, double *inSamples, int size)
 static void PsyThreshold(GlobalPsyInfo * gpsyInfo, PsyInfo * psyInfo, int *cb_width_long,
 			 int num_cb_long, int *cb_width_short, int num_cb_short)
 {
-  int b, j;
-  double volb[8][NSFB_SHORT];	// band volume in each window
-  double totchg;
+  double totvol = 0.0;
+  double totchg, totchg2;
   int lastband;
   psydata_t *psydata = psyInfo->data;
-  static const double longthr = 1.0;
-  const double shortthr = longthr * 0.7;
-  static const int firstband = 1;
-
-
-  /* Long window */
-  for (b = 0; b < num_cb_long; b++)
-  {
-    psyInfo->maskEn[b] = 1.0;
-    psyInfo->maskThr[b] = longthr;
-  }
-
-  /* Short windows */
-  for (j = 0; j < 8; j++)
-  {
-    for (b = 0; b < num_cb_short; b++)
-    {
-      psyInfo->maskEnS[j][b] = 1.0;
-      psyInfo->maskThrS[j][b] = shortthr;
-    }
-  }
+  int firstband = 1;
+  int first = 0;
+  int last = 0;
+  int sfb;
 
   /* long/short block switch */
-  // compute band volume
-  for (j = 0; j < 8; j++)
+  totchg = totchg2 = 0.0;
+  for (sfb = 0; sfb < num_cb_short; sfb++)
   {
-    int l = 0;
-    for (b = 0; b < num_cb_short; b++)
-    {
-      int last = l + cb_width_short[b];
-      double e = 0;
+    int win;
+    double volb[8+1]; // 1 window comes from next frame
+    double maxdif = 0.0;
+    double totmaxdif = 0.0;
+    double e;
+    int l;
+
+    first = last;
+    last = first + cb_width_short[sfb];
+
+    if (first < 1)
+      first = 1;
 
       if (last > psydata->bandS) // band out of range
+      break;
+
+    // 8 windows of current frame
+    for (win = 0; win < 8; win++)
       {
-	volb[j][b] = 0;
-	l = last;
-	continue;
-      }
+      e = 0.0;
+      for (l = first; l < last; l++)
+	e += psydata->fftEnrgS[win][l];
 
-      for (; l < last; l++)
-	e += psydata->fftEnrgS[j][l];
-      volb[j][b] = sqrt(e);
+      volb[win] = sqrt(e);
+      totvol += e;
     }
-  }
-  lastband = b;
+    // 1 window of next frame
+    e = 0.0;
+    for (l = first; l < last; l++)
+      e += psydata->fftEnrgNextS[0][l];
 
-  // compare volume levels in each band of short widows
-  totchg = 0.0;
-  for (b = firstband; b < lastband; b++)
-  {
-    double maxdif = 0;
+    volb[8] = sqrt(e);
+    totvol += e;
 
-    for (j = 1; j < 7; j++)
+    // don't calculate energy change in lowest bands
+    if (sfb < firstband)
+      continue;
+
+    for (win = 1; win < 8; win++)
     {
-      double slowvol = (1.0 / 7.0) * ((7 - j) * volb[0][b] + j * volb[7][b]);
-      double voldif = volb[j][b] / slowvol;
-
-      if (voldif < 1.0)
-	voldif = 1.0 / voldif;
-      voldif -= 1.0;
+      double slowvol = (1.0 / 8.0) * ((8 - win) * volb[0] + win * volb[8]);
+      double voldif = fabs((volb[win] - slowvol) / slowvol);
+      double totvoldif = (volb[win] - slowvol) * (volb[win] - slowvol);
 
       if (voldif > maxdif)
 	maxdif = voldif;
+
+      if (totvoldif > totmaxdif)
+	totmaxdif = totvoldif;
     }
     totchg += maxdif;
+    totchg2 += totmaxdif;
   }
-  totchg = totchg / lastband;
+  //lastband = num_cb_short;
+  lastband = sfb;
 
-  psyInfo->block_type = (totchg > 0.8) ? ONLY_SHORT_WINDOW : ONLY_LONG_WINDOW;
+  totvol = sqrt(totvol);
+
+  totchg2 = sqrt(totchg2);
+
+  totchg = totchg / lastband;
+  totchg2 /= totvol;
+
+  psyInfo->block_type = ((totchg > 0.75) && (totchg2 > 0.10))
+    ? ONLY_SHORT_WINDOW : ONLY_LONG_WINDOW;
 
 #if 0
   {
@@ -160,47 +164,10 @@ static void PsyThreshold(GlobalPsyInfo * gpsyInfo, PsyInfo * psyInfo, int *cb_wi
       shorts++;
     }
 
-    printf("totchg: %s %g\t%g\n", flash, totchg, (double)shorts/total);
+    printf("totchg: %s %g %g\t%g\n", flash, totchg, totchg2,
+	   (double)shorts/total);
   }
 #endif
-}
-
-static void PsyThresholdMS(ChannelInfo * channelInfoL, GlobalPsyInfo * gpsyInfo,
-			   PsyInfo * psyInfoL, PsyInfo * psyInfoR, int
-			   *cb_width_long, int num_cb_long, int *cb_width_short,
-			   int num_cb_short)
-{
-  int b, j;
-
-  // do nothing
-
-  // long
-  for (b = 0; b < num_cb_long; b++)
-  {
-    psyInfoL->maskThrMS[b] = 0.7;
-    psyInfoR->maskThrMS[b] = 0.7;
-    psyInfoL->maskEnMS[b] = 1.0;
-    psyInfoR->maskEnMS[b] = 1.0;
-
-    //channelInfoL->msInfo.ms_used[b] = 1;
-    channelInfoL->msInfo.ms_used[b] = 0;
-  }
-
-  /* Short windows */
-  for (j = 0; j < 8; j++)
-  {
-    for (b = 0; b < num_cb_short; b++)
-    {
-
-      psyInfoL->maskThrSMS[j][b] = 0.7;
-      psyInfoR->maskThrSMS[j][b] = 0.7;
-      psyInfoL->maskEnSMS[j][b] = 1.0;
-      psyInfoR->maskEnSMS[j][b] = 1.0;
-    }
-
-    //channelInfoL->msInfo.ms_usedS[j][b] = 1;
-    channelInfoL->msInfo.ms_usedS[j][b] = 0;
-  }
 }
 
 static void PsyInit(GlobalPsyInfo * gpsyInfo, PsyInfo * psyInfo, unsigned int numChannels,
@@ -232,18 +199,12 @@ static void PsyInit(GlobalPsyInfo * gpsyInfo, PsyInfo * psyInfo, unsigned int nu
   size = BLOCK_LEN_LONG;
   for (channel = 0; channel < numChannels; channel++)
   {
+#if PREPARELONGFFT
     psydata_t *psydata = psyInfo[channel].data;
+#endif
 
     psyInfo[channel].size = size;
 
-    psyInfo[channel].maskThr =
-      (double *) AllocMemory(MAX_SCFAC_BANDS * sizeof(double));
-    psyInfo[channel].maskEn =
-      (double *) AllocMemory(MAX_SCFAC_BANDS * sizeof(double));
-    psyInfo[channel].maskThrMS =
-      (double *) AllocMemory(MAX_SCFAC_BANDS * sizeof(double));
-    psyInfo[channel].maskEnMS =
-      (double *) AllocMemory(MAX_SCFAC_BANDS * sizeof(double));
     psyInfo[channel].prevSamples =
       (double *) AllocMemory(size * sizeof(double));
     memset(psyInfo[channel].prevSamples, 0, size * sizeof(double));
@@ -271,15 +232,6 @@ static void PsyInit(GlobalPsyInfo * gpsyInfo, PsyInfo * psyInfo, unsigned int nu
 
     for (j = 0; j < 8; j++)
     {
-      psyInfo[channel].maskThrS[j] =
-	(double *) AllocMemory(MAX_SCFAC_BANDS * sizeof(double));
-      psyInfo[channel].maskEnS[j] =
-	(double *) AllocMemory(MAX_SCFAC_BANDS * sizeof(double));
-      psyInfo[channel].maskThrSMS[j] =
-	(double *) AllocMemory(MAX_SCFAC_BANDS * sizeof(double));
-      psyInfo[channel].maskEnSMS[j] =
-	(double *) AllocMemory(MAX_SCFAC_BANDS * sizeof(double));
-
       psydata->fftEnrgS[j] =
 	(psyfloat *) AllocMemory(size * sizeof(psyfloat));
       memset(psydata->fftEnrgS[j], 0, size * sizeof(psyfloat));
@@ -305,18 +257,12 @@ static void PsyEnd(GlobalPsyInfo * gpsyInfo, PsyInfo * psyInfo, unsigned int num
 
   for (channel = 0; channel < numChannels; channel++)
   {
+#if PREPARELONGFFT
     psydata_t *psydata = psyInfo[channel].data;
+#endif
 
     if (psyInfo[channel].prevSamples)
       FreeMemory(psyInfo[channel].prevSamples);
-    if (psyInfo[channel].maskThr)
-      FreeMemory(psyInfo[channel].maskThr);
-    if (psyInfo[channel].maskEn)
-      FreeMemory(psyInfo[channel].maskEn);
-    if (psyInfo[channel].maskThrMS)
-      FreeMemory(psyInfo[channel].maskThrMS);
-    if (psyInfo[channel].maskEnMS)
-      FreeMemory(psyInfo[channel].maskEnMS);
 
 #if PREPARELONGFFT
     if (psydata->fftEnrg)
@@ -336,15 +282,6 @@ static void PsyEnd(GlobalPsyInfo * gpsyInfo, PsyInfo * psyInfo, unsigned int num
       FreeMemory(psyInfo[channel].prevSamplesS);
     for (j = 0; j < 8; j++)
     {
-      if (psyInfo[channel].maskThrS[j])
-	FreeMemory(psyInfo[channel].maskThrS[j]);
-      if (psyInfo[channel].maskEnS[j])
-	FreeMemory(psyInfo[channel].maskEnS[j]);
-      if (psyInfo[channel].maskThrSMS[j])
-	FreeMemory(psyInfo[channel].maskThrSMS[j]);
-      if (psyInfo[channel].maskEnSMS[j])
-	FreeMemory(psyInfo[channel].maskEnSMS[j]);
-
       if (psydata->fftEnrgS[j])
 	FreeMemory(psydata->fftEnrgS[j]);
       if (psydata->fftEnrgNextS[j])
@@ -386,12 +323,6 @@ static void PsyCalculate(ChannelInfo * channelInfo, GlobalPsyInfo * gpsyInfo,
 		     cb_width_short, num_cb_short);
 	PsyThreshold(gpsyInfo, &psyInfo[rightChan], cb_width_long, num_cb_long,
 		     cb_width_short, num_cb_short);
-
-	/* And for MS */
-	PsyThresholdMS(&channelInfo[leftChan], gpsyInfo, &psyInfo[leftChan],
-		       &psyInfo[rightChan], cb_width_long, num_cb_long, cb_width_short,
-		       num_cb_short);
-
       }
       else if (!channelInfo[channel].cpe &&
 	       channelInfo[channel].lfe)
