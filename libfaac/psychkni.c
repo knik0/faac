@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: psychkni.c,v 1.9 2003/06/26 19:20:52 knik Exp $
+ * $Id: psychkni.c,v 1.10 2003/07/07 16:31:46 knik Exp $
  */
 #include <stdio.h>
 #include <stdlib.h>
@@ -124,17 +124,20 @@ static void PsyThreshold(GlobalPsyInfo * gpsyInfo, PsyInfo * psyInfo, int *cb_wi
     if (sfb < firstband)
       continue;
 
-    for (win = 1; win < 8; win++)
+    if ((volb[0] > 0.0) || (volb[8] > 0.0))
     {
-      double slowvol = (1.0 / 8.0) * ((8 - win) * volb[0] + win * volb[8]);
-      double voldif = fabs((volb[win] - slowvol) / slowvol);
-      double totvoldif = (volb[win] - slowvol) * (volb[win] - slowvol);
+      for (win = 1; win < 8; win++)
+      {
+	double slowvol = (1.0 / 8.0) * ((8 - win) * volb[0] + win * volb[8]);
+	double voldif = fabs((volb[win] - slowvol) / slowvol);
+	double totvoldif = (volb[win] - slowvol) * (volb[win] - slowvol);
 
-      if (voldif > maxdif)
-	maxdif = voldif;
+	if (voldif > maxdif)
+	  maxdif = voldif;
 
-      if (totvoldif > totmaxdif)
-	totmaxdif = totvoldif;
+	if (totvoldif > totmaxdif)
+	  totmaxdif = totvoldif;
+      }
     }
     totchg += maxdif;
     totchg2 += totmaxdif;
@@ -147,7 +150,10 @@ static void PsyThreshold(GlobalPsyInfo * gpsyInfo, PsyInfo * psyInfo, int *cb_wi
   totchg2 = sqrt(totchg2);
 
   totchg = totchg / lastband;
-  totchg2 /= totvol;
+  if (totvol)
+    totchg2 /= totvol;
+  else
+    totchg2 = 0.0;
 
   psyInfo->block_type = ((totchg > 0.75) && (totchg2 > 0.10))
     ? ONLY_SHORT_WINDOW : ONLY_LONG_WINDOW;
