@@ -105,7 +105,6 @@ int WriteADTSHeader(AACQuantInfo* quantInfo,   /* AACQuantInfo structure */
 		BsPutBit(fixedStream, 0, 1); // copyr. id. bit
 		BsPutBit(fixedStream, 0, 1); // copyr. id. start
 		BsPutBit(fixedStream, bit2byte(used_bits), 13); // number of bits
-		printf("%d\t%d\t", used_bits, bit2byte(used_bits));
 		BsPutBit(fixedStream, 0x7FF, 11); // buffer fullness (0x7FF for VBR)
 		BsPutBit(fixedStream, 0, 2); // raw data blocks (0+1=1)
 	}
