@@ -43,7 +43,7 @@ CEncoderJob::~CEncoderJob()
 }
 
 
-CEncoderJob& CEncoderJob::operator=(const CEncoderJob &oRight)
+/*CEncoderJob& CEncoderJob::operator=(const CEncoderJob &oRight)
 {
 	m_oFiles=oRight.m_oFiles;
 	m_bSourceFileFilterIsRecursive=oRight.m_bSourceFileFilterIsRecursive;
@@ -60,7 +60,7 @@ CEncoderJob& CEncoderJob::operator=(const CEncoderJob &oRight)
 	m_ulBandwidth=oRight.m_ulBandwidth;
 
 	return *this;
-}
+}*/
 
 CString CEncoderJob::DescribeJobTypeShort() const
 {
@@ -134,7 +134,36 @@ bool CEncoderJob::ProcessJob() const
 	{
 		// it's a filter encoder job
 
-		// first find out all files that actually belong to the job
+		CJobList oExpandedJobList;
+		if (!ExpandFilterJob(oExpandedJobList)) return false;
+
+		CBListReader oReader(oExpandedJobList);
+		CJob *poCurrentJob;
+		while ((poCurrentJob=oExpandedJobList.GetNextJob(oReader))!=0)
+		{
+			// make sure the target directory for the current job exists
+			CString oTargetDir(poCurrentJob->GetEncoderJob()->GetFiles().GetTargetFileDirectory());
+			if (!CRecursiveDirectoryTraverser::MakeSureDirectoryExists(oTargetDir))
+			{
+				CString oError;
+				oError.Format(IDS_ErrorCreatingNestedEncoderJob, poCurrentJob->GetEncoderJob()->GetFiles().GetCompleteSourceFilePath(), GetFiles().GetCompleteSourceFilePath());
+				AfxMessageBox("Error creating target directory", MB_OK | MB_ICONSTOP);		// XXX insert resource string and ask user what to do
+				return false;
+			}
+
+			// process the job
+			if (!poCurrentJob->GetEncoderJob()->ProcessJob())
+			{
+				CString oError;
+				oError.Format(IDS_ErrorCreatingNestedEncoderJob, poCurrentJob->GetEncoderJob()->GetFiles().GetCompleteSourceFilePath(), GetFiles().GetCompleteSourceFilePath());
+				if (AfxMessageBox(oError, MB_YESNO)!=IDYES)
+				{
+					return false;
+				}
+			}
+		}
+
+		/*// first find out all files that actually belong to the job
 		TItemList<CString> oFiles=
 			CRecursiveDirectoryTraverser::FindFiles(
 			GetFiles().GetSourceFileDirectory(),
@@ -149,11 +178,15 @@ bool CEncoderJob::ProcessJob() const
 			return false;
 		}
 
+		long lTotalNumberOfSubJobsToProcess=oFiles.GetNumber();
+		long lCurSubJobCount=0;
+
 		CBListReader oReader(oFiles);
 		CString oCurrentFilePath;
 		while (oFiles.GetNextElemContent(oReader, oCurrentFilePath))
 		{
 			CEncoderJob oNewJob(*this);
+			oNewJob.SetSubJobNumberInfo(lCurSubJobCount++, lTotalNumberOfSubJobsToProcess);
 			if (!oNewJob.GetFiles().SetCompleteSourceFilePath(oCurrentFilePath))
 			{
 				CString oError;
@@ -169,16 +202,16 @@ bool CEncoderJob::ProcessJob() const
 				CString oSourceFileDir;
 				{
 					oSourceFileDir=GetFiles().GetSourceFileDirectory();
-					if (oSourceFileDir[oSourceFileDir.GetLength()-1]=='\\')
-					{
-						oSourceFileDir.Delete(oSourceFileDir.GetLength()-1);
-					}
 					CString oTemp;
 					LPTSTR pDummy;
 					::GetFullPathName(oSourceFileDir,
 						MAX_PATH, oTemp.GetBuffer(MAX_PATH),
 						&pDummy);
 					oTemp.ReleaseBuffer();
+					if (oTemp[oTemp.GetLength()-1]=='\\')
+					{
+						oTemp.Delete(oTemp.GetLength()-1);
+					}
 
 					oSourceFileDir=oTemp;
 				}
@@ -227,7 +260,7 @@ bool CEncoderJob::ProcessJob() const
 					return false;
 				}
 			}
-		}
+		}*/
 
 		return true;
 	}
@@ -349,6 +382,116 @@ CString CEncoderJob::TranslateAacProfileToShortString(EAacProfile eAacProfile)
 	CString oToReturn;
 	oToReturn.Format(iStringId);
 	return oToReturn;
+}
+
+bool CEncoderJob::ExpandFilterJob(CJobList &oTarget, bool bCreateDirectories) const
+{
+	if (!CFilePathCalc::IsValidFileMask(GetFiles().GetSourceFileName()))
+	{
+		ASSERT(false);		// not a filter job
+		return false;
+	}
+	else
+	{
+		// it's a filter encoder job
+
+		oTarget.DeleteAll();
+
+		// first find out all files that actually belong to the job
+		TItemList<CString> oFiles=
+			CRecursiveDirectoryTraverser::FindFiles(
+			GetFiles().GetSourceFileDirectory(),
+			GetFiles().GetSourceFileName(),
+			GetSourceFileFilterIsRecursive());
+
+		if (oFiles.GetNumber()==0)
+		{
+			CString oError;
+			oError.Format(IDS_FilterDidntFindFiles, GetFiles().GetCompleteSourceFilePath());
+			AfxMessageBox(oError);
+			return false;
+		}
+
+		long lTotalNumberOfSubJobsToProcess=oFiles.GetNumber();
+		long lCurSubJobCount=0;
+
+		CBListReader oReader(oFiles);
+		CString oCurrentFilePath;
+		while (oFiles.GetNextElemContent(oReader, oCurrentFilePath))
+		{
+			CEncoderJob oNewJob(*this);
+			oNewJob.SetSubJobNumberInfo(lCurSubJobCount++, lTotalNumberOfSubJobsToProcess);
+			if (!oNewJob.GetFiles().SetCompleteSourceFilePath(oCurrentFilePath))
+			{
+				CString oError;
+				oError.Format(IDS_ErrorCreatingNestedEncoderJob, oCurrentFilePath, GetFiles().GetCompleteSourceFilePath());
+				if (AfxMessageBox(oError, MB_YESNO)!=IDYES)
+				{
+					return false;
+				}
+			}
+			// assemble the target file name and apply it to the new job
+			{
+				// find out the long name of the source file directory
+				CString oSourceFileDir;
+				{
+					oSourceFileDir=GetFiles().GetSourceFileDirectory();
+					CString oTemp;
+					LPTSTR pDummy;
+					::GetFullPathName(oSourceFileDir,
+						MAX_PATH, oTemp.GetBuffer(MAX_PATH),
+						&pDummy);
+					oTemp.ReleaseBuffer();
+					if (oTemp[oTemp.GetLength()-1]=='\\')
+					{
+						oTemp.Delete(oTemp.GetLength()-1);
+					}
+
+					oSourceFileDir=oTemp;
+				}
+
+				// find out the suffix to append to the target directory
+				// for our particular file
+				CString oDirSuffix;
+				{
+					CString oFileDir(oCurrentFilePath);
+					CFilePathCalc::MakePath(oFileDir);
+					int iLength=oFileDir.GetLength();
+					oDirSuffix=oFileDir.Right(iLength-oSourceFileDir.GetLength());
+					oDirSuffix.Delete(0);
+				}
+
+				// determine the target directory for that particular file
+				CString oTargetDir(GetFiles().GetTargetFileDirectory());
+				CFilePathCalc::MakePath(oTargetDir, true);
+				oTargetDir+=oDirSuffix;
+				if (bCreateDirectories)
+				{
+					if (!CRecursiveDirectoryTraverser::MakeSureDirectoryExists(oTargetDir))
+					{
+						CString oError;
+						oError.Format(IDS_ErrorCreatingNestedEncoderJob, oCurrentFilePath, GetFiles().GetCompleteSourceFilePath());
+						AfxMessageBox("Error creating target directory", MB_OK | MB_ICONSTOP);		// XXX insert resource string and ask user what to do
+						return false;
+					}
+				}
+
+				CString oSourceFileName;
+				CFilePathCalc::ExtractFileName(oCurrentFilePath, oSourceFileName);
+				CString oSourceFileNameRaw;
+				CString oSourceFileExtension;
+				CFilePathCalc::SplitFileAndExtension(oSourceFileName, oSourceFileNameRaw, oSourceFileExtension);
+				oNewJob.GetFiles().SetTargetFileDirectory(oTargetDir);
+				CString oDefaultExtension;
+				oDefaultExtension.LoadString(IDS_EndTargetFileStandardExtension);
+				oNewJob.GetFiles().SetTargetFileName(oSourceFileNameRaw+"."+oDefaultExtension);
+			}
+
+			oTarget.AddJob(oNewJob);
+		}
+
+		return true;
+	}
 }
 
 CEncoderGeneralPropertyPageContents CEncoderJob::GetGeneralPageContents() const

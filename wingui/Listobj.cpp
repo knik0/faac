@@ -213,12 +213,11 @@ PBBaseElem CBList::Add()
 
 	pElem=CreateElem();
 
-
-	if (pLast==0) pLast=pElem;
-	pElem->pNext=pFirst;
-	if (pFirst!=0) pElem->pNext->pPrevious=pElem;
-	pElem->pPrevious=0;
-	pFirst=pElem;
+	if (pFirst==0) pFirst=pElem;
+	pElem->pPrevious=pLast;
+	if (pLast!=0) pElem->pPrevious->pNext=pElem;
+	pElem->pNext=0;
+	pLast=pElem;
 	pElem->lIndex=lIndex;
 	pElem->pParentList=this;
 

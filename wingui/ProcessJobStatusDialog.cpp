@@ -54,6 +54,7 @@ BEGIN_MESSAGE_MAP(CProcessJobStatusDialog, CDialog)
 	ON_BN_CLICKED(IDC_BUTTONABORT, OnButtonAbort)
 	ON_BN_CLICKED(IDC_BUTTONPAUSE, OnButtonPause)
 	ON_BN_CLICKED(IDC_BUTTONCONTINUE, OnButtonContinue)
+	ON_BN_CLICKED(IDC_BUTTONMINIMIZEAPP, OnButtonMinimizeApp)
 	//}}AFX_MSG_MAP
 END_MESSAGE_MAP()
 
@@ -93,12 +94,32 @@ void CProcessJobStatusDialog::SetAvailableActions(bool bStop, bool bPause)
 
 void CProcessJobStatusDialog::ProcessUserMessages()
 {
+	//MSG msg;
+	//while (::PeekMessage(&msg, /**this*/0, 0, 0, PM_REMOVE)) 
+	//{ 
+	//	::TranslateMessage(&msg);
+	//	::DispatchMessage(&msg); 
+	//}
+
+	// copied from MSDN Topic "Idle Loop Processing"
 	MSG msg;
-	while (::PeekMessage(&msg, /**this*/0, 0, 0, PM_REMOVE)) 
-	{ 
-		::TranslateMessage(&msg);
-		::DispatchMessage(&msg); 
-	}
+    while ( ::PeekMessage( &msg, NULL, 0, 0, PM_NOREMOVE ) ) 
+    { 
+        if ( !AfxGetApp()->PumpMessage( ) ) 
+        { 
+			ASSERT(false);
+            //bDoingBackgroundProcessing = FALSE; 
+            ::PostQuitMessage(0); 
+            break; 
+        } 
+    } 
+    // let MFC do its idle processing
+    LONG lIdle = 0;
+    while ( AfxGetApp()->OnIdle(lIdle++ ) )
+        ;  
+    // Perform some background processing here 
+    // using another call to OnIdle
+
 }
 
 void CProcessJobStatusDialog::ReturnToCaller(bool bSuccess)
@@ -111,6 +132,32 @@ void CProcessJobStatusDialog::ReturnToCaller(bool bSuccess)
 	{
 		CDialog::OnCancel();
 	}
+}
+
+void CProcessJobStatusDialog::SetAdditionalCaptionInfo(const CString &oAdditionalInfo)
+{
+	if (oAdditionalInfo.GetLength()==0) return;
+
+	CString oCaption;
+	GetWindowText(oCaption);
+
+	CString oAddInfo(oAdditionalInfo);
+
+	if (oCaption.GetLength()>0)
+	{
+		// already a caption text there
+		oAddInfo=_T(" (")+oAddInfo+")";
+	}
+
+	if (oCaption.GetLength()<3 || oCaption.Right(3)!="...")
+	{
+		oCaption+=oAddInfo;
+	}
+	else
+	{
+		oCaption.Insert(oCaption.GetLength()-3, oAddInfo);
+	}
+	SetWindowText(oCaption);
 }
 
 void CALLBACK EXPORT CProcessJobStatusDialog::TimerProc(
@@ -153,4 +200,12 @@ void CProcessJobStatusDialog::OnButtonContinue()
 {
 	// TODO: Add your control notification handler code here
 	m_poClient->Start(0);
+}
+
+void CProcessJobStatusDialog::OnButtonMinimizeApp() 
+{
+	// TODO: Add your control notification handler code here
+
+	// can't do that like this - don't yet know how to get it restored
+	// AfxGetMainWnd()->ShowWindow(SW_MINIMIZE);
 }

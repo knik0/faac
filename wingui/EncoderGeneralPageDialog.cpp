@@ -186,7 +186,7 @@ void CEncoderGeneralPageDialog::ModifyJobs(const CEncoderGeneralPropertyPageCont
 	CJob *poCurJob;
 	while (m_oJobsToConfigure.GetNextElemContent(oReader, poCurJob))
 	{
-		if (!poCurJob->GetJobType()==CJob::eEncoderJob)
+		if (poCurJob->GetJobType()!=CJob::eEncoderJob)
 		{
 			// must all be encoder jobs
 			ASSERT(false);

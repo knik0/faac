@@ -87,6 +87,7 @@ public:
 	bool FindContent(const LItemType &etContent, long lStartSearchAfterId, long &lId) const;
 	long GetContentCount(const LItemType &etContent) const;
 	TItemList<long> GetContentIds(const LItemType &etContent) const;
+	TItemList<long> GetAllUsedIds() const;
 
 	bool GetFirstElemContent(LItemType &etContent, long &lId) const;
 	bool GetFirstElemContent(LItemType* &etContent, long &lId) const;
@@ -474,6 +475,28 @@ template <class LItemType> TItemList<long> TItemList<LItemType>::GetContentIds(c
 		{
 			oReturn.AddNewElem(lCurId);
 		}
+	}
+
+	poThis->EndRead(hRead);
+	return oReturn;
+}
+
+template <class LItemType> TItemList<long> TItemList<LItemType>::GetAllUsedIds() const
+{
+	TItemList<long> oReturn;
+
+	// we're using non-const members though we're going
+	// to reverse all changes; therefore let's disable
+	// the const checking
+	TItemList<LItemType> *poThis=(TItemList<LItemType>*)this;
+
+	// loop through all elements and collect their ids
+	LItemType *etReadContent;		// just a dummy
+	HRead hRead=poThis->BeginRead();
+	long lCurId;
+	while (poThis->GetNextElemContent(hRead, etReadContent, &lCurId))
+	{
+		oReturn.AddNewElem(lCurId);
 	}
 
 	poThis->EndRead(hRead);

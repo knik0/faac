@@ -36,6 +36,7 @@ public:
 	virtual void SetAvailableActions(bool bStop, bool bPause);
 	virtual void ProcessUserMessages();
 	virtual void ReturnToCaller(bool bSuccess);
+	virtual void SetAdditionalCaptionInfo(const CString &oAdditionalInfo);
 
 	static CProcessJobStatusDialog *m_poDialog;
 	static void CALLBACK EXPORT TimerProc(
@@ -64,6 +65,7 @@ protected:
 	afx_msg void OnButtonAbort();
 	afx_msg void OnButtonPause();
 	afx_msg void OnButtonContinue();
+	afx_msg void OnButtonMinimizeApp();
 	//}}AFX_MSG
 	DECLARE_MESSAGE_MAP()
 

@@ -23,6 +23,7 @@ public:
 	virtual void SetStatus(double dProgress, const CString &oTopStatusText, const CString &oBottomStatusText)=0;
 	virtual void SetAvailableActions(bool bStop, bool bPause)=0;
 	virtual void ProcessUserMessages()=0;
+	virtual void SetAdditionalCaptionInfo(const CString &oAdditionalInfo)=0;
 
 	// the return value is the status code to return to the caller;
 	// if bSuccess then IDOK is returned, IDCANCEL otherwise

@@ -48,7 +48,7 @@ public:
 
 	// this member properly cleans up any floating property window, if there's
 	// any
-	static void InvalidFloatingPropertiesDialog();
+	static void InvalidateFloatingPropertiesDialog();
 
 // Implementation
 protected:
@@ -57,6 +57,7 @@ protected:
 	//{{AFX_MSG(CFloatingPropertyDialog)
 	afx_msg void OnSize(UINT nType, int cx, int cy);
 	virtual BOOL OnInitDialog();
+	afx_msg void OnClose();
 	//}}AFX_MSG
 	DECLARE_MESSAGE_MAP()
 

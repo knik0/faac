@@ -18,6 +18,7 @@
 #include "JobList.h"
 #include "PropertiesDummyParentDialog.h"
 #include "FaacWinguiProgramSettings.h"
+#include "FloatingPropertyDialog.h"
 
 /////////////////////////////////////////////////////////////////////////////
 // CFaac_winguiApp:
@@ -28,6 +29,7 @@ class CFaac_winguiApp : public CWinApp
 {
 public:
 	CFaac_winguiApp();
+	virtual ~CFaac_winguiApp();
 
 // Overrides
 	// ClassWizard generated virtual function overrides
@@ -43,8 +45,10 @@ public:
 
 	// these two members are not an exact pair (getter/setter); however they
 	// work closely together
-	void SetGlobalPropertiesDummyParentDialogSingleton(CPropertiesDummyParentDialog *poPropertyContainer);
+	void SetGlobalPropertiesDummyParentDialogSingleton(CPropertiesDummyParentDialog *poPropertyContainer, CFloatingPropertyDialog *poFloatingPropertiesDialog=0);
 	CPropertiesDummyParentDialog* GetGlobalPropertiesDummyParentDialogSingleton();
+	bool HaveFloatingProperties() const;
+	CFloatingPropertyDialog* GetFloatingPropertiesDialog() const;
 
 // Implementation
 
@@ -67,6 +71,7 @@ private:
 	// this member saves a pointer to the entry point to display
 	// properties of jobs
 	CPropertiesDummyParentDialog *m_poCurPropertiesDummyParentDialogSingletonContainer;
+	CFloatingPropertyDialog *m_poFloatingPropertiesDialog;
 
 
 	// something like the destructor of the application

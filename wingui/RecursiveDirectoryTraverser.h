@@ -20,6 +20,11 @@ public:
 	CRecursiveDirectoryTraverser();
 	virtual ~CRecursiveDirectoryTraverser();
 
+	// the filter string may be a directory name, a file, or a directory
+	// name with a file filter;
+	// returns -1 in case of errors
+	static int CountMatchingFiles(const CString &oFilterString);
+
 	// this method finds all files that are in the specified directory
 	// and match the filter; it can walk recursively through the entire
 	// subtree returning all files in the subtree that match the filter;
@@ -35,8 +40,6 @@ public:
 	static bool MakeSureDirectoryExists(const CString &oDirectoryPath);
 
 private:
-	// returns -1 in case of errors
-	static int CountMatchingFiles(const CString &oFilterString);
 
 	// example:
 	//	before:

@@ -26,6 +26,8 @@ public:
 // Dialog Data
 	//{{AFX_DATA(CFaac_winguiDlg)
 	enum { IDD = IDD_FAAC_WINGUI_DIALOG };
+	CButton	m_ctrlButtonExpandFilterJob;
+	CButton	m_ctrlButtonOpenProperties;
 	CListCtrl	m_ctrlListJobs;
 	BOOL	m_bCheckRemoveProcessedJobs;
 	//}}AFX_DATA
@@ -36,8 +38,18 @@ public:
 	virtual void DoDataExchange(CDataExchange* pDX);	// DDX/DDV support
 	//}}AFX_VIRTUAL
 
+protected:
 	CJobList* GetGlobalJobList()								{ return &((CFaac_winguiApp*)AfxGetApp())->GetGlobalJobList(); }
 	CFaacWinguiProgramSettings* GetGlobalProgramSettings()		{ return &((CFaac_winguiApp*)AfxGetApp())->GetGlobalProgramSettings(); }
+
+public:
+
+	// a properties window that hides itself should call this member first
+	// so that the "Open Properties" button gets enabled; once this button
+	// is pressed ShowWindow is called for the window formerly specified and
+	// the button is hidden again
+	void HidePropertiesWindow(CWnd *poPropertiesWindow);
+	void ShowPropertiesWindow();
 
 // Implementation
 protected:
@@ -58,6 +70,10 @@ protected:
 	afx_msg void OnButtonSaveJobList();
 	afx_msg void OnButtonLoadJobList();
 	afx_msg void OnButtonDuplicateSelected();
+	afx_msg void OnButtonProcessAll();
+	afx_msg void OnButtonOpenProperties();
+	afx_msg void OnShowWindow(BOOL bShow, UINT nStatus);
+	afx_msg void OnButtonExpandFilterJob();
 	//}}AFX_MSG
 	DECLARE_MESSAGE_MAP()
 
@@ -89,6 +105,19 @@ protected:
 	// propose when file interaction is done
 	CString *m_poCurrentStandardFile;
 	void ReleaseStandardFile()			{ if (m_poCurrentStandardFile!=0) delete m_poCurrentStandardFile; }
+
+	// processes all jobs whose ids are in the specified list
+	void ProcessJobs(TItemList<long> oJobIds, bool bRemoveProcessJobs=false);
+
+	// file interaction; note that the load method also
+	// takes care of refilling the list control; both methods
+	// display error messages; thus their return values are
+	// only informative
+	bool LoadJobList(const CString &oCompletePath);
+	bool SaveJobList(const CString &oCompletePath);
+
+	// this member is used by the DefinePropertiesWindowToSetToEnableButton method
+	CWnd *m_poHiddenPropertiesWindow;
 };
 
 //{{AFX_INSERT_LOCATION}}

@@ -34,6 +34,10 @@ CFaac_winguiApp::CFaac_winguiApp():
 	// Place all significant initialization in InitInstance
 }
 
+CFaac_winguiApp::~CFaac_winguiApp()
+{
+}
+
 /////////////////////////////////////////////////////////////////////////////
 // The one and only CFaac_winguiApp object
 
@@ -79,7 +83,8 @@ BOOL CFaac_winguiApp::InitInstance()
 }
 
 void CFaac_winguiApp::SetGlobalPropertiesDummyParentDialogSingleton(
-	CPropertiesDummyParentDialog *poPropertyContainer)
+	CPropertiesDummyParentDialog *poPropertyContainer,
+	CFloatingPropertyDialog *poFloatingPropertiesDialog)
 {
 	if (m_poCurPropertiesDummyParentDialogSingletonContainer!=0)
 	{
@@ -89,11 +94,22 @@ void CFaac_winguiApp::SetGlobalPropertiesDummyParentDialogSingleton(
 	}
 
 	m_poCurPropertiesDummyParentDialogSingletonContainer=poPropertyContainer;
+	m_poFloatingPropertiesDialog=poFloatingPropertiesDialog;
 }
 
 CPropertiesDummyParentDialog* CFaac_winguiApp::GetGlobalPropertiesDummyParentDialogSingleton()
 {
 	return m_poCurPropertiesDummyParentDialogSingletonContainer;
+}
+
+bool CFaac_winguiApp::HaveFloatingProperties() const
+{
+	return m_poFloatingPropertiesDialog!=0;
+}
+
+CFloatingPropertyDialog* CFaac_winguiApp::GetFloatingPropertiesDialog() const
+{
+	return m_poFloatingPropertiesDialog;
 }
 
 void CFaac_winguiApp::PerformAppCleanup()

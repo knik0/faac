@@ -47,6 +47,8 @@ private:
 	void WriteProgress(long lOperationStartTickCount, long lMaxSteps, long lCurSteps);
 
 	static int GetAacProfileConstant(CEncoderJob::EAacProfile eAacProfile);
+
+	static CArchive* GetOutputFileArchive(const CString &oFileName);
 };
 
 #endif // !defined(AFX_ENCODERJOBPROCESSINGMANAGER_H__A1444E93_1546_11D5_8402_0080C88C25BD__INCLUDED_)

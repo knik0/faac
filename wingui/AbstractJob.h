@@ -28,6 +28,18 @@ public:
 	// is used during the processing of the job to give the user a
 	// feedback what exactly is done; may use up to 3 lines
 	virtual CString GetDetailedDescriptionForStatusDialog() const=0;
+
+	// job processing information; all numbers are zero based
+	void SetJobNumberInfo(long lThisJobCountNumber, long lTotalNumberOfJobs);
+	void SetSubJobNumberInfo(long lThisSubJobCountNumber, long lTotalNumberOfSubJobs);
+	void CopyAllJobNumberInfoFromJob(const CAbstractJob &oJob);
+	CString GetJobProcessingAdditionalCaptionBarInformation() const;
+
+private:
+	long m_lThisJobCountNumber;
+	long m_lTotalNumberOfJobs;
+	long m_lThisSubJobCountNumber;
+	long m_lTotalNumberOfSubJobs;
 };
 
 #endif // !defined(AFX_ABSTRACTJOB_H__DFE38E74_0E81_11D5_8402_0080C88C25BD__INCLUDED_)

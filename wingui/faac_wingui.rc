@@ -101,14 +101,14 @@ BEGIN
     CONTROL         "Use LTP",IDC_CHECKUSELTP,"Button",BS_AUTOCHECKBOX | 
                     WS_TABSTOP,24,72,44,10
     CONTROL         "Use LFE",IDC_CHECKUSELFE,"Button",BS_AUTOCHECKBOX | 
-                    WS_TABSTOP,24,83,43,10
+                    WS_DISABLED | WS_TABSTOP,24,83,43,10
     GROUPBOX        "AAC Profile",IDC_STATIC,133,46,47,48
     CONTROL         "LC",IDC_RADIOAACPROFILELC,"Button",BS_AUTORADIOBUTTON | 
                     WS_GROUP | WS_TABSTOP,142,58,25,10
     CONTROL         "Main",IDC_RADIOAACPROFILEMAIN,"Button",
                     BS_AUTORADIOBUTTON,142,69,31,10
-    CONTROL         "SSR",IDC_RADIOAACPROFILESSR,"Button",BS_AUTORADIOBUTTON,
-                    142,79,31,10
+    CONTROL         "SSR",IDC_RADIOAACPROFILESSR,"Button",BS_AUTORADIOBUTTON | 
+                    WS_DISABLED,142,79,31,10
     DEFPUSHBUTTON   "Enter Attractor",IDC_BUTTON1,198,112,50,14,NOT 
                     WS_VISIBLE
 END
@@ -178,28 +178,34 @@ BEGIN
                     IDC_STATIC,40,22,190,8
 END
 
-IDD_FAAC_WINGUI_DIALOG DIALOGEX 0, 0, 422, 199
-STYLE DS_MODALFRAME | WS_POPUP | WS_VISIBLE | WS_CAPTION | WS_SYSMENU
+IDD_FAAC_WINGUI_DIALOG DIALOGEX 0, 0, 422, 202
+STYLE DS_MODALFRAME | WS_MINIMIZEBOX | WS_POPUP | WS_VISIBLE | WS_CAPTION | 
+    WS_SYSMENU
 EXSTYLE WS_EX_APPWINDOW
 CAPTION "winfaac"
-FONT 8, "MS Sans Serif"
+FONT 8, "MS Sans Serif", 0, 0, 0x1
 BEGIN
-    DEFPUSHBUTTON   "Bye",IDOK,365,178,50,14
+    DEFPUSHBUTTON   "Bye",IDOK,365,181,50,14
     CONTROL         "List1",IDC_LISTJOBS,"SysListView32",LVS_REPORT | 
                     LVS_SHOWSELALWAYS | LVS_NOSORTHEADER | WS_BORDER | 
                     WS_TABSTOP,7,7,408,131
     PUSHBUTTON      "&Add Encoder Jobs...",IDC_BUTTONADDENCODERJOB,7,143,71,
                     14
     PUSHBUTTON      "&Delete Jobs",IDC_BUTTONDELETEJOBS,83,143,50,14
-    PUSHBUTTON      "&Process Selected",IDC_BUTTONPROCESSSELECTED,7,161,66,
+    PUSHBUTTON      "&Process Selected",IDC_BUTTONPROCESSSELECTED,63,161,66,
                     14
     CONTROL         "Remove Processed Jobs From List",
                     IDC_CHECKREMOVEPROCESSEDJOBS,"Button",BS_AUTOCHECKBOX | 
-                    WS_TABSTOP,7,182,125,10
+                    WS_TABSTOP,7,179,125,10
     PUSHBUTTON      "&Save Joblist...",IDC_BUTTONSAVEJOBLIST,301,143,54,14
     PUSHBUTTON      "&Load Joblist...",IDC_BUTTONLOADJOBLIST,361,143,54,14
     PUSHBUTTON      "D&uplicate Selected",IDC_BUTTONDUPLICATESELECTED,139,
                     143,69,14
+    PUSHBUTTON      "Pro&cess All",IDC_BUTTONPROCESSALL,7,161,50,14
+    PUSHBUTTON      "Open Pr&operties",IDC_BUTTONOPENPROPERTIES,356,161,59,
+                    14
+    PUSHBUTTON      "E&xpand Filter Job",IDC_BUTTONEXPANDFILTERJOB,215,143,
+                    65,14,WS_DISABLED
 END
 
 IDD_PROPERTIESTABPARENTDIALOG DIALOG DISCARDABLE  0, 0, 186, 95
@@ -283,9 +289,10 @@ CAPTION "Processing Job..."
 FONT 8, "MS Sans Serif"
 BEGIN
     CTEXT           "Static",IDC_LABELTOPSTATUSTEXT,7,7,340,39
-    CTEXT           "Static",IDC_LABELBOTTOMSTATUSTEXT,7,58,340,23
+    PUSHBUTTON      "_",IDC_BUTTONMINIMIZEAPP,337,91,10,11,NOT WS_VISIBLE
     CONTROL         "Progress1",IDC_PROGRESS1,"msctls_progress32",WS_BORDER,
                     23,47,307,10
+    CTEXT           "Static",IDC_LABELBOTTOMSTATUSTEXT,7,58,340,23
     PUSHBUTTON      "Abort",IDC_BUTTONABORT,152,88,50,14,NOT WS_VISIBLE
     PUSHBUTTON      "Pause",IDC_BUTTONPAUSE,207,88,50,14,NOT WS_VISIBLE
     PUSHBUTTON      "Continue",IDC_BUTTONCONTINUE,262,88,50,14,NOT 
@@ -315,7 +322,7 @@ BEGIN
         LEFTMARGIN, 7
         RIGHTMARGIN, 415
         TOPMARGIN, 7
-        BOTTOMMARGIN, 192
+        BOTTOMMARGIN, 195
         HORZGUIDE, 150
         HORZGUIDE, 168
     END
@@ -813,6 +820,9 @@ BEGIN
                             "The file filter ""%s"" didn't find any files. This might be due to an error in the filter format or because no files exist.\nThe job completes with an error."
     IDS_ErrorCreatingNestedEncoderJob 
                             "Could not process nested file ""%s"". Would you like to continue processing remaining files of encoder job ""%s""?"
+    IDS_ErrorWhileLoadingJobList "Error while loading joblist."
+    IDS_JobNofM             "%d of %d"
+    IDS_SubJobNofM          "Sub Job %d of %d"
 END
 
 #endif    // English (U.S.) resources

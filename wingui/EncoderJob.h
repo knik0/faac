@@ -16,6 +16,8 @@
 #include "EncoderGeneralPropertyPageContents.h"
 #include "EncoderQualityPropertyPageContents.h"
 #include "EncoderId3PropertyPageContents.h"
+//#include "JobList.h"		// ring include
+class CJobList;
 
 // do not derive this class from CJob;
 // rather let CJob objects contain instances of this class
@@ -67,7 +69,8 @@ public:
 	void SetBandwidth(unsigned long ulBandwidth)						{ m_ulBandwidth=ulBandwidth; }
 	void SetBandwidth(long lBandwidth)									{ ASSERT(lBandwidth>=0); m_ulBandwidth=lBandwidth; }
 
-	CEncoderJob& operator=(const CEncoderJob &oRight);
+	// no more up to date (also had to call base class version at least)
+	// CEncoderJob& operator=(const CEncoderJob &oRight);
 
 	// property page interaction
 	CEncoderGeneralPropertyPageContents GetGeneralPageContents() const;
@@ -92,6 +95,13 @@ public:
 	virtual bool GetFromArchive(CArchive &oArchive);
 
 	static CString TranslateAacProfileToShortString(EAacProfile eAacProfile);
+
+	// when <this> is an encoder job with a filter as source file this method expands
+	// this job to a list of single jobs to process;
+	// returns false in case of errors but displays error messages on its own;
+	// the bCreateDirectories parameter specifies if the target directory structure
+	// is already to create (otherwise executing the job could fail)
+	bool ExpandFilterJob(CJobList &oTarget, bool bCreateDirectories=false) const;
 
 private:
 	CSourceTargetFilePair m_oFiles;

@@ -209,6 +209,7 @@ bool CJob::ProcessJob() const
 {
 	if (m_poJob!=0)
 	{
+		m_poJob->CopyAllJobNumberInfoFromJob(*this);
 		return m_poJob->ProcessJob();
 	}
 	else

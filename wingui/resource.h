@@ -51,6 +51,9 @@
 #define IDR_TOOLBARMAIN                 137
 #define IDS_FilterDidntFindFiles        137
 #define IDS_ErrorCreatingNestedEncoderJob 138
+#define IDS_ErrorWhileLoadingJobList    139
+#define IDS_JobNofM                     140
+#define IDS_SubJobNofM                  141
 #define IDC_LISTJOBS                    1000
 #define IDC_BUTTONADDENCODERJOB         1001
 #define IDC_TAB1                        1002
@@ -99,6 +102,10 @@
 #define IDC_BUTTONLOADJOBLIST           1050
 #define IDC_BUTTONDUPLICATESELECTED     1051
 #define IDC_CHECKRECURSIVE              1052
+#define IDC_BUTTONPROCESSALL            1053
+#define IDC_BUTTONOPENPROPERTIES        1054
+#define IDC_BUTTONMINIMIZEAPP           1055
+#define IDC_BUTTONEXPANDFILTERJOB       1056
 #define ID_BUTTON32771                  32771
 #define ID_BUTTON32772                  32772
 #define ID_BUTTON32773                  32773
@@ -110,7 +117,7 @@
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NEXT_RESOURCE_VALUE        139
 #define _APS_NEXT_COMMAND_VALUE         32775
-#define _APS_NEXT_CONTROL_VALUE         1053
+#define _APS_NEXT_CONTROL_VALUE         1057
 #define _APS_NEXT_SYMED_VALUE           101
 #endif
 #endif

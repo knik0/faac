@@ -27,11 +27,32 @@ CRecursiveDirectoryTraverser::~CRecursiveDirectoryTraverser()
 
 }
 
+int CRecursiveDirectoryTraverser::CountMatchingFiles(const CString &oFilterString)
+{
+	int iToReturn=0;
+
+	CFileFind oFileFind;
+	CString oSearchMask=oFilterString;
+	
+	if (oFileFind.FindFile(oSearchMask))
+	{		
+		iToReturn++;
+		while (oFileFind.FindNextFile())
+		{
+			iToReturn++;
+		}
+	}
+
+	oFileFind.Close();
+
+	return iToReturn;
+}
+
 TItemList<CString> CRecursiveDirectoryTraverser::FindFiles(const CString &oRootDirectory, const CString &oFileNameFilter, bool bRecursive)
 {
 	TItemList<CString> oToReturn;
 	CString oRootDir(oRootDirectory);
-	if (!CFilePathCalc::MakePath(oRootDir) || !CFilePathCalc::IsValidFileMask(oFileNameFilter))
+	if (!CFilePathCalc::MakePath(oRootDir, true) || !CFilePathCalc::IsValidFileMask(oFileNameFilter))
 	{
 		CString oError;
 		oError.Format(IDS_SearchParametersInvalid, oRootDir, oFileNameFilter);
@@ -140,27 +161,6 @@ bool CRecursiveDirectoryTraverser::MakeSureDirectoryExists(const CString &oDirec
 		}
 	}
 	return true;
-}
-
-int CRecursiveDirectoryTraverser::CountMatchingFiles(const CString &oFilterString)
-{
-	int iToReturn=0;
-
-	CFileFind oFileFind;
-	CString oSearchMask=oFilterString;
-	
-	if (oFileFind.FindFile(oSearchMask))
-	{		
-		iToReturn++;
-		while (oFileFind.FindNextFile())
-		{
-			iToReturn++;
-		}
-	}
-
-	oFileFind.Close();
-
-	return iToReturn;
 }
 
 bool CRecursiveDirectoryTraverser::CreateOneDirectory(CString &oExistingPath, CString &oCreatablePath)

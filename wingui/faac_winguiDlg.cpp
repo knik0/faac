@@ -69,7 +69,8 @@ END_MESSAGE_MAP()
 CFaac_winguiDlg::CFaac_winguiDlg(CWnd* pParent /*=NULL*/)
 	: CDialog(CFaac_winguiDlg::IDD, pParent),
 	m_iListCtrlUpdatesCounter(-1),
-	m_poCurrentStandardFile(0)
+	m_poCurrentStandardFile(0),
+	m_poHiddenPropertiesWindow(0)
 {
 	//{{AFX_DATA_INIT(CFaac_winguiDlg)
 	m_bCheckRemoveProcessedJobs = FALSE;
@@ -87,6 +88,8 @@ void CFaac_winguiDlg::DoDataExchange(CDataExchange* pDX)
 {
 	CDialog::DoDataExchange(pDX);
 	//{{AFX_DATA_MAP(CFaac_winguiDlg)
+	DDX_Control(pDX, IDC_BUTTONEXPANDFILTERJOB, m_ctrlButtonExpandFilterJob);
+	DDX_Control(pDX, IDC_BUTTONOPENPROPERTIES, m_ctrlButtonOpenProperties);
 	DDX_Control(pDX, IDC_LISTJOBS, m_ctrlListJobs);
 	DDX_Check(pDX, IDC_CHECKREMOVEPROCESSEDJOBS, m_bCheckRemoveProcessedJobs);
 	//}}AFX_DATA_MAP
@@ -106,6 +109,10 @@ BEGIN_MESSAGE_MAP(CFaac_winguiDlg, CDialog)
 	ON_BN_CLICKED(IDC_BUTTONSAVEJOBLIST, OnButtonSaveJobList)
 	ON_BN_CLICKED(IDC_BUTTONLOADJOBLIST, OnButtonLoadJobList)
 	ON_BN_CLICKED(IDC_BUTTONDUPLICATESELECTED, OnButtonDuplicateSelected)
+	ON_BN_CLICKED(IDC_BUTTONPROCESSALL, OnButtonProcessAll)
+	ON_BN_CLICKED(IDC_BUTTONOPENPROPERTIES, OnButtonOpenProperties)
+	ON_WM_SHOWWINDOW()
+	ON_BN_CLICKED(IDC_BUTTONEXPANDFILTERJOB, OnButtonExpandFilterJob)
 	//}}AFX_MSG_MAP
 END_MESSAGE_MAP()
 
@@ -152,12 +159,47 @@ BOOL CFaac_winguiDlg::OnInitDialog()
 
 		// create a floating property window
 		CFloatingPropertyDialog::CreateFloatingPropertiesDummyParentDialog();
+		m_ctrlButtonOpenProperties.ShowWindow(SW_HIDE);		// property window is open
 
 		// make sure the floating window is initialized properly
 		OnJobListCtrlSelChange();
+
+
+		// load file specified on the command line (if any)
+		{
+			// Parse command line for standard shell commands, DDE, file open
+			CCommandLineInfo cmdInfo;
+			AfxGetApp()->ParseCommandLine(cmdInfo);
+			if (cmdInfo.m_nShellCommand==CCommandLineInfo::FileNew)	// prevent opening a new file on program start
+			{
+				cmdInfo.m_nShellCommand=CCommandLineInfo::FileNothing;
+			}
+			else if (cmdInfo.m_nShellCommand==CCommandLineInfo::FileOpen)
+			{
+				// must load a job list
+				LoadJobList(cmdInfo.m_strFileName);
+			}
+		}
 	}
 	
 	return TRUE;  // return TRUE  unless you set the focus to a control
+}
+
+void CFaac_winguiDlg::HidePropertiesWindow(CWnd *poPropertiesWindow)
+{
+	// must not hide two property windows at a time
+	ASSERT(m_poHiddenPropertiesWindow==0);
+
+	m_poHiddenPropertiesWindow=poPropertiesWindow;
+	m_poHiddenPropertiesWindow->ShowWindow(SW_HIDE);
+	m_ctrlButtonOpenProperties.ShowWindow(SW_SHOW);
+}
+
+void CFaac_winguiDlg::ShowPropertiesWindow()
+{
+	m_poHiddenPropertiesWindow->ShowWindow(SW_SHOW);
+	m_poHiddenPropertiesWindow=0;
+	m_ctrlButtonOpenProperties.ShowWindow(SW_HIDE);
 }
 
 void CFaac_winguiDlg::OnSysCommand(UINT nID, LPARAM lParam)
@@ -412,6 +454,32 @@ void CFaac_winguiDlg::OnJobListCtrlSelChange(TItemList<long> *poNewSelection)
 	{
 		delete poSupportedPages;
 	}
+
+	// enable/disable the expand button
+	{
+		bool bButtonEnabled=true;
+		if (m_oSelectedJobsIds.GetNumber()!=1)
+		{
+			bButtonEnabled=false;
+		}
+		else
+		{
+			long lSelectedJobId;
+			long lDummy;
+			m_oSelectedJobsIds.GetFirstElemContent(lSelectedJobId, lDummy);
+			CJob *poJob=oJobs.GetJob(lSelectedJobId);
+			if (poJob->GetEncoderJob()==0)
+			{
+				bButtonEnabled=false;
+			}
+			else if (!CFilePathCalc::IsValidFileMask(poJob->GetEncoderJob()->GetFiles().GetSourceFileName()))
+			{
+				bButtonEnabled=false;
+			}
+		}
+
+		m_ctrlButtonExpandFilterJob.EnableWindow(bButtonEnabled ? TRUE : FALSE);
+	}
 }
 
 void CFaac_winguiDlg::OnClickListJobs(NMHDR* pNMHDR, LRESULT* pResult) 
@@ -451,51 +519,10 @@ void CFaac_winguiDlg::OnButtonProcessSelected()
 {
 	if (!UpdateData(TRUE)) return;
 
-	CJobList *poJobList=GetGlobalJobList();
-
 	TItemList<long> oCurSelection(CWindowUtil::GetAllSelectedListCtrlItemLParams(&m_ctrlListJobs, false));
+	ProcessJobs(oCurSelection, m_bCheckRemoveProcessedJobs!=0);
 
-	TItemList<long> oItemsToRemove;
-
-	CBListReader oReader(oCurSelection);
-	long lCurIndex;
-	bool bContinue=true;
-	while (bContinue && oCurSelection.GetNextElemContent(oReader, lCurIndex))
-	{
-		// get the current job
-		CJob *poJob=poJobList->GetJob(lCurIndex);
-
-		if (!poJob->ProcessJob())
-		{
-			if (AfxMessageBox(IDS_ErrorProcessingJobSelection, MB_YESNO)!=IDYES)
-			{
-				bContinue=false;
-			}
-		}
-		else
-		{
-			// successfully processed
-			if (m_bCheckRemoveProcessedJobs)
-			{
-				int iListItem=CWindowUtil::GetListCtrlItemIdByLParam(&m_ctrlListJobs, lCurIndex);
-				ASSERT(iListItem>=0);		// must exist (logically)
-				m_ctrlListJobs.DeleteItem(iListItem);
-
-				oItemsToRemove.AddNewElem(lCurIndex);
-			}
-		}
-	}
-
-	if (oItemsToRemove.GetNumber()>0)
-	{
-		OnJobListCtrlUserAction();	// this call is very important since the property dialog must be informed about the new selection before the underlying jobs are deleted
-		poJobList->DeleteElems(oItemsToRemove);
-		ReFillInJobListCtrl(0, false);
-
-		// the selection may have changed, so make sure the property
-		// dialog is updated
-		OnJobListCtrlUserAction();
-	}
+	CJobList *poJobList=GetGlobalJobList();
 }
 
 void CFaac_winguiDlg::OnRclickListJobs(NMHDR* pNMHDR, LRESULT* pResult) 
@@ -537,13 +564,9 @@ void CFaac_winguiDlg::OnButtonSaveJobList()
 	if (oOpenDialog.DoModal()==IDOK)
 	{
 		// the file has been selected
-		CFileSerializableJobList oJobList(*GetGlobalJobList());
 		ReleaseStandardFile();
 		m_poCurrentStandardFile=new CString(oOpenDialog.GetPathName());
-		if (!oJobList.SaveToFile(oOpenDialog.GetPathName(), 1))
-		{
-			AfxMessageBox(IDS_ErrorWhileSavingJobList, MB_OK | MB_ICONSTOP);
-		}
+		SaveJobList(*m_poCurrentStandardFile);
 	}
 	else
 	{
@@ -588,18 +611,9 @@ void CFaac_winguiDlg::OnButtonLoadJobList()
 	if (oOpenDialog.DoModal()==IDOK)
 	{
 		// the file has been selected
-		CFileSerializableJobList oJobList;
 		ReleaseStandardFile();
 		m_poCurrentStandardFile=new CString(oOpenDialog.GetPathName());
-		if (!oJobList.LoadFromFile(oOpenDialog.GetPathName(), 1))
-		{
-			AfxMessageBox(IDS_ErrorWhileSavingJobList, MB_OK | MB_ICONSTOP);
-		}
-		else
-		{
-			*GetGlobalJobList()=oJobList;
-			ReFillInJobListCtrl(0, false);
-		}
+		LoadJobList(*m_poCurrentStandardFile);
 	}
 	else
 	{
@@ -649,5 +663,150 @@ void CFaac_winguiDlg::OnButtonDuplicateSelected()
 		// the selection may have changed, so make sure the property
 		// dialog is updated
 		OnJobListCtrlUserAction();
+	}
+}
+
+void CFaac_winguiDlg::OnButtonProcessAll() 
+{
+	// TODO: Add your control notification handler code here
+	if (!UpdateData(TRUE)) return;
+
+	ProcessJobs(GetGlobalJobList()->GetAllUsedIds(), m_bCheckRemoveProcessedJobs!=0);
+}
+
+void CFaac_winguiDlg::ProcessJobs(TItemList<long> oJobIds, bool bRemoveProcessJobs)
+{
+	if (oJobIds.GetNumber()==0) return;
+	CJobList *poJobList=GetGlobalJobList();
+
+	TItemList<long> oItemsToRemove;
+
+	long lTotalNumberOfJobsToProcess=oJobIds.GetNumber();
+	long lCurJobCount=0;
+
+	CBListReader oReader(oJobIds);
+	long lCurIndex;
+	bool bContinue=true;
+	while (bContinue && oJobIds.GetNextElemContent(oReader, lCurIndex))
+	{
+		// get the current job
+		CJob *poJob=poJobList->GetJob(lCurIndex);
+		poJob->SetJobNumberInfo(lCurJobCount++, lTotalNumberOfJobsToProcess);
+
+		if (!poJob->ProcessJob())
+		{
+			if (AfxMessageBox(IDS_ErrorProcessingJobSelection, MB_YESNO)!=IDYES)
+			{
+				bContinue=false;
+			}
+		}
+		else
+		{
+			// successfully processed
+			if (bRemoveProcessJobs)
+			{
+				int iListItem=CWindowUtil::GetListCtrlItemIdByLParam(&m_ctrlListJobs, lCurIndex);
+				ASSERT(iListItem>=0);		// must exist (logically)
+				m_ctrlListJobs.DeleteItem(iListItem);
+
+				oItemsToRemove.AddNewElem(lCurIndex);
+			}
+		}
+	}
+
+	if (oItemsToRemove.GetNumber()>0)
+	{
+		OnJobListCtrlUserAction();	// this call is very important since the property dialog must be informed about the new selection before the underlying jobs are deleted
+		poJobList->DeleteElems(oItemsToRemove);
+		ReFillInJobListCtrl(0, false);
+
+		// the selection may have changed, so make sure the property
+		// dialog is updated
+		OnJobListCtrlUserAction();
+	}
+}
+
+bool CFaac_winguiDlg::LoadJobList(const CString &oCompletePath)
+{
+	// the file has been selected
+	CFileSerializableJobList oJobList;
+	if (!oJobList.LoadFromFile(oCompletePath, 1))
+	{
+		AfxMessageBox(IDS_ErrorWhileLoadingJobList, MB_OK | MB_ICONSTOP);
+		return false;
+	}
+	else
+	{
+		// first make sure the property window doesn't contain anything
+		CWindowUtil::DeleteAllListCtrlItems(&m_ctrlListJobs);
+		OnJobListCtrlUserAction();
+
+		*GetGlobalJobList()=oJobList;
+		ReFillInJobListCtrl(0, false);
+		return true;
+	}
+}
+
+bool CFaac_winguiDlg::SaveJobList(const CString &oCompletePath)
+{
+	// the file has been selected
+	CFileSerializableJobList oJobList(*GetGlobalJobList());
+	if (!oJobList.SaveToFile(oCompletePath, 1))
+	{
+		AfxMessageBox(IDS_ErrorWhileSavingJobList, MB_OK | MB_ICONSTOP);
+		return false;
+	}
+	else
+	{
+		return true;
+	}
+}
+
+void CFaac_winguiDlg::OnButtonOpenProperties() 
+{
+	// TODO: Add your control notification handler code here
+	ShowPropertiesWindow();
+}
+
+void CFaac_winguiDlg::OnShowWindow(BOOL bShow, UINT nStatus) 
+{
+	CDialog::OnShowWindow(bShow, nStatus);
+	
+	// TODO: Add your message handler code here
+	
+}
+
+void CFaac_winguiDlg::OnButtonExpandFilterJob() 
+{
+	// TODO: Add your control notification handler code here
+	TItemList<long> oCurSelection(CWindowUtil::GetAllSelectedListCtrlItemLParams(&m_ctrlListJobs, false));
+
+	long lSelectedJobId;
+	long lDummy;
+	oCurSelection.GetFirstElemContent(lSelectedJobId, lDummy);
+
+	CJobList *poGlobalJobList=GetGlobalJobList();
+	CJob *poJob=poGlobalJobList->GetJob(lSelectedJobId);
+	CJobList oExpanded;
+	if (poJob->GetEncoderJob()==0)
+	{
+		ASSERT(false);
+		return;
+	}
+	else if (poJob->GetEncoderJob()->ExpandFilterJob(oExpanded, false))
+	{
+		int iListItemToDelete=CWindowUtil::GetListCtrlItemIdByLParam(&m_ctrlListJobs, lSelectedJobId);
+		if (iListItemToDelete>=0)
+		{
+			m_ctrlListJobs.DeleteItem(iListItemToDelete);
+			OnJobListCtrlUserAction();	// this call is very important since the property dialog must be informed about the new selection before the underlying jobs are deleted
+		}
+		poGlobalJobList->DeleteElem(lSelectedJobId);
+		*poGlobalJobList+=oExpanded;
+
+		CListCtrlStateSaver oListSelection;
+		oListSelection.SetToSelected(oExpanded.GetAllUsedIds());
+		ReFillInJobListCtrl(&oListSelection, false);
+		OnJobListCtrlSelChange();
 	}
 }

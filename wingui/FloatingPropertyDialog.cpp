@@ -6,6 +6,7 @@
 #include "stdafx.h"
 #include "faac_wingui.h"
 #include "FloatingPropertyDialog.h"
+#include "Faac_winguiDlg.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -52,6 +53,7 @@ void CFloatingPropertyDialog::DoDataExchange(CDataExchange* pDX)
 BEGIN_MESSAGE_MAP(CFloatingPropertyDialog, CDialog)
 	//{{AFX_MSG_MAP(CFloatingPropertyDialog)
 	ON_WM_SIZE()
+	ON_WM_CLOSE()
 	//}}AFX_MSG_MAP
 END_MESSAGE_MAP()
 
@@ -68,7 +70,7 @@ void CFloatingPropertyDialog::CreateFloatingPropertiesDummyParentDialog()
 	}
 }
 
-void CFloatingPropertyDialog::InvalidFloatingPropertiesDialog()
+void CFloatingPropertyDialog::InvalidateFloatingPropertiesDialog()
 {
 	if (m_poFloatingPropertyDialogSingleton!=0)
 	{
@@ -92,7 +94,7 @@ BOOL CFloatingPropertyDialog::OnInitDialog()
 	// TODO: Add extra initialization here
 	ShowWindow(SW_SHOW);
 	m_poPropertiesDummyDialog=new CPropertiesDummyParentDialog(true, this);
-	((CFaac_winguiApp*)AfxGetApp())->SetGlobalPropertiesDummyParentDialogSingleton(m_poPropertiesDummyDialog);
+	((CFaac_winguiApp*)AfxGetApp())->SetGlobalPropertiesDummyParentDialogSingleton(m_poPropertiesDummyDialog, this);
 	ApplyNewSize(m_oCurrentSize);
 	m_poPropertiesDummyDialog->ShowWindow(SW_SHOW);
 	
@@ -114,4 +116,13 @@ void CFloatingPropertyDialog::ApplyNewSize(const CRect &oSize)
 		oDebugLabelRect.OffsetRect(-oLabelRect.Size().cx, -oLabelRect.Size().cy);
 		m_ctrlLabelDebugTag.MoveWindow(oDebugLabelRect);
 	}
+}
+
+void CFloatingPropertyDialog::OnClose() 
+{
+	// TODO: Add your message handler code here and/or call default
+
+	((CFaac_winguiDlg*)AfxGetMainWnd())->HidePropertiesWindow(this);
+	
+	// CDialog::OnClose();
 }
