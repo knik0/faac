@@ -1,10 +1,5 @@
 #include <windows.h>
-#include <stdlib.h>
-#include "resource.h"
 #include "filters.h" //CoolEdit
-#include "faac.h"
-
-extern faacEncConfiguration faacEncCfg;
 
 
 BOOL WINAPI DllMain (HANDLE hModule, DWORD fdwReason, LPVOID lpReserved)
@@ -68,16 +63,16 @@ BOOL WINAPI DllMain (HANDLE hModule, DWORD fdwReason, LPVOID lpReserved)
 __declspec(dllexport) short FAR PASCAL QueryCoolFilter(COOLQUERY far * cq)
 {
 	lstrcpy(cq->szName,"MPEG4-AAC Format");		
-	lstrcpy(cq->szCopyright,"Freeware AAC-MPEG4 codec");// Compiled on: " __DATE__);
+	lstrcpy(cq->szCopyright,"Freeware AAC-MPEG4 codec");
 	lstrcpy(cq->szExt,"AAC");
 	lstrcpy(cq->szExt2,"MP4"); 
 	cq->lChunkSize=16384; 
 	cq->dwFlags=QF_RATEADJUSTABLE|QF_CANLOAD|QF_CANSAVE|QF_HASOPTIONSBOX;
- 	cq->Stereo8=0xFF; // supports all rates of stereo 8
+ 	cq->Stereo8=0xFF; // supports all rates ???
  	cq->Stereo16=0xFF;
  	cq->Stereo24=0xFF;
  	cq->Stereo32=0xFF;
- 	cq->Mono8=0xFF; // supports all rates of stereo 8
+ 	cq->Mono8=0xFF;
  	cq->Mono16=0xFF;
  	cq->Mono24=0xFF;
  	cq->Mono32=0xFF;
@@ -86,132 +81,3 @@ __declspec(dllexport) short FAR PASCAL QueryCoolFilter(COOLQUERY far * cq)
  	cq->Quad8=0xFF;
  	return C_VALIDLIBRARY;
 }
-
-__declspec(dllexport) BOOL FAR PASCAL DIALOGMsgProc(HWND hWndDlg, UINT Message, WPARAM wParam, LPARAM lParam)
-{
-   switch(Message)
-   {
-   case WM_INITDIALOG:
-         {             
-          SendMessage(GetDlgItem(hWndDlg, IDC_CB_BITRATE), CB_ADDSTRING, 0, (LPARAM)(LPCTSTR)"8");
-          SendMessage(GetDlgItem(hWndDlg, IDC_CB_BITRATE), CB_ADDSTRING, 0, (LPARAM)(LPCTSTR)"18");
-          SendMessage(GetDlgItem(hWndDlg, IDC_CB_BITRATE), CB_ADDSTRING, 0, (LPARAM)(LPCTSTR)"20");
-          SendMessage(GetDlgItem(hWndDlg, IDC_CB_BITRATE), CB_ADDSTRING, 0, (LPARAM)(LPCTSTR)"24");
-          SendMessage(GetDlgItem(hWndDlg, IDC_CB_BITRATE), CB_ADDSTRING, 0, (LPARAM)(LPCTSTR)"32");
-          SendMessage(GetDlgItem(hWndDlg, IDC_CB_BITRATE), CB_ADDSTRING, 0, (LPARAM)(LPCTSTR)"40");
-          SendMessage(GetDlgItem(hWndDlg, IDC_CB_BITRATE), CB_ADDSTRING, 0, (LPARAM)(LPCTSTR)"48");
-          SendMessage(GetDlgItem(hWndDlg, IDC_CB_BITRATE), CB_ADDSTRING, 0, (LPARAM)(LPCTSTR)"56");
-          SendMessage(GetDlgItem(hWndDlg, IDC_CB_BITRATE), CB_ADDSTRING, 0, (LPARAM)(LPCTSTR)"64");
-          SendMessage(GetDlgItem(hWndDlg, IDC_CB_BITRATE), CB_ADDSTRING, 0, (LPARAM)(LPCTSTR)"96");
-          SendMessage(GetDlgItem(hWndDlg, IDC_CB_BITRATE), CB_ADDSTRING, 0, (LPARAM)(LPCTSTR)"112");
-          SendMessage(GetDlgItem(hWndDlg, IDC_CB_BITRATE), CB_ADDSTRING, 0, (LPARAM)(LPCTSTR)"128");
-          SendMessage(GetDlgItem(hWndDlg, IDC_CB_BITRATE), CB_ADDSTRING, 0, (LPARAM)(LPCTSTR)"160");
-          SendMessage(GetDlgItem(hWndDlg, IDC_CB_BITRATE), CB_ADDSTRING, 0, (LPARAM)(LPCTSTR)"192");
-          SendMessage(GetDlgItem(hWndDlg, IDC_CB_BITRATE), CB_ADDSTRING, 0, (LPARAM)(LPCTSTR)"256");
-          SendMessage(GetDlgItem(hWndDlg, IDC_CB_BITRATE), CB_SETCURSEL, 11, 0);
-
-          SendMessage(GetDlgItem(hWndDlg, IDC_CB_BANDWIDTH), CB_ADDSTRING, 0, (LPARAM)(LPCTSTR)"4000");
-          SendMessage(GetDlgItem(hWndDlg, IDC_CB_BANDWIDTH), CB_ADDSTRING, 0, (LPARAM)(LPCTSTR)"8000");
-          SendMessage(GetDlgItem(hWndDlg, IDC_CB_BANDWIDTH), CB_ADDSTRING, 0, (LPARAM)(LPCTSTR)"16000");
-          SendMessage(GetDlgItem(hWndDlg, IDC_CB_BANDWIDTH), CB_ADDSTRING, 0, (LPARAM)(LPCTSTR)"22050");
-          SendMessage(GetDlgItem(hWndDlg, IDC_CB_BANDWIDTH), CB_ADDSTRING, 0, (LPARAM)(LPCTSTR)"24000");
-          SendMessage(GetDlgItem(hWndDlg, IDC_CB_BANDWIDTH), CB_SETCURSEL, 3, 0);
-
-          CheckDlgButton(hWndDlg, IDC_ALLOWMIDSIDE, TRUE);
-          CheckDlgButton(hWndDlg, IDC_USETNS, TRUE);
-          CheckDlgButton(hWndDlg, IDC_USELFE, FALSE);
-
-	         switch((long)lParam)
-			 {
-			 case 1:
-			  CheckDlgButton(hWndDlg,IDC_RADIO1,TRUE);
-			  break;
-			 case 2:
-			  CheckDlgButton(hWndDlg,IDC_RADIO2,TRUE);
-			  break;
-			 case 3:
-			  CheckDlgButton(hWndDlg,IDC_RADIO3,TRUE);
-			  break;
-			 case 4:
-			  CheckDlgButton(hWndDlg,IDC_RADIO4,TRUE);
-			  break;
-			 case 5:
-			  CheckDlgButton(hWndDlg,IDC_RADIO5,TRUE);
-			  break;
-			 case 6:
-			  CheckDlgButton(hWndDlg,IDC_RADIO6,TRUE);
-			  break;
-			 case 7:
-			  CheckDlgButton(hWndDlg,IDC_RADIO7,TRUE);
-			  break;
-			 case 8:
-			  CheckDlgButton(hWndDlg,IDC_RADIO8,TRUE);
-			  break;
-			 case 9:
-			  CheckDlgButton(hWndDlg,IDC_RADIO9,TRUE);
-			  break;
-			 default:
-			  CheckDlgButton(hWndDlg,IDC_RADIO1,TRUE);
-			  CheckDlgButton(hWndDlg,IDC_RADIO3,TRUE);
-			  CheckDlgButton(hWndDlg,IDC_RADIO7,TRUE);
-			  break;
-	         }	         
-         }         
-         break; // End of WM_INITDIALOG                                 
-
-    case WM_CLOSE:
-         // Closing the Dialog behaves the same as Cancel               
-         PostMessage(hWndDlg, WM_COMMAND, IDCANCEL, 0L);
-         break; // End of WM_CLOSE                                      
-
-    case WM_COMMAND:
-	{
-		switch(LOWORD(wParam))
-        {
-		    case IDOK:
-            	 {
-				 char szTemp[10];
-            	  if(IsDlgButtonChecked(hWndDlg,IDC_RADIO1))
-            	   faacEncCfg.mpegVersion=4;
-            	  if(IsDlgButtonChecked(hWndDlg,IDC_RADIO2))
-            	   faacEncCfg.mpegVersion=2;
-            	  if(IsDlgButtonChecked(hWndDlg,IDC_RADIO3))
-            	   faacEncCfg.aacObjectType=0;
-            	  if(IsDlgButtonChecked(hWndDlg,IDC_RADIO4))
-            	   faacEncCfg.aacObjectType=1;
-            	  if(IsDlgButtonChecked(hWndDlg,IDC_RADIO5))
-            	   faacEncCfg.aacObjectType=2;
-            	  if(IsDlgButtonChecked(hWndDlg,IDC_RADIO6))
-            	   faacEncCfg.aacObjectType=3;
-/*            	  if(IsDlgButtonChecked(hWndDlg,IDC_RADIO7))
-            	   faacEncCfg=;
-            	  if(IsDlgButtonChecked(hWndDlg,IDC_RADIO8))
-            	   faacEncCfg=;
-            	  if(IsDlgButtonChecked(hWndDlg,IDC_RADIO9))
-            	   faacEncCfg=;*/
-
-                  faacEncCfg.allowMidside=IsDlgButtonChecked(hWndDlg, IDC_ALLOWMIDSIDE) == BST_CHECKED ? 1 : 0;
-                  faacEncCfg.useTns=IsDlgButtonChecked(hWndDlg, IDC_USETNS) == BST_CHECKED ? 1 : 0;
-                  faacEncCfg.useLfe=IsDlgButtonChecked(hWndDlg, IDC_USELFE) == BST_CHECKED ? 1 : 0;
-
-				  GetDlgItemText(hWndDlg, IDC_CB_BITRATE, szTemp, sizeof(szTemp));
-				  faacEncCfg.bitRate=atoi(szTemp);
-				  GetDlgItemText(hWndDlg, IDC_CB_BANDWIDTH, szTemp, sizeof(szTemp));
-				  faacEncCfg.bandWidth=atoi(szTemp);
-                  
-				  EndDialog(hWndDlg, (short)2);
-            	 }
-                 break;
-            case IDCANCEL:
-                 // Ignore data values entered into the controls        
-                 // and dismiss the dialog window returning FALSE       
-                 EndDialog(hWndDlg, FALSE);
-                 break;
-           }
-         break;    // End of WM_COMMAND                                 
-	}
-    default:
-        return FALSE;
-   }
- return TRUE;
-}//  End of DIALOGSMsgProc                                      
