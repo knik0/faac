@@ -28,20 +28,20 @@ int faacEncodeInit(faacAACStream *as, int *samplesToRead, int *bitBufferSize, in
 	int startupNumFrame;
 
 	if ((as->inputBuffer = (double**)malloc( as->channels*sizeof(double*)))==NULL)
-		return NULL;
+		return 0;
 	for (ch=0; ch < as->channels; ch++)
 	{
 		if ((as->inputBuffer[ch]=(double*)malloc( 1024*sizeof(double)))==NULL)
-			return NULL;
+			return 0;
 	}
 
 	if((as->bit_rate % 1000)||(as->bit_rate < 16000)) {
-		return NULL;
+		return 0;
 	}
 	if (as->channels != 2)
-		return NULL;
+		return 0;
 	if ((as->profile != MAIN_PROFILE)&&(as->profile != LOW_PROFILE))
-		return NULL;
+		return 0;
 
 	as->total_bits = 0;
 	as->frames = 0;
@@ -325,7 +325,7 @@ faacVersion *faacEncodeVersion(void)
 	faacVersion *faacv = malloc(sizeof(faacVersion));
 
 	faacv->DLLMajorVersion = 2;
-	faacv->DLLMinorVersion = 20;
+	faacv->DLLMinorVersion = 30;
 	faacv->MajorVersion = 0;
 	faacv->MinorVersion = 65;
 	strcpy(faacv->HomePage, "http://www.slimline.net/aac/");
@@ -630,7 +630,7 @@ int main(int argc, char *argv[])
 		as->header_type = header_type;
 
 		res = faacEncodeInit(as, &readNumSample, &bitBufSize, &headerSize);
-		if (res == NULL) {
+		if (res == 0) {
 			printf("Error while encoding %s.\n", FileNames[i]);
 			continue;
 		}
