@@ -63,6 +63,7 @@ void usage(void)
   printf(" -nm   Don't use mid/side stereo coding.\n");
   printf("       The default for MS is intelligent switching.\n");
   printf(" -np   Don't use LTP (Long Term Prediction).\n");
+  printf(" -lfe  Use LFE (Low Frequency Enhancement) channel.\n");
   printf(" -oX   Set output directory.\n");
   printf(" -sX   Set output sampling rate.\n");
   printf(" -cX   Set cut-off frequency.\n");
@@ -188,6 +189,9 @@ int parse_arg(int argc, char *argv[],faacAACStream *as, char *InFileNames[100], 
 	  break;
         case 'c': case 'C':
 	  faac_SetParam(as,CUT_OFF,atoi(&argv[i][2]));
+	  break;
+        case 'l': case 'L':
+	  faac_SetParam(as,LFE_PRESENT,USE_LFE);
 	  break;
         case 'o': case 'O':
 	  out_dir_set = 1;

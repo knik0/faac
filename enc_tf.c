@@ -247,7 +247,7 @@ int EncTfFrame (faacAACStream *as, BsBitStream  *fixed_stream)
   /***********************************************************************/
   /* Determine channel elements */
   /***********************************************************************/
-  DetermineChInfo(channelInfo, max_ch);
+  DetermineChInfo(channelInfo, max_ch, as->lfePresent);
 
 
   /***********************************************************************/
@@ -487,6 +487,21 @@ int EncTfFrame (faacAACStream *as, BsBitStream  *fixed_stream)
     }
   }
 
+
+  /************************************************************************
+   Set upper spectral coefficients to zero for LFE
+   ************************************************************************/
+  {
+    int chanNum;
+    for (chanNum=0;chanNum<max_ch;chanNum++) { 
+      if (channelInfo[chanNum].lfe) {           
+        int i;    
+        for (i=13;i<sfb_offset_table[chanNum][nr_of_sfb[chanNum]];i++)      
+          spectral_line_vector[chanNum][i] = 0;
+      }
+    }
+  }
+
   /*****************************************************************************
   * quantization and coding
   *****************************************************************************/
@@ -512,22 +527,27 @@ int EncTfFrame (faacAACStream *as, BsBitStream  *fixed_stream)
     /* Perform TNS analysis and filtering     */
     /******************************************/
     for (chanNum=0;chanNum<max_ch;chanNum++) {
-      error = TnsEncode(nr_of_sfb[chanNum],            /* Number of bands per window */
+		if (!channelInfo[chanNum].lfe) {
+			error = TnsEncode(nr_of_sfb[chanNum],            /* Number of bands per window */
       		        quantInfo[chanNum].max_sfb,              /* max_sfb */
-          	        block_type[chanNum],
-	  	        sfb_offset_table[chanNum],
-		        spectral_line_vector[chanNum],
-		        &tnsInfo[chanNum],
-		        as->use_TNS);
-      if (error == FERROR)
-      return FERROR;
+					block_type[chanNum],
+					sfb_offset_table[chanNum],
+					spectral_line_vector[chanNum],
+					&tnsInfo[chanNum],
+					as->use_TNS);
+			if (error == FERROR)
+				return FERROR;
+		} else {
+			tnsInfo[chanNum].tnsDataPresent=0;      /* TNS not used for LFE */
+		}
     }
 
     /*******************************************************************************/
     /* If LTP prediction is used, compute LTP predictor info and residual spectrum */
     /*******************************************************************************/
     for(chanNum=0;chanNum<max_ch;chanNum++) {
-      if(as->use_LTP && (block_type[chanNum] != ONLY_SHORT_WINDOW)) {
+      if(as->use_LTP && channelInfo[chanNum].present &&
+		  (!channelInfo[chanNum].lfe) && (block_type[chanNum] != ONLY_SHORT_WINDOW)) {
         if(channelInfo[chanNum].cpe) {
     	  if(channelInfo[chanNum].ch_is_left) {
 	    int i;
@@ -600,8 +620,24 @@ int EncTfFrame (faacAACStream *as, BsBitStream  *fixed_stream)
     /************************************************/
     for (chanNum = 0; chanNum < max_ch; chanNum++) {
       int bitsToUse;
-      bitsToUse = (int)((average_bits - used_bits)/max_ch);
-      bitsToUse += (int)(0.2*available_bitreservoir_bits/max_ch);
+	  if (!as->lfePresent) {
+		  bitsToUse = (int)((average_bits - used_bits)/max_ch);
+		  bitsToUse += (int)(0.2*available_bitreservoir_bits/max_ch);
+	  } else {
+		  /* Calculation of reduced bitrate for LFE */
+		  double lfeBitRatio = 0.14;       /* ratio of LFE bits to bits of one SCE */
+		  int lfeBits = max(200,(int)((average_bits - used_bits) * lfeBitRatio / (max_ch - 1))); /* number of bits for LFE */ 
+		  
+		  if (channelInfo[chanNum].lfe) {
+			  bitsToUse = lfeBits;
+			  bitsToUse += (int)(0.2*available_bitreservoir_bits 
+				  * lfeBitRatio / (max_ch - 1));
+		  } else {
+			  bitsToUse = (int)((average_bits - used_bits - lfeBits) / (max_ch - 1));
+			  bitsToUse += (int)(0.2*available_bitreservoir_bits 
+				  * (1 - lfeBitRatio / (max_ch - 1)) / (max_ch - 1));
+		  }
+	  }
 
       error = tf_encode_spectrum_aac(&spectral_line_vector[chanNum],
                                      &p_ratio[chanNum],
@@ -645,12 +681,14 @@ int EncTfFrame (faacAACStream *as, BsBitStream  *fixed_stream)
     /**********************************************************/
     if(as->use_LTP)
       for (chanNum=0;chanNum<max_ch;chanNum++) {
-        nok_ltp_reconstruct(reconstructed_spectrum[chanNum],
-			    block_type[chanNum],
-			    WS_SIN,
-			    &sfb_offset_table[chanNum][0],
-			    nr_of_sfb[chanNum],
-			    &nok_lt_status[chanNum]);
+		  if (!channelInfo[chanNum].lfe) {  /* no reconstruction needed for LFE channel*/
+			  nok_ltp_reconstruct(reconstructed_spectrum[chanNum],
+				  block_type[chanNum],
+				  WS_SIN,
+				  &sfb_offset_table[chanNum][0],
+				  nr_of_sfb[chanNum],
+				  &nok_lt_status[chanNum]);
+		  }
       }
 
 
@@ -665,11 +703,19 @@ int EncTfFrame (faacAACStream *as, BsBitStream  *fixed_stream)
       if (channelInfo[chanNum].present) {
         /* Write out a single_channel_element */
         if (!channelInfo[chanNum].cpe) {
-	  /* Write out sce */ /* BugFix by YT  '+=' sould be '=' */
-          used_bits += WriteSCE(&quantInfo[chanNum],   /* Quantization information */
-			        channelInfo[chanNum].tag,
-			        fixed_stream,           /* Bitstream */
-			        0);                     /* Write flag, 1 means write */
+           if (channelInfo[chanNum].lfe) {
+			   /* Write out lfe */ 
+			   used_bits += WriteLFE(&quantInfo[chanNum],   /* Quantization information */
+				   channelInfo[chanNum].tag,
+				   fixed_stream,           /* Bitstream */
+				   0);                     /* Write flag, 1 means write */
+           } else {
+			   /* Write out sce */
+			   used_bits += WriteSCE(&quantInfo[chanNum],   /* Quantization information */
+				   channelInfo[chanNum].tag,
+				   fixed_stream,           /* Bitstream */
+				   0);                     /* Write flag, 1 means write */
+		   }
         }
         else {
 	  if (channelInfo[chanNum].ch_is_left) {
@@ -716,11 +762,19 @@ int EncTfFrame (faacAACStream *as, BsBitStream  *fixed_stream)
       if (channelInfo[chanNum].present) {
         /* Write out a single_channel_element */
         if (!channelInfo[chanNum].cpe) {
-          /* Write out sce */
-	  WriteSCE(&quantInfo[chanNum],   /* Quantization information */
-		   channelInfo[chanNum].tag,
-		   fixed_stream,           /* Bitstream */
-		   1);                     /* Write flag, 1 means write */
+           if (channelInfo[chanNum].lfe) {
+			   /* Write out lfe */ 
+			   WriteLFE(&quantInfo[chanNum],   /* Quantization information */
+				   channelInfo[chanNum].tag,
+				   fixed_stream,           /* Bitstream */
+				   1);                     /* Write flag, 1 means write */
+           } else {
+			   /* Write out sce */
+			   WriteSCE(&quantInfo[chanNum],   /* Quantization information */
+				   channelInfo[chanNum].tag,
+				   fixed_stream,           /* Bitstream */
+				   1);                     /* Write flag, 1 means write */
+		   }
         }
         else {
        	  if (channelInfo[chanNum].ch_is_left) {

@@ -630,7 +630,27 @@ void EncTf_psycho_acoustic(
 					memcpy(p_chpo_short[rightChan][i].use_ms, psy_stvar_short[rightChan].use_ms[i], NSFB_SHORT*sizeof(int));
 				}
 
-			} else if (channelInfo[chanNum].lfe) { /* LFE */ /* not yet finished */
+			} else if (channelInfo[chanNum].lfe) { /* LFE */
+
+				// LFE psych ratios are set to -24 dB
+				for (i = 0; i < 4; i++) {
+					psy_stvar_long[chanNum].ismr[i] = 0.004; /* -24 dB */
+				}
+				for (i = 4; i < NSFB_LONG; i++) {
+					psy_stvar_long[chanNum].ismr[i] = 1.0; /* -24 dB */
+				}
+				p_chpo_long[chanNum].p_ratio   = psy_stvar_long[chanNum].ismr;
+
+				block_type[chanNum] = ONLY_LONG_WINDOW;
+
+				// set the scalefactor band values
+				p_chpo_long[chanNum].cb_width  = p_sri->cb_width_long;
+				p_chpo_long[chanNum].no_of_cb = p_sri->num_cb_long;
+				for( i=0; i<MAX_SHORT_WINDOWS; i++ ) {
+					p_chpo_short[chanNum][i].p_ratio  = psy_stvar_short[chanNum].ismr[i];
+					p_chpo_short[chanNum][i].cb_width = p_sri->cb_width_short;
+					p_chpo_short[chanNum][i].no_of_cb = p_sri->num_cb_short;
+				}
 
 			} else { /* SCE */
 

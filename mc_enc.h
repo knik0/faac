@@ -5,7 +5,7 @@
 
 #include "all.h"
 
-void DetermineChInfo(Ch_Info* chInfo, int numChannels/*, int lfePresent*/);
+void DetermineChInfo(Ch_Info* chInfo, int numChannels, int lfePresent);
 
 
 #endif

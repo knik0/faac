@@ -388,6 +388,7 @@ void faac_InitParams(faacAACStream *as)
   as->use_TNS = 1;
   as->use_LTP = 1;
   as->use_PNS = 0;
+  as->lfePresent = 0;
   as->cut_off = 0;
   as->bit_rate = 128000;
   as->out_sampling_rate = 0;
@@ -427,6 +428,9 @@ void faac_SetParam(faacAACStream *as, int param, int value)
     case PNS:
       as->use_PNS = value;
       break;
+	case LFE_PRESENT:
+		as->lfePresent = value;
+		break;
     case IN_SAMPLING_RATE:
       as->in_sampling_rate = value;
       break;

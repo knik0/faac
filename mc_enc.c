@@ -1,7 +1,7 @@
 
 #include "mc_enc.h"
 
-void DetermineChInfo(Ch_Info* chInfo, int numChannels/*, int lfePresent*/) {
+void DetermineChInfo(Ch_Info* chInfo, int numChannels, int lfePresent) {
    
   /* If LFE present                                                       */
   /*  Num channels       # of SCE's       # of CPE's       #of LFE's      */ 
@@ -65,22 +65,20 @@ void DetermineChInfo(Ch_Info* chInfo, int numChannels/*, int lfePresent*/) {
 		numChannelsLeft--;
 	}
 
-	/* Is there another channel left ?  If -lf switched then lfe else sce */
+	/* Is there another channel left ? */
 	if (numChannelsLeft) {
-/*		if (lfePresent) { 
+		if (lfePresent) { 
 			chInfo[numChannels-numChannelsLeft].present = 1;
 			chInfo[numChannels-numChannelsLeft].tag=lfeTag++;
 			chInfo[numChannels-numChannelsLeft].cpe=0;
 			chInfo[numChannels-numChannelsLeft].lfe=1; 
-		} else { */
+		} else {
 			chInfo[numChannels-numChannelsLeft].present = 1;
 			chInfo[numChannels-numChannelsLeft].tag=sceTag++;
 			chInfo[numChannels-numChannelsLeft].cpe=0;
 			chInfo[numChannels-numChannelsLeft].lfe=0;
-//		}
+		}
 		numChannelsLeft--;
-	} else {
-//		if (lfePresent) CommonExit(1,"no LFE channel detected");
 	}
 }
 

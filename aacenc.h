@@ -16,6 +16,7 @@ typedef struct RCBufStruct RCBuf;	/* buffer handle */
 #define PNS                     11
 #define IN_SAMPLING_RATE        12
 #define NUMBER_OF_CHANNELS      13
+#define LFE_PRESENT             14
 
 #define MAIN_PROFILE 0
 #define LOW_PROFILE 1
@@ -33,6 +34,9 @@ typedef struct RCBufStruct RCBuf;	/* buffer handle */
 
 #define USE_LTP         1
 #define NO_LTP          0
+
+#define USE_LFE         1
+#define NO_LFE          0
 
 #define USE_PNS         1
 #define NO_PNS          0
@@ -64,7 +68,7 @@ typedef struct {
 	int in_sampling_rate;
 	int frame_bits;
 	int available_bits;
-        int header_type;
+	int header_type;
 	int use_MS;
 	int use_TNS;
 	int use_LTP;
@@ -78,12 +82,13 @@ typedef struct {
 	int cut_off;
 	int bit_rate;
 	int raw_audio;
-        SNDFILE *in_file;
-        FILE *out_file;
-        unsigned char *bitBuffer;
-        int bitBufferSize;
-        short *sampleBuffer;
+	SNDFILE *in_file;
+	FILE *out_file;
+	unsigned char *bitBuffer;
+	int bitBufferSize;
+	short *sampleBuffer;
 	int samplesToRead;
+	int lfePresent;
 } faacAACStream;
 
 #ifndef FAAC_DLL
