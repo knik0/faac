@@ -18,7 +18,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: main.c,v 1.59 2004/03/24 11:09:06 danchr Exp $
+ * $Id: main.c,v 1.60 2004/03/24 15:44:08 danchr Exp $
  */
 
 #ifdef _MSC_VER
@@ -35,7 +35,7 @@
 
 #define DEFAULT_TNS     0
 
-#ifdef WIN32
+#ifdef _WIN32
 #include <windows.h>
 #include <fcntl.h>
 #else
@@ -71,7 +71,7 @@
 
 /* globals */
 char* progName;
-#ifndef WIN32
+#ifndef _WIN32
 volatile int running = 1;
 #endif
 
@@ -87,7 +87,7 @@ enum container_format {
 #endif
 };
 
-#ifndef WIN32
+#ifndef _WIN32
 void signal_handler(int signal) {
     running = 0;
 }
@@ -198,7 +198,7 @@ int main(int argc, char *argv[])
     char *faac_id_string;
     char *faac_copyright_string;
 
-#ifndef WIN32
+#ifndef _WIN32
     // install signal handler
     signal(SIGINT, signal_handler);
     signal(SIGTERM, signal_handler);
@@ -829,6 +829,9 @@ int main(int argc, char *argv[])
 
 /*
 $Log: main.c,v $
+Revision 1.60  2004/03/24 15:44:08  danchr
+fixing WIN32 -> _WIN32
+
 Revision 1.59  2004/03/24 11:09:06  danchr
 prettify the way stream format is handled - this just *might* fix a bug
 
