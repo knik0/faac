@@ -1,0 +1,22 @@
+LIBRARY   Cool32*SDKAU
+
+HEAPSIZE  2048
+
+EXPORTS
+                QueryCoolFilter	   @2
+				OpenFilterOutput   @3
+				CloseFilterOutput  @4
+				WriteFilterOutput  @5
+				OpenFilterInput    @6
+				CloseFilterInput   @7
+				ReadFilterInput    @8
+                FilterUnderstandsFormat @9
+				FilterGetOptions		@14 
+				FilterOptions			@15
+				FilterGetFileSize		@16
+				FilterOptionsString		@17
+				DIALOGMsgProc 			@20
+			   	FilterGetFirstSpecialData	@31
+				FilterGetNextSpecialData	@32
+				FilterWriteSpecialData		@33
+
