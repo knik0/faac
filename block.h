@@ -26,7 +26,6 @@ Copyright(c)1996.
 #ifndef BLOCK_H
 #define BLOCK_H 1
 
-#include "transfo.h"
 #include "dolby_def.h"
 
 
