@@ -84,7 +84,7 @@ void MSPreprocess(double p_ratio_long[][MAX_SCFAC_BANDS],
 
 							if (block_type[leftChan] == ONLY_SHORT_WINDOW) {
 								for (j = groupIndex; j < quantInfo[leftChan].window_group_length[g]+groupIndex; j++) {
-									use_ms_short = min(use_ms_short, p_chpo_short[1][j].use_ms[sfbNum]);
+									use_ms_short = min(use_ms_short, p_chpo_short[rightChan][j].use_ms[sfbNum]);
 								}
 								if (sfbNum < isBand) {
 									msInfo->ms_used[b] = use_ms_short;
@@ -99,37 +99,37 @@ void MSPreprocess(double p_ratio_long[][MAX_SCFAC_BANDS],
 									used++;
 									for (j = groupIndex; j < quantInfo[leftChan].window_group_length[g]+groupIndex; j++) {
 										p_ratio_short[leftChan][(g*maxSfb)+sfbNum] = p_chpo_short[leftChan][j].p_ratio[sfbNum];
-										p_ratio_short[1][(g*maxSfb)+sfbNum] = p_chpo_short[1][j].p_ratio[sfbNum];
-										p_chpo_short[1][j].use_ms[sfbNum] = use_ms_short;
+										p_ratio_short[rightChan][(g*maxSfb)+sfbNum] = p_chpo_short[rightChan][j].p_ratio[sfbNum];
+										p_chpo_short[rightChan][j].use_ms[sfbNum] = use_ms_short;
 									}
 								}
 								else {
 									notused++;
 									for (j = groupIndex; j < quantInfo[leftChan].window_group_length[g]+groupIndex; j++) {
 										p_ratio_short[leftChan][(g*maxSfb)+sfbNum] = p_chpo_short[leftChan][j].p_ratio[sfbNum];
-										p_ratio_short[1][(g*maxSfb)+sfbNum] = p_chpo_short[1][j].p_ratio[sfbNum];
-										p_chpo_short[1][j].use_ms[sfbNum] = use_ms_short;
+										p_ratio_short[rightChan][(g*maxSfb)+sfbNum] = p_chpo_short[rightChan][j].p_ratio[sfbNum];
+										p_chpo_short[rightChan][j].use_ms[sfbNum] = use_ms_short;
 									}
 								}
 							}
 							else {
 								if (sfbNum < isBand) {
-									msInfo->ms_used[b] = p_chpo_long[1].use_ms[sfbNum];
+									msInfo->ms_used[b] = p_chpo_long[rightChan].use_ms[sfbNum];
 								}
 								else {
 									msInfo->ms_used[b] = 0;
-									p_chpo_long[1].use_ms[sfbNum] = 0;
+									p_chpo_long[rightChan].use_ms[sfbNum] = 0;
 								}
 								if (msInfo->ms_used[b]) {
 									realyused = 1;
 									used++;
 									p_ratio_long[leftChan][sfbNum] = p_chpo_long[leftChan].p_ratio[sfbNum];
-									p_ratio_long[1][sfbNum] = p_chpo_long[1].p_ratio[sfbNum];
+									p_ratio_long[rightChan][sfbNum] = p_chpo_long[rightChan].p_ratio[sfbNum];
 								}
 								else {
 									notused++;
 									p_ratio_long[leftChan][sfbNum] = p_chpo_long[leftChan].p_ratio[sfbNum];
-									p_ratio_long[1][sfbNum] = p_chpo_long[1].p_ratio[sfbNum];
+									p_ratio_long[rightChan][sfbNum] = p_chpo_long[rightChan].p_ratio[sfbNum];
 								}
 							}
 						}
@@ -139,6 +139,8 @@ void MSPreprocess(double p_ratio_long[][MAX_SCFAC_BANDS],
 					if (realyused) {
 						channelInfo[leftChan].common_window = 1;  /* Use common window */
 						channelInfo[leftChan].ms_info.is_present=1;
+						channelInfo[rightChan].common_window = 1;  /* Use common window */
+						channelInfo[rightChan].ms_info.is_present=1;
 					}
 				}
 				else if ((block_type[leftChan]==block_type[rightChan])&&(use_ms == 1)) {
@@ -151,6 +153,8 @@ void MSPreprocess(double p_ratio_long[][MAX_SCFAC_BANDS],
 
 					channelInfo[leftChan].ms_info.is_present = 1;
 					channelInfo[leftChan].common_window = 1;
+					channelInfo[rightChan].ms_info.is_present = 1;
+					channelInfo[rightChan].common_window = 1;
 
 					for (chan = 0; chan < 2; chan++) {
 						int chan2;
@@ -172,13 +176,13 @@ void MSPreprocess(double p_ratio_long[][MAX_SCFAC_BANDS],
 									msInfo->ms_used[b] = 1;
 									for (j = groupIndex; j < quantInfo[chan2].window_group_length[g]+groupIndex; j++) {
 										p_ratio_short[chan2][(g*maxSfb)+sfbNum] = p_chpo_short[chan2][j].p_ratio[sfbNum];
-										p_chpo_short[1][j].use_ms[sfbNum] = 1;
+										p_chpo_short[rightChan][j].use_ms[sfbNum] = 1;
 									}
 								}
 								else {
 									msInfo->ms_used[b] = 1;
 									p_ratio_long[chan2][sfbNum] = p_chpo_long[chan2].p_ratio[sfbNum];
-									p_chpo_long[1].use_ms[sfbNum] = 1;
+									p_chpo_long[rightChan].use_ms[sfbNum] = 1;
 								}
 							}
 //							groupIndex+=quantInfo[chan2].window_group_length[g];
@@ -213,13 +217,13 @@ void MSPreprocess(double p_ratio_long[][MAX_SCFAC_BANDS],
 									msInfo->ms_used[b] = 0;
 									for (j = groupIndex; j < quantInfo[chan].window_group_length[g]+groupIndex; j++) {
 										p_ratio_short[chan2][(g*maxSfb)+sfbNum] = p_chpo_short[chan2][j].p_ratio[sfbNum];
-										p_chpo_short[1][j].use_ms[sfbNum] = 0;
+										p_chpo_short[rightChan][j].use_ms[sfbNum] = 0;
 									}
 								}
 								else {
 									msInfo->ms_used[b] = 0;
 									p_ratio_long[chan2][sfbNum] = p_chpo_long[chan2].p_ratio[sfbNum];
-									p_chpo_long[1].use_ms[sfbNum] = 0;
+									p_chpo_long[rightChan].use_ms[sfbNum] = 0;
 								}
 							}
 //							groupIndex+=quantInfo[chan2].window_group_length[g];
@@ -263,10 +267,10 @@ void MSEnergy(double *spectral_line_vector[MAX_TIME_CHANNELS],
 					int sfb;
 
 					if (block_type[chanNum] == ONLY_SHORT_WINDOW) {
-						p_use_ms = p_chpo_short[1][w].use_ms;
+						p_use_ms = p_chpo_short[rightChan][w].use_ms;
 					}
 					else {
-						p_use_ms = p_chpo_long[1].use_ms;
+						p_use_ms = p_chpo_long[rightChan].use_ms;
 					}
 
 					j = w*windowLength;
@@ -282,7 +286,7 @@ void MSEnergy(double *spectral_line_vector[MAX_TIME_CHANNELS],
 							if ((p_use_ms[sfb]||(use_ms==1))&&(use_ms!=-1)) {
 								dtmp = (spectral_line_vector[leftChan][j]+spectral_line_vector[rightChan][j])*0.5;
 								energy[leftChan][bandNumber] += dtmp*dtmp;
-								dtmp = (spectral_line_vector[0][j]-spectral_line_vector[1][j])*0.5;
+								dtmp = (spectral_line_vector[leftChan][j]-spectral_line_vector[rightChan][j])*0.5;
 								energy[rightChan][bandNumber] += dtmp*dtmp;
 							} else {
 								dtmp = spectral_line_vector[leftChan][j];
@@ -363,6 +367,8 @@ void MSEncode(double *spectrum[MAX_TIME_CHANNELS],   /* array of pointers to spe
 
 					channelInfo[leftChan].common_window = 1;  /* Use common window */
 					channelInfo[leftChan].ms_info.is_present=1;
+					channelInfo[rightChan].common_window = 1;  /* Use common window */
+					channelInfo[rightChan].ms_info.is_present=1;
 
 					numGroups = quantInfo[leftChan].num_window_groups;
 					maxSfb = quantInfo[leftChan].max_sfb;
@@ -428,12 +434,14 @@ void MSEncodeSwitch(double *spectrum[MAX_TIME_CHANNELS],   /* array of pointers 
 				int rightChan=channelInfo[chanNum].paired_ch;
 				int numGroups;
 				int maxSfb;
-				int g,b,w,line_offset;
+				int g,/*b,*/w,line_offset;
 				int startWindow,stopWindow;
 				MS_Info *msInfo;
 
 				channelInfo[leftChan].common_window = 1;  /* Use common window */
 				channelInfo[leftChan].ms_info.is_present=1;
+				channelInfo[rightChan].common_window = 1;  /* Use common window */
+				channelInfo[rightChan].ms_info.is_present=1;
 
 				numGroups = quantInfo[leftChan].num_window_groups;
 				maxSfb = quantInfo[leftChan].max_sfb;
@@ -441,7 +449,7 @@ void MSEncodeSwitch(double *spectrum[MAX_TIME_CHANNELS],   /* array of pointers 
 				/* Determine which bands should be enabled */
 				/* Right now, simply enable bands which do not use intensity stereo */
 				msInfo = &(channelInfo[leftChan].ms_info);
-#if 1
+#if 0
 				for (g=0;g<numGroups;g++) {
 					for (sfbNum=0;sfbNum<maxSfb;sfbNum++) {
 						b = g*maxSfb+sfbNum;

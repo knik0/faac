@@ -36,7 +36,7 @@ double *spectral_line_vector[MAX_TIME_CHANNELS];
 double *reconstructed_spectrum[MAX_TIME_CHANNELS];
 double *overlap_buffer[MAX_TIME_CHANNELS];
 double *DTimeSigBuf[MAX_TIME_CHANNELS];
-double *DTimeSigLookAheadBuf[MAX_TIME_CHANNELS+2];
+double *DTimeSigLookAheadBuf[MAX_TIME_CHANNELS*2];
 double *nok_tmp_DTimeSigBuf[MAX_TIME_CHANNELS]; /* temporary fix to the buffer size problem. */
 
 /* variables used by the T/F mapping */
@@ -85,7 +85,7 @@ void EncTfFree (void)
     if (nok_lt_status[chanNum].delay) free(nok_lt_status[chanNum].delay);
     if (nok_tmp_DTimeSigBuf[chanNum]) free(nok_tmp_DTimeSigBuf[chanNum]);
   }
-  for (chanNum=0;chanNum<MAX_TIME_CHANNELS+2;chanNum++) {
+  for (chanNum=0;chanNum<MAX_TIME_CHANNELS*2;chanNum++) {
     if (DTimeSigLookAheadBuf[chanNum]) free(DTimeSigLookAheadBuf[chanNum]);
   }
 }
@@ -156,7 +156,7 @@ void EncTfInit (faacAACStream *as)
     nok_tmp_DTimeSigBuf[chanNum]  = (double*)malloc(2*block_size_samples*sizeof(double));
     memset(nok_tmp_DTimeSigBuf[chanNum],0,(2*block_size_samples)*sizeof(double));
   }
-  for (chanNum=0;chanNum<MAX_TIME_CHANNELS+2;chanNum++) {
+  for (chanNum=0;chanNum<MAX_TIME_CHANNELS*2;chanNum++) {
     DTimeSigLookAheadBuf[chanNum]   = (double*)malloc((block_size_samples)*sizeof(double));
     memset(DTimeSigLookAheadBuf[chanNum],0,(block_size_samples)*sizeof(double));
   }
@@ -250,15 +250,9 @@ int EncTfFrame (faacAACStream *as, BsBitStream  *fixed_stream)
   /* Energy array (computed before prediction for long windows) */
   double energy[MAX_TIME_CHANNELS][MAX_SCFAC_BANDS];
 
-  /* determine the function parameters used earlier:   HP 21-aug-96 */
+  /* determine the function parameters used earlier */
   int          average_bits = as->frame_bits;
   int          available_bitreservoir_bits = as->available_bits-as->frame_bits;
-
-  /* actual amount of bits currently in the bit reservoir */
-  /* it is the job of this module to determine
-  the no of bits to use in addition to average_block_bits
-  max. available: average_block_bits + available_bitreservoir_bits */
-//	int max_bitreservoir_bits = 8184;
 
   /* max. allowed amount of bits in the reservoir  (used to avoid padding bits) */
   long num_bits_available;
@@ -269,70 +263,72 @@ int EncTfFrame (faacAACStream *as, BsBitStream  *fixed_stream)
   int    nr_of_sfb[MAX_TIME_CHANNELS], sfb_width_table[MAX_TIME_CHANNELS][MAX_SCFAC_BANDS];
   int sfb_offset_table[MAX_TIME_CHANNELS][MAX_SCFAC_BANDS+1];
 
-//	int no_sub_win, sub_win_size;
 
   /* structures holding the output of the psychoacoustic model */
-  CH_PSYCH_OUTPUT_LONG chpo_long[MAX_TIME_CHANNELS+2];
-  CH_PSYCH_OUTPUT_SHORT chpo_short[MAX_TIME_CHANNELS+2][MAX_SHORT_WINDOWS];
+  CH_PSYCH_OUTPUT_LONG chpo_long[MAX_TIME_CHANNELS];
+  CH_PSYCH_OUTPUT_SHORT chpo_short[MAX_TIME_CHANNELS][MAX_SHORT_WINDOWS];
   static int ps = 1;
   ps = !ps;
 
   if (as->header_type==ADTS_HEADER)
     available_bitreservoir_bits += 58;
 
-  {
-	  /* store input data in look ahead buffer which may be necessary for the window switching decision */
-	  int i;
-	  int chanNum;
+  /***********************************************************************/
+  /* Determine channel elements */
+  /***********************************************************************/
+  DetermineChInfo(channelInfo, max_ch);
 
-	  for (chanNum=0;chanNum<max_ch;chanNum++) {
-		  if(as->use_LTP)
-			  for( i=0; i<block_size_samples; i++ ) {
-				  /* temporary fix: a linear buffer for LTP containing the whole time frame */
-				  nok_tmp_DTimeSigBuf[chanNum][i] = DTimeSigBuf[chanNum][i];
-				  nok_tmp_DTimeSigBuf[chanNum][block_size_samples + i] = DTimeSigLookAheadBuf[chanNum][i];
+
+  /***********************************************************************/
+  /* Fill buffers  */
+  /* store input data in look ahead buffer which may be necessary */
+  /* for the window switching decision */
+  /***********************************************************************/
+  {
+	  int chanNum;
+	  int i;
+
+	  for (chanNum = 0; chanNum < max_ch; chanNum++) {
+
+		  if (channelInfo[chanNum].present) {
+			  if ((channelInfo[chanNum].cpe) && (channelInfo[chanNum].ch_is_left)) { /* CPE */
+				  int leftChan = chanNum;
+				  int rightChan = channelInfo[chanNum].paired_ch;
+
+				  if (as->use_MS == 1) {
+					  for(i = 0; i < block_size_samples; i++){
+						  DTimeSigLookAheadBuf[leftChan][i] = (as->inputBuffer[leftChan][i]+as->inputBuffer[rightChan][i])*0.5;
+						  DTimeSigLookAheadBuf[rightChan][i] = (as->inputBuffer[leftChan][i]-as->inputBuffer[rightChan][i])*0.5;
+					  }
+				  }
+			  }
+
+			  if(as->use_LTP) {
+				  for( i=0; i<block_size_samples; i++ ) {
+					  nok_tmp_DTimeSigBuf[chanNum][i] = DTimeSigBuf[chanNum][i];
+					  nok_tmp_DTimeSigBuf[chanNum][block_size_samples + i] = DTimeSigLookAheadBuf[chanNum][i];
+				  }
 			  }
 			  for( i=0; i<block_size_samples; i++ ) {
-				  /* last frame input data are encoded now */
 				  DTimeSigBuf[chanNum][i] = DTimeSigLookAheadBuf[chanNum][i];
 				  DTimeSigLookAheadBuf[chanNum][i] = as->inputBuffer[chanNum][i];
-			  } /* end for(i ..) */
-	  } /* end for(chanNum ... ) */
-
-	  if (as->use_MS == 1) {
-		  for (chanNum=0;chanNum<2;chanNum++) {
-			  if (chanNum == 0) {
-				  for(i = 0; i < block_size_samples; i++){
-					  DTimeSigLookAheadBuf[chanNum][i] = (as->inputBuffer[0][i]+as->inputBuffer[1][i])*0.5;
-				  }
-			  }
-			  else {
-				  for(i = 0; i < block_size_samples; i++){
-					  DTimeSigLookAheadBuf[chanNum][i] = (as->inputBuffer[0][i]-as->inputBuffer[1][i])*0.5;
-				  }
 			  }
 		  }
 	  }
   }
 
+
   if (fixed_stream == NULL) {
     psy_fill_lookahead(DTimeSigLookAheadBuf, max_ch);
-    return FNO_ERROR; /* quick'n'dirty fix for encoder startup    HP 21-aug-96 */
+    return FNO_ERROR; /* quick'n'dirty fix for encoder startup */
   }
 
   /* Keep track of number of bits used */
   used_bits = 0;
 
-  /***********************************************************************/
-  /* Determine channel elements      */
-  /***********************************************************************/
-  DetermineChInfo(channelInfo, max_ch);
-
-  /*****************************************************************************
-  *
-  * psychoacoustic
-  *
-  *****************************************************************************/
+  /*****************************************************************************/
+  /* psychoacoustics */
+  /*****************************************************************************/
   EncTf_psycho_acoustic(
 	  sampling_rate,
 	  max_ch,
@@ -344,11 +340,9 @@ int EncTfFrame (faacAACStream *as, BsBitStream  *fixed_stream)
 	  chpo_short
 	  );
 
-  /*****************************************************************************
-  *
-  * block_switch processing
-  *
-  *****************************************************************************/
+  /*****************************************************************************/
+  /* block_switch processing */
+  /*****************************************************************************/
   {
     int chanNum;
 	
@@ -444,9 +438,7 @@ int EncTfFrame (faacAACStream *as, BsBitStream  *fixed_stream)
 
 
   /*****************************************************************************
-  *
-  * T/F mapping
-  *
+  * T/F mapping (MDCT)
   *****************************************************************************/
   {
     int chanNum, k;
@@ -473,9 +465,7 @@ int EncTfFrame (faacAACStream *as, BsBitStream  *fixed_stream)
   }
 
   /*****************************************************************************
-  *
   * adapt ratios of psychoacoustic module to codec scale factor bands
-  *
   *****************************************************************************/
 
   {
@@ -527,9 +517,7 @@ int EncTfFrame (faacAACStream *as, BsBitStream  *fixed_stream)
   }
 
   /*****************************************************************************
-  *
   * quantization and coding
-  *
   *****************************************************************************/
   {
 //  int padding_limit = max_bitreservoir_bits;
@@ -757,7 +745,7 @@ int EncTfFrame (faacAACStream *as, BsBitStream  *fixed_stream)
       if (channelInfo[chanNum].present) {
         /* Write out a single_channel_element */
         if (!channelInfo[chanNum].cpe) {
-          /* Write out sce */ /* BugFix by YT  '+=' sould be '=' */
+          /* Write out sce */
 	  WriteSCE(&quantInfo[chanNum],   /* Quantization information */
 		   channelInfo[chanNum].tag,
 		   fixed_stream,           /* Bitstream */

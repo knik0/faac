@@ -517,7 +517,7 @@ void EncTf_psycho_acoustic(
 					&psy_stvar_short[leftChan],	&fft_tbl_long, &fft_tbl_short, leftChan);
 				psy_step2(sample, &psy_stvar_long[rightChan],
 					&psy_stvar_short[rightChan], &fft_tbl_long, &fft_tbl_short, rightChan);
-				if (use_MS >= 0)
+				if (use_MS == 0)
 					psy_step2MS(psy_stvar_long, psy_stvar_short,
 					leftChan, rightChan, midChan, sideChan);
 
@@ -530,14 +530,14 @@ void EncTf_psycho_acoustic(
 					&psy_var_long[0], &psy_var_short[0]);
 				psy_step4(&psy_stvar_long[rightChan], &psy_stvar_short[rightChan],
 					&psy_var_long[1], &psy_var_short[1]);
-				if (use_MS >= 0)
+				if (use_MS == 0)
 					psy_step4MS(psy_var_long, psy_var_short, 0, 1, 2, 3);
 
 				psy_step5(&part_tbl_long, &part_tbl_short, &psy_stvar_long[leftChan], &psy_stvar_short[leftChan],
 					&psy_var_long[0], &psy_var_short[0]);
 				psy_step5(&part_tbl_long, &part_tbl_short, &psy_stvar_long[rightChan], &psy_stvar_short[rightChan],
 					&psy_var_long[1], &psy_var_short[1]);
-				if (use_MS >= 0) {
+				if (use_MS == 0) {
 					psy_step5(&part_tbl_long, &part_tbl_short, &psy_stvar_long[midChan], &psy_stvar_short[midChan],
 						&psy_var_long[2], &psy_var_short[2]);
 					psy_step5(&part_tbl_long, &part_tbl_short, &psy_stvar_long[sideChan], &psy_stvar_short[sideChan],
@@ -548,7 +548,7 @@ void EncTf_psycho_acoustic(
 					&psy_var_long[0], &psy_var_short[0]);
 				psy_step6(&part_tbl_long, &part_tbl_short, &psy_stvar_long[rightChan], &psy_stvar_short[rightChan],
 					&psy_var_long[1], &psy_var_short[1]);
-				if (use_MS >= 0) {
+				if (use_MS == 0) {
 					psy_step6(&part_tbl_long, &part_tbl_short, &psy_stvar_long[midChan], &psy_stvar_short[midChan],
 						&psy_var_long[2], &psy_var_short[2]);
 					psy_step6(&part_tbl_long, &part_tbl_short, &psy_stvar_long[sideChan], &psy_stvar_short[sideChan],
@@ -557,20 +557,20 @@ void EncTf_psycho_acoustic(
 
 				psy_step7(&part_tbl_long, &part_tbl_short, &psy_var_long[0], &psy_var_short[0]);
 				psy_step7(&part_tbl_long, &part_tbl_short, &psy_var_long[1], &psy_var_short[1]);
-				if (use_MS >= 0) {
+				if (use_MS == 0) {
 					psy_step7MS(psy_var_long, psy_var_short, 0, 1, 2, 3);
 				}
 
 				psy_step8(&part_tbl_long, &part_tbl_short, &psy_var_long[0], &psy_var_short[0]);
 				psy_step8(&part_tbl_long, &part_tbl_short, &psy_var_long[1], &psy_var_short[1]);
-				if (use_MS >= 0) {
+				if (use_MS == 0) {
 					psy_step8(&part_tbl_long, &part_tbl_short, &psy_var_long[2], &psy_var_short[2]);
 					psy_step8(&part_tbl_long, &part_tbl_short, &psy_var_long[3], &psy_var_short[3]);
 				}
 
 				psy_step9(&part_tbl_long, &part_tbl_short, &psy_var_long[0], &psy_var_short[0]);
 				psy_step9(&part_tbl_long, &part_tbl_short, &psy_var_long[1], &psy_var_short[1]);
-				if (use_MS >= 0) {
+				if (use_MS == 0) {
 					psy_step9(&part_tbl_long, &part_tbl_short, &psy_var_long[2], &psy_var_short[2]);
 					psy_step9(&part_tbl_long, &part_tbl_short, &psy_var_long[3], &psy_var_short[3]);
 				}
@@ -579,18 +579,18 @@ void EncTf_psycho_acoustic(
 					&psy_var_long[0], &psy_var_short[0]);
 				psy_step10(&part_tbl_long, &part_tbl_short, &psy_stvar_long[rightChan], &psy_stvar_short[rightChan], 
 					&psy_var_long[1], &psy_var_short[1]);
-				if (use_MS >= 0) {
+				if (use_MS == 0) {
 					psy_step10(&part_tbl_long, &part_tbl_short, &psy_stvar_long[midChan], &psy_stvar_short[midChan], 
 						&psy_var_long[2], &psy_var_short[2]);
 					psy_step10(&part_tbl_long, &part_tbl_short, &psy_stvar_long[sideChan], &psy_stvar_short[sideChan], 
 						&psy_var_long[3], &psy_var_short[3]);
-
-					psy_step11MS(&part_tbl_long, &part_tbl_short, psy_stvar_long, psy_stvar_short, no_of_chan);
 				}
+
+				psy_step11MS(&part_tbl_long, &part_tbl_short, psy_stvar_long, psy_stvar_short, no_of_chan);
 
 				psy_step11(&part_tbl_long, &part_tbl_short, &psy_stvar_long[leftChan], &psy_stvar_short[leftChan]);
 				psy_step11(&part_tbl_long, &part_tbl_short, &psy_stvar_long[rightChan], &psy_stvar_short[rightChan]);
-				if (use_MS >= 0) {
+				if (use_MS == 0) {
 					psy_step11(&part_tbl_long, &part_tbl_short, &psy_stvar_long[midChan], &psy_stvar_short[midChan]);
 					psy_step11(&part_tbl_long, &part_tbl_short, &psy_stvar_long[sideChan], &psy_stvar_short[sideChan]);
 				}
@@ -612,7 +612,7 @@ void EncTf_psycho_acoustic(
 					&psy_stvar_short[leftChan], &psy_var_long[0], &psy_var_short[0]);
 				psy_step14(p_sri, &part_tbl_long, &part_tbl_short, &psy_stvar_long[rightChan],
 					&psy_stvar_short[rightChan], &psy_var_long[1], &psy_var_short[1]);
-				if (use_MS >= 0) {
+				if (use_MS == 0) {
 					psy_step14(p_sri, &part_tbl_long, &part_tbl_short, &psy_stvar_long[midChan],
 						&psy_stvar_short[midChan], &psy_var_long[2], &psy_var_short[2]);
 					psy_step14(p_sri, &part_tbl_long, &part_tbl_short, &psy_stvar_long[sideChan],
@@ -623,13 +623,8 @@ void EncTf_psycho_acoustic(
 						leftChan, rightChan, midChan, sideChan);
 				}
 
-				if (use_MS == 1) {
-					p_chpo_long[leftChan].p_ratio   = psy_stvar_long[midChan].ismr;
-					p_chpo_long[rightChan].p_ratio   = psy_stvar_long[sideChan].ismr;
-				} else {
-					p_chpo_long[leftChan].p_ratio   = psy_stvar_long[leftChan].ismr;
-					p_chpo_long[rightChan].p_ratio   = psy_stvar_long[rightChan].ismr;
-				}
+				p_chpo_long[leftChan].p_ratio   = psy_stvar_long[leftChan].ismr;
+				p_chpo_long[rightChan].p_ratio   = psy_stvar_long[rightChan].ismr;
 				p_chpo_long[leftChan].cb_width  = p_sri->cb_width_long;
 				p_chpo_long[rightChan].cb_width  = p_sri->cb_width_long;
 				p_chpo_long[leftChan].no_of_cb = p_sri->num_cb_long;
@@ -638,13 +633,8 @@ void EncTf_psycho_acoustic(
 				memcpy(p_chpo_long[rightChan].use_ms, psy_stvar_long[rightChan].use_ms, NSFB_LONG*sizeof(int));
 
 				for( i=0; i<MAX_SHORT_WINDOWS; i++ ) {
-					if (use_MS == 1) {
-						p_chpo_short[leftChan][i].p_ratio  = psy_stvar_short[midChan].ismr[i];
-						p_chpo_short[rightChan][i].p_ratio  = psy_stvar_short[sideChan].ismr[i];
-					} else {
-						p_chpo_short[leftChan][i].p_ratio  = psy_stvar_short[leftChan].ismr[i];
-						p_chpo_short[rightChan][i].p_ratio  = psy_stvar_short[rightChan].ismr[i];
-					}
+					p_chpo_short[leftChan][i].p_ratio  = psy_stvar_short[leftChan].ismr[i];
+					p_chpo_short[rightChan][i].p_ratio  = psy_stvar_short[rightChan].ismr[i];
 					p_chpo_short[leftChan][i].cb_width = p_sri->cb_width_short;
 					p_chpo_short[rightChan][i].cb_width = p_sri->cb_width_short;
 					p_chpo_short[leftChan][i].no_of_cb = p_sri->num_cb_short;
