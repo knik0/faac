@@ -64,6 +64,7 @@ faacAACStream *faacEncodeInit(faacAACConfig *ac, int *samplesToRead, int *bitBuf
 	as->write_header = ac->write_header;
 	as->use_MS = ac->use_MS;
 	as->use_IS = ac->use_IS;
+	as->use_TNS = ac->use_TNS;
 	as->profile = ac->profile;
 	as->is_first_frame = 1;
 
@@ -338,10 +339,13 @@ void usage(void)
 	printf("Options:\n");
 	printf(" -h    Shows this help screen.\n");
 	printf(" -pX   AAC profile (X can be LOW, or MAIN (default).\n");
-	printf(" -n    No header will be written to the AAC file.\n");
 	printf(" -bX   Bitrate in kbps (X can be: 64, 80, 96, 112, 128 (default),\n");
 	printf("       160, 192, 224 or 256).\n");
-	printf(" -ms   Use mid/side stereo coding (currently ignored).\n");
+	printf(" -ms   Use mid/side stereo coding.\n");
+	printf(" -nm   Don't use mid/side stereo coding.\n");
+	printf("       The default for MS is intelligent switching.\n");
+	printf(" -nt   Don't use TNS (Temporal Noise Shaping).\n");
+	printf(" -nh   No header will be written to the AAC file.\n");
 	printf(" -is   Use intensity stereo coding.\n");
 	printf(" -oX   Set output directory.\n");
 	printf(" -r    Use raw data input file.\n");
@@ -371,7 +375,7 @@ int main(int argc, char *argv[])
 	int i, frames, cfr;
 	int profile = MAIN_PROFILE;
 	int no_header = 0;
-	int use_IS = 0, use_MS = 0;
+	int use_IS = 0, use_MS = 0, use_TNS = 1;
 	int bit_rate = 128;
 	char out_dir[255];
 	int out_dir_set = 0;
@@ -458,7 +462,12 @@ int main(int argc, char *argv[])
 				break;
 			case 'n':
 			case 'N':
-				no_header = 1;
+				if (argv[i][2] == 'm' || 'M')
+					use_MS = -1;
+				else if (argv[i][2] == 't' || 'T')
+					use_TNS = 0;
+				else
+					no_header = 1;
 				break;
 			case 'm':
 			case 'M':
@@ -541,6 +550,7 @@ int main(int argc, char *argv[])
 		ac.profile = profile;
 		ac.use_MS = use_MS;
 		ac.use_IS = use_IS;
+		ac.use_TNS = use_TNS;
 		ac.write_header = !no_header;
 
 		as = faacEncodeInit(&ac, &readNumSample, &bitBufSize, &headerSize);

@@ -114,7 +114,7 @@ int TruncateCoeffs(int fOrder,double threshold,double* kArray);
 void TnsFilter(int length,double* spec,TNS_FILTER_DATA* filter);
 int TnsInvFilter(int length,double* spec,TNS_FILTER_DATA* filter);
 void TnsInit(long samplingRate,enum AAC_PROFILE profile,TNS_INFO* tnsInfo); 
-int TnsEncode(int numberOfBands,int maxSfb,enum WINDOW_TYPE blockType,int* sfbOffsetTable,double* spec,TNS_INFO* tnsInfo);
+int TnsEncode(int numberOfBands,int maxSfb,enum WINDOW_TYPE blockType,int* sfbOffsetTable,double* spec,TNS_INFO* tnsInfo,int use_tns);
 
 #endif
 

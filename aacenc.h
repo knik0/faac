@@ -15,8 +15,10 @@ typedef struct {
 	int write_header;  // If this is 1, a ADIF header will be written, if it is 0, no
 	                   //    header will be written. (better turn this on, because
                        //    there is some bug when not using ADIF header)
-	int use_MS;        // If 1, MS stereo is on, if 0, it is off
+	int use_MS;        // If 1, MS stereo is on on all scalefactors, if 0 the intelligent switching is used
+	                   // if it is -1 MS is totally off.
 	int use_IS;        // If 1, IS stereo is on, if 0, it is off
+	int use_TNS;       // If 1, TNS is on, if 0, it is off
 } faacAACConfig;
 
 // This structure is for internal use of the encoder only.
@@ -32,6 +34,7 @@ typedef struct {
 	int write_header;
 	int use_MS;
 	int use_IS;
+	int use_TNS;
 	int profile;
 	double **inputBuffer;
 } faacAACStream;

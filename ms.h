@@ -47,6 +47,7 @@ void MSPreprocess(double p_ratio_long[][MAX_SCFAC_BANDS],
 				  Ch_Info *channelInfo,                  /* Pointer to Ch_Info */
 				  enum WINDOW_TYPE block_type[MAX_TIME_CHANNELS], /* Block type */
 				  AACQuantInfo* quantInfo,               /* Quant info */
+				  int use_ms,
 				  int numberOfChannels
 				  );
 
@@ -58,9 +59,17 @@ void MSEnergy(double *spectral_line_vector[MAX_TIME_CHANNELS],
 			  Ch_Info *channelInfo,                  /* Pointer to Ch_Info */
 			  enum WINDOW_TYPE block_type[MAX_TIME_CHANNELS], /* Block type */
 			  AACQuantInfo* quantInfo,               /* Quant info */
+			  int use_ms,
 			  int numberOfChannels
 			  );
 			  
+void MSEncodeSwitch(double *spectrum[MAX_TIME_CHANNELS],   /* array of pointers to spectral data */
+	      Ch_Info *channelInfo,                  /* Pointer to Ch_Info */
+	      int sfb_offset_table[][MAX_SCFAC_BANDS+1],
+	      enum WINDOW_TYPE block_type[MAX_TIME_CHANNELS], /* Block type */
+	      AACQuantInfo* quantInfo,
+	      int numberOfChannels);                 /* Number of channels */
+
 void MSEncode(double *spectrum[MAX_TIME_CHANNELS],   /* array of pointers to spectral data */
 	      Ch_Info *channelInfo,                  /* Pointer to Ch_Info */
 	      int sfb_offset_table[][MAX_SCFAC_BANDS+1],

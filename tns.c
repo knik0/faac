@@ -93,7 +93,7 @@ int TnsEncode(int numberOfBands,       /* Number of bands per window */
 	       enum WINDOW_TYPE blockType,   /* block type */
 	       int* sfbOffsetTable,     /* Scalefactor band offset table */
 	       double* spec,            /* Spectral data array */
-	       TNS_INFO* tnsInfo)       /* TNS info */
+	       TNS_INFO* tnsInfo, int use_tns)       /* TNS info */
 {
 	int numberOfWindows,windowSize;
 	int startBand,stopBand,order;    /* Bands over which to apply TNS */
@@ -136,6 +136,7 @@ int TnsEncode(int numberOfBands,       /* Number of bands per window */
 	tnsInfo->tnsDataPresent=0;     /* default TNS not used */
 
 #if 1
+	if (use_tns)
 	/* Doesn't work well on short windows. */
 	if (blockType != ONLY_SHORT_WINDOW)
 	/* Perform analysis and filtering for each window */

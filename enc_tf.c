@@ -236,7 +236,7 @@ int EncTfFrame (faacAACStream *as, BsBitStream  *fixed_stream)
 			for( i=0; i<block_size_samples; i++ ) {
 				/* last frame input data are encoded now */
 				DTimeSigBuf[chanNum][i] = DTimeSigLookAheadBuf[chanNum][i];
-				DTimeSigLookAheadBuf[chanNum][i] = (double)as->inputBuffer[chanNum][i];
+				DTimeSigLookAheadBuf[chanNum][i] = as->inputBuffer[chanNum][i];
 			} /* end for(i ..) */
 		} /* end for(chanNum ... ) */
 
@@ -339,8 +339,8 @@ int EncTfFrame (faacAACStream *as, BsBitStream  *fixed_stream)
 		for (chanNum=0;chanNum<max_ch;chanNum++) {
 
 			/* Set window shape paremeter in quantInfo */
-			quantInfo[chanNum].window_shape = WS_DOLBY;
-//			quantInfo[chanNum].window_shape = WS_FHG;
+//			quantInfo[chanNum].window_shape = WS_DOLBY;
+			quantInfo[chanNum].window_shape = WS_FHG;
 
 			switch( block_type[chanNum] ) {
 			case ONLY_SHORT_WINDOW  :
@@ -356,6 +356,13 @@ int EncTfFrame (faacAACStream *as, BsBitStream  *fixed_stream)
 #else
 				quantInfo[chanNum].num_window_groups = 1;
 				quantInfo[chanNum].window_group_length[0] = 8;
+				quantInfo[chanNum].window_group_length[1] = 0;
+				quantInfo[chanNum].window_group_length[2] = 0;
+				quantInfo[chanNum].window_group_length[3] = 0;
+				quantInfo[chanNum].window_group_length[4] = 0;
+				quantInfo[chanNum].window_group_length[5] = 0;
+				quantInfo[chanNum].window_group_length[6] = 0;
+				quantInfo[chanNum].window_group_length[7] = 0;
 #endif
 				break;
 				
@@ -442,7 +449,7 @@ int EncTfFrame (faacAACStream *as, BsBitStream  *fixed_stream)
 
 //	if (as->use_MS) {
 		MSPreprocess(p_ratio_long, p_ratio_short, chpo_long, chpo_short,
-			channelInfo, block_type, quantInfo,max_ch);
+			channelInfo, block_type, quantInfo, as->use_MS, max_ch);
 //	} else {
 //		int chanNum;
 //		for (chanNum=0;chanNum<max_ch;chanNum++) {
@@ -459,8 +466,8 @@ int EncTfFrame (faacAACStream *as, BsBitStream  *fixed_stream)
 //		}
 //	}
 
-	MSEnergy(spectral_line_vector, energy, chpo_long, chpo_short,
-		sfb_width_table, channelInfo, block_type, quantInfo, max_ch);
+	MSEnergy(spectral_line_vector, energy, chpo_long, chpo_short, sfb_width_table,
+		channelInfo, block_type, quantInfo, as->use_MS, max_ch);
 
 	{
 		int chanNum;   
@@ -508,7 +515,8 @@ int EncTfFrame (faacAACStream *as, BsBitStream  *fixed_stream)
 				block_type[chanNum],
 				sfb_offset_table[chanNum],
 				spectral_line_vector[chanNum],
-				&tnsInfo[chanNum]);
+				&tnsInfo[chanNum],
+				as->use_TNS);
 			if (error == FERROR)
 				return FERROR;
 		}
@@ -551,14 +559,21 @@ int EncTfFrame (faacAACStream *as, BsBitStream  *fixed_stream)
 		/******************************************/
 		/* Apply MS stereo                        */
 		/******************************************/
-//		if (as->use_MS) {
+		if (as->use_MS == 1) {
 			MSEncode(spectral_line_vector,
 				channelInfo,
 				sfb_offset_table,
 				block_type,
 				quantInfo,
 				max_ch);
-//		}
+		} else if (as->use_MS == 0) {
+			MSEncodeSwitch(spectral_line_vector,
+				channelInfo,
+				sfb_offset_table,
+				block_type,
+				quantInfo,
+				max_ch);
+		}
 
 		/************************************************/
 		/* Call the AAC quantization and coding module. */
