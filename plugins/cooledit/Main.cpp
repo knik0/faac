@@ -69,16 +69,16 @@ __declspec(dllexport) short FAR PASCAL QueryCoolFilter(COOLQUERY far * cq)
 	lstrcpy(cq->szExt2,"MP4"); 
 	cq->lChunkSize=16384; 
 	cq->dwFlags=QF_RATEADJUSTABLE|QF_CANLOAD|QF_CANSAVE|QF_HASOPTIONSBOX;
- 	cq->Stereo8=0xFF; // supports all rates ???
- 	cq->Stereo16=0xFF;
- 	cq->Stereo24=0xFF;
- 	cq->Stereo32=0xFF;
  	cq->Mono8=0xFF;
  	cq->Mono16=0xFF;
  	cq->Mono24=0xFF;
  	cq->Mono32=0xFF;
- 	cq->Quad32=0xFF;
- 	cq->Quad16=0xFF;
+ 	cq->Stereo8=0xFF; // supports all rates ???
+ 	cq->Stereo16=0xFF;
+ 	cq->Stereo24=0xFF;
+ 	cq->Stereo32=0xFF;
  	cq->Quad8=0xFF;
+ 	cq->Quad16=0xFF;
+ 	cq->Quad32=0xFF;
  	return C_VALIDLIBRARY;
 }

@@ -7,25 +7,25 @@
 
 
 
-#define PI_VER "v2.0 beta1"
+#define PI_VER "v2.0 beta2"
 #define REGISTRY_PROGRAM_NAME "SOFTWARE\\4N\\CoolEdit\\AAC-MPEG4"
 
 
 
 typedef struct output_tag  // any special vars associated with output file
 {
- FILE  *fFile;
- DWORD lSize;
- long  lSamprate;
- WORD  wBitsPerSample;
- WORD  wChannels;
- char  szNAME[256];
+FILE			*fFile;
+DWORD			lSize;
+long			lSamprate;
+WORD			wBitsPerSample;
+WORD			wChannels;
+char			szNAME[256];
 
- faacEncHandle hEncoder;
- unsigned char *bitbuf;
- DWORD maxBytesOutput;
- long  samplesInput;
- BYTE  bStopEnc;
+faacEncHandle	hEncoder;
+unsigned char	*bitbuf;
+DWORD			maxBytesOutput;
+long			samplesInput;
+BYTE			bStopEnc;
 } MYOUTPUT;
 
 
@@ -35,6 +35,12 @@ typedef struct mc
 bool					AutoCfg;
 faacEncConfiguration	EncCfg;
 } MYCFG;
+
+
+
+// *********************************************************************************************
+
+
 
 void RD_Cfg(MYCFG *cfg) 
 { 
@@ -273,8 +279,7 @@ __declspec(dllexport) BOOL FAR PASCAL DIALOGMsgProc(HWND hWndDlg, UINT Message, 
  
 	return TRUE;
 } // End of DIALOGSMsgProc                                      
-
-
+// *********************************************************************************************
 
 __declspec(dllexport) DWORD FAR PASCAL FilterGetOptions(HWND hWnd, HINSTANCE hInst, long lSamprate, WORD wChannels, WORD wBitsPerSample, DWORD dwOptions) // return 0 if no options box
 {
@@ -286,12 +291,14 @@ FARPROC lpfnDIALOGMsgProc;
 
  return nDialogReturn;
 }
+// *********************************************************************************************
 
 __declspec(dllexport) DWORD FAR PASCAL FilterWriteFirstSpecialData(HANDLE hInput, 
 	SPECIALDATA * psp)
 {
  return 0;
 }
+// *********************************************************************************************
 
 __declspec(dllexport) DWORD FAR PASCAL FilterWriteNextSpecialData(HANDLE hInput, SPECIALDATA * psp)
 {	
@@ -300,12 +307,14 @@ __declspec(dllexport) DWORD FAR PASCAL FilterWriteNextSpecialData(HANDLE hInput,
 // as either a counter to know which item to retrieve next, or as a
 // structure with other state information in it.
 }
+// *********************************************************************************************
 
 __declspec(dllexport) DWORD FAR PASCAL FilterWriteSpecialData(HANDLE hOutput,
 	LPCSTR szListType, LPCSTR szType, char * pData,DWORD dwSize)
 {
  return 0;
 }
+// *********************************************************************************************
 
 __declspec(dllexport) void FAR PASCAL CloseFilterOutput(HANDLE hOutput)
 {
@@ -334,106 +343,101 @@ __declspec(dllexport) void FAR PASCAL CloseFilterOutput(HANDLE hOutput)
   GlobalFree(hOutput);
  }
 }              
+// *********************************************************************************************
+
+#define ERROR_OFO(msg) \
+{ \
+	if(msg) \
+		MessageBox(0, msg, "FAAC plugin", MB_OK); \
+	if(hOutput) \
+	{ \
+		GlobalUnlock(hOutput); \
+		CloseFilterOutput(hOutput); \
+	} \
+	return 0; \
+}
 
 __declspec(dllexport) HANDLE FAR PASCAL OpenFilterOutput(LPSTR lpstrFilename,long lSamprate,WORD wBitsPerSample,WORD wChannels,long lSize, long far *lpChunkSize, DWORD dwOptions)
 {
 HANDLE			hOutput;
-faacEncHandle	hEncoder;
-FILE			*outfile;
-unsigned char	*bitbuf;
+MYOUTPUT		*mo;
+MYCFG			cfg;
 DWORD			maxBytesOutput;
 DWORD			samplesInput;
 int				bytesEncoded;
+int				tmp;
 
-//    if(!((dwOptions>>23)&1))
-/*	{
-     config_init();
-     config_read(&dwOptions);
-	}
-*/
+    hOutput=GlobalAlloc(GMEM_MOVEABLE|GMEM_SHARE,sizeof(MYOUTPUT));
+    if(!hOutput)
+		ERROR_OFO("Memory allocation error: hOutput");
+	mo=(MYOUTPUT *)GlobalLock(hOutput);
+	memset(mo,0,sizeof(MYOUTPUT));
+
 // open the aac output file 
-	if(!(outfile=fopen(lpstrFilename, "wb")))
-	{
-     MessageBox(0, "Can't create file", "FAAC interface", MB_OK);
-	 return 0;
-	}
+	if(!(mo->fFile=fopen(lpstrFilename, "wb")))
+		ERROR_OFO("Can't create file");
 
 // open the encoder library
-	if(!(hEncoder=faacEncOpen(lSamprate, wChannels, &samplesInput, &maxBytesOutput)))
-	{
-	 MessageBox(0, "Can't init library", "FAAC interface", MB_OK);
-	 fclose(outfile);
-	 return 0;
-	}
+	if(!(mo->hEncoder=faacEncOpen(lSamprate, wChannels, &samplesInput, &maxBytesOutput)))
+		ERROR_OFO("Can't init library");
 
-	if(!(bitbuf=(unsigned char*)malloc(maxBytesOutput*sizeof(unsigned char))))
-	{
-	 MessageBox(0, "Memory allocation error: output buffer", "FAAC interface", MB_OK);
-     faacEncClose(hEncoder);
-	 fclose(outfile);
-	 return 0;
-	}
+	if(!(mo->bitbuf=(unsigned char*)malloc(maxBytesOutput*sizeof(unsigned char))))
+		ERROR_OFO("Memory allocation error: output buffer");
 
 	*lpChunkSize=samplesInput*2;
 
-    hOutput=GlobalAlloc(GMEM_MOVEABLE|GMEM_SHARE,sizeof(MYOUTPUT));
-    if(hOutput)
-    {
-	MYCFG cfg;
-	MYOUTPUT *mo;
-	 mo=(MYOUTPUT *)GlobalLock(hOutput);
 
-	 RD_Cfg(&cfg);
-	 if(!cfg.AutoCfg)
-	 {
-     faacEncConfigurationPtr myFormat=&cfg.EncCfg;
-//     myFormat=faacEncGetCurrentConfiguration(hEncoder);
+	RD_Cfg(&cfg);
+	if(!cfg.AutoCfg)
+	{
+    faacEncConfigurationPtr myFormat=&cfg.EncCfg;
+//     myFormat=faacEncGetCurrentConfiguration(mo->hEncoder);
 
-      if(!myFormat->bandWidth)
-	   myFormat->bandWidth=lSamprate/2;
+		if(!myFormat->bandWidth)
+			myFormat->bandWidth=lSamprate/2;
 
-	  if(!faacEncSetConfiguration(hEncoder, myFormat))
-	  {
-       MessageBox(0, "Unsupported parameters", "FAAC interface", MB_OK);
-       faacEncClose(hEncoder);
-	   fclose(outfile);
-	   free(bitbuf);
-       GlobalFree(hOutput);
-	   return 0;
-	  }
+		if(!faacEncSetConfiguration(mo->hEncoder, myFormat))
+			ERROR_OFO("Unsupported parameters");
 	 }
 
-	 mo->fFile=outfile;
-	 mo->lSize=lSize;
-	 mo->lSamprate=lSamprate;
-	 mo->wBitsPerSample=wBitsPerSample;
-	 mo->wChannels=wChannels;
-	 strcpy(mo->szNAME,lpstrFilename);
+	mo->fFile=mo->fFile;
+	mo->lSize=lSize;
+	mo->lSamprate=lSamprate;
+	mo->wBitsPerSample=wBitsPerSample;
+	mo->wChannels=wChannels;
+	strcpy(mo->szNAME,lpstrFilename);
 
-	 mo->hEncoder=hEncoder;
-     mo->bitbuf=bitbuf;
-	 mo->maxBytesOutput=maxBytesOutput;
-	 mo->samplesInput=samplesInput;
-	 mo->bStopEnc=0;
-
-	 GlobalUnlock(hOutput);
-    }
-	else
-	{
-	 MessageBox(0, "hOutput=NULL", "FAAC interface", MB_OK);
-     faacEncClose(hEncoder);
-	 fclose(outfile);
-	 free(bitbuf);
-	 return 0;
-	}
-
+	mo->hEncoder=mo->hEncoder;
+    mo->bitbuf=mo->bitbuf;
+	mo->maxBytesOutput=maxBytesOutput;
+	mo->samplesInput=samplesInput;
+	mo->bStopEnc=0;
 
 // init flushing process
-    bytesEncoded=faacEncEncode(hEncoder, 0, 0, bitbuf, maxBytesOutput); // initializes the flushing process
+    bytesEncoded=faacEncEncode(mo->hEncoder, 0, 0, mo->bitbuf, maxBytesOutput); // initializes the flushing process
     if(bytesEncoded>0)
-	 fwrite(bitbuf, 1, bytesEncoded, outfile);
+	{
+		tmp=fwrite(mo->bitbuf, 1, bytesEncoded, mo->fFile);
+		if(tmp!=bytesEncoded)
+			ERROR_OFO("fwrite");
+	}
+
+	GlobalUnlock(hOutput);
 
     return hOutput;
+}
+// *********************************************************************************************
+
+#define ERROR_WFO(msg) \
+{ \
+	if(msg) \
+		MessageBox(0, msg, "FAAC plugin", MB_OK); \
+	if(hOutput) \
+	{ \
+		mo->bStopEnc=1; \
+		GlobalUnlock(hOutput); \
+	} \
+	return 0; \
 }
 
 __declspec(dllexport) DWORD FAR PASCAL WriteFilterOutput(HANDLE hOutput, unsigned char far *buf, long lBytes)
@@ -446,17 +450,14 @@ int bytesEncoded;
  MYOUTPUT far *mo;
   mo=(MYOUTPUT far *)GlobalLock(hOutput);
 
-  if(!mo->bStopEnc)
+  if(!mo->bStopEnc) // Is this case possible?
   {
 // call the actual encoding routine
    bytesEncoded=faacEncEncode(mo->hEncoder, (short *)buf, mo->samplesInput, mo->bitbuf, mo->maxBytesOutput);
    if(bytesEncoded<1) // end of flushing process
    {
     if(bytesEncoded<0)
-	{
-     MessageBox(0, "faacEncEncode() failed", "FAAC interface", MB_OK);
-     mo->bStopEnc=1;
-	}
+		ERROR_WFO("faacEncEncode");
 	bytesWritten=lBytes ? 1 : 0; // bytesWritten==0 stops CoolEdit...
     GlobalUnlock(hOutput);
     return bytesWritten;
@@ -464,12 +465,7 @@ int bytesEncoded;
 // write bitstream to aac file 
    bytesWritten=fwrite(mo->bitbuf, 1, bytesEncoded, mo->fFile);
    if(bytesWritten!=bytesEncoded)
-   {
-    MessageBox(0, "bytesWritten and bytesEncoded are different", "FAAC interface", MB_OK);
-    mo->bStopEnc=1;
-    GlobalUnlock(hOutput);
-    return 0;
-   }
+		ERROR_WFO("fwrite");
 
    GlobalUnlock(hOutput);
   }
