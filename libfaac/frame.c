@@ -16,7 +16,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: frame.c,v 1.55 2003/12/17 20:59:55 knik Exp $
+ * $Id: frame.c,v 1.56 2004/01/23 10:22:26 stux Exp $
  */
 
 /*
@@ -66,8 +66,8 @@ static const double bwfac = 0.45;
 
 
 
-int FAACAPI faacEncGetVersion(char **faac_id_string,
-			      char **faac_copyright_string)
+int FAACAPI faacEncGetVersion( char **faac_id_string,
+			      				char **faac_copyright_string)
 {
   if (faac_id_string)
     *faac_id_string = libfaacName;
@@ -942,6 +942,9 @@ static SR_INFO srInfo[12+1] =
 
 /*
 $Log: frame.c,v $
+Revision 1.56  2004/01/23 10:22:26  stux
+*** empty log message ***
+
 Revision 1.55  2003/12/17 20:59:55  knik
 changed default cutoff to 16k
 

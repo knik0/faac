@@ -168,6 +168,10 @@ SOURCE=.\coder.h
 # End Source File
 # Begin Source File
 
+SOURCE=..\faac\include\faaccfg.h
+# End Source File
+# Begin Source File
+
 SOURCE=.\fft.h
 # End Source File
 # Begin Source File
@@ -185,10 +189,6 @@ SOURCE=.\huffman.h
 # Begin Source File
 
 SOURCE=.\hufftab.h
-# End Source File
-# Begin Source File
-
-SOURCE=.\joint.h
 # End Source File
 # Begin Source File
 
