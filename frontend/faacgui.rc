@@ -63,7 +63,7 @@ BEGIN
     PUSHBUTTON      "...",IDC_SELECT_OUTPUTFILE,228,32,19,14,WS_DISABLED,
                     WS_EX_STATICEDGE
     CONTROL         "Allow Mid/Side",IDC_ALLOWMIDSIDE,"Button",
-                    BS_AUTOCHECKBOX | BS_LEFTTEXT | WS_TABSTOP,17,78,63,10
+                    BS_AUTOCHECKBOX | BS_LEFTTEXT | WS_TABSTOP,13,78,71,10
     EDITTEXT        IDC_BITRATE,142,73,69,14,ES_AUTOHSCROLL
     EDITTEXT        IDC_BANDWIDTH,142,93,69,14,ES_AUTOHSCROLL
     DEFPUSHBUTTON   "Encode",IDOK,75,149,50,14,WS_DISABLED
@@ -76,7 +76,7 @@ BEGIN
     CONTROL         "",IDC_STATIC,"Static",SS_BLACKFRAME | SS_SUNKEN,7,54,
                     252,1
     LTEXT           "-",IDC_INPUTPARAMS,32,66,55,8
-    LTEXT           "In:",IDC_STATIC,18,66,12,8
+    LTEXT           "In:",IDC_STATIC,14,66,12,8
     CONTROL         "Progress1",IDC_PROGRESS,"msctls_progress32",WS_BORDER,7,
                     120,252,10
     GROUPBOX        "Output Format",IDC_STATIC,94,62,153,51
@@ -85,6 +85,8 @@ BEGIN
     LTEXT           "Bitrate:",IDC_STATIC,101,76,37,8
     LTEXT           "bps/ch",IDC_STATIC,218,76,24,8
     LTEXT           "Hz",IDC_STATIC,218,96,10,8
+    CONTROL         "Use LFE channel",IDC_USELFE,"Button",BS_AUTOCHECKBOX | 
+                    BS_LEFTTEXT | WS_DISABLED | WS_TABSTOP,13,89,71,10
 END
 
 

@@ -14,6 +14,7 @@
 #define IDC_TIME                        1008
 #define IDC_BANDWIDTH                   1009
 #define IDC_BITRATE                     1010
+#define IDC_USELFE                      1011
 
 // Next default values for new objects
 // 
