@@ -24,7 +24,7 @@ copyright notice must be included in all copies or derivative works.
 Copyright (c) 1997.
 **********************************************************************/
 /*
- * $Id: bitstream.c,v 1.21 2001/09/21 12:40:02 eraser Exp $
+ * $Id: bitstream.c,v 1.22 2001/11/29 19:36:28 menno Exp $
  */
 
 #include <stdlib.h>
@@ -441,11 +441,16 @@ static int WriteLTPPredictorData(CoderInfo *coderInfo, BitStream *bitStream, int
 
     bits = 1;
 
+	if(writeFlag)
+		PutBit(bitStream, ltpInfo->global_pred_flag, 1); /* Prediction Global used */
+
     if (ltpInfo->global_pred_flag)
     {
+		
         if(writeFlag)
             PutBit(bitStream, 1, 1); /* LTP used */
-
+		bits++;
+		
         switch(coderInfo->block_type)
         {
         case ONLY_LONG_WINDOW:
@@ -459,8 +464,8 @@ static int WriteLTPPredictorData(CoderInfo *coderInfo, BitStream *bitStream, int
                 PutBit(bitStream, ltpInfo->weight_idx,  LEN_LTP_COEF);
             }
 
-            last_band = (coderInfo->nr_of_sfb < MAX_LT_PRED_LONG_SFB) ?
-                coderInfo->nr_of_sfb : MAX_LT_PRED_LONG_SFB;
+            last_band = ((coderInfo->nr_of_sfb < MAX_LT_PRED_LONG_SFB) ?
+                coderInfo->nr_of_sfb : MAX_LT_PRED_LONG_SFB);
 
             bits += last_band;
             if(writeFlag)
@@ -471,9 +476,6 @@ static int WriteLTPPredictorData(CoderInfo *coderInfo, BitStream *bitStream, int
         default:
             break;
         }
-    } else {
-        if(writeFlag)
-            PutBit(bitStream, 0, 1); /* LTP not used */
     }
 
     return (bits);
