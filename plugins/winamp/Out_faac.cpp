@@ -22,6 +22,7 @@ ntnfrn_email-temp@yahoo.it
 #include <windows.h>
 #include "resource.h"
 #include "out.h"
+#include "wa_ipc.h"
 #include "defines.h"
 #include "EncDialog.h"
 #include "Cfaac.h"
@@ -199,6 +200,56 @@ void Config(HWND hWnd)
 //									Utilities
 // *********************************************************************************************
 
+char *getSourceName(HWND hwnd)
+{
+HANDLE hProcess;
+DWORD processid;
+char filename[MAX_PATH], *pname;
+SIZE_T bread;
+//HWND hdlgPE;
+	
+	memset(filename, 0, MAX_PATH);
+	GetWindowThreadProcessId(hwnd, &processid);
+	hProcess = OpenProcess(PROCESS_VM_READ, FALSE, processid);
+//	hdlgPE=SendMessage(hwnd,WM_WA_IPC,IPC_GETWND_PE,IPC_GETWND);
+	pname=(char*)SendMessage(hwnd,WM_WA_IPC,SendMessage(hwnd,WM_WA_IPC,0,IPC_GETLISTPOS),IPC_GETPLAYLISTFILE);
+	ReadProcessMemory(hProcess, pname, filename, MAX_PATH, &bread);
+	CloseHandle(hProcess);
+	return strdup(filename);
+}
+
+char *getWASourceName(char *src)
+{
+char	*dst=NULL, *tmp=src;
+int		l;
+	if(!src)
+	{
+		if(dst=(char *)malloc(1))
+			*dst='\0';
+		return dst;
+	}
+
+	while(*src && *src>='0' && *src<='9')
+		src++;
+	if(src[0]=='.' && src[1]==' ')
+		src+=2;
+	else
+		src=tmp;
+	if(!(dst=(char *)malloc(strlen(src)+1)))
+		return dst;
+	strcpy(dst,src);
+	l=strlen(src);
+	if(l>9 && !strcmpi(src+l-9," - Winamp"))
+		dst[l-9]='\0';
+	// cut ext
+	tmp=dst+strlen(dst);
+	while(tmp!=dst && *tmp!='.')
+		tmp--;
+	if(*tmp=='.')
+		*tmp='\0';
+	return dst;
+}
+
 static char *scanstr_back(char *str, char *toscan, char *defval)
 {
 char *s=str+strlen(str)-1;
@@ -215,6 +266,7 @@ char *s=str+strlen(str)-1;
 		s=t;
 	}
 }
+//------------------------------------------------------------------------------------------
 
 void GetNewFileName(char *lpstrFilename)
 {
@@ -296,7 +348,10 @@ void Quit()
 int Open(int lSamprate, int wChannels, int wBitsPerSample, int bufferlenms, int prebufferms)
 {
 CMyEncCfg	cfg;
-char		lpstrFilename[MAX_PATH];
+char		OutFilename[MAX_PATH],
+			*srcFilename=NULL;
+//			buf[MAX_PATH],
+//			*tsrcFilename;
 
 	w_offset = writtentime = 0;
 	numchan = wChannels;
@@ -304,12 +359,20 @@ char		lpstrFilename[MAX_PATH];
 	bps = wBitsPerSample;
 
 	strcpy(config_AACoutdir,cfg.OutDir);
-	GetNewFileName(lpstrFilename);
+	GetNewFileName(OutFilename);
 
 	Cpcmaac=new Cfaac();
-	if(!Cpcmaac->Init(lpstrFilename,lSamprate,wBitsPerSample,wChannels,-1))
+#ifdef USE_IMPORT_TAG
+/*	GetWindowText(out.hMainWindow,buf,sizeof(buf));
+	tsrcFilename=getWASourceName(buf);
+	srcFilename=Cpcmaac->getSourceFilename(cfg.TagSrcPath,tsrcFilename,cfg.TagSrcExt);
+	FREE_ARRAY(tsrcFilename);*/
+	srcFilename=getSourceName(out.hMainWindow);
+#endif
+	if(!Cpcmaac->Init(srcFilename,OutFilename,lSamprate,wBitsPerSample,wChannels,-1))
 		ERROR_O(0);
 
+	FREE_ARRAY(srcFilename);
 	return 0;
 }
 // *********************************************************************************************
