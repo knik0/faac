@@ -52,9 +52,9 @@ Copyright (c) 1997.
 
 Source file:
 
-$Id: psych.c,v 1.35 2000/02/05 20:00:23 menno Exp $
-$Id: psych.c,v 1.35 2000/02/05 20:00:23 menno Exp $
-$Id: psych.c,v 1.35 2000/02/05 20:00:23 menno Exp $
+$Id: psych.c,v 1.36 2000/02/06 22:37:09 menno Exp $
+$Id: psych.c,v 1.36 2000/02/06 22:37:09 menno Exp $
+$Id: psych.c,v 1.36 2000/02/06 22:37:09 menno Exp $
 
 **********************************************************************/
 
@@ -513,11 +513,17 @@ void EncTf_psycho_acoustic(
 				&fft_tbl_short, ch);
 			psy_step3(&psy_stvar_long[no_of_chan], &psy_stvar_short[no_of_chan], &psy_var_long, &psy_var_short, ch);
 			psy_step4(&psy_stvar_long[no_of_chan], &psy_stvar_short[no_of_chan], &psy_var_long, &psy_var_short, ch);
-		} else if (no_of_chan == 3) {
+		} else if (no_of_chan == 2) {
 			int w, l;
+			psy_stvar_long[2].p_fft += BLOCK_LEN_LONG;
+			if(psy_stvar_long[2].p_fft == BLOCK_LEN_LONG * 3)
+				psy_stvar_long[2].p_fft = 0;
+			psy_stvar_long[3].p_fft += BLOCK_LEN_LONG;
+			if(psy_stvar_long[3].p_fft == BLOCK_LEN_LONG * 3)
+				psy_stvar_long[3].p_fft = 0;
 			for (w = 0; w < BLOCK_LEN_LONG; w++) {
-				psy_stvar_long[2].fft_r[w+psy_stvar_long->p_fft] = (psy_stvar_long[0].fft_r[w+psy_stvar_long->p_fft]+psy_stvar_long[1].fft_r[w+psy_stvar_long->p_fft])*0.5;
-				psy_stvar_long[3].fft_r[w+psy_stvar_long->p_fft] = (psy_stvar_long[0].fft_r[w+psy_stvar_long->p_fft]-psy_stvar_long[1].fft_r[w+psy_stvar_long->p_fft])*0.5;
+				psy_stvar_long[2].fft_r[w+psy_stvar_long->p_fft] = (psy_stvar_long[0].fft_r[w+psy_stvar_long[0].p_fft]+psy_stvar_long[1].fft_r[w+psy_stvar_long[1].p_fft])*0.5;
+				psy_stvar_long[3].fft_r[w+psy_stvar_long->p_fft] = (psy_stvar_long[0].fft_r[w+psy_stvar_long[0].p_fft]-psy_stvar_long[1].fft_r[w+psy_stvar_long[1].p_fft])*0.5;
 			}
 			for (l = 0; l < MAX_SHORT_WINDOWS; l++) {
 				for (w = 0; w < BLOCK_LEN_SHORT; w++) {
@@ -529,33 +535,33 @@ void EncTf_psycho_acoustic(
 
 		if (no_of_chan == 0) {
 			for (b = 0; b < NPART_LONG; b++)
-				psy_stvar_long[no_of_chan].save_cw[b] = psy_var_long.cw[b];
+				psy_stvar_long[no_of_chan].save_cw[b] = psy_var_long.c[b];
 			for (i = 0; i < MAX_SHORT_WINDOWS; i++)
 				for (b = 0; b < NPART_SHORT; b++)
-					psy_stvar_short[no_of_chan].save_cw[i][b] = psy_var_short.cw[i][b];
+					psy_stvar_short[no_of_chan].save_cw[i][b] = psy_var_short.c[i][b];
 		}
 		if (no_of_chan == 1) {
 			for (b = 0; b < NPART_LONG; b++)
-				psy_stvar_long[no_of_chan].save_cw[b] = min(psy_var_long.cw[b], psy_stvar_long[0].save_cw[b]);
+				psy_stvar_long[no_of_chan].save_cw[b] = min(psy_var_long.c[b], psy_stvar_long[0].save_cw[b]);
 			for (i = 0; i < MAX_SHORT_WINDOWS; i++)
 				for (b = 0; b < NPART_SHORT; b++)
-					psy_stvar_short[no_of_chan].save_cw[i][b] = min(psy_var_short.cw[i][b], psy_stvar_short[0].save_cw[i][b]);
+					psy_stvar_short[no_of_chan].save_cw[i][b] = min(psy_var_short.c[i][b], psy_stvar_short[0].save_cw[i][b]);
 		}
 		if (no_of_chan > 1) {
 			for (b = 0; b < NPART_LONG; b++)
-				psy_var_long.cw[b] = psy_stvar_long[1].save_cw[b];
+				psy_var_long.c[b] = psy_stvar_long[1].save_cw[b];
 			for (i = 0; i < MAX_SHORT_WINDOWS; i++)
 				for (b = 0; b < NPART_SHORT; b++)
-					psy_var_short.cw[i][b] = psy_stvar_short[1].save_cw[i][b];
+					psy_var_short.c[i][b] = psy_stvar_short[1].save_cw[i][b];
 		}
 
 		psy_step5(&part_tbl_long, &part_tbl_short, &psy_stvar_long[no_of_chan], &psy_stvar_short[no_of_chan], 
 			&psy_var_long, &psy_var_short, ch);
 		psy_step6(&part_tbl_long, &part_tbl_short, &psy_stvar_long[no_of_chan], &psy_stvar_short[no_of_chan],
 			&psy_var_long, &psy_var_short);
-		psy_step7(&part_tbl_long, &part_tbl_short, &psy_var_long, &psy_var_short);
 
 		if (no_of_chan < 2) {
+			psy_step7(&part_tbl_long, &part_tbl_short, &psy_var_long, &psy_var_short);
 			for (b = 0; b < NPART_LONG; b++)
 				psy_stvar_long[no_of_chan].save_tb[b] = psy_var_long.tb[b];
 			for (i = 0; i < MAX_SHORT_WINDOWS; i++)
@@ -583,8 +589,7 @@ void EncTf_psycho_acoustic(
 		psy_step15(psy_stvar_long[no_of_chan].use_ms, psy_stvar_short[no_of_chan].use_ms, p_sri, &psy_stvar_long[0], &psy_stvar_short[0], &psy_var_long, &psy_var_short, no_of_chan);
 	}	
 
-	/*  for( ch=0; ch<no_of_chan; ch++ ) { */
-	{   /* Now performed for only one channel at a time, CL 97.01.10 */
+	{
 		int i;
 
 		p_chpo_long[no_of_chan].p_ratio   = psy_stvar_long[no_of_chan].ismr;
@@ -628,6 +633,8 @@ void psy_step2(double sample[][BLOCK_LEN_LONG*2],
     double sqrtN;
 	double data[2048+1024]; // +1024 becuase of problems in FFT
 
+	memset(data, 0, (2048+1024)*sizeof(double));
+
     /* FFT for long */
     psy_stvar_long->p_fft += BLOCK_LEN_LONG;
 
@@ -637,9 +644,9 @@ void psy_step2(double sample[][BLOCK_LEN_LONG*2],
 	sqrtN = 1/sqrt(2048);
 
     /* windowing */
-    for(w = 0; w < BLOCK_LEN_LONG*2; w++){
+	for(w = 0; w < BLOCK_LEN_LONG*2; w++){
 		data[w] = fft_tbl_long->hw[w] * sample[ch][w];
-    }
+	}
 
 	complspectrum(data, 11);
 
@@ -684,7 +691,7 @@ void psy_step3(PSY_STATVARIABLE_LONG *psy_stvar_long,
 		p1_l = BLOCK_LEN_LONG * 2;
     p2_l = p1_l - BLOCK_LEN_LONG;
     if( p2_l < 0 )
-		p2_l = BLOCK_LEN_LONG * 2;
+		p2_l = BLOCK_LEN_LONG;
 
     for(w = 0; w < 420; w++){
 		psy_var_long->r_pred[w] = 2.0 * psy_stvar_long->fft_r[p1_l + w] - psy_stvar_long->fft_r[p2_l + w];
@@ -1088,7 +1095,7 @@ void psy_step12(PARTITION_TABLE_LONG *part_tbl_long,
     psy_var_long->pe = 0.0;
     for(b = 0; b < part_tbl_long->len; ++b){
 		psy_var_long->pe -= part_tbl_long->width[b]
-			* log10(psy_stvar_long->nb[psy_stvar_long->p_nb + b]
+			* log10((psy_stvar_long->nb[psy_stvar_long->p_nb + b] + 0.0000000001)
 			/ (psy_var_long->e[b] + 0.0000000001)); 
     }
 //	if(psy_var_long->pe > 1100)
