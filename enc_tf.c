@@ -760,7 +760,8 @@ int EncTfFrame (faacAACStream *as, BsBitStream  *fixed_stream)
 		/**********************************/
 		/* Write out all encoded channels */
 		/**********************************/
-		used_bits = WriteADTSHeader(&quantInfo[0], fixed_stream, used_bits, 0);
+                if (as->header_type==ADTS_HEADER)
+        		used_bits = WriteADTSHeader(&quantInfo[0], fixed_stream, used_bits, 0);
 
 		for (chanNum=0;chanNum<max_ch;chanNum++) {
 			if (channelInfo[chanNum].present) {
@@ -808,7 +809,8 @@ int EncTfFrame (faacAACStream *as, BsBitStream  *fixed_stream)
 		/* Now byte align the bitstream */
 		used_bits += ByteAlign(fixed_stream, 0);
 
-		WriteADTSHeader(&quantInfo[0], fixed_stream, used_bits, 1);
+                if (as->header_type==ADTS_HEADER)
+        		WriteADTSHeader(&quantInfo[0], fixed_stream, used_bits, 1);
 
 		for (chanNum=0;chanNum<max_ch;chanNum++) {
 			if (channelInfo[chanNum].present) {

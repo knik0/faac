@@ -51,15 +51,11 @@ int faacEncodeInit(faacAACStream *as, int *samplesToRead, int *bitBufferSize, in
 		as->rc_needed = 1;
 	else
 		as->rc_needed = 0;
-#if 0
 	if (as->header_type==ADIF_HEADER) {
 		*headerSize = 17;
 	} else {
-#endif
 		*headerSize = 0;
-#if 0
 	}
-#endif
 
 	EncTfInit(as, 0);
 
@@ -182,7 +178,7 @@ int faacEncodeFrame(faacAACStream *as, short *Buffer, int Samples, unsigned char
 		/* variable bit rate: don't exceed bit reservoir size */
 		if (as->available_bits > 8184)
 			as->available_bits = 8184;
-		
+
 		/* Add to frameAvailNumBit the number of bits for this frame */
 		as->available_bits += as->frame_bits;
 
@@ -237,91 +233,87 @@ int faacEncodeFinish(faacAACStream *as, unsigned char *bitBuffer, int *bitBufSiz
 	return FNO_ERROR;
 }
 
-int faacEncodeFree(faacAACStream *as, unsigned char *headerBuf)
+int make_ADIF_header(faacAACStream *as, unsigned char *headerBuf)
 {
 	BsBitStream *bitHeader;
 	float seconds;
-	int bits, bytes, ch;
+	int i, bits, bytes;
+	static int SampleRates[] = {96000,88200,64000,48000,44100,32000,24000,22050,16000,12000,11025,8000,0};
 
 	seconds = (float)as->out_sampling_rate/(float)1024;
 	seconds = (float)as->cur_frame/seconds;
+
+	as->total_bits += 17 * 8;
+	bitHeader = BsOpenWrite(BITHEADERBUFSIZE);
+
+	for (i = 0; ; i++)
+	{
+		if (SampleRates[i] == as->out_sampling_rate)
+			break;
+		else if (SampleRates[i] == 0)
+		{
+			return FERROR;
+		}
+	}
+
+	// ADIF_Header
+	BsPutBit(bitHeader,'A',8);
+	BsPutBit(bitHeader,'D',8);
+	BsPutBit(bitHeader,'I',8);
+	BsPutBit(bitHeader,'F',8);
+	BsPutBit(bitHeader,0,1);   // Copyright present
+	BsPutBit(bitHeader,0,1);   // Original
+	BsPutBit(bitHeader,0,1);   // Home
+	BsPutBit(bitHeader,0,1);   // Bitstream type
+	BsPutBit(bitHeader,(int)(as->total_bits/seconds),23);  // Bitrate
+	BsPutBit(bitHeader, 0, 4);   // num program config elements
+
+	// ADIF_buffer_fulness
+	BsPutBit(bitHeader, 0, 20);
+
+	// program_config_element
+	BsPutBit(bitHeader,0,4);
+	BsPutBit(bitHeader,as->profile,2);
+	BsPutBit(bitHeader,i,4);
+	BsPutBit(bitHeader,1,4);
+	BsPutBit(bitHeader,0,4);
+	BsPutBit(bitHeader,0,4);
+	BsPutBit(bitHeader,0,2);
+	BsPutBit(bitHeader,0,3);
+	BsPutBit(bitHeader,0,4);
+	BsPutBit(bitHeader,0,1);
+	BsPutBit(bitHeader,0,1);
+	BsPutBit(bitHeader,0,1);
+	// element_list
+	BsPutBit(bitHeader,(as->channels == 2),1);
+	BsPutBit(bitHeader,0,4);
+
+	ByteAlign(bitHeader, 1);
+        // Comment
+	BsPutBit(bitHeader,0,8);
+
+	bits = BsBufferNumBit(bitHeader);
+
+	// Copy bitBuf into bitBuffer here
+	bytes = (int)((bits+7)/8);
+	for (i = 0; i < bytes; i++)
+		headerBuf[i] = bitHeader->data[i];
+	BsClose(bitHeader);
+	return FNO_ERROR;
+}
+
+void faacEncodeFree(faacAACStream *as)
+{
+	int ch;
 
 	/* free encoder memory */
 	EncTfFree();
 	if (as->rc_needed)
 		RateConvFree (as->rc_buf);
 
-#if 0
-	if (as->header_type==ADIF_HEADER)
-	{
-		int i;
-		static int SampleRates[] = {96000,88200,64000,48000,44100,32000,24000,22050,16000,12000,11025,8000,0};
-
-		as->total_bits += 17 * 8;
-
-		bitHeader = BsOpenWrite(BITHEADERBUFSIZE);
-
-		for (i = 0; ; i++)
-		{
-			if (SampleRates[i] == as->out_sampling_rate)
-				break;
-			else if (SampleRates[i] == 0)
-			{
-				return FERROR;
-			}
-		}
-
-		// ADIF_Header
-		BsPutBit(bitHeader,'A',8);
-		BsPutBit(bitHeader,'D',8);
-		BsPutBit(bitHeader,'I',8);
-		BsPutBit(bitHeader,'F',8);
-		BsPutBit(bitHeader,0,1);   // Copyright present
-		BsPutBit(bitHeader,0,1);   // Original
-		BsPutBit(bitHeader,0,1);   // Home
-		BsPutBit(bitHeader,0,1);   // Bitstream type
-		BsPutBit(bitHeader,(int)(as->total_bits/seconds),23);  // Bitrate
-		BsPutBit(bitHeader, 0, 4);   // num program config elements
-
-		// ADIF_buffer_fulness
-		BsPutBit(bitHeader, 0, 20);
-
-		// program_config_element
-		BsPutBit(bitHeader,0,4);
-		BsPutBit(bitHeader,as->profile,2);
-		BsPutBit(bitHeader,i,4);
-		BsPutBit(bitHeader,1,4);
-		BsPutBit(bitHeader,0,4);
-		BsPutBit(bitHeader,0,4);
-		BsPutBit(bitHeader,0,2);
-		BsPutBit(bitHeader,0,3);
-		BsPutBit(bitHeader,0,4);
-		BsPutBit(bitHeader,0,1);
-		BsPutBit(bitHeader,0,1);
-		BsPutBit(bitHeader,0,1);
-		// element_list
-		BsPutBit(bitHeader,(as->channels == 2),1);
-		BsPutBit(bitHeader,0,4);
-
-		ByteAlign(bitHeader, 1);
-		// Comment
-		BsPutBit(bitHeader,0,8);
-
-		bits = BsBufferNumBit(bitHeader);
-
-		// Copy bitBuf into bitBuffer here
-		bytes = (int)((bits+7)/8);
-		for (i = 0; i < bytes; i++)
-			headerBuf[i] = bitHeader->data[i];
-		BsClose(bitHeader);
-	}
-#endif
-
 	for (ch=0; ch < as->channels; ch++)
 		if(as->inputBuffer[ch]) free(as->inputBuffer[ch]);
 	if(as->inputBuffer) free(as->inputBuffer);
-
-	return FNO_ERROR;
 }
 
 faacVersion *faacEncodeVersion(void)
@@ -386,7 +378,7 @@ void usage(void)
 	printf("Usage:\n");
 	printf("faac.exe -options file ...\n");
 	printf("Options:\n");
-	printf(" -h    Shows this help screen.\n");
+	printf(" -?    Shows this help screen.\n");
 	printf(" -pX   AAC profile (X can be LOW, or MAIN (default).\n");
 	printf(" -bX   Bitrate in kbps (in steps of 1kbps, min. 16kbps)\n");
 	printf(" -pns  Use PNS (Perceptual Noise Substitution).\n");
@@ -396,11 +388,13 @@ void usage(void)
 	printf(" -nm   Don't use mid/side stereo coding.\n");
 	printf("       The default for MS is intelligent switching.\n");
 	printf(" -np   Don't use LTP (Long Term Prediction).\n");
-	printf(" -nh   No header will be written to the AAC file.\n");
 	printf(" -oX   Set output directory.\n");
 	printf(" -sX   Set output sampling rate.\n");
 	printf(" -cX   Set cut-off frequency.\n");
 	printf(" -r    Use raw data input file.\n");
+	printf(" -hN   No header will be written to the AAC file.\n");
+	printf(" -hS   ADTS headers will be written to the AAC file(default).\n");
+	printf(" -hI   ADIF header will be written to the AAC file.\n");
 	printf(" file  Multiple files can be given as well as wild cards.\n");
 	printf("       Can be any of the filetypes supported by libsndfile\n");
 	printf("       (http://www.zip.com.au/~erikd/libsndfile/).\n");
@@ -415,7 +409,7 @@ int i;
 char *argp;
 
 as->profile = MAIN_PROFILE;
-as->header_type = ADIF_HEADER;
+as->header_type = ADTS_HEADER;
 as->use_IS = 0, as->use_MS = 0, as->use_TNS = 0, as->use_LTP = 1, as->use_PNS = 0;
 as->cut_off = 0;
 as->bit_rate = 128;
@@ -490,8 +484,14 @@ as->raw_audio = 0;
 					as->use_MS = -1;
 				else if ((argv[i][2] == 'p') || (argv[i][2] == 'P'))
 					as->use_LTP = 0;
-				else if ((argv[i][2] == 'h') || (argv[i][2] == 'H'))
-					as->header_type = NO_HEADER;
+				break;
+                        case 'h': case 'H':
+                                if ((argv[i][2] == 'i') || (argv[i][2] == 'I'))
+                                        as->header_type = ADIF_HEADER;
+                                else if ((argv[i][2] == 's') || (argv[i][2] == 'S'))
+                                        as->header_type = ADTS_HEADER;
+                                else if ((argv[i][2] == 'n') || (argv[i][2] == 'N'))
+                                        as->header_type = NO_HEADER;
 				break;
 			case 'm': case 'M':
 				as->use_MS = 1;
@@ -518,7 +518,7 @@ as->raw_audio = 0;
 				as->out_dir_set = 1;
 				strcpy(as->out_dir, &argv[i][2]);
 				break;
-			case 'h': case 'H':
+			case '?':
 				usage();
 				return 1;
 			}
@@ -563,7 +563,7 @@ int main(int argc, char *argv[])
 		faacv->MajorVersion, faacv->MinorVersion);
 	if (faacv) free(faacv);
 
-	/* Process the command line */
+	/* Process command line params */
         if (parse_arg(argc, argv, &as, FileNames, &FileCount)) return 0;
 
 	printf("AAC profile: %s.\n", (as.profile==MAIN_PROFILE)?"MAIN":"LOW");
@@ -660,7 +660,7 @@ int main(int argc, char *argv[])
 			}
 
 			fwrite(bitBuffer, 1, curBitBufSize, aacfile);
-			
+
 			printf("%.2f%%\tBusy encoding %s.\r", min(((double)cfr/(double)frames)*100,100),FileNames[i]);
 
 		} while (noSamples == readNumSample);
@@ -677,21 +677,18 @@ int main(int argc, char *argv[])
 
 		fwrite(bitBuffer, 1, curBitBufSize, aacfile);
 
-		sf_close(sndfile);
-
-		error = faacEncodeFree(&as, bitBuffer);
-		if (error == FERROR) {
-			printf("Error while encoding %s.\n", FileNames[i]);
-			continue;
-		}
-
-		// Write the header to the beginning of the file now
-		if (headerSize > 0) {
+                if (as.header_type==ADIF_HEADER){
+                        make_ADIF_header(&as,bitBuffer);
 			fseek(aacfile, 0, SEEK_SET);
 			fwrite(bitBuffer, 1, headerSize, aacfile);
-		}
+                        }
+
+		sf_close(sndfile);
+
+		faacEncodeFree(&as);
 
 		fclose(aacfile);
+
 		if (bitBuffer)  free(bitBuffer);
 		if (sampleBuffer)  free(sampleBuffer);
 #ifdef WIN32
