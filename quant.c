@@ -1059,7 +1059,7 @@ int compute_scalefacs(AACQuantInfo* quantInfo,
   
   
 
-double calc_sfb_noise_ave(double *xr, double *xr34, int bw,int sf)
+double calc_sfb_noise_ave(double *p_spectrum, double *pow_spectrum, int bw,int sf)
 {
 	int j;
 	double xfsf=0, xfsf_p1=0, xfsf_m1=0;
@@ -1079,24 +1079,24 @@ double calc_sfb_noise_ave(double *xr, double *xr34, int bw,int sf)
 		int ix;
 		double temp,temp_p1,temp_m1;
 
-		if (xr34[j]*sfpow34_m1 > 8191) return -1;
+		if (pow_quant[j]*sfpow34_m1 > 8191) return -1;
 
-		temp = xr34[j]*sfpow34;
+		temp = pow_quant[j]*sfpow34;
 		XRPOW_FTOI(temp, ix);
 		XRPOW_FTOI(temp + QUANTFAC(ix), ix);
-		temp = fabs(xr[j])- pow_quant[ix]*sfpow;
+		temp = fabs(p_spectrum[j])- pow_quant[ix]*sfpow;
 		temp *= temp;
 
-		temp_p1 = xr34[j]*sfpow34_p1;
+		temp_p1 = pow_quant[j]*sfpow34_p1;
 		XRPOW_FTOI(temp_p1, ix);
 		XRPOW_FTOI(temp_p1 + QUANTFAC(ix), ix);
-		temp_p1 = fabs(xr[j])- pow_quant[ix]*sfpow_p1;
+		temp_p1 = fabs(p_spectrum[j])- pow_quant[ix]*sfpow_p1;
 		temp_p1 *= temp_p1;
 		
-		temp_m1 = xr34[j]*sfpow34_m1;
+		temp_m1 = pow_quant[j]*sfpow34_m1;
 		XRPOW_FTOI(temp_m1, ix);
 		XRPOW_FTOI(temp_m1 + QUANTFAC(ix), ix);
-		temp_m1 = fabs(xr[j])- pow_quant[ix]*sfpow_m1;
+		temp_m1 = fabs(p_spectrum[j])- pow_quant[ix]*sfpow_m1;
 		temp_m1 *= temp_m1;
 
 		xfsf += temp;
@@ -1108,7 +1108,7 @@ double calc_sfb_noise_ave(double *xr, double *xr34, int bw,int sf)
 	return xfsf/bw;
 }
 
-int find_scalefac(double *xr,double *xr34,int sfb,
+int find_scalefac(double *p_spectrum,double *pow_quant,int sfb,
 				  double l3_xmin,int bw)
 {
 	double xfsf;
@@ -1121,7 +1121,7 @@ int find_scalefac(double *xr,double *xr34,int sfb,
 	sf_ok=10000;
 	for (i=0; i<7; i++) {
 		delsf /= 2;
-		xfsf = calc_sfb_noise_ave(xr,xr34,bw,sf);
+		xfsf = calc_sfb_noise_ave(p_spectrum,pow_quant,bw,sf);
 
 		if (xfsf < 0) {
 			/* scalefactors too small */
@@ -1155,8 +1155,8 @@ VBR_quantize_granule(AACQuantInfo* quantInfo,
 
 int
 VBR_noise_shaping(AACQuantInfo* quantInfo,
-				  double xr[1024],
-				  double xr34orig[1024],
+				  double p_spectrum[1024],
+				  double pow_quant_orig[1024],
 				  double allowed_dist[SFB_NUM_MAX],
 				  int quant[1024], int minbits, int maxbits,
 				  int scalefac[SFB_NUM_MAX])
@@ -1167,14 +1167,14 @@ VBR_noise_shaping(AACQuantInfo* quantInfo,
 	int save_sf[SFB_NUM_MAX];
 	int maxover0,maxover1,maxover,mover;
 	int ifqstep;
-	double xr34[1024];
+	double pow_quant[1024];
 
 	
 //	for(i=0;i<1024;i++) {
-//		double temp=fabs(xr[i]);
-//		xr34[i]=sqrt(sqrt(temp)*temp);
+//		double temp=fabs(p_spectrum[i]);
+//		pow_quant[i]=sqrt(sqrt(temp)*temp);
 //	}
-	memcpy(xr34, xr34orig, sizeof(xr34));
+	memcpy(pow_quant, pow_quant_orig, sizeof(pow_quant));
 
 	
 	vbrmax=-10000;
@@ -1183,7 +1183,7 @@ VBR_noise_shaping(AACQuantInfo* quantInfo,
 		start = quantInfo->sfb_offset[sfb];
 		end   = quantInfo->sfb_offset[sfb+1];
 		bw = end - start;
-		vbrsf[sfb] = find_scalefac(&xr[start],&xr34[start],sfb,
+		vbrsf[sfb] = find_scalefac(&p_spectrum[start],&pow_quant[start],sfb,
 			allowed_dist[sfb],bw);
 	}
 
@@ -1251,7 +1251,7 @@ VBR_noise_shaping(AACQuantInfo* quantInfo,
 //		assert(maxover <=0);
 		
 		
-		/* quantize xr34[] based on computed scalefactors */
+		/* quantize pow_quant[] based on computed scalefactors */
 		ifqstep = 2;
 		for ( sfb = 0; sfb < quantInfo->nr_of_sfb; sfb++ ) {
 			int ifac;
@@ -1268,11 +1268,11 @@ VBR_noise_shaping(AACQuantInfo* quantInfo,
 			start = quantInfo->sfb_offset[sfb];
 			end   = quantInfo->sfb_offset[sfb+1];
 			for ( l = start; l < end; l++ ) {
-				xr34[l]*=fac;
+				pow_quant[l]*=fac;
 			}
 		} 
 
-		bits_used = VBR_quantize_granule(quantInfo, xr34, quant);
+		bits_used = VBR_quantize_granule(quantInfo, pow_quant, quant);
 
 
 		if (bits_used < minbits) {
@@ -1284,7 +1284,7 @@ VBR_noise_shaping(AACQuantInfo* quantInfo,
 
 			--vbrmax;
 			memcpy(&vbrsf,&save_sf,sizeof(int)*SFB_NUM_MAX);
-			memcpy(xr34, xr34orig, sizeof(xr34));
+			memcpy(pow_quant, pow_quant_orig, sizeof(pow_quant));
 		}
 
 	} while ((bits_used < minbits));
@@ -1293,13 +1293,13 @@ VBR_noise_shaping(AACQuantInfo* quantInfo,
 	while (bits_used > min(maxbits,4095)) {
 		/* increase global gain, keep exisiting scale factors */
 		++quantInfo->common_scalefac;
-		bits_used = VBR_quantize_granule(quantInfo, xr34, quant);
+		bits_used = VBR_quantize_granule(quantInfo, pow_quant, quant);
 	}
 
 	return bits_used;
 }
 
-int calc_xmin(AACQuantInfo* quantInfo, double xr[1024], double ratio[MAX_SCFAC_BANDS],
+int calc_xmin(AACQuantInfo* quantInfo, double p_spectrum[1024], double ratio[MAX_SCFAC_BANDS],
 	       double allowed_dist[MAX_SCFAC_BANDS], double masking_lower)
 {
 	int start, end, bw,l,ath_over=0;
@@ -1312,7 +1312,7 @@ int calc_xmin(AACQuantInfo* quantInfo, double xr[1024], double ratio[MAX_SCFAC_B
 		bw = end - start;
 		
 		for (en0 = 0.0, l = start; l < end; l++ ) {
-			ener = xr[l] * xr[l];
+			ener = p_spectrum[l] * p_spectrum[l];
 			en0 += ener;
 		}
 		en0 /= bw;
