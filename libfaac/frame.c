@@ -16,7 +16,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: frame.c,v 1.56 2004/01/23 10:22:26 stux Exp $
+ * $Id: frame.c,v 1.57 2004/03/15 20:16:42 knik Exp $
  */
 
 /*
@@ -51,8 +51,8 @@
 static char *libfaacName = FAAC_VERSION " (" __DATE__ ")";
 static char *libCopyright =
   "FAAC - Freeware Advanced Audio Coder (http://www.audiocoding.com/)\n"
-  " Portions Copyright (C) 1999,2000,2001 Menno Bakker\n"
-  " Portions Copyright (C) 2002,2003 Krzysztof Nikiel\n"
+  " Copyright (C) 1999,2000,2001  Menno Bakker\n"
+  " Copyright (C) 2002,2003  Krzysztof Nikiel\n"
   "This software is based on the ISO MPEG-4 reference source code.\n";
 
 static const psymodellist_t psymodellist[] = {
@@ -942,6 +942,9 @@ static SR_INFO srInfo[12+1] =
 
 /*
 $Log: frame.c,v $
+Revision 1.57  2004/03/15 20:16:42  knik
+fixed copyright notice
+
 Revision 1.56  2004/01/23 10:22:26  stux
 *** empty log message ***
 
