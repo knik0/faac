@@ -253,10 +253,10 @@ __declspec(dllexport) BOOL FAR PASCAL DIALOGMsgProc(HWND hWndDlg, UINT Message, 
            	 {
 		     char buf[256];
  			  sprintf(buf,	"AAC-MPEG4 plugin %s by 4N\n"
-							"This plugin uses FAAC encoder engine v%g and FAAD2 decoder engine\n\n"
+				  "This plugin uses FAAC encoder engine v"
+				  FAACENC_VERSION " and FAAD2 decoder engine\n\n"
 							"Compiled on %s\n",
 							PI_VER,
-							FAACENC_VERSION,
 							__DATE__
 						  );
 		      MessageBox(hWndDlg, buf, "About", MB_OK);

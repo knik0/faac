@@ -478,10 +478,9 @@ void About(HWND hwnd)
 {
 char buf[256];
  sprintf(buf,"AAC-MPEG4 encoder plug-in %s by 4N\n"
-			"This plugin uses FAAC encoder engine v%g\n\n"
+	 "This plugin uses FAAC encoder engine v" FAACENC_VERSION "\n\n"
 			"Compiled on %s\n",
 	         PI_VER,
-             FAACENC_VERSION,
 			 __DATE__);
  MessageBox(hwnd, buf, "About", MB_OK);
 }

@@ -16,7 +16,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: main.c,v 1.25 2002/08/09 16:29:41 knik Exp $
+ * $Id: main.c,v 1.26 2002/08/10 16:07:23 knik Exp $
  */
 
 #ifdef _WIN32
@@ -105,7 +105,7 @@ int main(int argc, char *argv[])
 #endif
 
     fprintf(stderr, "FAAC - command line demo of %s\n", __DATE__);
-    fprintf(stderr, "Uses FAACLIB version: %.1f %s\n\n", FAACENC_VERSION, (FAACENC_VERSIONB)?"beta":"");
+    fprintf(stderr, "Uses FAACLIB version: " FAACENC_VERSION "\n\n");
 
     /* begin process command line */
     progName = argv[0];
