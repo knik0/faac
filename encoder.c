@@ -307,25 +307,33 @@ int faac_EncodeFrame(faacAACStream *as)
   if ( Samples > 0 )
     if ( faac_EncodeFrameCore(as, Samples) == FERROR)
       return FERROR;
-  if (Samples < as->samplesToRead)
+  if (Samples < as->samplesToRead) {
+    if(as->sampleBuffer){
+      free(as->sampleBuffer);
+      as->sampleBuffer = NULL;
+    }
+    faac_EncodeFrameCore(as,0);
+    faac_EncodeFrameCore(as,0);
     return F_FINISH;
+    }
   return FNO_ERROR;
 }
 ////////////////////////////////////////////////////////////////////////////////
 int faac_BlockEncodeFrame(faacAACStream *as, short *input_samples, int Samples)
 {
   memcpy(as->sampleBuffer,input_samples,sizeof(short)*Samples);
-  return faac_EncodeFrameCore(as, Samples);
-}
-////////////////////////////////////////////////////////////////////////////////
-void faac_EncodeFinish(faacAACStream *as)
-{
-  if(as->sampleBuffer){
-    free(as->sampleBuffer);
-    as->sampleBuffer = NULL;
-  }
-  faac_EncodeFrameCore(as,0);
-  faac_EncodeFrameCore(as,0);
+  if (Samples < as->samplesToRead) {
+    faac_EncodeFrameCore(as,Samples);
+    if(as->sampleBuffer){
+      free(as->sampleBuffer);
+      as->sampleBuffer = NULL;
+    }
+    faac_EncodeFrameCore(as,0);
+    faac_EncodeFrameCore(as,0);
+    return F_FINISH;
+    }
+  else
+    return faac_EncodeFrameCore(as,Samples);
 }
 ////////////////////////////////////////////////////////////////////////////////
 void faac_EncodeFree(faacAACStream *as)

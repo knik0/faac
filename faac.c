@@ -310,7 +310,7 @@ int main(int argc, char *argv[])
     } while (result != F_FINISH);
 
     /* finishing last frames and destroying internal data */
-    faac_EncodeFinish(as);
+//    faac_EncodeFinish(as);
     faac_EncodeFree(as);
 #ifdef _WIN32
     end = GetTickCount();
