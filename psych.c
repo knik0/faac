@@ -52,9 +52,9 @@ Copyright (c) 1997.
 
 Source file:
 
-$Id: psych.c,v 1.25 2000/01/18 14:16:33 menno Exp $
-$Id: psych.c,v 1.25 2000/01/18 14:16:33 menno Exp $
-$Id: psych.c,v 1.25 2000/01/18 14:16:33 menno Exp $
+$Id: psych.c,v 1.26 2000/01/30 22:24:42 menno Exp $
+$Id: psych.c,v 1.26 2000/01/30 22:24:42 menno Exp $
+$Id: psych.c,v 1.26 2000/01/30 22:24:42 menno Exp $
 
 **********************************************************************/
 
@@ -606,16 +606,17 @@ void psy_step1(double* p_time_signal[],
 	}
 }
 
+
 void psy_step2(double sample[][BLOCK_LEN_LONG*2],
                PSY_STATVARIABLE_LONG *psy_stvar_long,
                PSY_STATVARIABLE_SHORT *psy_stvar_short,
-	       FFT_TABLE_LONG *fft_tbl_long,
-	       FFT_TABLE_SHORT *fft_tbl_short,
-	       int ch
-	       )
+			   FFT_TABLE_LONG *fft_tbl_long,
+			   FFT_TABLE_SHORT *fft_tbl_short,
+			   int ch
+			   )
 {
     int w,i,l,unscambled;
-    double t_re,t_im;
+    double t_re,t_im, sqrtN;
 
     /* FFT for long */
     psy_stvar_long->p_fft += BLOCK_LEN_LONG;
@@ -623,72 +624,45 @@ void psy_step2(double sample[][BLOCK_LEN_LONG*2],
     if(psy_stvar_long->p_fft == BLOCK_LEN_LONG * 3)
 		psy_stvar_long->p_fft = 0;
 
+	sqrtN = 1/sqrt(2048);
+
     /* windowing */
     for(i = 0; i < BLOCK_LEN_LONG*2; i++){
-		FFTarray[i].re = fft_tbl_long->hw[i] * (sample[ch][i]/32768);
+		FFTarray[i].re = fft_tbl_long->hw[i] * sample[ch][i];
 		FFTarray[i].im = 0.0;
     }
 
     pfftw_2048(FFTarray);
 
-        for(w = 0; w < BLOCK_LEN_LONG; w++){
- 		unscambled = unscambled2048[w];
-                t_re = FFTarray[unscambled].re;
-                t_im = FFTarray[unscambled].im;
-		psy_stvar_long->fft_r[w+psy_stvar_long->p_fft]
-			= sqrt(t_re*t_re + t_im*t_im);
+	for(w = 0; w < BLOCK_LEN_LONG; w++){
+		unscambled = unscambled2048[w];
+		t_re = FFTarray[unscambled].re;
+		t_im = FFTarray[unscambled].im;
+		psy_stvar_long->fft_r[w+psy_stvar_long->p_fft] = hypot(t_re,t_im) * sqrtN;
 
-		if( t_re > 0.0 ){
-			if( t_im >= 0.0 )
-				psy_stvar_long->fft_f[w+psy_stvar_long->p_fft] = atan( t_im / t_re );
-			else
-				psy_stvar_long->fft_f[w+psy_stvar_long->p_fft] = atan( t_im / t_re )+ M_PI * 2.0;
-		} else if( t_re < 0.0 ) {
-			psy_stvar_long->fft_f[w+psy_stvar_long->p_fft] = atan( t_im / t_re ) + M_PI;
-		} else {
-			if( t_im > 0.0 )
-				psy_stvar_long->fft_f[w+psy_stvar_long->p_fft] = M_PI * 0.5;
-			else if( t_im < 0.0 )
-				psy_stvar_long->fft_f[w+psy_stvar_long->p_fft] = M_PI * 1.5;
-			else
-				psy_stvar_long->fft_f[w+psy_stvar_long->p_fft] = 0.0; /* tmp */
-		}
+		psy_stvar_long->fft_f[w+psy_stvar_long->p_fft] = atan2(t_im, t_re);
     }
 
 	/* FFT for short */
+	sqrtN = 1/sqrt(256);
 
 	for(l = 0; l < MAX_SHORT_WINDOWS; l++){
 
         /* windowing */
         for(i = 0; i < BLOCK_LEN_SHORT*2; i++){
-			FFTarray[i].re = fft_tbl_short->hw[i] * (sample[ch][/*OFFSET_FOR_SHORT +*/ BLOCK_LEN_SHORT * l + i]/4096);
+			FFTarray[i].re = fft_tbl_short->hw[i] * sample[ch][OFFSET_FOR_SHORT + (BLOCK_LEN_SHORT * l) + i];
 			FFTarray[i].im = 0.0;
 		}
 
-                pfftw_256(FFTarray);
+		pfftw_256(FFTarray);
 
 		for(w = 0; w < BLOCK_LEN_SHORT; w++){
-         		unscambled = unscambled256[w];
-                        t_re = FFTarray[unscambled].re;
-                        t_im = FFTarray[unscambled].im;
-			psy_stvar_short->fft_r[l][w]
-				= sqrt(t_re*t_re + t_im*t_im);
+			unscambled = unscambled256[w];
+			t_re = FFTarray[unscambled].re;
+			t_im = FFTarray[unscambled].im;
+			psy_stvar_short->fft_r[l][w] = hypot(t_re,t_im) * sqrtN;
 
-			if( t_re > 0.0 ){
-				if( t_im >= 0.0 )
-					psy_stvar_short->fft_f[l][w] = atan( t_im / t_re );
-				else
-					psy_stvar_short->fft_f[l][w] = atan( t_im / t_re )+ M_PI * 2.0;
-			} else if( t_re < 0.0 ) {
-				psy_stvar_short->fft_f[l][w] = atan( t_im / t_re ) + M_PI;
-			} else {
-				if( t_im > 0.0 )
-					psy_stvar_short->fft_f[l][w] = M_PI * 0.5;
-				else if( t_im < 0.0 )
-					psy_stvar_short->fft_f[l][w] = M_PI * 1.5;
-				else
-					psy_stvar_short->fft_f[l][w] = 0.0; /* tmp */
-			}
+			psy_stvar_short->fft_f[l][w] = atan2(t_im, t_re);
 		}
     }
 }
