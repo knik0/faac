@@ -17,7 +17,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: aacquant.c,v 1.23 2003/08/17 14:44:40 knik Exp $
+ * $Id: aacquant.c,v 1.24 2003/08/18 16:23:30 knik Exp $
  */
 
 #include <math.h>
@@ -398,7 +398,7 @@ static void CalcAllowedDist(CoderInfo *coderInfo, PsyInfo *psyInfo,
     tmp = minfix * (tmp + 0.77);
     thr = 1.0 / ((1.0 / thr) + (1.0 / tmp));
 
-    xmin[sfb] = ((coderInfo->block_type == ONLY_SHORT_WINDOW) ? 0.7 : 1.0)
+    xmin[sfb] = ((coderInfo->block_type == ONLY_SHORT_WINDOW) ? 0.65 : 1.0)
       * globalthr * thr;
     }
 }
