@@ -39,6 +39,8 @@ rfftw_destroy_plan(rdft_plan8);
 void rdft( double *fr, unsigned lg2n ) 
 /* real discrete Fourier transform; not recursive */
 {
+fftw_init();
+/*FIXME: has to be placed elsewhere*/
 rfftw_plan rdft_plan;
 double fo[lg2n];
 switch(lg2n) {
@@ -53,6 +55,8 @@ switch(lg2n) {
 	printf("ERROR: rdft with size %i",lg2n);
 }
 	memcpy(fr,fo,sizeof(fr));
+fftw_destroy();
+/*FIXME: has to be placed elsewhere*/
 }
 
 void spectrum( double *f, unsigned lg2n )
