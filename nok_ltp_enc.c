@@ -34,8 +34,8 @@ Copyright (c)1997.
 /**************************************************************************
   Version Control Information			Method: CVS
   Identifiers:
-  $Revision: 1.1 $
-  $Date: 2000/01/05 21:41:37 $ (check in)
+  $Revision: 1.2 $
+  $Date: 2000/01/06 13:55:21 $ (check in)
   $Author: menno $
   *************************************************************************/
 
@@ -212,7 +212,10 @@ nok_ltp_enc(double *p_spectrum, double *p_time_signal, enum WINDOW_TYPE win_type
 			lt_status->sfb_prediction_used, sfb_offset, 
 			win_type, lt_status->side_info, last_band);
 
-//		fprintf(stderr, " bit gain : %f\n", num_bit[0]);
+//		if (num_bit[0] > 0) {
+//			fprintf(stderr, "(LTP) lag : %i ", lt_status->delay[0]);
+//			fprintf(stderr, " bit gain : %f\n", num_bit[0]);
+//		}
 
 		lt_status->global_pred_flag = (num_bit[0] == 0.0) ? 0 : 1;
 

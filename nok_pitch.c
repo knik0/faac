@@ -34,8 +34,8 @@ Copyright (c)1997.
 /**************************************************************************
   Version Control Information			Method: CVS
   Identifiers:
-  $Revision: 1.2 $
-  $Date: 2000/01/06 10:16:11 $ (check in)
+  $Revision: 1.3 $
+  $Date: 2000/01/06 13:55:21 $ (check in)
   $Author: menno $
   *************************************************************************/
 
@@ -135,6 +135,8 @@ snr_pred (double *mdct_in,
 		snr_p[i] = (mdct_in[i] - mdct_pred[i]) * (mdct_in[i] - mdct_pred[i]);
     }
 
+	num_bit = 0.0;
+
 	for (i = 0; i < num_of_sfb; i++)
     {
 		temp1 = 0.0;
@@ -148,8 +150,8 @@ snr_pred (double *mdct_in,
 		if (temp2 < snr_limit)
 			temp2 = snr_limit;
 
-		if (temp1 > 1.e-20)
-			snr[i] = /*-*/10. * log10 (temp2 / temp1);
+		if (temp1 > /*1.e-20*/0.0)
+			snr[i] = -10. * log10 (temp2 / temp1);
 		else
 			snr[i] = 0.0;
 
@@ -162,13 +164,11 @@ snr_pred (double *mdct_in,
 				sfb_flag[i] = 0;
 				for (j = sfb_offset[i]; j < sfb_offset[i + 1]; j++)
 					mdct_pred[j] = 0.0;
+			} else {
+				num_bit += snr[i] / 6. * (sfb_offset[i + 1] - sfb_offset[i]);
 			}
 		}
     }
-
-	num_bit = 0.0;
-	for (i = 0; i < num_of_sfb; i++)
-		num_bit += snr[i] / 6. * (sfb_offset[i + 1] - sfb_offset[i]);
 
 	if (num_bit < side_info)
     {
@@ -180,7 +180,6 @@ snr_pred (double *mdct_in,
     }
 	else
 		num_bit -= side_info;
-
 
 	return (num_bit);
 }
@@ -257,13 +256,12 @@ int estimate_delay (double *sb_samples,
 					int flen
 					)
 {
-#if 0
 	int i, j;
 	int delay;
 	double corr[DELAY];
 	double p_max, energy;
 
-	for (i = 0; i < DELAY; i++)
+	for (i = 0; i < DELAY; i+=16)
 	{
 		energy = 0.0;
 		corr[i] = 0.0;
@@ -281,7 +279,7 @@ int estimate_delay (double *sb_samples,
 
 	p_max = 0.0;
 	delay = 0;
-	for (i = 0; i < DELAY; i++)
+	for (i = 0; i < DELAY; i+=16)
 		if (p_max < corr[i])
 		{
 			p_max = corr[i];
@@ -296,13 +294,6 @@ int estimate_delay (double *sb_samples,
 	*/
 
 	return delay;
-#else
-	static int delay = 992;
-	delay += 32;
-	if (delay == 2048)
-		delay = 1024;
-	return delay;
-#endif
 }
 
 
