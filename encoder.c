@@ -375,7 +375,7 @@ faacVersion *faac_Version(void)
   faacv->DLLMinorVersion = 30;
   faacv->MajorVersion = 0;
   faacv->MinorVersion = 70;
-  strcpy(faacv->HomePage, "http://www.slimline.net/aac/");
+  strcpy(faacv->HomePage, "http://faac.sourceforge.net/");
 
   return faacv;
 }

@@ -223,7 +223,7 @@ double bark2hz (double bark)
     double hz;
 
     if(bark>2.0)
-	hz = 1960 * (bark + 0.53) / (26.28 - bark);
+	hz = 1960 / (26.81 / (bark + 0.53) - 1);
     else
 	hz = bark * 102.9;
 
@@ -241,7 +241,7 @@ double hz2bark (double hz)
     double bark;
 
     if(hz>200.0)
-	bark = 26.81 * hz / (1960 + hz) - 0.53; 
+	bark = 26.81 / (1 + (1960 / hz)) - 0.53; 
     else
 	bark = hz / 102.9;
 
@@ -254,9 +254,9 @@ void psy_part_table_init(double sampling_rate,
 						 PARTITION_TABLE_SHORT *part_tbl_short
 						 )
 {
-    int b,bb; /* Jul 10 */
+    int b,bb;
     double tmp;
-	int partition[1024], j, w;
+	int j;
 	int cbands, prev_cbound, crit_bands, cbound;
 
 	cbands = (int)hz2bark(sampling_rate/2.0) + 1;
@@ -308,29 +308,20 @@ void psy_part_table_init(double sampling_rate,
 	part_tbl_short->len = crit_bands+1;
 //	printf("%d %d\n",part_tbl_short->len, part_tbl_short->w_high[crit_bands]);
 
-	for (b = 0; b < part_tbl_long->len; b++) {
-		for(w = part_tbl_long->w_low[b]; w <= part_tbl_long->w_high[b]; ++w){
-			partition[w] = b;
-		}
-	}
 
-	for(b = 0; b < part_tbl_long->len ; b++) {
+	// Using Traunmuller formula for bark, for more info see:
+	// http://www.ling.su.se/staff/hartmut/bark.htm
+	for(b = 0; b < part_tbl_long->len; b++) {
 		double ji = part_tbl_long->w_low[b] + (part_tbl_long->width[b]-1)/2.0;
 		double freq = part_tbl_long->sampling_rate*ji/2048;
-		double bark = 13*atan(0.00076*freq)+3.5*atan((freq/7500)*(freq/7500));
+		double bark = 26.81/(1+(1960/freq)) - 0.53;
 		dyn_long.bval[b] = bark;
-	}
-
-	for (b = 0; b < part_tbl_short->len; b++) {
-		for(w = part_tbl_short->w_low[b]; w <= part_tbl_short->w_high[b]; ++w){
-			partition[w] = b;
-		}
 	}
 
 	for(b = 0; b < part_tbl_short->len ; b++) {
 		double ji = part_tbl_short->w_low[b] + (part_tbl_short->width[b]-1)/2.0;
 		double freq = part_tbl_short->sampling_rate*ji/256;
-		double bark = 13*atan(0.00076*freq) + 3.5*atan((freq/7500)*(freq/7500));
+		double bark = 26.81/(1+(1960/freq)) - 0.53;
 		dyn_short.bval[b]=bark;
 	}
 
