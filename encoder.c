@@ -81,7 +81,7 @@ faacAACStream *faacEncodeInit(faacAACConfig *ac, int *samplesToRead, int *bitBuf
 	*samplesToRead = frameNumSample * ac->channels;
 
 	as->frame_bits = (int)(ac->bit_rate*frameNumSample/ac->sampling_rate+0.5);
-	*bitBufferSize = (int)((as->frame_bits * 2 + 8)/8);
+	*bitBufferSize = (int)(((as->frame_bits * 2) + 7)/8);
 
 
 	/* num frames to start up encoder due to delay compensation */
@@ -159,7 +159,7 @@ int faacEncodeFrame(faacAACStream *as, short *Buffer, int Samples, unsigned char
 	as->total_bits += usedNumBit;
 
 	// Copy bitBuf into bitBuffer here
-	usedBytes = (int)((usedNumBit/8)+0.5);
+	usedBytes = (int)((usedNumBit+7)/8);
 	*bitBufSize = usedBytes;
 	for (i = 0; i < usedBytes; i++)
 		bitBuffer[i] = bitBuf->data[i];
@@ -258,7 +258,7 @@ int faacEncodeFree(faacAACStream *as, unsigned char *headerBuf)
 		bits = BsBufferNumBit(bitHeader);
 
 		// Copy bitBuf into bitBuffer here
-		bytes = (int)((bits+8)/8);
+		bytes = (int)((bits+7)/8);
 		for (i = 0; i < bytes; i++)
 			headerBuf[i] = bitHeader->data[i];
 		BsClose(bitHeader);
