@@ -4,7 +4,7 @@
 #include "filters.h" //CoolEdit
 #include "resource.h"
 
-#include "faad.h"
+#include <faad.h>
 #include "aacinfo.h"
 
 

@@ -2,7 +2,7 @@
 #include <stdio.h>  // for FILE *
 #include "filters.h" //CoolEdit
 #include "resource.h"
-#include "faac.h"
+#include <faac.h>
 
 static faacEncHandle hEncoder;
 faacEncConfiguration faacEncCfg;
