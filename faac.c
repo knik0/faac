@@ -7,6 +7,7 @@
 #endif
 
 #include "aacenc.h"
+#include "bitstream.h"
 
 #ifdef FAAC_DLL
 
@@ -241,16 +242,18 @@ void printConf(faacAACStream *as)
 
 int main(int argc, char *argv[])
 {
-  int i, frames, currentFrame, result, FileCount;
-  char *InFileNames[100];
-  char *OutFileNames[100];
-
+  int						i, frames, currentFrame, result, FileCount;
+  char					*InFileNames[100], *OutFileNames[100];
   faacAACStream *as;
 
-  /* timing vars */
-  long begin, end;
-  int nTotSecs, nSecs;
-  int nMins;
+	/* System dependant types */
+#ifdef WIN32
+  long	begin, end;
+  int		nTotSecs, nSecs;
+  int		nMins;
+#else
+	float	totalSecs;
+#endif
 
   /* create main aacstream object */
   as =(faacAACStream *) malloc(sizeof(faacAACStream));
@@ -269,9 +272,8 @@ int main(int argc, char *argv[])
     printf("0%\tBusy encoding %s.\r", InFileNames[i]);
 #ifdef WIN32
     begin = GetTickCount();
-#else
-    begin = clock();
 #endif
+
     /* Init encoder core and retrieve number of frames */
     if ((frames=faac_EncodeInit(as, InFileNames[i], OutFileNames[i])) < 0) {
       printf("Error %d while encoding %s.\n",-frames,InFileNames[i]);
@@ -295,13 +297,15 @@ int main(int argc, char *argv[])
     faac_EncodeFree(as);
 #ifdef WIN32
     end = GetTickCount();
-#else
-    end = clock();
-#endif
     nTotSecs = (end-begin)/1000;
     nMins = nTotSecs / 60;
     nSecs = nTotSecs - (60*nMins);
     printf("Encoding %s took:\t%d:%.2d\t\n", InFileNames[i], nMins, nSecs);
+#else
+		totalSecs = (float)(clock())/(float)CLOCKS_PER_SEC;
+		printf("Encoding %s took:\t%d:%.2d\t\n", InFileNames[i],
+			totalSecs/(float)60, totalSecs - ((float)60 * (totalSecs/(float)60)));
+#endif
     if(InFileNames[i]) free(InFileNames[i]);
     if(OutFileNames[i]) free(OutFileNames[i]);
   }
