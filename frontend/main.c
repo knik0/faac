@@ -18,7 +18,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: main.c,v 1.71 2004/07/28 08:18:21 danchr Exp $
+ * $Id: main.c,v 1.72 2004/08/02 20:41:59 danchr Exp $
  */
 
 #ifdef _MSC_VER
@@ -47,6 +47,7 @@
 #endif
 
 #ifdef __unix__
+#include <time.h>
 #include <sys/time.h>
 #include <sys/resource.h>
 #include <unistd.h>
@@ -433,8 +434,8 @@ int main(int argc, char *argv[])
 #ifdef HAVE_LIBMP4V2
     MP4FileHandle MP4hFile = MP4_INVALID_FILE_HANDLE;
     MP4TrackId MP4track = 0;
-    int ntracks = 0, trackno = 0;
-    int ndiscs = 0, discno = 0;
+    unsigned int ntracks = 0, trackno = 0;
+    unsigned int ndiscs = 0, discno = 0;
     u_int8_t compilation = 0;
     const char *artist = NULL, *title = NULL, *album = NULL, *year = NULL,
       *genre = NULL, *comment = NULL, *writer = NULL;
@@ -617,10 +618,10 @@ int main(int argc, char *argv[])
 	    album = optarg;
 	    break;
 	case TRACK_FLAG:
-	    sscanf(optarg, "%i/%i", &trackno, &ntracks);
+	    sscanf(optarg, "%u/%u", &trackno, &ntracks);
 	    break;
 	case DISC_FLAG:
-	    sscanf(optarg, "%i/%i", &discno, &ndiscs);
+	    sscanf(optarg, "%u/%u", &discno, &ndiscs);
 	    break;
 	case COMPILATION_FLAG:
 	    compilation = 0x1;
@@ -1140,6 +1141,9 @@ int main(int argc, char *argv[])
 
 /*
 $Log: main.c,v $
+Revision 1.72  2004/08/02 20:41:59  danchr
+NetBSD portability fix + fixing metadata bugs w/ sscanf()
+
 Revision 1.71  2004/07/28 08:18:21  danchr
 Darwin portability fixes, should help on Linux too
 
