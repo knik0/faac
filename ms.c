@@ -68,13 +68,12 @@ void MSPreprocess(double p_ratio_long[][MAX_SCFAC_BANDS],
 					int numGroups;
 					int groupIndex = 0;
 					int maxSfb;
-					int g,b,w, j;
+					int g,b,j;
 					int use_ms_short;
 					MS_Info *msInfo;
 
 					numGroups = quantInfo[leftChan].num_window_groups;
 					maxSfb = quantInfo[leftChan].max_sfb;
-					w=0;
 
 					/* Determine which bands should be enabled */
 					msInfo = &(channelInfo[leftChan].ms_info);
@@ -135,7 +134,7 @@ void MSPreprocess(double p_ratio_long[][MAX_SCFAC_BANDS],
 					int numGroups;
 					int groupIndex = 0;
 					int maxSfb;
-					int g,b,w, j;
+					int g,b,j;
 					MS_Info *msInfo;
 
 					channelInfo[0].ms_info.is_present = 1;
@@ -143,7 +142,6 @@ void MSPreprocess(double p_ratio_long[][MAX_SCFAC_BANDS],
 
 					for (chan = 0; chan < 2; chan++) {
 						maxSfb = quantInfo[chan].max_sfb;
-						w=0;
 
 						/* Determine which bands should be enabled */
 						msInfo = &(channelInfo[leftChan].ms_info);
@@ -178,12 +176,11 @@ void MSPreprocess(double p_ratio_long[][MAX_SCFAC_BANDS],
 					int numGroups;
 					int groupIndex = 0;
 					int maxSfb;
-					int g,b,w, j;
+					int g,b,j;
 					MS_Info *msInfo;
 
 					for (chan = 0; chan < 2; chan++) {
 						maxSfb = quantInfo[chan].max_sfb;
-						w=0;
 
 						/* Determine which bands should be enabled */
 						msInfo = &(channelInfo[leftChan].ms_info);
@@ -314,10 +311,10 @@ void MSEncode(double *spectrum[MAX_TIME_CHANNELS],   /* array of pointers to spe
 
 					channelInfo[leftChan].common_window = 1;  /* Use common window */
 					channelInfo[leftChan].ms_info.is_present=1;
+                                        w = 0;
 
 					numGroups = quantInfo[leftChan].num_window_groups;
 					maxSfb = quantInfo[leftChan].max_sfb;
-					w=0;
 
 					/* Determine which bands should be enabled */
 					/* Right now, simply enable bands which do not use intensity stereo */

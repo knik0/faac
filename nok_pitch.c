@@ -34,9 +34,9 @@ Copyright (c)1997.
 /**************************************************************************
   Version Control Information			Method: CVS
   Identifiers:
-  $Revision: 1.3 $
-  $Date: 2000/01/06 13:55:21 $ (check in)
-  $Author: menno $
+  $Revision: 1.4 $
+  $Date: 2000/01/08 13:31:28 $ (check in)
+  $Author: lenox $
   *************************************************************************/
 
 
@@ -69,9 +69,24 @@ Copyright (c)1997.
   *************************************************************************/
 #include "nok_ltp_common_internal.h"
 
-static void lnqgj (double (*a)[LPC + 1]);
+void lnqgj (double (*a)[LPC + 1]);
 
-static void w_quantize (double *freq, int *ltp_idx);
+void w_quantize (double *freq, int *ltp_idx);
+
+/*
+  Purpose:	Codebook for LTP weight coefficients.  */
+
+double codebook[CODESIZE] =
+{
+  0.570829,
+  0.696616,
+  0.813004,
+  0.911304,
+  0.984900,
+  1.067894,
+  1.194601,
+  1.369533
+};
 
 /**************************************************************************
   Title:	snr_pred

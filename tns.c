@@ -11,9 +11,9 @@ unsigned long tnsSupportedSamplingRates[13] =
   {8000,11025,12000,16000,22050,24000,32000,44100,48000,64000,88200,96000,0};
 
 /* Limit bands to > 1.5 kHz */
-/*static unsigned short tnsMinBandNumberLong[12] = 
+/* unsigned short tnsMinBandNumberLong[12] = 
   { 26, 25, 24, 20, 23, 22, 17, 14, 13, 12, 9, 8 };
-static unsigned short tnsMinBandNumberShort[12] = 
+ unsigned short tnsMinBandNumberShort[12] = 
   { 10, 9, 8, 8, 5, 4, 3, 3, 2, 2, 1, 1 }; */
        
 /* Limit bands to > 2.0 kHz */

@@ -97,19 +97,5 @@ Copyright (c) 1997.
    Explanation:  - */
 typedef double float_ext;
 
-/*
-  Purpose:	Codebook for LTP weight coefficients.  */
-static double codebook[CODESIZE] =
-{
-  0.570829,
-  0.696616,
-  0.813004,
-  0.911304,
-  0.984900,
-  1.067894,
-  1.194601,
-  1.369533
-};
-
 
 #endif /* _NOK_LTP_COMMON_INTERNAL_H */

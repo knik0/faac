@@ -34,9 +34,9 @@ Copyright (c)1997.
 /**************************************************************************
   Version Control Information			Method: CVS
   Identifiers:
-  $Revision: 1.2 $
-  $Date: 2000/01/06 13:55:21 $ (check in)
-  $Author: menno $
+  $Revision: 1.3 $
+  $Date: 2000/01/08 13:31:28 $ (check in)
+  $Author: lenox $
   *************************************************************************/
 
 
@@ -65,7 +65,7 @@ Copyright (c)1997.
   *************************************************************************/
 #include "nok_ltp_common_internal.h"
 
-static short double_to_int (double sig_in);
+short double_to_int (double sig_in);
 
 
 /**************************************************************************
@@ -348,7 +348,7 @@ nok_ltp_reconstruct(double *p_spectrum, enum WINDOW_TYPE win_type,
 			     >1 otherwise
                            - weight_idx : 
                              3 bit number indicating the LTP coefficient in 
-                             the codebook 
+                             the codebook
                            - sfb_prediction_used:
                              1 bit for each scalefactor band (sfb) where LTP 
                              can be used indicating whether LTP is switched 
@@ -453,7 +453,7 @@ nok_ltp_encode (BsBitStream *bs, enum WINDOW_TYPE win_type, int num_of_sfb,
 						}
 					}
 				}
-			}  
+			}
 			break;
 
 		default:
@@ -487,7 +487,7 @@ nok_ltp_encode (BsBitStream *bs, enum WINDOW_TYPE win_type, int num_of_sfb,
   Author(s):	Juha Ojanpera
   *************************************************************************/
 
-static short
+short
 double_to_int (double sig_in)
 {
 	short sig_out;
@@ -503,3 +503,4 @@ double_to_int (double sig_in)
 
 	return (sig_out);
 }
+

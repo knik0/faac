@@ -19,7 +19,6 @@ void MDCT (fftw_real *data, int N) {
     fftw_real freq = 2.0 * M_PI / N;
     fftw_real fac,cosfreq8,sinfreq8;
     int i, n;
-    int isign = 1;
     int b = N >> 1;
     int N4 = N >> 2;
     int N2 = N >> 1;

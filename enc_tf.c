@@ -41,7 +41,7 @@ double *DTimeSigBuf[MAX_TIME_CHANNELS];
 double *DTimeSigLookAheadBuf[MAX_TIME_CHANNELS+2];
 double *nok_tmp_DTimeSigBuf[MAX_TIME_CHANNELS]; /* temporary fix to the buffer size problem. */
 
-/* static variables used by the T/F mapping */
+/* variables used by the T/F mapping */
 enum QC_MOD_SELECT qc_select = AAC_QC;                   /* later f(encPara) */
 enum AAC_PROFILE profile = MAIN;
 enum WINDOW_TYPE block_type[MAX_TIME_CHANNELS];

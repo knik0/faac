@@ -52,9 +52,9 @@ Copyright (c) 1997.
 
 Source file:
 
-$Id: psych.c,v 1.21 2000/01/07 17:17:56 lenox Exp $
-$Id: psych.c,v 1.21 2000/01/07 17:17:56 lenox Exp $
-$Id: psych.c,v 1.21 2000/01/07 17:17:56 lenox Exp $
+$Id: psych.c,v 1.22 2000/01/08 13:31:28 lenox Exp $
+$Id: psych.c,v 1.22 2000/01/08 13:31:28 lenox Exp $
+$Id: psych.c,v 1.22 2000/01/08 13:31:28 lenox Exp $
 
 **********************************************************************/
 
@@ -276,9 +276,9 @@ PARTITION_TABLE_SHORT    *part_tbl_short;
 DYN_PART_TABLE_LONG     dyn_long;  
 DYN_PART_TABLE_SHORT    dyn_short;
 PSY_STATVARIABLE_LONG    psy_stvar_long[MAX_TIME_CHANNELS+2];
-                               /* static variables for long block */
+                               /* variables for long block */
 PSY_STATVARIABLE_SHORT    psy_stvar_short[MAX_TIME_CHANNELS+2];
-                               /* static variables for short block */
+                               /* variables for short block */
 /* added by T. Araki (1997.10.16) end */
 
 void EncTf_psycho_acoustic_init( void )
@@ -1054,13 +1054,13 @@ void psy_step11andahalf(PARTITION_TABLE_LONG *part_tbl_long,
 						int ch)
 {
 
-	int b, i,p1,p2;
+	int b, i,p1;//p2;
 	double t;
 	double tempL, tempR, tempM, tempS;
 
     p1 = psy_stvar_long->p_nb;
-    if( p1 == 0 ) p2 = NPART_LONG;
-    else if( p1 == NPART_LONG ) p2 = 0;
+//    if( p1 == 0 ) p2 = NPART_LONG;
+//    else if( p1 == NPART_LONG ) p2 = 0;
 
 	if (ch==3) {
 		for(b = 0; b < part_tbl_long->len; b++) {
