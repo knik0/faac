@@ -16,7 +16,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: coder.h,v 1.10 2003/05/01 10:29:33 knik Exp $
+ * $Id: coder.h,v 1.11 2003/06/26 19:19:51 knik Exp $
  */
 
 #ifndef CODER_H
@@ -139,6 +139,8 @@ typedef struct {
     int max_sfb;
     int nr_of_sfb;
     int sfb_offset[250];
+    int lastx;
+    double avgenrg;
 
     int spectral_count;
 
