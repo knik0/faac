@@ -47,7 +47,7 @@ void MSPreprocess(double p_ratio_long[][MAX_SCFAC_BANDS],
 				  Ch_Info *channelInfo,                  /* Pointer to Ch_Info */
 				  enum WINDOW_TYPE block_type[MAX_TIME_CHANNELS], /* Block type */
 				  AACQuantInfo* quantInfo,               /* Quant info */
-				  int use_ms,
+				  int use_ms, int use_is,
 				  int numberOfChannels
 				  );
 
