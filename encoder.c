@@ -399,11 +399,11 @@ void usage(void)
 	printf(" -pX   AAC profile (X can be LOW, or MAIN (default).\n");
 	printf(" -bX   Bitrate in kbps (in steps of 1kbps, min. 16kbps)\n");
 	printf(" -pns  Use PNS (Perceptual Noise Substitution).\n");
+	printf(" -tns  Use TNS (Temporal Noise Shaping).\n");
 	printf(" -is   Use intensity stereo coding.\n");
 	printf(" -ms   Use mid/side stereo coding.\n");
 	printf(" -nm   Don't use mid/side stereo coding.\n");
 	printf("       The default for MS is intelligent switching.\n");
-	printf(" -nt   Don't use TNS (Temporal Noise Shaping).\n");
 	printf(" -np   Don't use LTP (Long Term Prediction).\n");
 	printf(" -nh   No header will be written to the AAC file.\n");
 	printf(" -oX   Set output directory.\n");
@@ -436,7 +436,7 @@ int main(int argc, char *argv[])
 	int i, frames, cfr;
 	int profile = MAIN_PROFILE;
 	int no_header = 0;
-	int use_IS = 0, use_MS = 0, use_TNS = 1, use_LTP = 1, use_PNS = 0;
+	int use_IS = 0, use_MS = 0, use_TNS = 0, use_LTP = 1, use_PNS = 0;
 	int cut_off = 0;
 	int bit_rate = 128;
 	int out_rate = 0;
@@ -528,8 +528,6 @@ int main(int argc, char *argv[])
 			case 'n': case 'N':
 				if ((argv[i][2] == 'm') || (argv[i][2] == 'M'))
 					use_MS = -1;
-				else if ((argv[i][2] == 't') || (argv[i][2] == 'T'))
-					use_TNS = 0;
 				else if ((argv[i][2] == 'p') || (argv[i][2] == 'P'))
 					use_LTP = 0;
 				else
@@ -543,6 +541,9 @@ int main(int argc, char *argv[])
 				break;
 			case 'r': case 'R':
 				raw_audio = 1;
+				break;
+			case 't': case 'T':
+				use_TNS = 1;
 				break;
 			case 'b': case 'B':
 				bit_rate = atoi(&argv[i][2]);
