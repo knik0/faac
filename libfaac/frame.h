@@ -16,7 +16,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: frame.h,v 1.18 2003/03/27 17:09:03 knik Exp $
+ * $Id: frame.h,v 1.19 2003/06/26 19:20:20 knik Exp $
  */
 
 #ifndef FRAME_H
@@ -41,7 +41,7 @@ extern "C" {
   #endif
 #endif
 
-#define FAAC_CFG_VERSION 100
+#define FAAC_CFG_VERSION 101
 
 typedef struct {
   psymodel_t *model;
@@ -55,6 +55,9 @@ typedef struct faacEncConfiguration
 
     /* library version */
     char *name;
+
+    /* copyright string */
+    char *copyright;
 
     /* MPEG version, 2 or 4 */
     unsigned int mpegVersion;
