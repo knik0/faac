@@ -304,10 +304,7 @@ int main(int argc, char *argv[])
     printf("Encoding %s took:\t%d:%.2d\t\n", InFileNames[i], nMins, nSecs);
 #else
 		totalSecs = (float)(clock())/(float)CLOCKS_PER_SEC;
-		printf("Encoding %s took: %5.2f sec.\n", InFileNames[i],
-			(float)(clock())/(float)CLOCKS_PER_SEC);
 		mins = totalSecs/60;
-		printf("Blah: %i\n", mins); 
 		printf("Encoding %s took: %i min, %.2f sec.\n", InFileNames[i],
 			mins, totalSecs - (60 * mins));
 #endif
@@ -315,7 +312,7 @@ int main(int argc, char *argv[])
     if(OutFileNames[i]) free(OutFileNames[i]);
   }
   if (as) free (as);
-  return FNO_ERROR;
+  exit(FNO_ERROR);
 }
 
 #endif // end of not dll
