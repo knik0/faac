@@ -16,7 +16,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: main.c,v 1.26 2002/08/10 16:07:23 knik Exp $
+ * $Id: main.c,v 1.27 2002/08/19 16:33:54 knik Exp $
  */
 
 #ifdef _WIN32
@@ -77,13 +77,12 @@ int main(int argc, char *argv[])
     unsigned int useMidSide = 1;
     unsigned int useTns = 0;
     unsigned int useAdts = 1;
-    unsigned int cutOff = 0;
-    unsigned long bitRate = 64000;
+    int cutOff = -1;
+    unsigned long bitRate = 0;
     int psymodelidx = -1;
 
     char *audioFileName;
     char *aacFileName;
-    char percent[200];
 
     short *pcmbuf;
 
@@ -92,20 +91,7 @@ int main(int argc, char *argv[])
 
     FILE *outfile;
 
-#ifdef __unix__
-    struct rusage usage;
-#endif
-#ifdef _WIN32
-    long begin, end;
-    int nTotSecs, nSecs;
-    int nMins;
-#else
-    float totalSecs;
-    int mins;
-#endif
-
-    fprintf(stderr, "FAAC - command line demo of %s\n", __DATE__);
-    fprintf(stderr, "Uses FAACLIB version: " FAACENC_VERSION "\n\n");
+    fprintf(stderr, "FAAC version " FAACENC_VERSION " (" __DATE__ ")\n");
 
     /* begin process command line */
     progName = argv[0];
@@ -177,9 +163,7 @@ int main(int argc, char *argv[])
         }
         case 'c': {
             unsigned int i;
-            if (sscanf(optarg, "%u", &i) < 1) {
-                cutOff = 18000;
-            } else {
+	    if (sscanf(optarg, "%u", &i) > 0) {
                 cutOff = i;
             }
             break;
@@ -187,7 +171,6 @@ int main(int argc, char *argv[])
 	case 'b':
 	  {
             unsigned int i;
-                bitRate = 64000;
 	    if (sscanf(optarg, "%u", &i) > 0)
 	    {
 	      if (i > 0 && i < 1000)
@@ -219,7 +202,7 @@ int main(int argc, char *argv[])
       hEncoder = faacEncOpen(44100, 2, &samplesInput, &maxBytesOutput);
       myFormat = faacEncGetCurrentConfiguration(hEncoder);
 
-        fprintf(stderr, "USAGE: %s -options infile outfile\n", progName);
+        fprintf(stderr, "\nUsage: %s -options infile outfile\n", progName);
         fprintf(stderr, "Options:\n");
         fprintf(stderr, "  -m X   AAC MPEG version, X can be 2 or 4.\n");
         fprintf(stderr, "  -o X   AAC object type, X can be LC, MAIN or LTP.\n");
@@ -234,7 +217,8 @@ int main(int argc, char *argv[])
         fprintf(stderr, "  -t     Use TNS coding.\n");
     fprintf(stderr,
 	    "  -c X   Set the bandwidth, X in Hz. (default=automatic)\n");
-    fprintf(stderr, "  -b X   Set the bitrate per channel, X in kbps.\n\n");
+    fprintf(stderr, "  -b X   Set the bitrate per channel, X in kbps."
+	    " (default is auto)\n\n");
 
     faacEncClose(hEncoder);
 
@@ -271,6 +255,28 @@ int main(int argc, char *argv[])
     pcmbuf = (short*)malloc(samplesInput*sizeof(short));
     bitbuf = (unsigned char*)malloc(maxBytesOutput*sizeof(unsigned char));
 
+    if (!bitRate)
+    {
+      bitRate = ((sr * 2) / 1000) * 1000;
+      if (bitRate > 64000)
+	bitRate = 64000;
+    }
+    if (cutOff <= 0)
+    {
+      if (cutOff < 0) // default
+	cutOff = bitRate / 4;
+      else // disabled
+	cutOff = sr / 2;
+    }
+    if (cutOff > (sr / 2))
+      cutOff = sr / 2;
+    fprintf(stderr, "Bit rate: %ld bps per channel\n", bitRate);
+    fprintf(stderr, "Cutoff frequency is ");
+    if (cutOff == sr / 2)
+      fprintf(stderr, "disabled\n");
+    else
+      fprintf(stderr, "%d Hz\n", cutOff);
+
     /* put the options in the configuration struct */
     myFormat = faacEncGetCurrentConfiguration(hEncoder);
     myFormat->aacObjectType = objectType;
@@ -289,18 +295,20 @@ int main(int argc, char *argv[])
 
     if (outfile)
     {
+	int showcnt = 0;
 #ifdef _WIN32
-        begin = GetTickCount();
+	long begin = GetTickCount();
 #endif
-        frames = (int)(sfinfo.samples/1024+0.5);
+	frames = (int)sfinfo.samples / 1024 + 2;
         currentFrame = 0;
 
+	fprintf(stderr, "Encoding %s\n", audioFileName);
+	fprintf(stderr,
+		"   frame          | elapsed/estim | play/CPU | ETA\n");
         /* encoding loop */
         for ( ;; )
         {
             int bytesWritten;
-
-            currentFrame++;
 
             bytesInput = sf_read_short(infile, pcmbuf, samplesInput) * sizeof(short);
 
@@ -311,15 +319,51 @@ int main(int argc, char *argv[])
                 bitbuf,
                 maxBytesOutput);
 
-      if (!(currentFrame & 63))
+	    if (bytesWritten)
       {
-#ifndef _DEBUG
-            sprintf(percent, "%.2f encoding %s.",
-                min((double)(currentFrame*100)/frames,100), audioFileName);
-            fprintf(stderr, "%s\r", percent);
+	      currentFrame++;
+	      showcnt--;
+	    }
+
+	    if ((showcnt <= 0) || !bytesWritten)
+	    {
+	      double timeused;
+#ifdef __unix__
+	      struct rusage usage;
 #endif
 #ifdef _WIN32
+	      char percent[50];
+	      timeused = (GetTickCount() - begin) * 1e-3;
+#else
+#ifdef __unix__
+	      if (getrusage(RUSAGE_SELF, &usage) == 0) {
+		timeused = (double)usage.ru_utime.tv_sec +
+		  (double)usage.ru_utime.tv_usec * 1e-6;
+	      }
+	      else
+                timeused = 0;
+#else
+	      timeused = (double)clock() * (1.0 / CLOCKS_PER_SEC);
+#endif
+#endif
+	      if (currentFrame && (timeused > 0.1))
+	      {
+
+		showcnt += 50;
+
+		fprintf(stderr,
+			"\r%5d/%-5d (%3d%%)| %6.1f/%-6.1f | %8.3f | %.1f ",
+			currentFrame, frames, currentFrame*100/frames,
+			timeused,
+			timeused * frames / currentFrame,
+			(1024.0 * currentFrame / sr) / timeused,
+			timeused  * (frames - currentFrame) / currentFrame);
+		fflush(stderr);
+#ifdef _WIN32
+		sprintf(percent, "%.2f%% encoding %s",
+			100.0 * currentFrame / frames, audioFileName);
             SetConsoleTitle(percent);
+	      }
 #endif
       }
 
@@ -336,32 +380,10 @@ int main(int argc, char *argv[])
             /* write bitstream to aac file */
             fwrite(bitbuf, 1, bytesWritten, outfile);
         }
+	fprintf(stderr, "\n\n");
 
         /* clean up */
         fclose(outfile);
-
-#ifdef _WIN32
-        end = GetTickCount();
-        nTotSecs = (end-begin)/1000;
-        nMins = nTotSecs / 60;
-        nSecs = nTotSecs - (60*nMins);
-	fprintf(stderr, "Encoding %s took:\t%.2fsec\n", audioFileName,
-		(double)(end - begin) / 1000);
-#else
-#ifdef __unix__
-        if (getrusage(RUSAGE_SELF, &usage) == 0) {
-            totalSecs=usage.ru_utime.tv_sec;
-            mins = totalSecs/60;
-            fprintf(stderr, "Encoding %s took: %i min, %.2f sec. of cpu-time\n",
-                audioFileName, mins, totalSecs - (60 * mins));
-        }
-#else
-        totalSecs = (float)(clock())/(float)CLOCKS_PER_SEC;
-        mins = totalSecs/60;
-        fprintf(stderr, "Encoding %s took: %i min, %.2f sec.\n",
-            audioFileName, mins, totalSecs - (60 * mins));
-#endif
-#endif
     }
 
     faacEncClose(hEncoder);
@@ -373,3 +395,11 @@ int main(int argc, char *argv[])
 
     return 0;
 }
+
+/*
+$Log: main.c,v $
+Revision 1.27  2002/08/19 16:33:54  knik
+automatic bitrate setting
+more advanced status line
+
+*/
