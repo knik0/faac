@@ -2,6 +2,7 @@
 // Copyright (C) 2003 Janne Hyvärinen
 //
 // Changes:
+//  0.3.2 (2003-09-17): Last fix wasn't perfect and very small input chunks wouldn't have been encoded
 //  0.3.1 (2003-09-14): Fixed possible memory access problems
 //  0.3   (2003-08-17): Even more corrections to MP4 writing, now encoder delay is taken into account and first MP4 sample is given length 0
 //                      writes 'TOOL' metadata tag with libfaac version string
@@ -30,7 +31,7 @@
 #include <faac.h>
 #include <version.h>
 
-#define FOO_FAAC_VERSION     "0.3.1"
+#define FOO_FAAC_VERSION     "0.3.2"
 
 #define FF_AAC  0
 #define FF_MP4  1
@@ -241,7 +242,7 @@ public:
             const audio_sample *s = src->get_data();
 
             do {
-                unsigned int num = (samples > samplesInput) ? samplesInput : samples;
+                unsigned int num = (samples+bufferedSamples < samplesInput) ? samples+bufferedSamples : samplesInput;
                 if ( num == 0 ) break;
 
                 float *d = (float *)floatbuf.get_ptr() + bufferedSamples;
