@@ -158,6 +158,10 @@ SOURCE=.\tns.c
 
 SOURCE=.\transfo.c
 # End Source File
+# Begin Source File
+
+SOURCE=.\winswitch.c
+# End Source File
 # End Group
 # Begin Group "Resource Files"
 
