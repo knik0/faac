@@ -6,8 +6,9 @@ infile can be any of the filetypes supported by
 libsndfile (http://www.zip.com.au/~erikd/libsndfile/)
 
 options:
--nm   Don't use mid/side coding
--tns  Use Temporal Noise Shaping
--ltp  Use Long Term Prediction
--bwX  Use bandwidth X, this is in Hz
--brX  Use bitrate X, this is in bps/channel
+-m X   AAC MPEG version, X can be 2 or 4.
+-o X   AAC object type, X can be LC, MAIN or LTP.
+-n     Don't use mid/side coding.
+-t     Use TNS coding.
+-c X   Set the bandwidth, X in Hz.
+-b X   Set the bitrate per channel, X in bps.

@@ -16,7 +16,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: main.c,v 1.20 2001/06/08 18:01:09 menno Exp $
+ * $Id: main.c,v 1.21 2001/06/09 14:33:26 menno Exp $
  */
 
 #ifdef _WIN32
@@ -34,8 +34,13 @@
 #include <stdlib.h>
 
 #include <sndfile.h>
+#include <getopt.h>
 
-#include "faac.h"
+#include <faac.h>
+
+
+/* globals */
+char* progName;
 
 
 int main(int argc, char *argv[])
@@ -47,6 +52,18 @@ int main(int argc, char *argv[])
 
     unsigned int sr, chan;
     unsigned long samplesInput, maxBytesOutput;
+
+    faacEncConfigurationPtr myFormat;
+    unsigned int mpegVersion = MPEG2;
+    unsigned int objectType = LOW;
+    unsigned int useMidSide = 1;
+    unsigned int useTns = 0;
+    unsigned int cutOff = 18000;
+    unsigned long bitRate = 64000;
+
+    char *audioFileName;
+    char *aacFileName;
+    char percent[200];
 
     short *pcmbuf;
 
@@ -67,35 +84,129 @@ int main(int argc, char *argv[])
     int mins;
 #endif
 
-    printf("FAAC - command line demo of %s\n", __DATE__);
-    printf("Uses FAACLIB version: %.1f %s\n\n", FAACENC_VERSION, (FAACENC_VERSIONB)?"beta":"");
+    fprintf(stderr, "FAAC - command line demo of %s\n", __DATE__);
+    fprintf(stderr, "Uses FAACLIB version: %.1f %s\n\n", FAACENC_VERSION, (FAACENC_VERSIONB)?"beta":"");
 
-    if (argc < 3)
+    /* begin process command line */
+    progName = argv[0];
+    while (1) {
+        int c = -1;
+        int option_index = 0;
+        static struct option long_options[] = {
+            { "mpeg", 0, 0, 'm' },
+            { "objecttype", 0, 0, 'o' },
+            { "nomidside", 0, 0, 'n' },
+            { "usetns", 0, 0, 't' },
+            { "cutoff", 1, 0, 'c' },
+            { "bitrate", 1, 0, 'b' }
+        };
+
+        c = getopt_long(argc, argv, "m:o:ntc:b:",
+            long_options, &option_index);
+
+        if (c == -1)
+            break;
+
+        switch (c) {
+        case 'm': {
+            unsigned int i;
+            if (optarg) {
+                if (sscanf(optarg, "%u", &i) < 1) {
+                    mpegVersion = MPEG2;
+                } else {
+                    if (i == 2)
+                        mpegVersion = MPEG2;
+                    else
+                        mpegVersion = MPEG4;
+                }
+            } else {
+                mpegVersion = MPEG2;
+            }
+            break;
+        }
+        case 'o': {
+            unsigned char i[10];
+            if (optarg) {
+                if (sscanf(optarg, "%s", i) < 1) {
+                    objectType = LOW;
+                } else {
+                    if (strcmpi(i, "MAIN") == 0)
+                        objectType = MAIN;
+                    else if (strcmpi(i, "LTP") == 0)
+                        objectType = LTP;
+                    else
+                        objectType = LOW;
+                }
+            } else {
+                objectType = LOW;
+            }
+            break;
+        }
+        case 'n': {
+            useMidSide = 0;
+            break;
+        }
+        case 't': {
+            useTns = 1;
+            break;
+        }
+        case 'c': {
+            unsigned int i;
+            if (sscanf(optarg, "%u", &i) < 1) {
+                cutOff = 18000;
+            } else {
+                cutOff = i;
+            }
+            break;
+        }
+        case 'b': {
+            unsigned int i;
+            if (sscanf(optarg, "%u", &i) < 1) {
+                bitRate = 64000;
+            } else {
+                bitRate = i;
+            }
+            break;
+        }
+        case '?':
+            break;
+        default:
+            fprintf(stderr, "%s: unknown option specified, ignoring: %c\n",
+                progName, c);
+        }
+    }
+
+    /* check that we have at least two non-option arguments */
+    if ((argc - optind) < 2)
     {
-        printf("USAGE: %s -options infile outfile\n", argv[0]);
-        printf("Options:\n");
-        printf("  -mX   AAC MPEG version, X can be 2 or 4.\n");
-        printf("  -pX   AAC object type, X can be LC, MAIN or LTP.\n");
-        printf("  -nm   Don\'t use mid/side coding.\n");
-        printf("  -tns  Use TNS coding.\n");
-        printf("  -bwX  Set the bandwidth, X in Hz.\n");
-        printf("  -brX  Set the bitrate per channel, X in bps.\n\n");
+        fprintf(stderr, "USAGE: %s -options infile outfile\n", progName);
+        fprintf(stderr, "Options:\n");
+        fprintf(stderr, "  -m X   AAC MPEG version, X can be 2 or 4.\n");
+        fprintf(stderr, "  -o X   AAC object type, X can be LC, MAIN or LTP.\n");
+        fprintf(stderr, "  -n     Don\'t use mid/side coding.\n");
+        fprintf(stderr, "  -t     Use TNS coding.\n");
+        fprintf(stderr, "  -c X   Set the bandwidth, X in Hz.\n");
+        fprintf(stderr, "  -b X   Set the bitrate per channel, X in bps.\n\n");
         return 1;
     }
 
+    /* point to the specified file names */
+    audioFileName = argv[optind++];
+    aacFileName = argv[optind++];
+
     /* open the audio input file */
-    infile = sf_open_read(argv[argc-2], &sfinfo);
+    infile = sf_open_read(audioFileName, &sfinfo);
     if (infile == NULL)
     {
-        printf("couldn't open input file %s\n", argv [argc-2]);
+        fprintf(stderr, "Couldn't open input file %s\n", audioFileName);
         return 1;
     }
 
     /* open the aac output file */
-    outfile = fopen(argv[argc-1], "wb");
+    outfile = fopen(aacFileName, "wb");
     if (!outfile)
     {
-        printf("couldn't create output file %s\n", argv [argc-1]);
+        fprintf(stderr, "Couldn't create output file %s\n", aacFileName);
         return 1;
     }
 
@@ -109,63 +220,17 @@ int main(int argc, char *argv[])
     pcmbuf = (short*)malloc(samplesInput*sizeof(short));
     bitbuf = (unsigned char*)malloc(maxBytesOutput*sizeof(unsigned char));
 
-    /* set other options */
-    if (argc > 3)
-    {
-        faacEncConfigurationPtr myFormat;
-        myFormat = faacEncGetCurrentConfiguration(hEncoder);
-
-        for (i = 1; i < argc-2; i++) {
-            if ((argv[i][0] == '-') || (argv[i][0] == '/')) {
-                switch(argv[i][1]) {
-                case 'p': case 'P':
-                    if ((argv[i][2] == 'l') || (argv[i][2] == 'L')) {
-                        if ((argv[i][3] == 'c') || (argv[i][2] == 'C')) {
-                            myFormat->aacObjectType = LOW;
-                        } else if ((argv[i][3] == 't') || (argv[i][2] == 'T')) {
-                            myFormat->aacObjectType = LTP;
-                        }
-                    } else if ((argv[i][2] == 'm') || (argv[i][2] == 'M')) {
-                        myFormat->aacObjectType = MAIN;
-                    }
-                break;
-                case 'm': case 'M':
-                    if (argv[i][2] == '4') {
-                        myFormat->mpegVersion = MPEG4;
-                    } else {
-                        myFormat->mpegVersion = MPEG2;
-                    }
-                break;
-                case 't': case 'T':
-                    if ((argv[i][2] == 'n') || (argv[i][2] == 'N'))
-                        myFormat->useTns = 1;
-                break;
-                case 'n': case 'N':
-                    if ((argv[i][2] == 'm') || (argv[i][2] == 'M'))
-                        myFormat->allowMidside = 0;
-                break;
-                case 'b': case 'B':
-                    if ((argv[i][2] == 'r') || (argv[i][2] == 'R'))
-                    {
-                        unsigned int bitrate = atol(&argv[i][3]);
-                        if (bitrate)
-                        {
-                            myFormat->bitRate = bitrate;
-                        }
-                    } else if ((argv[i][2] == 'w') || (argv[i][2] == 'W')) {
-                        unsigned int bandwidth = atol(&argv[i][3]);
-                        if (bandwidth)
-                        {
-                            myFormat->bandWidth = bandwidth;
-                        }
-                    }
-                break;
-                }
-            }
-        }
-
-        if (!faacEncSetConfiguration(hEncoder, myFormat))
-            fprintf(stderr, "unsupported output format!\n");
+    /* put the options in the configuration struct */
+    myFormat = faacEncGetCurrentConfiguration(hEncoder);
+    myFormat->aacObjectType = objectType;
+    myFormat->mpegVersion = mpegVersion;
+    myFormat->useTns = useTns;
+    myFormat->allowMidside = useMidSide;
+    myFormat->bitRate = bitRate;
+    myFormat->bandWidth = cutOff;
+    if (!faacEncSetConfiguration(hEncoder, myFormat)) {
+        fprintf(stderr, "Unsupported output format!\n");
+        return 1;
     }
 
     if (outfile)
@@ -193,8 +258,12 @@ int main(int argc, char *argv[])
                 maxBytesOutput);
 
 #ifndef _DEBUG
-            printf("%.2f%%\tBusy encoding %s.\r",
-                min((double)(currentFrame*100)/frames,100), argv[argc-2]);
+            sprintf(percent, "%.2f encoding %s.",
+                min((double)(currentFrame*100)/frames,100), audioFileName);
+            fprintf(stderr, "%s\r", percent);
+#endif
+#ifdef _WIN32
+            SetConsoleTitle(percent);
 #endif
 
             /* all done, bail out */
@@ -219,18 +288,20 @@ int main(int argc, char *argv[])
         nTotSecs = (end-begin)/1000;
         nMins = nTotSecs / 60;
         nSecs = nTotSecs - (60*nMins);
-        printf("Encoding %s took:\t%d:%.2d\t\n", argv[argc-2], nMins, nSecs);
+        fprintf(stderr, "Encoding %s took:\t%d:%.2d\t\n", audioFileName, nMins, nSecs);
 #else
 #ifdef __unix__
         if (getrusage(RUSAGE_SELF, &usage) == 0) {
             totalSecs=usage.ru_utime.tv_sec;
             mins = totalSecs/60;
-            printf("Encoding %s took: %i min, %.2f sec. of cpu-time\n", argv[argc-2], mins, totalSecs - (60 * mins));
+            fprintf(stderr, "Encoding %s took: %i min, %.2f sec. of cpu-time\n",
+                audioFileName, mins, totalSecs - (60 * mins));
         }
 #else
         totalSecs = (float)(clock())/(float)CLOCKS_PER_SEC;
         mins = totalSecs/60;
-        printf("Encoding %s took: %i min, %.2f sec.\n", argv[argc-2], mins, totalSecs - (60 * mins));
+        fprintf(stderr, "Encoding %s took: %i min, %.2f sec.\n",
+            audioFileName, mins, totalSecs - (60 * mins));
 #endif
 #endif
     }
