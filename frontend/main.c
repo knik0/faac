@@ -16,7 +16,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: main.c,v 1.33 2003/04/13 08:39:28 knik Exp $
+ * $Id: main.c,v 1.34 2003/05/10 09:40:35 knik Exp $
  */
 
 #ifdef HAVE_CONFIG_H
@@ -88,6 +88,7 @@ int main(int argc, char *argv[])
     static unsigned int useTns = 1;
     unsigned int useAdts = 1;
     int cutOff = -1;
+    int bitRate = 0;
     unsigned long quantqual = 0;
 
     char *audioFileName;
@@ -138,7 +139,7 @@ int main(int argc, char *argv[])
             { 0, 0, 0, 0}
         };
 
-    c = getopt_long(argc, argv, "m:o:rnc:q:PR:B:C:",
+    c = getopt_long(argc, argv, "a:m:o:rnc:q:PR:B:C:",
             long_options, &option_index);
 
         if (c == -1)
@@ -196,6 +197,14 @@ int main(int argc, char *argv[])
                 cutOff = i;
             }
             break;
+        }
+        case 'a': {
+	  unsigned int i;
+	  if (sscanf(optarg, "%u", &i) > 0)
+	  {
+	    bitRate = 1000 * i;
+	  }
+	  break;
         }
     case 'q':
       {
@@ -274,14 +283,14 @@ int main(int argc, char *argv[])
     {
         fprintf(stderr, "\nUsage: %s -options infile outfile\n", progName);
         fprintf(stderr, "Options:\n");
+	fprintf(stderr, "  -a <x>\tSet average bitrate to approximately x kbps/channel.\n");
+        fprintf(stderr, "  -c <bandwidth>\tSet the bandwidth in Hz. (default=automatic)\n");
+        fprintf(stderr, "  -q <quality>\tSet quantizer quality.\n");
+        fprintf(stderr, "  --notns\tDisable TNS coding.\n");
+//        fprintf(stderr, "  -n     Don\'t use mid/side coding.\n");
         fprintf(stderr, "  -m X   AAC MPEG version, X can be 2 or 4.\n");
         fprintf(stderr, "  -o X   AAC object type, X can be LC, MAIN or LTP.\n");
-        fprintf(stderr, "  -n     Don\'t use mid/side coding.\n");
         fprintf(stderr, "  -r     RAW AAC output file.\n");
-        fprintf(stderr, "  --notns\tDisable TNS coding.\n");
-        fprintf(stderr,
-"  -c <bandwidth>\tSet the bandwidth in Hz. (default=automatic)\n");
-        fprintf(stderr, "  -q <quality>\tSet quantizer quality.\n");
         fprintf(stderr, "  -P     Raw PCM input mode (default 44100Hz 16bit stereo).\n");
         fprintf(stderr, "  -R     Raw PCM input rate.\n");
         fprintf(stderr, "  -B     Raw PCM input sample size (16 default or 8bits).\n");
@@ -359,7 +368,8 @@ int main(int argc, char *argv[])
     myFormat->mpegVersion = mpegVersion;
     myFormat->useTns = useTns;
     myFormat->allowMidside = useMidSide;
-    //myFormat->bitRate = bitRate;
+    if (bitRate)
+      myFormat->bitRate = bitRate;
     myFormat->bandWidth = cutOff;
     if (quantqual > 0)
       myFormat->quantqual = quantqual;
@@ -371,6 +381,9 @@ int main(int argc, char *argv[])
 
     cutOff = myFormat->bandWidth;
     quantqual = myFormat->quantqual;
+    bitRate = myFormat->bitRate;
+    if (bitRate)
+      fprintf(stderr, "Approximate ABR: %d kbps/channel\n", bitRate/1000);
     fprintf(stderr, "Quantization quality: %ld\n", quantqual);
     fprintf(stderr, "Bandwidth: %d Hz\n", cutOff);
     if (myFormat->useTns | myFormat->allowMidside)
@@ -500,6 +513,9 @@ int main(int argc, char *argv[])
 
 /*
 $Log: main.c,v $
+Revision 1.34  2003/05/10 09:40:35  knik
+added approximate ABR option
+
 Revision 1.33  2003/04/13 08:39:28  knik
 removed psymodel setting
 
