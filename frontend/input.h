@@ -16,7 +16,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: input.h,v 1.3 2003/07/10 19:18:58 knik Exp $
+ * $Id: input.h,v 1.5 2003/08/17 19:38:15 menno Exp $
  */
 
 #ifndef _INPUT_H
@@ -64,9 +64,11 @@ typedef struct
   int samplerate;
   int samples;
   int bigendian;
+  int isfloat;
 } pcmfile_t;
 
 pcmfile_t *wav_open_read(const char *path, int rawchans);
+size_t wav_read_float32(pcmfile_t *sndf, float *buf, size_t num, int *map);
 size_t wav_read_int24(pcmfile_t *sndf, int32_t *buf, size_t num, int *map);
 int wav_close(pcmfile_t *file);
 

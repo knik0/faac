@@ -16,7 +16,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: input.c,v 1.8 2003/07/28 17:12:57 menno Exp $
+ * $Id: input.c,v 1.10 2003/08/17 19:38:15 menno Exp $
  */
 
 #ifdef HAVE_CONFIG_H
@@ -27,6 +27,7 @@
 #include <stdlib.h>
 
 #ifdef WIN32
+#include <io.h>
 #include <fcntl.h>
 #endif
 
@@ -60,6 +61,7 @@ typedef struct
 riffsub_t;
 
 #define WAVE_FORMAT_PCM		1
+#define WAVE_FORMAT_FLOAT	3
 #define WAVE_FORMAT_EXTENSIBLE	0xfffe
 typedef struct
 {
@@ -163,22 +165,22 @@ pcmfile_t *wav_open_read(const char *name, int rawinput)
       for (skip = riffsub.len; skip > 0; skip--)
 	fgetc(wave_f);
     }
-    if (UINT16(wave.Format.wFormatTag) != WAVE_FORMAT_PCM)
+    if (UINT16(wave.Format.wFormatTag) != WAVE_FORMAT_PCM && UINT16(wave.Format.wFormatTag) != WAVE_FORMAT_FLOAT)
     {
       if (UINT16(wave.Format.wFormatTag) == WAVE_FORMAT_EXTENSIBLE)
       {
-	if (UINT16(wave.Format.cbSize) < 22) // struct too small
-	  return NULL;
-	if (memcmp(wave.SubFormat, waveformat_pcm_guid, 16))
-	{
+        if (UINT16(wave.Format.cbSize) < 22) // struct too small
+          return NULL;
+        if (memcmp(wave.SubFormat, waveformat_pcm_guid, 16))
+        {
           unsuperr(name);
-	  return NULL;
-	}
+          return NULL;
+        }
       }
       else
       {
-	unsuperr(name);
-	return NULL;
+        unsuperr(name);
+        return NULL;
       }
     }
   }
@@ -186,6 +188,7 @@ pcmfile_t *wav_open_read(const char *name, int rawinput)
   sndf = malloc(sizeof(*sndf));
   memset(sndf, 0, sizeof(*sndf));
   sndf->f = wave_f;
+  sndf->isfloat = (UINT16(wave.Format.wFormatTag) == WAVE_FORMAT_FLOAT);
   if (rawinput)
   {
     sndf->bigendian = 1;
@@ -224,6 +227,117 @@ static void chan_remap(int32_t *buf, int channels, int blocks, int *map)
     for (chn = 0; chn < channels; chn++)
       buf[i * channels + chn] = tmp[map[chn]];
   }
+}
+
+size_t wav_read_float32(pcmfile_t *sndf, float *buf, size_t num, int *map)
+{
+  size_t i = 0;
+  unsigned char bufi[8];
+
+  if ((sndf->samplebytes > 8) || (sndf->samplebytes < 1))
+    return 0;
+
+  while (i<num) {
+    if (fread(bufi, sndf->samplebytes, 1, sndf->f) != 1)
+      break;
+
+    if (sndf->isfloat)
+    {
+      switch (sndf->samplebytes) {
+      case 4:
+        buf[i] = (*(float *)&bufi) * (float)32768;
+        break;
+
+      case 8:
+        buf[i] = (float)((*(double *)&bufi) * (float)32768);
+        break;
+
+      default:
+        return 0;
+      }
+    }
+    else
+    {
+      // convert to 32 bit float
+      // fix endianness
+      switch (sndf->samplebytes) {
+      case 1:
+        /* this is endian clean */
+        buf[i] = ((float)bufi[0] - 128) * (float)256;
+        break;
+
+      case 2:
+#ifdef WORDS_BIGENDIAN
+        if (!sndf->bigendian)
+#else
+        if (sndf->bigendian)
+#endif
+        {
+          // swap bytes
+          int16_t s = ((int16_t *)bufi)[0];
+          s = SWAP16(s);
+          buf[i] = (float)s;
+        }
+        else
+        {
+          // no swap
+          int s = ((int16_t *)bufi)[0];
+          buf[i] = (float)s;
+        }
+        break;
+
+      case 3:
+        if (!sndf->bigendian)
+        {
+          int s = bufi[0] | (bufi[1] << 8) | (bufi[2] << 16);
+
+          // fix sign
+          if (s & 0x800000)
+            s |= 0xff000000;
+
+          buf[i] = (float)s / 256;
+        }
+        else // big endian input
+        {
+          int s = (bufi[0] << 16) | (bufi[1] << 8) | bufi[2];
+
+          // fix sign
+          if (s & 0x800000)
+            s |= 0xff000000;
+
+          buf[i] = (float)s / 256;
+        }
+        break;
+
+      case 4:
+#ifdef WORDS_BIGENDIAN
+        if (!sndf->bigendian)
+#else
+        if (sndf->bigendian)
+#endif
+        {
+          // swap bytes
+          int s = *(int *)&bufi;
+          buf[i] = (float)SWAP32(s) / 65536;
+        }
+        else
+        {
+          int s = *(int *)&bufi;
+          buf[i] = (float)s / 65536;
+        }
+        break;
+
+      default:
+        return 0;
+      }
+    }
+    i++;
+  }
+
+  if (map)
+    chan_remap((int32_t *)buf, sndf->channels, i / sndf->channels, map);
+
+  return i;
 }
 
 size_t wav_read_int24(pcmfile_t *sndf, int32_t *buf, size_t num, int *map)

@@ -16,8 +16,10 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: main.c,v 1.41 2003/08/15 11:43:14 knik Exp $
+ * $Id: main.c,v 1.42 2003/08/16 15:06:07 menno Exp $
  */
+
+#include <mp4.h>
 
 #ifdef HAVE_CONFIG_H
 #include "config.h"
@@ -134,7 +136,8 @@ int main(int argc, char *argv[])
     char *audioFileName;
     char *aacFileName;
 
-    int32_t *pcmbuf;
+    //int32_t *pcmbuf;
+    float *floatbuf;
     int *chanmap = NULL;
 
     unsigned char *bitbuf;
@@ -146,6 +149,12 @@ int main(int argc, char *argv[])
     int rawRate = 44100;
 
     FILE *outfile;
+
+    MP4FileHandle MP4hFile = MP4_INVALID_FILE_HANDLE;
+    MP4TrackId MP4track = 0;
+    int mp4 = 0;
+    u_int64_t total_samples = 0;
+    u_int64_t encoded_samples = 0;
 
     // get faac version
     hEncoder = faacEncOpen(44100, 2, &samplesInput, &maxBytesOutput);
@@ -181,12 +190,13 @@ int main(int argc, char *argv[])
             { "pcmsamplebits", 1, 0, 'B'},
             { "pcmchannels", 1, 0, 'C'},
             { "addsilent", 1, 0, 300},
+            { "createmp4", 0, 0, 'w'},
             { 0, 0, 0, 0}
         };
       int c = -1;
       int option_index = 0;
 
-      c = getopt_long(argc, argv, "a:m:o:rnc:q:PR:B:C:I:",
+      c = getopt_long(argc, argv, "a:m:o:rnwc:q:PR:B:C:I:",
             long_options, &option_index);
 
         if (c == -1)
@@ -298,6 +308,9 @@ int main(int argc, char *argv[])
 	case 300:
 	  sscanf(optarg, "%u", &addsilent);
 	  break;
+    case 'w':
+      mp4 = 1;
+      break;
         case '?':
             break;
         default:
@@ -325,9 +338,10 @@ int main(int argc, char *argv[])
 	printf("  -r     RAW AAC output file.\n");
 	printf("  -P     Raw PCM input mode (default 44100Hz 16bit stereo).\n");
 	printf("  -R     Raw PCM input rate.\n");
-	printf("  -B     Raw PCM input sample size (16 default or 8bits).\n");
+	printf("  -B     Raw PCM input sample size (8, 16 (default), 24 or 32bits).\n");
 	printf("  -C     Raw PCM input channels.\n");
 	printf("  -I <C,LF> Input channel config, default is 3,4 (Center third, LF fourth)\n");
+    printf("  -w     Wrap AAC data in MP4 container\n");
 	printf("  --addsilent <n> Add n silent frames at the end of output (default=%d)\n",
 	       addsilent);
 	//printf("More details on FAAC usage can be found in the faac.html file.\n");
@@ -360,19 +374,18 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    /* open the aac output file */
-    outfile = fopen(aacFileName, "wb");
-    if (!outfile)
+    if (mp4)
     {
-        fprintf(stderr, "Couldn't create output file %s\n", aacFileName);
-        return 1;
+        mpegVersion = MPEG4;
+        useAdts = 0;
     }
 
     /* open the encoder library */
     hEncoder = faacEncOpen(infile->samplerate, infile->channels,
 			   &samplesInput, &maxBytesOutput);
 
-    pcmbuf = (int32_t *)malloc(samplesInput*sizeof(int32_t));
+    //pcmbuf = (int32_t *)malloc(samplesInput*sizeof(int32_t));
+    floatbuf = (float *)malloc(samplesInput*sizeof(float));
     bitbuf = (unsigned char*)malloc(maxBytesOutput*sizeof(unsigned char));
     chanmap = mkChanMap(infile->channels, chanC, chanLF);
     if (chanmap)
@@ -396,6 +409,7 @@ int main(int argc, char *argv[])
     myFormat->aacObjectType = objectType;
     myFormat->mpegVersion = mpegVersion;
     myFormat->useTns = useTns;
+    if (infile->channels >= 6) myFormat->useLfe = 1;
     myFormat->allowMidside = useMidSide;
     if (bitRate)
       myFormat->bitRate = bitRate;
@@ -403,9 +417,40 @@ int main(int argc, char *argv[])
     if (quantqual > 0)
       myFormat->quantqual = quantqual;
     myFormat->outputFormat = useAdts;
+    myFormat->inputFormat = FAAC_INPUT_FLOAT;
     if (!faacEncSetConfiguration(hEncoder, myFormat)) {
         fprintf(stderr, "Unsupported output format!\n");
+        if (mp4) MP4Close(MP4hFile);
         return 1;
+    }
+
+    /* initialize MP4 creation */
+    if (mp4) {
+        u_int8_t *ASC = 0;
+        u_int32_t ASCLength = 0;
+
+        MP4hFile = MP4Create(aacFileName, 0, 0, 0);
+        if (MP4hFile == MP4_INVALID_FILE_HANDLE) {
+            fprintf(stderr, "Couldn't create output file %s\n", aacFileName);
+            return 1;
+        }
+
+        MP4SetTimeScale(MP4hFile, 90000);
+        MP4track = MP4AddAudioTrack(MP4hFile, infile->samplerate, MP4_INVALID_DURATION, MP4_MPEG4_AUDIO_TYPE);
+        MP4SetAudioProfileLevel(MP4hFile, 0x0F);
+        //MP4AV_AacGetConfiguration(&ASC, &ASCLength, (u_int8_t)objectType, (u_int32_t)infile->samplerate, (u_int8_t)infile->channels);
+        faacEncGetDecoderSpecificInfo(hEncoder, &ASC, &ASCLength);
+        MP4SetTrackESConfiguration(MP4hFile, MP4track, ASC, ASCLength);
+    }
+    else
+    {
+        /* open the aac output file */
+        outfile = fopen(aacFileName, "wb");
+        if (!outfile)
+        {
+            fprintf(stderr, "Couldn't create output file %s\n", aacFileName);
+            return 1;
+        }
     }
 
     cutOff = myFormat->bandWidth;
@@ -435,7 +480,7 @@ int main(int argc, char *argv[])
       fprintf(stderr, " + M/S");
     fprintf(stderr, "\n");
 
-    if (outfile)
+    if (outfile || MP4hFile != MP4_INVALID_FILE_HANDLE)
     {
     int showcnt = 0;
 #ifdef _WIN32
@@ -459,21 +504,26 @@ int main(int argc, char *argv[])
         {
             int bytesWritten;
 
-	    samplesRead = wav_read_int24(infile, pcmbuf, samplesInput, chanmap);
+	    //samplesRead = wav_read_int24(infile, pcmbuf, samplesInput, chanmap);
+	    samplesRead = wav_read_float32(infile, floatbuf, samplesInput, chanmap);
+
+        total_samples += samplesRead / infile->channels;
 
 	    if (!samplesRead)
 	    {
 	      if (addsilent)
 	      {
 		addsilent--;
-		memset(pcmbuf, 0, samplesInput * sizeof(*pcmbuf));
+		//memset(pcmbuf, 0, samplesInput * sizeof(*pcmbuf));
+		memset(floatbuf, 0, samplesInput * sizeof(*floatbuf));
 		samplesRead = samplesInput;
 	      }
 	    }
 
             /* call the actual encoding routine */
             bytesWritten = faacEncEncode(hEncoder,
-                pcmbuf,
+                //pcmbuf,
+                floatbuf,
                 samplesRead,
                 bitbuf,
                 maxBytesOutput);
@@ -546,20 +596,41 @@ int main(int argc, char *argv[])
                 break ;
             }
 
-            /* write bitstream to aac file */
-            fwrite(bitbuf, 1, bytesWritten, outfile);
+            if (bytesWritten > 0)
+            {
+                unsigned int samples = ((total_samples - encoded_samples) < (samplesInput/infile->channels))
+                    ? (total_samples - encoded_samples)
+                    : (samplesInput/infile->channels);
+
+                if (mp4)
+                {
+                    /* write bitstream to mp4 file */
+                    MP4WriteSample(MP4hFile, MP4track, bitbuf, bytesWritten, samples, 0, 1);
+                }
+                else
+                {
+                    /* write bitstream to aac file */
+                    fwrite(bitbuf, 1, bytesWritten, outfile);
+                }
+
+                encoded_samples += samples;
+            }
         }
     fprintf(stderr, "\n\n");
 
         /* clean up */
-        fclose(outfile);
+        if (mp4)
+            MP4Close(MP4hFile);
+        else
+            fclose(outfile);
     }
 
     faacEncClose(hEncoder);
 
     wav_close(infile);
 
-    if (pcmbuf) free(pcmbuf);
+    //if (pcmbuf) free(pcmbuf);
+    if (floatbuf) free(floatbuf);
     if (bitbuf) free(bitbuf);
 
     return 0;
@@ -567,6 +638,11 @@ int main(int argc, char *argv[])
 
 /*
 $Log: main.c,v $
+Revision 1.42  2003/08/16 15:06:07  menno
+Case:
+- More input options
+- MP4 output
+
 Revision 1.41  2003/08/15 11:43:14  knik
 Option to add a number of silent frames at the end of output.
 Small TNS option fix.
