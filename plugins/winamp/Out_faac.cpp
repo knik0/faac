@@ -23,6 +23,7 @@ ntnfrn_email-temp@yahoo.it
 #include <shlobj.h>
 #include <stdio.h>		// FILE *
 #include <shellapi.h>	// ShellExecute
+#include <Commdlg.h>
 #include "resource.h"
 #include "out.h"
 /*#include <mp4.h>
@@ -32,6 +33,10 @@ ntnfrn_email-temp@yahoo.it
 */
 #include "defines.h"
 #include "Cfaac.h"
+
+#include <commctrl.h>
+//#include <id3.h>
+#include <id3v2tag.h>
 
 
 
@@ -178,29 +183,23 @@ static BOOL CALLBACK DialogMsgProcAbout(HWND hWndDlg, UINT Message, WPARAM wPara
 	{
 	case WM_INITDIALOG:
 		{
-		  char buf[512];
-		  unsigned long samplesInput, maxBytesOutput;
+		char buf[512];
+		char *faac_id_string, *faac_copyright_string;
 
-		  faacEncHandle hEncoder =
-		    faacEncOpen(44100, 2, &samplesInput, &maxBytesOutput);
-		  faacEncConfigurationPtr myFormat =
-		    faacEncGetCurrentConfiguration(hEncoder);
-
-			sprintf(buf,
+		sprintf(buf,
 					APP_NAME " plugin " APP_VER " by Antonio Foranna\n\n"
 					"Engines used:\n"
 					"\tlibfaac v%s\n"
-//					"\tFAAD2 v" FAAD2_VERSION "\n"
+					"\tFAAD2 v" FAAD2_VERSION "\n"
 					"\t" PACKAGE " v" VERSION "\n\n"
 					"This code is given with FAAC package and does not contain executables.\n"
 					"This program is free software and can be distributed/modifyed under the terms of the GNU General Public License.\n"
 					"This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY.\n\n"
 					"Compiled on %s\n",
-					(myFormat->version == FAAC_CFG_VERSION) ? myFormat->name : " bad version",
+				(faacEncGetVersion(&faac_id_string, &faac_copyright_string)==FAAC_CFG_VERSION) ? faac_id_string : " wrong libfaac version",
 					__DATE__
 					);
 			SetDlgItemText(hWndDlg, IDC_L_ABOUT, buf);
-			faacEncClose(hEncoder);
 		}
 		break;
 	case WM_COMMAND:
@@ -256,7 +255,7 @@ void About(HWND hWndDlg)
 }
 // *********************************************************************************************
 
-static int CALLBACK WINAPI BrowseCallbackProc( HWND hwnd, UINT uMsg, LPARAM lParam, LPARAM lpData)
+static int CALLBACK BrowseCallbackProc( HWND hwnd, UINT uMsg, LPARAM lParam, LPARAM lpData)
 {
 	if (uMsg == BFFM_INITIALIZED)
 	{
@@ -271,8 +270,12 @@ void ReadCfgEnc()
 { 
 CRegistry reg;
 
-	if(reg.openCreateReg(HKEY_LOCAL_MACHINE,REGISTRY_PROGRAM_NAME))
-		reg.getSetRegStr("OutDir","",OutDir,MAX_PATH); 
+	if(reg.OpenCreate(HKEY_LOCAL_MACHINE,REGISTRY_PROGRAM_NAME))
+	{
+	char *tmp=reg.GetSetStr("OutDir","");
+		memcpy(OutDir,tmp,strlen(tmp));
+		free(tmp);
+	}
 	else
 		MessageBox(0,"Can't open registry!",0,MB_OK|MB_ICONSTOP);
 }
@@ -282,8 +285,8 @@ void WriteCfgEnc()
 { 
 CRegistry reg;
 
-	if(reg.openCreateReg(HKEY_LOCAL_MACHINE,REGISTRY_PROGRAM_NAME))
-		reg.setRegStr("OutDir",OutDir); 
+	if(reg.OpenCreate(HKEY_LOCAL_MACHINE,REGISTRY_PROGRAM_NAME))
+		reg.SetStr("OutDir",OutDir); 
 	else
 		MessageBox(0,"Can't open registry!",0,MB_OK|MB_ICONSTOP);
 }
@@ -295,6 +298,15 @@ CRegistry reg;
 		SendMessage(GetDlgItem(hWnd, nID), CB_ADDSTRING, 0, (LPARAM)list[i]); \
 	SendMessage(GetDlgItem(hWnd, nID), CB_SETCURSEL, IdSelected, 0); \
 }
+// -----------------------------------------------------------------------------------------------
+
+#define INIT_CB_GENRES(hWnd,nID,ID3Genres,IdSelected) \
+{ \
+	for(int i=0; i<(sizeof(ID3Genres)/sizeof(ID3Genres[0])); i++) \
+		SendMessage(GetDlgItem(hWnd, nID), CB_ADDSTRING, 0, (LPARAM)ID3Genres[i].name); \
+	SendMessage(GetDlgItem(hWnd, nID), CB_SETCURSEL, IdSelected, 0); \
+}
+// -----------------------------------------------------------------------------------------------
 
 #define DISABLE_LTP \
 { \
@@ -333,6 +345,167 @@ CRegistry reg;
 }
 // -----------------------------------------------------------------------------------------------
 
+#define ENABLE_TAG(Enabled) \
+{ \
+	EnableWindow(GetDlgItem(hWndDlg, IDC_E_ARTIST), Enabled); \
+	EnableWindow(GetDlgItem(hWndDlg, IDC_E_TITLE), Enabled); \
+	EnableWindow(GetDlgItem(hWndDlg, IDC_E_ALBUM), Enabled); \
+	EnableWindow(GetDlgItem(hWndDlg, IDC_E_YEAR), Enabled); \
+	EnableWindow(GetDlgItem(hWndDlg, IDC_CB_GENRE), Enabled); \
+	EnableWindow(GetDlgItem(hWndDlg, IDC_E_WRITER), Enabled); \
+	EnableWindow(GetDlgItem(hWndDlg, IDC_E_COMMENT), Enabled); \
+	EnableWindow(GetDlgItem(hWndDlg, IDC_E_COMPILATION), Enabled); \
+	EnableWindow(GetDlgItem(hWndDlg, IDC_E_TRACK), Enabled); \
+	EnableWindow(GetDlgItem(hWndDlg, IDC_E_NTRACKS), Enabled); \
+	EnableWindow(GetDlgItem(hWndDlg, IDC_E_DISK), Enabled); \
+	EnableWindow(GetDlgItem(hWndDlg, IDC_E_NDISKS), Enabled); \
+	EnableWindow(GetDlgItem(hWndDlg, IDC_E_ARTFILE), Enabled); \
+	EnableWindow(GetDlgItem(hWndDlg, IDC_BTN_ARTFILE), Enabled); \
+}
+// -----------------------------------------------------------------------------------------------
+
+#define ENABLE_AACTAGS(Enabled) \
+{ \
+	EnableWindow(GetDlgItem(hWndDlg, IDC_E_COMPILATION), Enabled); \
+	EnableWindow(GetDlgItem(hWndDlg, IDC_E_NTRACKS), Enabled); \
+	EnableWindow(GetDlgItem(hWndDlg, IDC_E_DISK), Enabled); \
+	EnableWindow(GetDlgItem(hWndDlg, IDC_E_NDISKS), Enabled); \
+}
+// -----------------------------------------------------------------------------------------------
+
+// ripped from id3v2tag.c
+ID3GENRES ID3Genres[]=
+{
+    123,    "Acapella",
+    34,     "Acid",
+    74,     "Acid Jazz",
+    73,     "Acid Punk",
+    99,     "Acoustic",
+    20,     "Alternative",
+    40,     "AlternRock",
+    26,     "Ambient",
+    90,     "Avantgarde",
+    116,    "Ballad",
+    41,     "Bass",
+    85,     "Bebob",
+    96,     "Big Band",
+    89,     "Bluegrass",
+    0,      "Blues",
+    107,    "Booty Bass",
+    65,     "Cabaret",
+    88,     "Celtic",
+    104,    "Chamber Music",
+    102,    "Chanson",
+    97,     "Chorus",
+    61,     "Christian Rap",
+    1,      "Classic Rock",
+    32,     "Classical",
+    112,    "Club",
+    57,     "Comedy",
+    2,      "Country",
+    58,     "Cult",
+    3,      "Dance",
+    125,    "Dance Hall",
+    50,     "Darkwave",
+    254,    "Data",
+    22,     "Death Metal",
+    4,      "Disco",
+    55,     "Dream",
+    122,    "Drum Solo",
+    120,    "Duet",
+    98,     "Easy Listening",
+    52,     "Electronic",
+    48,     "Ethnic",
+    124,    "Euro-House",
+    25,     "Euro-Techno",
+    54,     "Eurodance",
+    84,     "Fast Fusion",
+    80,     "Folk",
+    81,     "Folk-Rock",
+    115,    "Folklore",
+    119,    "Freestyle",
+    5,      "Funk",
+    30,     "Fusion",
+    36,     "Game",
+    59,     "Gangsta",
+    38,     "Gospel",
+    49,     "Gothic",
+    91,     "Gothic Rock",
+    6,      "Grunge",
+    79,     "Hard Rock",
+    7,      "Hip-Hop",
+    35,     "House",
+    100,    "Humour",
+    19,     "Industrial",
+    33,     "Instrumental",
+    46,     "Instrumental Pop",
+    47,     "Instrumental Rock",
+    8,      "Jazz",
+    29,     "Jazz+Funk",
+    63,     "Jungle",
+    86,     "Latin",
+    71,     "Lo-Fi",
+    45,     "Meditative",
+    9,      "Metal",
+    77,     "Musical",
+    82,     "National Folk",
+    64,     "Native American",
+    10,     "New Age",
+    66,     "New Wave",
+    39,     "Noise",
+    255,    "Not Set",
+    11,     "Oldies",
+    103,    "Opera",
+    12,     "Other",
+    75,     "Polka",
+    13,     "Pop",
+    62,     "Pop/Funk",
+    53,     "Pop-Folk",
+    109,    "Porn Groove",
+    117,    "Power Ballad",
+    23,     "Pranks",
+    108,    "Primus",
+    92,     "Progressive Rock",
+    67,     "Psychadelic",
+    93,     "Psychedelic Rock",
+    43,     "Punk",
+    121,    "Punk Rock",
+    14,     "R&B",
+    15,     "Rap",
+    68,     "Rave",
+    16,     "Reggae",
+    76,     "Retro",
+    87,     "Revival",
+    118,    "Rhythmic Soul",
+    17,     "Rock",
+    78,     "Rock & Roll",
+    114,    "Samba",
+    110,    "Satire",
+    69,     "Showtunes",
+    21,     "Ska",
+    111,    "Slow Jam",
+    95,     "Slow Rock",
+    105,    "Sonata",
+    42,     "Soul",
+    37,     "Sound Clip",
+    24,     "Soundtrack",
+    56,     "Southern Rock",
+    44,     "Space",
+    101,    "Speech",
+    83,     "Swing",
+    94,     "Symphonic Rock",
+    106,    "Symphony",
+    113,    "Tango",
+    18,     "Techno",
+    51,     "Techno-Industrial",
+    60,     "Top 40",
+    70,     "Trailer",
+    31,     "Trance",
+    72,     "Tribal",
+    27,     "Trip-Hop",
+    28,     "Vocal"
+};
+
 static BOOL CALLBACK DIALOGMsgProc(HWND hWndDlg, UINT Message, WPARAM wParam, LPARAM lParam)
 {
 	switch(Message)
@@ -345,14 +518,19 @@ static BOOL CALLBACK DIALOGMsgProc(HWND hWndDlg, UINT Message, WPARAM wParam, LP
 		char *BandWidth[]={"Auto","Full","4000","8000","11025","16000","22050","24000","32000","44100","48000",0};
 		MY_ENC_CFG cfg;
 			
+			SetWindowPos(GetDlgItem(hWndDlg,IDC_CHK_TAG),GetDlgItem(hWndDlg,IDC_GRP_TAG),0,0,0,0,SWP_NOMOVE | SWP_NOSIZE);
+
 			ReadCfgEnc();
 			Cfaac::getFaacCfg(&cfg);
 			
 			INIT_CB(hWndDlg,IDC_CB_QUALITY,Quality,0);
 			INIT_CB(hWndDlg,IDC_CB_BITRATE,BitRate,0);
 			INIT_CB(hWndDlg,IDC_CB_BANDWIDTH,BandWidth,0);
+
+			INIT_CB_GENRES(hWndDlg,IDC_CB_GENRE,ID3Genres,0);
 			
 			SendMessage(GetDlgItem(hWndDlg, IDC_BTN_BROWSE), BM_SETIMAGE, IMAGE_BITMAP, (LPARAM) hBmBrowse);
+			SendMessage(GetDlgItem(hWndDlg, IDC_BTN_ARTFILE), BM_SETIMAGE, IMAGE_BITMAP, (LPARAM) hBmBrowse);
 			if(!*OutDir)
 				GetCurrentDirectory(MAX_PATH,OutDir);
 			SetDlgItemText(hWndDlg, IDC_E_BROWSE, OutDir);
@@ -439,8 +617,25 @@ static BOOL CALLBACK DIALOGMsgProc(HWND hWndDlg, UINT Message, WPARAM wParam, LP
 			CheckDlgButton(hWndDlg, IDC_CHK_WRITEMP4, cfg.SaveMP4);
 
 			CheckDlgButton(hWndDlg,IDC_CHK_AUTOCFG, cfg.AutoCfg);
-			
 			DISABLE_CTRL(!cfg.AutoCfg);
+
+			CheckDlgButton(hWndDlg,IDC_CHK_TAG, cfg.Tag.On);
+			ENABLE_TAG(cfg.Tag.On);
+			ENABLE_AACTAGS(cfg.SaveMP4);
+			SetDlgItemText(hWndDlg, IDC_E_ARTIST, cfg.Tag.artist);
+			SetDlgItemText(hWndDlg, IDC_E_TITLE, cfg.Tag.title);
+			SetDlgItemText(hWndDlg, IDC_E_ALBUM, cfg.Tag.album);
+			SetDlgItemText(hWndDlg, IDC_E_YEAR, cfg.Tag.year);
+			SetDlgItemText(hWndDlg, IDC_CB_GENRE, cfg.Tag.genre);
+			SetDlgItemText(hWndDlg, IDC_E_WRITER, cfg.Tag.writer);
+			SetDlgItemText(hWndDlg, IDC_E_COMMENT, cfg.Tag.comment);
+			SetDlgItemText(hWndDlg, IDC_E_ARTFILE, cfg.Tag.artFileName);
+			SetDlgItemInt(hWndDlg, IDC_E_TRACK, cfg.Tag.trackno, FALSE);
+			SetDlgItemInt(hWndDlg, IDC_E_NTRACKS, cfg.Tag.ntracks, FALSE);
+			SetDlgItemInt(hWndDlg, IDC_E_DISK, cfg.Tag.discno, FALSE);
+			SetDlgItemInt(hWndDlg, IDC_E_NDISKS, cfg.Tag.ndiscs, FALSE);
+			SetDlgItemInt(hWndDlg, IDC_E_COMPILATION, cfg.Tag.compilation, FALSE);
+			Cfaac::FreeTag(&cfg.Tag);
 		}
 		break; // End of WM_INITDIALOG                                 
 		
@@ -452,13 +647,6 @@ static BOOL CALLBACK DIALOGMsgProc(HWND hWndDlg, UINT Message, WPARAM wParam, LP
 	case WM_COMMAND:
 		switch(LOWORD(wParam))
 		{
-		case IDC_CHK_AUTOCFG:
-			{
-			char Enabled=!IsDlgButtonChecked(hWndDlg,IDC_CHK_AUTOCFG);
-				DISABLE_CTRL(Enabled);
-			}
-			break;
-			
 		case IDOK:
 			{
 			HANDLE hCfg=(HANDLE)lParam;
@@ -515,8 +703,34 @@ static BOOL CALLBACK DIALOGMsgProc(HWND hWndDlg, UINT Message, WPARAM wParam, LP
 				
 				cfg.SaveMP4=IsDlgButtonChecked(hWndDlg, IDC_CHK_WRITEMP4) ? TRUE : FALSE;
 
+				cfg.Tag.On=IsDlgButtonChecked(hWndDlg,IDC_CHK_TAG) ? 1 : 0;
+			char buffer[MAX_PATH];
+				GetDlgItemText(hWndDlg, IDC_E_ARTIST, buffer, MAX_PATH);
+				cfg.Tag.artist=strdup(buffer);
+				GetDlgItemText(hWndDlg, IDC_E_TITLE, buffer, MAX_PATH);
+				cfg.Tag.title=strdup(buffer);
+				GetDlgItemText(hWndDlg, IDC_E_ALBUM, buffer, MAX_PATH);
+				cfg.Tag.album=strdup(buffer);
+				GetDlgItemText(hWndDlg, IDC_E_YEAR, buffer, MAX_PATH);
+				cfg.Tag.year=strdup(buffer);
+				GetDlgItemText(hWndDlg, IDC_CB_GENRE, buffer, MAX_PATH);
+				cfg.Tag.genre=strdup(buffer);
+				GetDlgItemText(hWndDlg, IDC_E_WRITER, buffer, MAX_PATH);
+				cfg.Tag.writer=strdup(buffer);
+				GetDlgItemText(hWndDlg, IDC_E_COMMENT, buffer, MAX_PATH);
+				cfg.Tag.comment=strdup(buffer);
+				GetDlgItemText(hWndDlg, IDC_E_ARTFILE, buffer, MAX_PATH);
+				cfg.Tag.artFileName=strdup(buffer);
+				cfg.Tag.trackno=GetDlgItemInt(hWndDlg, IDC_E_TRACK, 0, FALSE);
+				cfg.Tag.ntracks=GetDlgItemInt(hWndDlg, IDC_E_NTRACKS, 0, FALSE);
+				cfg.Tag.discno=GetDlgItemInt(hWndDlg, IDC_E_DISK, 0, FALSE);
+				cfg.Tag.ndiscs=GetDlgItemInt(hWndDlg, IDC_E_NDISKS, 0, FALSE);
+				cfg.Tag.compilation=(BYTE)GetDlgItemInt(hWndDlg, IDC_E_COMPILATION, 0, FALSE);
+
 				WriteCfgEnc();
 				Cfaac::setFaacCfg(&cfg);
+				Cfaac::FreeTag(&cfg.Tag);
+
 				EndDialog(hWndDlg, (DWORD)hCfg);
 			}
 			break;
@@ -525,6 +739,73 @@ static BOOL CALLBACK DIALOGMsgProc(HWND hWndDlg, UINT Message, WPARAM wParam, LP
 			// Ignore data values entered into the controls        
 			// and dismiss the dialog window returning FALSE
 			EndDialog(hWndDlg, FALSE);
+			break;
+
+		case IDC_BTN_ABOUT:
+			DialogBox((HINSTANCE)hInstance,(LPCSTR)MAKEINTRESOURCE(IDD_ABOUT), (HWND)hWndDlg, (DLGPROC)DialogMsgProcAbout);
+			break;
+
+		case IDC_BTN_LICENSE:
+			{
+			char *license =
+				"\nPlease note that the use of this software may require the payment of patent royalties.\n"
+				"You need to consider this issue before you start building derivative works.\n"
+				"We are not warranting or indemnifying you in any way for patent royalities!\n"
+				"YOU ARE SOLELY RESPONSIBLE FOR YOUR OWN ACTIONS!\n"
+				"\n"
+				"FAAC is based on the ISO MPEG-4 reference code. For this code base the\n"
+				"following license applies:\n"
+				"\n"
+/*				"This software module was originally developed by\n"
+				"\n"
+				"FirstName LastName (CompanyName)\n"
+				"\n"
+				"and edited by\n"
+				"\n"
+				"FirstName LastName (CompanyName)\n"
+				"FirstName LastName (CompanyName)\n"
+				"\n"
+*/				"in the course of development of the MPEG-2 NBC/MPEG-4 Audio standard\n"
+				"ISO/IEC 13818-7, 14496-1,2 and 3. This software module is an\n"
+				"implementation of a part of one or more MPEG-2 NBC/MPEG-4 Audio tools\n"
+				"as specified by the MPEG-2 NBC/MPEG-4 Audio standard. ISO/IEC gives\n"
+				"users of the MPEG-2 NBC/MPEG-4 Audio standards free license to this\n"
+				"software module or modifications thereof for use in hardware or\n"
+				"software products claiming conformance to the MPEG-2 NBC/ MPEG-4 Audio\n"
+				"standards. Those intending to use this software module in hardware or\n"
+				"software products are advised that this use may infringe existing\n"
+				"patents. The original developer of this software module and his/her\n"
+				"company, the subsequent editors and their companies, and ISO/IEC have\n"
+				"no liability for use of this software module or modifications thereof\n"
+				"in an implementation. Copyright is not released for non MPEG-2\n"
+				"NBC/MPEG-4 Audio conforming products. The original developer retains\n"
+				"full right to use the code for his/her own purpose, assign or donate\n"
+				"the code to a third party and to inhibit third party from using the\n"
+				"code for non MPEG-2 NBC/MPEG-4 Audio conforming products. This\n"
+				"copyright notice must be included in all copies or derivative works.\n"
+				"\n"
+				"Copyright (c) 1997.\n"
+				"\n"
+				"For the changes made for the FAAC project the GNU Lesser General Public\n"
+				"License (LGPL), version 2 1991 applies:\n"
+				"\n"
+				"FAAC - Freeware Advanced Audio Coder\n"
+				"Copyright (C) 2001-2004 The individual contributors\n"
+				"\n"
+				"This library is free software; you can redistribute it and/or modify it under the terms of\n"
+				"the GNU Lesser General Public License as published by the Free Software Foundation;\n"
+				"either version 2.1 of the License, or (at your option) any later version.\n"
+				"\n"
+				"This library is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;\n"
+				"without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.\n"
+				"See the GNU Lesser General Public License for more details.\n"
+				"\n"
+				"You should have received a copy of the GNU Lesser General Public\n"
+				"License along with this library; if not, write to the Free Software\n"
+				"Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA\n";
+
+				MessageBox(hWndDlg,license,"FAAC libray License",MB_OK|MB_ICONINFORMATION);
+			}
 			break;
 			
 		case IDC_BTN_BROWSE:
@@ -550,6 +831,33 @@ static BOOL CALLBACK DIALOGMsgProc(HWND hWndDlg, UINT Message, WPARAM wParam, LP
 			}
 			break;
 			
+		case IDC_BTN_ARTFILE:
+			{
+			OPENFILENAME ofn;
+			char ArtFilename[MAX_PATH]="";
+
+//				GetDlgItemText(hWndDlg, IDC_E_ARTFILE, ArtFilename, MAX_PATH);
+
+				ofn.lStructSize			= sizeof(OPENFILENAME);
+				ofn.hwndOwner			= (HWND)hWndDlg;
+				ofn.lpstrFilter			= "Cover art files (*.gif,*jpg,*.png)\0*.gif;*.jpg;*.png\0";
+				ofn.lpstrCustomFilter	= NULL;
+				ofn.nFilterIndex		= 1;
+				ofn.lpstrFile			= ArtFilename;
+				ofn.nMaxFile			= MAX_PATH; //sizeof ArtFilename;
+				ofn.lpstrFileTitle		= NULL;
+				ofn.nMaxFileTitle		= 0;
+				ofn.lpstrInitialDir		= NULL;
+				ofn.lpstrTitle			= "Select cover art file";
+				ofn.Flags				= OFN_EXPLORER | OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST | OFN_HIDEREADONLY | OFN_ENABLESIZING;
+				ofn.lpstrDefExt			= NULL;
+				ofn.hInstance			= hInstance;
+
+				if(GetOpenFileName(&ofn))
+					SetDlgItemText(hWndDlg, IDC_E_ARTFILE, ArtFilename);
+			}
+			break;
+
 		case IDC_RADIO_MPEG4:
 			EnableWindow(GetDlgItem(hWndDlg, IDC_RADIO_LTP), !IsDlgButtonChecked(hWndDlg,IDC_CHK_AUTOCFG));
 			break;
@@ -557,7 +865,27 @@ static BOOL CALLBACK DIALOGMsgProc(HWND hWndDlg, UINT Message, WPARAM wParam, LP
 		case IDC_RADIO_MPEG2:
 			EnableWindow(GetDlgItem(hWndDlg, IDC_RADIO_LTP), FALSE);
 			DISABLE_LTP
-				break;
+			break;
+
+		case IDC_CHK_AUTOCFG:
+			{
+			char Enabled=!IsDlgButtonChecked(hWndDlg,IDC_CHK_AUTOCFG);
+				DISABLE_CTRL(Enabled);
+			}
+			break;
+
+		case IDC_CHK_TAG:
+			{
+			char Enabled=IsDlgButtonChecked(hWndDlg,IDC_CHK_TAG);
+				ENABLE_TAG(Enabled);
+			}
+//			break;
+		case IDC_CHK_WRITEMP4:
+			{
+			char Enabled=IsDlgButtonChecked(hWndDlg,IDC_CHK_WRITEMP4) && IsDlgButtonChecked(hWndDlg,IDC_CHK_TAG);
+				ENABLE_AACTAGS(Enabled);
+			}
+			break;
 		}
 		break; // End of WM_COMMAND
 	default: 

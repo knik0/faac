@@ -27,15 +27,6 @@ ntnfrn_email-temp@yahoo.it
 
 
 
-#define FREE_ARRAY(ptr) \
-{ \
-	if(ptr) \
-		free(ptr); \
-	ptr=0; \
-}
-
-// *********************************************************************************************
-
 Cfaac::Cfaac(HANDLE hOut)
 {
 	if(hOut)
@@ -45,14 +36,10 @@ Cfaac::Cfaac(HANDLE hOut)
 	}
 
     if(!(hOutput=GlobalAlloc(GMEM_MOVEABLE|GMEM_SHARE|GMEM_ZEROINIT,sizeof(MYOUTPUT))))
+	{
 		MessageBox(0, "Memory allocation error: hOutput", APP_NAME " plugin", MB_OK|MB_ICONSTOP); \
-/*
-MYOUTPUT *mo;
-
-	if(!(mo=(MYOUTPUT *)GlobalLock(hOutput)))
-		MessageBox(0, "GlobalLock(hOutput)", APP_NAME " plugin", MB_OK|MB_ICONSTOP); \
-
-	GlobalUnlock(hOutput);*/
+		return;
+	}
 }
 // -----------------------------------------------------------------------------------------------
 
@@ -82,6 +69,15 @@ MYOUTPUT *mo;
 	{
 		fclose(mo->aacFile);
 		mo->aacFile=0;
+
+	MY_ENC_CFG	cfg;
+		getFaacCfg(&cfg);
+		if(cfg.Tag.On && mo->Filename)
+		{
+			WriteAacTag(mo->Filename,&cfg.Tag);
+			FREE_ARRAY(mo->Filename);
+		}
+		FreeTag(&cfg.Tag);
 	}
 	else
 	{
@@ -213,6 +209,143 @@ int i;
 			break;
 	}
 }
+// *********************************************************************************************
+
+int Cfaac::check_image_header(const char *buf)
+{
+  if (!strncmp(buf, "\x89\x50\x4E\x47\x0D\x0A\x1A\x0A", 8))
+    return 1; /* PNG */
+  else if (!strncmp(buf, "\xFF\xD8\xFF\xE0", 4) &&
+	   !strncmp(buf + 6, "JFIF\0", 5))
+    return 1; /* JPEG */
+  else if (!strncmp(buf, "GIF87a", 6) || !strncmp(buf, "GIF89a", 6))
+    return 1; /* GIF */
+  else
+    return 0;
+}
+// -----------------------------------------------------------------------------------------------
+
+int Cfaac::ReadCoverArtFile(char *pCoverArtFile, char **artData)
+{
+FILE *artFile;
+
+	if(!pCoverArtFile || !*pCoverArtFile)
+		return 0;
+
+	if(!(artFile=fopen(pCoverArtFile, "rb")))
+	{
+		MessageBox(NULL,"ReadCoverArtFile: fopen",NULL,MB_OK);
+		return 0;
+	}
+
+int r;
+char *art;
+int	artSize=0;
+
+	fseek(artFile, 0, SEEK_END);
+	artSize=ftell(artFile);
+	fseek(artFile, 0, SEEK_SET);
+
+	if(!(art=(char *)malloc(artSize)))
+	{
+		fclose(artFile);
+		MessageBox(NULL,"ReadCoverArtFile: Memory allocation error!", NULL, MB_OK);
+		return 0;
+	}
+
+	r=fread(art, 1, artSize, artFile);
+	if(r!=artSize)
+	{
+		free(art);
+		fclose(artFile);
+		MessageBox(NULL,"ReadCoverArtFile: Error reading cover art file!", NULL, MB_OK);
+		return 0;
+	}
+	else
+		if(artSize<12 || !check_image_header(art))
+		{
+			// the above expression checks the image signature
+			free(art);
+			fclose(artFile);
+			MessageBox(NULL,"ReadCoverArtFile: Unsupported cover image file format!", NULL, MB_OK);
+			return 0;
+		}
+
+	FREE_ARRAY(*artData);
+	*artData=art;
+	fclose(artFile);
+	return artSize;
+}
+
+void Cfaac::WriteMP4Tag(MP4FileHandle MP4File, MP4TAG *Tag)
+{
+char	*art=NULL;
+DWORD	artSize;
+
+char	buf[512], *faac_id_string, *faac_copyright_string;
+	sprintf(buf, "FAAC v%s", (faacEncGetVersion(&faac_id_string, &faac_copyright_string)==FAAC_CFG_VERSION) ? faac_id_string : " wrong libfaac version");
+	MP4SetMetadataTool(MP4File, buf);
+
+	if(Tag->artist) MP4SetMetadataArtist(MP4File, Tag->artist);
+	if(Tag->writer) MP4SetMetadataWriter(MP4File, Tag->writer);
+	if(Tag->title) MP4SetMetadataName(MP4File, Tag->title);
+	if(Tag->album) MP4SetMetadataAlbum(MP4File, Tag->album);
+	if(Tag->trackno>0) MP4SetMetadataTrack(MP4File, Tag->trackno, Tag->ntracks);
+	if(Tag->discno>0) MP4SetMetadataDisk(MP4File, Tag->discno, Tag->ndiscs);
+	if(Tag->compilation) MP4SetMetadataCompilation(MP4File, Tag->compilation);
+	if(Tag->year) MP4SetMetadataYear(MP4File, Tag->year);
+	if(Tag->genre) MP4SetMetadataGenre(MP4File, Tag->genre);
+	if(Tag->comment) MP4SetMetadataComment(MP4File, Tag->comment);
+	artSize=ReadCoverArtFile(Tag->artFileName,&art);
+	if(artSize)
+	{
+		MP4SetMetadataCoverArt(MP4File, (BYTE *)art, artSize);
+		free(art);
+	}
+}
+
+#define ADD_FIELD(id3Tag,NewFrame,ID3FID,ID3FN,data) \
+{ \
+	ID3_Frame *NewFrame=new ID3_Frame(ID3FID); \
+		NewFrame->Field(ID3FN)=data; \
+		id3Tag.AttachFrame(NewFrame); \
+}
+
+void Cfaac::WriteAacTag(char *Filename, MP4TAG *Tag)
+{
+char	buf[512], *faac_id_string, *faac_copyright_string;
+char	*art=NULL;
+DWORD	artSize;
+ID3_Tag id3Tag;
+ID3_Frame *Frame;
+
+	id3Tag.Link(Filename);
+//	Frame=id3Tag.Find(ID3FID_ALBUM);
+//	if(Frame!=NULL)
+//		myTag.RemoveFrame(Frame);
+
+	sprintf(buf, "FAAC v%s", (faacEncGetVersion(&faac_id_string, &faac_copyright_string)==FAAC_CFG_VERSION) ? faac_id_string : " wrong libfaac version");
+	ADD_FIELD(id3Tag,NewFrame,ID3FID_ENCODEDBY,ID3FN_TEXT,buf);
+
+	ADD_FIELD(id3Tag,NewFrame,ID3FID_LEADARTIST,ID3FN_TEXT,Tag->artist);
+	ADD_FIELD(id3Tag,NewFrame,ID3FID_COMPOSER,ID3FN_TEXT,Tag->writer);
+	ADD_FIELD(id3Tag,NewFrame,ID3FID_TITLE,ID3FN_TEXT,Tag->title);
+	ADD_FIELD(id3Tag,NewFrame,ID3FID_ALBUM,ID3FN_TEXT,Tag->album);
+	sprintf(buf,"%d",Tag->trackno);
+	ADD_FIELD(id3Tag,NewFrame,ID3FID_TRACKNUM,ID3FN_TEXT,buf);
+	ADD_FIELD(id3Tag,NewFrame,ID3FID_YEAR,ID3FN_TEXT,Tag->year);
+	ADD_FIELD(id3Tag,NewFrame,ID3FID_CONTENTTYPE,ID3FN_TEXT,Tag->genre);
+	ADD_FIELD(id3Tag,NewFrame,ID3FID_COMMENT,ID3FN_TEXT,Tag->comment);
+	artSize=ReadCoverArtFile(Tag->artFileName,&art);
+	if(artSize)
+	{
+		ADD_FIELD(id3Tag,NewFrame,ID3FID_PICTURE,ID3FN_PICTURETYPE,Tag->artFileName);
+		id3Tag.Update();
+		free(art);
+	}
+	else
+		id3Tag.Update();
+}
 
 // *********************************************************************************************
 //									Main functions
@@ -238,24 +371,53 @@ MYOUTPUT *mo;
 }
 // *********************************************************************************************
 
+void Cfaac::FreeTag(MP4TAG *Tag)
+{
+	FREE_ARRAY(Tag->artist);
+	FREE_ARRAY(Tag->title);
+	FREE_ARRAY(Tag->album);
+	FREE_ARRAY(Tag->year);
+	FREE_ARRAY(Tag->genre);
+	FREE_ARRAY(Tag->writer);
+	FREE_ARRAY(Tag->comment);
+	FREE_ARRAY(Tag->artFileName);
+}
+// -----------------------------------------------------------------------------------------------
+
 void Cfaac::getFaacCfg(MY_ENC_CFG *cfg)
 { 
 CRegistry reg;
 
-	if(reg.openCreateReg(HKEY_LOCAL_MACHINE,REGISTRY_PROGRAM_NAME "\\FAAC"))
+	if(reg.OpenCreate(HKEY_CURRENT_USER, REGISTRY_PROGRAM_NAME "\\FAAC"))
 	{
-		cfg->AutoCfg=reg.getSetRegBool("Auto",true);
-		cfg->SaveMP4=reg.getSetRegBool("Write MP4",false);
-		cfg->EncCfg.mpegVersion=reg.getSetRegDword("MPEG version",MPEG4); 
-		cfg->EncCfg.aacObjectType=reg.getSetRegDword("Profile",LOW); 
-		cfg->EncCfg.allowMidside=reg.getSetRegDword("MidSide",true); 
-		cfg->EncCfg.useTns=reg.getSetRegDword("TNS",true); 
-		cfg->EncCfg.useLfe=reg.getSetRegDword("LFE",false);
-		cfg->UseQuality=reg.getSetRegBool("Use quality",false);
-		cfg->EncCfg.quantqual=reg.getSetRegDword("Quality",100); 
-		cfg->EncCfg.bitRate=reg.getSetRegDword("BitRate",0); 
-		cfg->EncCfg.bandWidth=reg.getSetRegDword("BandWidth",0); 
-		cfg->EncCfg.outputFormat=reg.getSetRegDword("Header",ADTS); 
+		cfg->AutoCfg=reg.GetSetBool(REG_AUTO,DEF_AUTO);
+		cfg->SaveMP4=reg.GetSetBool(REG_WRITEMP4,DEF_WRITEMP4);
+		cfg->EncCfg.mpegVersion=reg.GetSetDword(REG_MPEGVER,DEF_MPEGVER); 
+		cfg->EncCfg.aacObjectType=reg.GetSetDword(REG_PROFILE,DEF_PROFILE); 
+		cfg->EncCfg.allowMidside=reg.GetSetDword(REG_MIDSIDE,DEF_MIDSIDE); 
+		cfg->EncCfg.useTns=reg.GetSetDword(REG_TNS,DEF_TNS); 
+		cfg->EncCfg.useLfe=reg.GetSetDword(REG_LFE,DEF_LFE);
+		cfg->UseQuality=reg.GetSetBool(REG_USEQUALTY,DEF_USEQUALTY);
+		cfg->EncCfg.quantqual=reg.GetSetDword(REG_QUALITY,DEF_QUALITY); 
+		cfg->EncCfg.bitRate=reg.GetSetDword(REG_BITRATE,DEF_BITRATE); 
+		cfg->EncCfg.bandWidth=reg.GetSetDword(REG_BANDWIDTH,DEF_BANDWIDTH); 
+		cfg->EncCfg.outputFormat=reg.GetSetDword(REG_HEADER,DEF_HEADER); 
+		cfg->OutDir=NULL;
+
+		cfg->Tag.On=reg.GetSetByte(REG_TAGON,0);
+		cfg->Tag.artist=reg.GetSetStr(REG_ARTIST,"");
+		cfg->Tag.title=reg.GetSetStr(REG_TITLE,"");
+		cfg->Tag.album=reg.GetSetStr(REG_ALBUM,"");
+		cfg->Tag.year=reg.GetSetStr(REG_YEAR,"");
+		cfg->Tag.genre=reg.GetSetStr(REG_GENRE,"");
+		cfg->Tag.writer=reg.GetSetStr(REG_WRITER,"");
+		cfg->Tag.comment=reg.GetSetStr(REG_COMMENT,"");
+		cfg->Tag.trackno=reg.GetSetDword(REG_TRACK,0);
+		cfg->Tag.ntracks=reg.GetSetDword(REG_NTRACKS,0);
+		cfg->Tag.discno=reg.GetSetDword(REG_DISK,0);
+		cfg->Tag.ndiscs=reg.GetSetDword(REG_NDISKS,0);
+		cfg->Tag.compilation=reg.GetSetByte(REG_COMPILATION,0);
+		cfg->Tag.artFileName=reg.GetSetStr(REG_ARTFILE,"");
 	}
 	else
 		MessageBox(0,"Can't open registry!",0,MB_OK|MB_ICONSTOP);
@@ -266,20 +428,35 @@ void Cfaac::setFaacCfg(MY_ENC_CFG *cfg)
 { 
 CRegistry reg;
 
-	if(reg.openCreateReg(HKEY_LOCAL_MACHINE,REGISTRY_PROGRAM_NAME "\\FAAC"))
+	if(reg.OpenCreate(HKEY_CURRENT_USER, REGISTRY_PROGRAM_NAME "\\FAAC"))
 	{
-		reg.setRegBool("Auto",cfg->AutoCfg); 
-		reg.setRegBool("Write MP4",cfg->SaveMP4); 
-		reg.setRegDword("MPEG version",cfg->EncCfg.mpegVersion); 
-		reg.setRegDword("Profile",cfg->EncCfg.aacObjectType); 
-		reg.setRegDword("MidSide",cfg->EncCfg.allowMidside); 
-		reg.setRegDword("TNS",cfg->EncCfg.useTns); 
-		reg.setRegDword("LFE",cfg->EncCfg.useLfe); 
-		reg.setRegBool("Use quality",cfg->UseQuality); 
-		reg.setRegDword("Quality",cfg->EncCfg.quantqual); 
-		reg.setRegDword("BitRate",cfg->EncCfg.bitRate); 
-		reg.setRegDword("BandWidth",cfg->EncCfg.bandWidth); 
-		reg.setRegDword("Header",cfg->EncCfg.outputFormat); 
+		reg.SetBool(REG_AUTO,cfg->AutoCfg); 
+		reg.SetBool(REG_WRITEMP4,cfg->SaveMP4); 
+		reg.SetDword(REG_MPEGVER,cfg->EncCfg.mpegVersion); 
+		reg.SetDword(REG_PROFILE,cfg->EncCfg.aacObjectType); 
+		reg.SetDword(REG_MIDSIDE,cfg->EncCfg.allowMidside); 
+		reg.SetDword(REG_TNS,cfg->EncCfg.useTns); 
+		reg.SetDword(REG_LFE,cfg->EncCfg.useLfe); 
+		reg.SetBool(REG_USEQUALTY,cfg->UseQuality); 
+		reg.SetDword(REG_QUALITY,cfg->EncCfg.quantqual); 
+		reg.SetDword(REG_BITRATE,cfg->EncCfg.bitRate); 
+		reg.SetDword(REG_BANDWIDTH,cfg->EncCfg.bandWidth); 
+		reg.SetDword(REG_HEADER,cfg->EncCfg.outputFormat); 
+
+		reg.SetByte(REG_TAGON,cfg->Tag.On);
+		reg.SetStr(REG_ARTIST,cfg->Tag.artist);
+		reg.SetStr(REG_TITLE,cfg->Tag.title);
+		reg.SetStr(REG_ALBUM,cfg->Tag.album);
+		reg.SetStr(REG_YEAR,cfg->Tag.year);
+		reg.SetStr(REG_GENRE,cfg->Tag.genre);
+		reg.SetStr(REG_WRITER,cfg->Tag.writer);
+		reg.SetStr(REG_COMMENT,cfg->Tag.comment);
+		reg.SetDword(REG_TRACK,cfg->Tag.trackno); 
+		reg.SetDword(REG_NTRACKS,cfg->Tag.ntracks); 
+		reg.SetDword(REG_DISK,cfg->Tag.discno); 
+		reg.SetDword(REG_NDISKS,cfg->Tag.ndiscs); 
+		reg.SetByte(REG_COMPILATION,cfg->Tag.compilation); 
+		reg.SetStr(REG_ARTFILE,cfg->Tag.artFileName);
 	}
 	else
 		MessageBox(0,"Can't open registry!",0,MB_OK|MB_ICONSTOP);
@@ -313,36 +490,53 @@ DWORD		samplesInput,
 	if(!(mo->buf32bit=(int32_t *)malloc(samplesInput*sizeof(int32_t))))
 		return ERROR_Init("Memory allocation error: 32 bit buffer");
 
-
 	getFaacCfg(&cfg);
 
-	if(cfg.SaveMP4)
+	if(cfg.SaveMP4)// || cfg.Tag.On)
 		if(!strcmpi(lpstrFilename+lstrlen(lpstrFilename)-4,".aac"))
+		{
 			strcpy(lpstrFilename+lstrlen(lpstrFilename)-4,".mp4");
+		FILE *f=fopen(lpstrFilename,"rb");
+			if(f)
+			{
+			char buf[MAX_PATH+20];
+				sprintf(buf,"Overwrite \"%s\" ?",lpstrFilename);
+				fclose(f);
+				if(MessageBox(NULL,buf,"File already exists!",MB_YESNO|MB_ICONQUESTION)==IDNO)
+					return ERROR_Init(0);//"User abort");
+			}
+		}
 		else
 			if(strcmpi(lpstrFilename+lstrlen(lpstrFilename)-4,".mp4"))
 				strcat(lpstrFilename,".mp4");
-	mo->WriteMP4=!strcmpi(lpstrFilename+lstrlen(lpstrFilename)-4,".mp4");
+	mo->WriteMP4=	!strcmpi(lpstrFilename+lstrlen(lpstrFilename)-4,".mp4") ||
+					!strcmpi(lpstrFilename+lstrlen(lpstrFilename)-4,".m4a");
 
-	if(cfg.AutoCfg)
+faacEncConfigurationPtr CurFormat=faacEncGetCurrentConfiguration(mo->hEncoder);
+	CurFormat->inputFormat=FAAC_INPUT_32BIT;
+/*	switch(wBitsPerSample)
+	{
+	case 16:
+		CurFormat->inputFormat=FAAC_INPUT_16BIT;
+		break;
+	case 24:
+		CurFormat->inputFormat=FAAC_INPUT_24BIT;
+		break;
+	case 32:
+		CurFormat->inputFormat=FAAC_INPUT_32BIT;
+		break;
+	default:
+		CurFormat->inputFormat=FAAC_INPUT_NULL;
+		break;
+	}*/
+	if(!cfg.AutoCfg)
 	{
 	faacEncConfigurationPtr myFormat=&cfg.EncCfg;
-	faacEncConfigurationPtr CurFormat=faacEncGetCurrentConfiguration(mo->hEncoder);
-		if(mo->WriteMP4)
-			CurFormat->outputFormat=RAW;
-		CurFormat->useLfe=wChannels>=6 ? 1 : 0;
-		if(!faacEncSetConfiguration(mo->hEncoder, CurFormat))
-			return ERROR_Init("Unsupported parameters!");
-	}
-	else
-	{
-	faacEncConfigurationPtr myFormat=&cfg.EncCfg;
-	faacEncConfigurationPtr CurFormat=faacEncGetCurrentConfiguration(mo->hEncoder);
 
 		if(cfg.UseQuality)
 		{
 			CurFormat->quantqual=myFormat->quantqual;
-			CurFormat->bitRate=myFormat->bitRate;
+			CurFormat->bitRate=0;//myFormat->bitRate;
 		}
 		else
 			if(!CurFormat->bitRate)
@@ -361,34 +555,30 @@ DWORD		samplesInput,
 			CurFormat->bandWidth=myFormat->bandWidth;
 			break;
 		}
-/*
-		switch(wBitsPerSample)
-		{
-		case 16:
-			CurFormat->inputFormat=FAAC_INPUT_16BIT;
-			break;
-		case 24:
-			CurFormat->inputFormat=FAAC_INPUT_24BIT;
-			break;
-		case 32:
-			CurFormat->inputFormat=FAAC_INPUT_32BIT;
-			break;
-		default:
-			CurFormat->inputFormat=FAAC_INPUT_NULL;
-			break;
-		}
-*/
 		CurFormat->mpegVersion=myFormat->mpegVersion;
-		CurFormat->outputFormat=mo->WriteMP4 ? 0 : myFormat->outputFormat;
+		CurFormat->outputFormat=myFormat->outputFormat;
 		CurFormat->mpegVersion=myFormat->mpegVersion;
 		CurFormat->aacObjectType=myFormat->aacObjectType;
 		CurFormat->allowMidside=myFormat->allowMidside;
 		CurFormat->useTns=myFormat->useTns;
-		CurFormat->useLfe=wChannels>=6 ? 1 : 0;
-
-		if(!faacEncSetConfiguration(mo->hEncoder, CurFormat))
-			return ERROR_Init("Unsupported parameters!");
 	}
+	else
+	{
+		CurFormat->mpegVersion=DEF_MPEGVER;
+		CurFormat->aacObjectType=DEF_PROFILE;
+		CurFormat->allowMidside=DEF_MIDSIDE;
+		CurFormat->useTns=DEF_TNS;
+		CurFormat->useLfe=DEF_LFE;
+		CurFormat->quantqual=DEF_QUALITY;
+		CurFormat->bitRate=DEF_BITRATE;
+		CurFormat->bandWidth=DEF_BANDWIDTH;
+		CurFormat->outputFormat=DEF_HEADER;
+	}
+	if(mo->WriteMP4)
+		CurFormat->outputFormat=RAW;
+	CurFormat->useLfe=wChannels>=6 ? 1 : 0;
+	if(!faacEncSetConfiguration(mo->hEncoder, CurFormat))
+		return ERROR_Init("Unsupported parameters!");
 
 //	mo->src_size=lSize;
 //	mi->dst_name=strdup(lpstrFilename);
@@ -414,7 +604,10 @@ DWORD		samplesInput,
         MP4SetTrackESConfiguration(mo->MP4File, mo->MP4track, (unsigned __int8 *)ASC, ASCLength);
 		mo->frameSize=samplesInput/wChannels;
 		mo->ofs=mo->frameSize;
-    }
+
+		if(cfg.Tag.On)
+			WriteMP4Tag(mo->MP4File,&cfg.Tag);
+	}
 	else // Create AAC file -----------------------------------------------------------------------------
 	{
 		// open the aac output file 
@@ -423,10 +616,13 @@ DWORD		samplesInput,
 
 		// use bufferized stream
 		setvbuf(mo->aacFile,NULL,_IOFBF,32767);
+
+		mo->Filename=strdup(lpstrFilename);
 	}
 
 	showInfo(mo);
 
+	FreeTag(&cfg.Tag);
 	GlobalUnlock(hOutput);
     return hOutput;
 }
@@ -450,7 +646,8 @@ int32_t *buf=mo->buf32bit;
 		mo->samplesInput=(len<<3)/mo->BitsPerSample;
 		mo->samplesInputSize=mo->samplesInput*(mo->BitsPerSample>>3);
 	}
-	To32bit(buf,bufIn,mo->samplesInput,mo->BitsPerSample>>3,false);
+//	if(mo->BitsPerSample==8 || mo->BitsPerSample==32)
+		To32bit(buf,bufIn,mo->samplesInput,mo->BitsPerSample>>3,false);
 
 	// call the actual encoding routine
 	if((bytesEncoded=faacEncEncode(mo->hEncoder, (int32_t *)buf, mo->samplesInput, mo->bitbuf, mo->maxBytesOutput))<0)

@@ -1,5 +1,5 @@
 /*
-FAAC - codec plugin for Cooledit
+CRegistry class
 Copyright (C) 2002-2004 Antonio Foranna
 
 This program is free software; you can redistribute it and/or modify
@@ -19,47 +19,56 @@ The author can be contacted at:
 ntnfrn_email-temp@yahoo.it
 */
 
-//#include "stdafx.h"
-#include <windows.h>
-#include <stdlib.h>		// malloc, free
-#include <string.h>
 #include "CRegistry.h"
 
-
-
-// *****************************************************************************
-
-
+//************************************************************************************************
 
 CRegistry::CRegistry()
 {
 	regKey=NULL;
 	path=NULL;
 }
+//------------------------------------------------------------------------------------------------
 
 CRegistry::~CRegistry()
 {
-	closeReg();
+	if(regKey)
+		RegCloseKey(regKey);
+	if(path)
+		free(path);
 }
-
-
-
-// *****************************************************************************
-
-
+//************************************************************************************************
+/*
+void CRegistry::ShowLastError(char *Caption)
+{
+LPVOID MsgBuf;
+	if(FormatMessage( 
+		FORMAT_MESSAGE_ALLOCATE_BUFFER | 
+		FORMAT_MESSAGE_FROM_SYSTEM | 
+		FORMAT_MESSAGE_IGNORE_INSERTS,
+		NULL,
+		GetLastError(),
+		MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), // Default language
+		(LPTSTR) &MsgBuf,
+		0,
+		NULL 
+	))
+		MessageBox(NULL, (LPCTSTR)MsgBuf, Caption, MB_OK|MB_ICONSTOP);
+	if(MsgBuf)
+		LocalFree(MsgBuf);
+}*/
+//************************************************************************************************
 
 #define setPath(SubKey) \
 	if(path) \
 		free(path); \
 	path=strdup(SubKey);
 
-// -----------------------------------------------------------------------------------------------
-
-BOOL CRegistry::openReg(HKEY hKey, char *SubKey)
+BOOL CRegistry::Open(HKEY hKey, char *SubKey)
 {
 	if(regKey)
 		RegCloseKey(regKey);
-	if(RegOpenKeyEx(hKey, SubKey, NULL , KEY_ALL_ACCESS , &regKey)==ERROR_SUCCESS)
+	if(RegOpenKeyEx(hKey, SubKey, 0, KEY_ALL_ACCESS, &regKey)==ERROR_SUCCESS)
 	{
 		setPath(SubKey);
 		return TRUE;
@@ -71,13 +80,13 @@ BOOL CRegistry::openReg(HKEY hKey, char *SubKey)
 		return FALSE;
 	}
 }
-// -----------------------------------------------------------------------------------------------
+//************************************************************************************************
 
-BOOL CRegistry::openCreateReg(HKEY hKey, char *SubKey)
+BOOL CRegistry::OpenCreate(HKEY hKey, char *SubKey)
 {
 	if(regKey)
 		RegCloseKey(regKey);
-	if(RegOpenKeyEx(hKey, SubKey, NULL , KEY_ALL_ACCESS , &regKey)==ERROR_SUCCESS)
+	if(RegOpenKeyEx(hKey, SubKey, 0, KEY_ALL_ACCESS, &regKey)==ERROR_SUCCESS)
 	{
 		setPath(SubKey);
 		return TRUE;
@@ -85,7 +94,7 @@ BOOL CRegistry::openCreateReg(HKEY hKey, char *SubKey)
 	else // open failed -> create the key
 	{
 	DWORD disp;
-		RegCreateKeyEx(hKey , SubKey, NULL , NULL, REG_OPTION_NON_VOLATILE , KEY_ALL_ACCESS , NULL , &regKey , &disp );
+		RegCreateKeyEx(hKey, SubKey, 0, NULL, REG_OPTION_NON_VOLATILE, KEY_ALL_ACCESS, NULL, &regKey, &disp);
 		if(disp==REG_CREATED_NEW_KEY) 
 		{
 			setPath(SubKey);
@@ -99,9 +108,9 @@ BOOL CRegistry::openCreateReg(HKEY hKey, char *SubKey)
 		}
 	}
 }
-// -----------------------------------------------------------------------------------------------
+//************************************************************************************************
 
-void CRegistry::closeReg()
+void CRegistry::Close()
 {
 	if(regKey)
 		RegCloseKey(regKey);
@@ -110,93 +119,78 @@ void CRegistry::closeReg()
 		delete path; 
 	path=NULL;
 }
+//************************************************************************************************
+//************************************************************************************************
+//************************************************************************************************
 
-
-
-// *****************************************************************************
-
-
-
-void CRegistry::DeleteRegVal(char *SubKey)
+void CRegistry::DeleteVal(char *SubKey)
 {
 	RegDeleteValue(regKey,SubKey);
 }
-// -----------------------------------------------------------------------------------------------
+//************************************************************************************************
 
-void CRegistry::DeleteRegKey(char *SubKey)
+void CRegistry::DeleteKey(char *SubKey)
 {
 	RegDeleteKey(regKey,SubKey);
 }
 
+//************************************************************************************************
+//************************************************************************************************
+//************************************************************************************************
 
-
-// *****************************************************************************
-
-
-
-void CRegistry::setRegBool(char *keyStr , BOOL val)
+void CRegistry::SetBool(char *keyStr, BOOL val)
 {
 BOOL tempVal;
 DWORD len;
-	if(RegQueryValueEx(regKey , keyStr , NULL , NULL, (BYTE *)&tempVal , &len )!=ERROR_SUCCESS ||
+	if(RegQueryValueEx(regKey, keyStr, NULL, NULL, (BYTE *)&tempVal, &len )!=ERROR_SUCCESS ||
 		tempVal!=val)
-		RegSetValueEx(regKey , keyStr , NULL , REG_BINARY , (BYTE *)&val , sizeof(BOOL));
+		RegSetValueEx(regKey, keyStr, 0, REG_BINARY, (BYTE *)&val, sizeof(BOOL));
 }
-// -----------------------------------------------------------------------------------------------
+//************************************************************************************************
 
-void CRegistry::setRegBool(char *keyStr , bool val)
-{
-bool tempVal;
-DWORD len;
-	if(RegQueryValueEx(regKey , keyStr , NULL , NULL, (BYTE *)&tempVal , &len )!=ERROR_SUCCESS ||
-		tempVal!=val)
-		RegSetValueEx(regKey , keyStr , NULL , REG_BINARY , (BYTE *)&val , sizeof(bool));
-}
-// -----------------------------------------------------------------------------------------------
-
-void CRegistry::setRegByte(char *keyStr , BYTE val)
+void CRegistry::SetByte(char *keyStr, BYTE val)
 {
 DWORD	t=val;
 DWORD	tempVal;
 DWORD	len;
-	if(RegQueryValueEx(regKey , keyStr , NULL , NULL, (BYTE *)&tempVal , &len )!=ERROR_SUCCESS ||
+	if(RegQueryValueEx(regKey, keyStr, NULL, NULL, (BYTE *)&tempVal, &len )!=ERROR_SUCCESS ||
 		tempVal!=val)
-		RegSetValueEx(regKey , keyStr , NULL , REG_DWORD , (BYTE *)&t , sizeof(DWORD));
+		RegSetValueEx(regKey, keyStr, 0, REG_DWORD, (BYTE *)&t, sizeof(DWORD));
 }
-// -----------------------------------------------------------------------------------------------
+//************************************************************************************************
 
-void CRegistry::setRegWord(char *keyStr , WORD val)
+void CRegistry::SetWord(char *keyStr, WORD val)
 {
 DWORD	t=val;
 DWORD	tempVal;
 DWORD	len;
-	if(RegQueryValueEx(regKey , keyStr , NULL , NULL, (BYTE *)&tempVal , &len )!=ERROR_SUCCESS ||
+	if(RegQueryValueEx(regKey, keyStr, NULL, NULL, (BYTE *)&tempVal, &len )!=ERROR_SUCCESS ||
 		tempVal!=val)
-		RegSetValueEx(regKey , keyStr , NULL , REG_DWORD , (BYTE *)&t , sizeof(DWORD));
+		RegSetValueEx(regKey, keyStr, 0, REG_DWORD, (BYTE *)&t, sizeof(DWORD));
 }
-// -----------------------------------------------------------------------------------------------
+//************************************************************************************************
 
-void CRegistry::setRegDword(char *keyStr , DWORD val)
+void CRegistry::SetDword(char *keyStr, DWORD val)
 {
 DWORD tempVal;
 DWORD len;
-	if(RegQueryValueEx(regKey , keyStr , NULL , NULL, (BYTE *)&tempVal , &len )!=ERROR_SUCCESS ||
+	if(RegQueryValueEx(regKey, keyStr, NULL, NULL, (BYTE *)&tempVal, &len )!=ERROR_SUCCESS ||
 		tempVal!=val)
-		RegSetValueEx(regKey , keyStr , NULL , REG_DWORD , (BYTE *)&val , sizeof(DWORD));
+		RegSetValueEx(regKey, keyStr, 0, REG_DWORD, (BYTE *)&val, sizeof(DWORD));
 }
-// -----------------------------------------------------------------------------------------------
+//************************************************************************************************
 
-void CRegistry::setRegFloat(char *keyStr , float val)
+void CRegistry::SetFloat(char *keyStr, float val)
 {
 float tempVal;
 DWORD len;
-	if(RegQueryValueEx(regKey , keyStr , NULL , NULL, (BYTE *)&tempVal , &len )!=ERROR_SUCCESS ||
+	if(RegQueryValueEx(regKey, keyStr, NULL, NULL, (BYTE *)&tempVal, &len )!=ERROR_SUCCESS ||
 		tempVal!=val)
-		RegSetValueEx(regKey , keyStr , NULL , REG_BINARY , (BYTE *)&val , sizeof(float));
+		RegSetValueEx(regKey, keyStr, 0, REG_BINARY, (BYTE *)&val, sizeof(float));
 }
-// -----------------------------------------------------------------------------------------------
+//************************************************************************************************
 
-void CRegistry::setRegStr(char *keyStr , char *valStr)
+void CRegistry::SetStr(char *keyStr, char *valStr)
 {
 DWORD len;
 DWORD slen=strlen(valStr)+1;
@@ -204,163 +198,165 @@ DWORD slen=strlen(valStr)+1;
 	if(!valStr || !*valStr)
 		return;
 
-	if(RegQueryValueEx(regKey , keyStr , NULL , NULL, NULL , &len )!=ERROR_SUCCESS ||
+	if(RegQueryValueEx(regKey, keyStr, NULL, NULL, NULL, &len )!=ERROR_SUCCESS ||
 		len!=slen)
-		RegSetValueEx(regKey , keyStr , NULL , REG_SZ , (BYTE *)valStr , slen);
+		RegSetValueEx(regKey, keyStr, 0, REG_SZ, (BYTE *)valStr, slen);
 	else
 	{
 	char *tempVal=new char[slen];
-		if(RegQueryValueEx(regKey , keyStr , NULL , NULL, (BYTE *)tempVal , &len )!=ERROR_SUCCESS ||
+		if(RegQueryValueEx(regKey, keyStr, NULL, NULL, (BYTE *)tempVal, &len )!=ERROR_SUCCESS ||
 			strcmpi(tempVal,valStr))
-			RegSetValueEx(regKey , keyStr , NULL , REG_SZ , (BYTE *)valStr , slen);
+			RegSetValueEx(regKey, keyStr, 0, REG_SZ, (BYTE *)valStr, slen);
 		delete tempVal;
 	}
 }
-// -----------------------------------------------------------------------------------------------
+//************************************************************************************************
 
-void CRegistry::setRegValN(char *keyStr , BYTE *addr,  DWORD size)
+void CRegistry::SetValN(char *keyStr, BYTE *addr,  DWORD size)
 {
 DWORD len;
 	if(!addr || !size)
 		return;
 
-	if(RegQueryValueEx(regKey , keyStr , NULL , NULL, NULL , &len )!=ERROR_SUCCESS ||
+	if(RegQueryValueEx(regKey, keyStr, NULL, NULL, NULL, &len )!=ERROR_SUCCESS ||
 		len!=size)
-		RegSetValueEx(regKey , keyStr , NULL , REG_BINARY , addr , size);
+		RegSetValueEx(regKey, keyStr, 0, REG_BINARY, addr, size);
 	else
 	{
 	BYTE *tempVal=new BYTE[size];
-		if(RegQueryValueEx(regKey , keyStr , NULL , NULL, (BYTE *)tempVal , &len )!=ERROR_SUCCESS ||
+		if(RegQueryValueEx(regKey, keyStr, NULL, NULL, (BYTE *)tempVal, &len )!=ERROR_SUCCESS ||
 			memcmp(tempVal,addr,len))
-			RegSetValueEx(regKey , keyStr , NULL , REG_BINARY , addr , size);
+			RegSetValueEx(regKey, keyStr, 0, REG_BINARY, addr, size);
 		delete tempVal;
 	}
 }
 
 
 
-// *****************************************************************************
+//************************************************************************************************
+//************************************************************************************************
+//************************************************************************************************
 
 
 
-BOOL CRegistry::getSetRegBool(char *keyStr, BOOL val)
-{
-BOOL tempVal;
-DWORD len=sizeof(BOOL);
-
-	if(RegQueryValueEx(regKey , keyStr , NULL , NULL, (BYTE *)&tempVal , &len )!=ERROR_SUCCESS)
-	{
-		RegSetValueEx(regKey , keyStr , NULL , REG_BINARY , (BYTE *)&val , sizeof(BOOL));
-		return val;
-	}
-	return tempVal;
-}
-// -----------------------------------------------------------------------------------------------
-
-bool CRegistry::getSetRegBool(char *keyStr, bool val)
+bool CRegistry::GetSetBool(char *keyStr, bool val)
 {
 bool tempVal;
 DWORD len=sizeof(bool);
 
-	if(RegQueryValueEx(regKey , keyStr , NULL , NULL, (BYTE *)&tempVal , &len )!=ERROR_SUCCESS)
+	if(RegQueryValueEx(regKey, keyStr, NULL, NULL, (BYTE *)&tempVal, &len )!=ERROR_SUCCESS)
 	{
-		RegSetValueEx(regKey , keyStr , NULL , REG_BINARY , (BYTE *)&val , sizeof(bool));
+		RegSetValueEx(regKey, keyStr, 0, REG_BINARY, (BYTE *)&val, sizeof(bool));
 		return val;
 	}
 	return tempVal;
 }
-// -----------------------------------------------------------------------------------------------
+//************************************************************************************************
 
-BYTE CRegistry::getSetRegByte(char *keyStr, BYTE val)
+BYTE CRegistry::GetSetByte(char *keyStr, BYTE val)
 {
 DWORD tempVal;
 DWORD len=sizeof(DWORD);
 
-	if(RegQueryValueEx(regKey , keyStr , NULL , NULL, (BYTE *)&tempVal , &len )!=ERROR_SUCCESS)
+	if(RegQueryValueEx(regKey, keyStr, NULL, NULL, (BYTE *)&tempVal, &len )!=ERROR_SUCCESS)
 	{
 		tempVal=val;
-		RegSetValueEx(regKey , keyStr , NULL , REG_DWORD , (BYTE *)&tempVal , sizeof(DWORD));
+		RegSetValueEx(regKey, keyStr, 0, REG_DWORD, (BYTE *)&tempVal, sizeof(DWORD));
 		return val;
 	}
 	return (BYTE)tempVal;
 }
-// -----------------------------------------------------------------------------------------------
+//************************************************************************************************
 
-WORD CRegistry::getSetRegWord(char *keyStr, WORD val)
+WORD CRegistry::GetSetWord(char *keyStr, WORD val)
 {
 DWORD tempVal;
 DWORD len=sizeof(DWORD);
 
-	if(RegQueryValueEx(regKey , keyStr , NULL , NULL, (BYTE *)&tempVal , &len )!=ERROR_SUCCESS)
+	if(RegQueryValueEx(regKey, keyStr, NULL, NULL, (BYTE *)&tempVal, &len )!=ERROR_SUCCESS)
 	{
 		tempVal=val;
-		RegSetValueEx(regKey , keyStr , NULL , REG_DWORD , (BYTE *)&tempVal , sizeof(DWORD));
+		RegSetValueEx(regKey, keyStr, 0, REG_DWORD, (BYTE *)&tempVal, sizeof(DWORD));
 		return val;
 	}
 	return (WORD)tempVal;
 }
-// -----------------------------------------------------------------------------------------------
+//************************************************************************************************
 
-DWORD CRegistry::getSetRegDword(char *keyStr, DWORD val)
+DWORD CRegistry::GetSetDword(char *keyStr, DWORD val)
 {
 DWORD tempVal;
 DWORD len=sizeof(DWORD);
 
-	if(RegQueryValueEx(regKey , keyStr , NULL , NULL, (BYTE *)&tempVal , &len )!=ERROR_SUCCESS)
+	if(RegQueryValueEx(regKey, keyStr, NULL, NULL, (BYTE *)&tempVal, &len )!=ERROR_SUCCESS)
 	{
-		RegSetValueEx(regKey , keyStr , NULL , REG_DWORD , (BYTE *)&val , sizeof(DWORD));
+		RegSetValueEx(regKey, keyStr, 0, REG_DWORD, (BYTE *)&val, sizeof(DWORD));
 		return val;
 	}
 	return (DWORD)tempVal;
 }
-// -----------------------------------------------------------------------------------------------
+//************************************************************************************************
 
-float CRegistry::getSetRegFloat(char *keyStr, float val)
+float CRegistry::GetSetFloat(char *keyStr, float val)
 {
 float tempVal;
 DWORD len=sizeof(float);
 
-	if(RegQueryValueEx(regKey , keyStr , NULL , NULL, (BYTE *)&tempVal , &len )!=ERROR_SUCCESS)
+	if(RegQueryValueEx(regKey, keyStr, NULL, NULL, (BYTE *)&tempVal, &len )!=ERROR_SUCCESS)
 	{
-		RegSetValueEx(regKey , keyStr , NULL , REG_BINARY , (BYTE *)&val , sizeof(float));
+		RegSetValueEx(regKey, keyStr, 0, REG_BINARY, (BYTE *)&val, sizeof(float));
 		return val;
 	}
 	return tempVal;
 }
-// -----------------------------------------------------------------------------------------------
+//************************************************************************************************
 
-int CRegistry::getSetRegStr(char *keyStr, char *tempString, char *dest, int maxLen)
+char *CRegistry::GetSetStr(char *keyStr, char *String)
 {
-DWORD tempLen=maxLen;
+long	retVal;
+DWORD	Len;
+char	*dest=NULL;
 	
-	if(RegQueryValueEx(regKey , keyStr , NULL , NULL, (BYTE *) dest , &tempLen )!=ERROR_SUCCESS)
+	if((retVal=RegQueryValueEx(regKey , keyStr , NULL , NULL, NULL, &Len))==ERROR_SUCCESS)
+		if(dest=(char *)malloc(Len+1))
+			retVal=RegQueryValueEx(regKey , keyStr , NULL , NULL, (BYTE *)dest , &Len);
+	if(retVal!=ERROR_SUCCESS)
 	{
-		if(!tempString)
-		{
-			*dest=0;
-			return 0;
-		}
-		strcpy(dest,tempString);
-		tempLen=strlen(tempString)+1;
-		RegSetValueEx(regKey , keyStr , NULL , REG_SZ , (BYTE *)tempString , tempLen);
+		if(dest)
+			free(dest);
+		if(!String)
+			return NULL;
+
+		Len=strlen(String)+1;
+		if(!(dest=strdup(String)))
+			return NULL;
+		RegSetValueEx(regKey , keyStr , NULL , REG_SZ , (BYTE *)dest , Len);
 	}
-	return tempLen;
+	return dest;
 }
 // -----------------------------------------------------------------------------------------------
 
-int CRegistry::getSetRegValN(char *keyStr, BYTE *tempAddr, BYTE *addr, DWORD size)
+int CRegistry::GetSetValN(char *keyStr, BYTE *defData, DWORD defSize, BYTE **dest)
 {
-DWORD tempLen=size;
+long	retVal;
+DWORD	size;
 
-	if(RegQueryValueEx(regKey , keyStr , NULL , NULL, (BYTE *)addr , &tempLen )!=ERROR_SUCCESS)
+	dest=NULL;
+	if((retVal=RegQueryValueEx(regKey , keyStr , NULL , NULL, NULL, &size))==ERROR_SUCCESS)
+		if(*dest=(BYTE *)malloc(size+1))
+			retVal=RegQueryValueEx(regKey , keyStr , NULL , NULL, (BYTE *)*dest , &size);
+	if(retVal!=ERROR_SUCCESS)
 	{
-		if(!tempAddr)
-		{
-			*addr=0;
+		if(dest)
+			free(dest);
+		if(!defData)
 			return 0;
-		}
-		memcpy(addr,tempAddr,size);
-		RegSetValueEx(regKey , keyStr , NULL , REG_BINARY , (BYTE *)addr , size);
+
+		size=defSize;
+		if(!(*dest=(BYTE *)malloc(size)))
+			return 0;
+		memcpy(*dest,defData,size);
+		RegSetValueEx(regKey , keyStr , NULL , REG_BINARY , (BYTE *)*dest , size);
 	}
-	return tempLen;
+	return size;
 }

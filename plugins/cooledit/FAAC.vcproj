@@ -16,15 +16,15 @@
 			IntermediateDirectory=".\Debug"
 			ConfigurationType="2"
 			UseOfMFC="0"
-			ATLMinimizesCRunTimeLibraryUsage="FALSE"
-			CharacterSet="2">
+			ATLMinimizesCRunTimeLibraryUsage="FALSE">
 			<Tool
 				Name="VCCLCompilerTool"
+				AdditionalOptions=""
 				Optimization="0"
-				AdditionalIncludeDirectories="../../../faad2/common/faad,../../include,../../../faad2/include,../../../faad2/common/mp4v2"
-				PreprocessorDefinitions="WIN32;NDEBUG;_WINDOWS;_USRDLL;FAAC_EXPORTS"
+				AdditionalIncludeDirectories="../../include,../../../faad2/include,../../../faad2/common/faad,../../../faad2/common/mp4v2,../../../faad2/common/id3lib/include"
+				PreprocessorDefinitions="WIN32;_DEBUG;_WINDOWS;WIN32_LEAN_AND_MEAN"
 				BasicRuntimeChecks="3"
-				RuntimeLibrary="5"
+				RuntimeLibrary="3"
 				UsePrecompiledHeader="2"
 				PrecompiledHeaderFile=".\Debug/FAAC.pch"
 				AssemblerListingLocation=".\Debug/"
@@ -40,9 +40,11 @@
 				Name="VCLinkerTool"
 				AdditionalOptions="/MACHINE:I386"
 				AdditionalDependencies="ws2_32.lib odbc32.lib odbccp32.lib"
-				OutputFile="Debug/FAAC.flt"
+				OutputFile="C:\Programmi\Adobe\Audition 1.0\FAAC.flt"
 				LinkIncremental="2"
 				SuppressStartupBanner="TRUE"
+				AdditionalLibraryDirectories="C:\Programmi\Intel\Compiler70\IA32\Lib"
+				IgnoreDefaultLibraryNames=""
 				ModuleDefinitionFile=".\FAAC.def"
 				GenerateDebugInformation="TRUE"
 				ProgramDatabaseFile=".\Debug/FAAC.pdb"
@@ -75,15 +77,15 @@
 			IntermediateDirectory=".\Release"
 			ConfigurationType="2"
 			UseOfMFC="0"
-			ATLMinimizesCRunTimeLibraryUsage="FALSE"
-			CharacterSet="2">
+			ATLMinimizesCRunTimeLibraryUsage="FALSE">
 			<Tool
 				Name="VCCLCompilerTool"
+				AdditionalOptions=""
 				InlineFunctionExpansion="1"
 				AdditionalIncludeDirectories="../../../faad2/common/faad,../../include,../../../faad2/include,../../../faad2/common/mp4v2"
-				PreprocessorDefinitions="WIN32;NDEBUG;_WINDOWS;_USRDLL;FAAC_EXPORTS"
+				PreprocessorDefinitions="WIN32;NDEBUG;_WINDOWS;WIN32_LEAN_AND_MEAN"
 				StringPooling="TRUE"
-				RuntimeLibrary="0"
+				RuntimeLibrary="2"
 				EnableFunctionLevelLinking="TRUE"
 				UsePrecompiledHeader="2"
 				PrecompiledHeaderFile=".\Release/FAAC.pch"
@@ -136,6 +138,12 @@
 				RelativePath=".\CRegistry.cpp">
 			</File>
 			<File
+				RelativePath=".\Cfaac.cpp">
+			</File>
+			<File
+				RelativePath=".\Cfaad.cpp">
+			</File>
+			<File
 				RelativePath=".\FAAC.def">
 			</File>
 			<File
@@ -158,13 +166,16 @@
 				RelativePath=".\CRegistry.h">
 			</File>
 			<File
+				RelativePath=".\Cfaac.h">
+			</File>
+			<File
+				RelativePath=".\Cfaad.h">
+			</File>
+			<File
 				RelativePath=".\Defines.h">
 			</File>
 			<File
 				RelativePath=".\Filters.h">
-			</File>
-			<File
-				RelativePath=".\Structs.h">
 			</File>
 			<File
 				RelativePath="..\..\include\faac.h">
@@ -187,6 +198,9 @@
 			</File>
 			<File
 				RelativePath=".\Mail.bmp">
+			</File>
+			<File
+				RelativePath="Open.bmp">
 			</File>
 			<File
 				RelativePath=".\mpeg4ip-v.bmp">

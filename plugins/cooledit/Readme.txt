@@ -14,8 +14,8 @@ but WITHOUT ANY WARRANTY.
 
 FAAC is a codec plugin for Cooledit/Audition to import and export .aac/.mp4 files.
 
-To compile it:
---------------
+To use it:
+----------
 
 1) put FAAC and FAAD2 packages into the same folder;
 2) open the project, set "Active Configuration = FAAC - win32 Release" and compile;
@@ -24,7 +24,8 @@ To compile it:
 To write .mp4 files:
 --------------------
 
-Append .mp4 extension to the name of file in the "Save waveform as" dialog.
+Check "Write .mp4" in the config dialog or
+append .mp4 extension to the name of file in the "Save waveform as" dialog.
 
 ----------------------------------------------------------------------------
 

@@ -20,6 +20,7 @@ ntnfrn_email-temp@yahoo.it
 */
 
 #include <windows.h>
+#include "resource.h"
 #include "filters.h"	//CoolEdit
 //#include "faac.h"
 #include "Defines.h"	// my defines
@@ -27,13 +28,17 @@ ntnfrn_email-temp@yahoo.it
 // Plugins of CoolEdit can be unloaded between each call of its exported funcs,
 // that's why no global variables can be used
 
-HINSTANCE hInst;
+HINSTANCE hInst=NULL;
+HBITMAP hBmBrowse=NULL;
+
 BOOL WINAPI DllMain (HANDLE hModule, DWORD fdwReason, LPVOID lpReserved)
 {
 	switch (fdwReason)
 	{
 	case DLL_PROCESS_ATTACH:
 		hInst=(HINSTANCE)hModule;
+		if(!hBmBrowse)
+			hBmBrowse=(HBITMAP)LoadImage(hInst,MAKEINTRESOURCE(IDB_BROWSE),IMAGE_BITMAP,0,0,/*LR_CREATEDIBSECTION|*/LR_LOADTRANSPARENT|LR_LOADMAP3DCOLORS);
         /*	Code from LibMain inserted here.  Return TRUE to keep the
 			DLL loaded or return FALSE to fail loading the DLL.
 
@@ -75,6 +80,12 @@ BOOL WINAPI DllMain (HANDLE hModule, DWORD fdwReason, LPVOID lpReserved)
 			LibMain) not be necessary.  Check to make certain that the
 			operating system is not doing it for you.
 			*/
+		hInst=NULL;
+		if(hBmBrowse)
+		{
+            DeleteObject(hBmBrowse);
+            hBmBrowse=NULL;
+		}
 		break;
 	}
  

@@ -1,5 +1,5 @@
 /*
-FAAC - codec plugin for Cooledit
+CRegistry class
 Copyright (C) 2002-2004 Antonio Foranna
 
 This program is free software; you can redistribute it and/or modify
@@ -19,8 +19,15 @@ The author can be contacted at:
 ntnfrn_email-temp@yahoo.it
 */
 
-#ifndef registry_h
-#define registry_h
+//---------------------------------------------------------------------------
+#ifndef CRegistryH
+#define CRegistryH
+//---------------------------------------------------------------------------
+
+#include <windows.h>
+#include <stdlib.h>
+#include <string.h>
+//#include <memory.h>
 
 class CRegistry 
 {
@@ -28,31 +35,30 @@ public:
 			CRegistry();
 			~CRegistry();
 
-	BOOL	openReg(HKEY hKey, char *SubKey);
-	BOOL	openCreateReg(HKEY hKey, char *SubKey);
-	void	closeReg();
-	void	DeleteRegVal(char *SubKey);
-	void	DeleteRegKey(char *SubKey);
+	BOOL	Open(HKEY hKey, char *SubKey);
+	BOOL	OpenCreate(HKEY hKey, char *SubKey);
+	void	Close();
+	void	DeleteVal(char *SubKey);
+	void	DeleteKey(char *SubKey);
 
-	void	setRegBool(char *keyStr , BOOL val);
-	void	setRegBool(char *keyStr , bool val);
-	void	setRegByte(char *keyStr , BYTE val);
-	void	setRegWord(char *keyStr , WORD val);
-	void	setRegDword(char *keyStr , DWORD val);
-	void	setRegFloat(char *keyStr , float val);
-	void	setRegStr(char *keyStr , char *valStr);
-	void	setRegValN(char *keyStr , BYTE *addr,  DWORD size);
+	void	SetBool(char *keyStr , BOOL val);
+	void	SetByte(char *keyStr , BYTE val);
+	void	SetWord(char *keyStr , WORD val);
+	void	SetDword(char *keyStr , DWORD val);
+	void	SetFloat(char *keyStr , float val);
+	void	SetStr(char *keyStr , char *valStr);
+	void	SetValN(char *keyStr , BYTE *addr,  DWORD size);
 
-	BOOL	getSetRegBool(char *keyStr, BOOL var);
-	bool	getSetRegBool(char *keyStr, bool var);
-	BYTE	getSetRegByte(char *keyStr, BYTE var);
-	WORD	getSetRegWord(char *keyStr, WORD var);
-	DWORD	getSetRegDword(char *keyStr, DWORD var);
-	float	getSetRegFloat(char *keyStr, float var);
-	int		getSetRegStr(char *keyStr, char *tempString, char *dest, int maxLen);
-	int		getSetRegValN(char *keyStr, BYTE *tempAddr, BYTE *addr, DWORD size);
+	bool	GetSetBool(char *keyStr, bool var);
+	BYTE	GetSetByte(char *keyStr, BYTE var);
+	WORD	GetSetWord(char *keyStr, WORD var);
+	DWORD	GetSetDword(char *keyStr, DWORD var);
+	float	GetSetFloat(char *keyStr, float var);
+	char	*GetSetStr(char *keyStr, char *String);
+	int		GetSetValN(char *keyStr, BYTE *defData, DWORD defSize, BYTE **dest);
 
 	HKEY	regKey;
 	char	*path;
 };
+
 #endif

@@ -314,16 +314,16 @@ void Cfaad::ReadCfgDec(MY_DEC_CFG *cfg)
 { 
 CRegistry reg;
 
-	if(reg.openCreateReg(HKEY_LOCAL_MACHINE,REGISTRY_PROGRAM_NAME  "\\FAAD"))
+if(reg.OpenCreate(HKEY_LOCAL_MACHINE, REGISTRY_PROGRAM_NAME "\\FAAD"))
 	{
-		cfg->DefaultCfg=reg.getSetRegBool("Default",true);
-		cfg->DecCfg.defObjectType=reg.getSetRegByte("Profile",LC);
-		cfg->DecCfg.defSampleRate=reg.getSetRegDword("SampleRate",44100);
-		cfg->DecCfg.outputFormat=reg.getSetRegByte("Bps",FAAD_FMT_16BIT);
-		cfg->DecCfg.downMatrix=reg.getSetRegByte("Downmatrix",0);
-		cfg->DecCfg.useOldADTSFormat=reg.getSetRegByte("Old ADTS",0);
-		cfg->DecCfg.dontUpSampleImplicitSBR=reg.getSetRegByte("Don\'t upsample implicit SBR",1);
-//		cfg->Channels=reg.getSetRegByte("Channels",2);
+		cfg->DefaultCfg=reg.GetSetBool("Default",true);
+		cfg->DecCfg.defObjectType=reg.GetSetByte("Profile",LC);
+		cfg->DecCfg.defSampleRate=reg.GetSetDword("SampleRate",44100);
+		cfg->DecCfg.outputFormat=reg.GetSetByte("Bps",FAAD_FMT_16BIT);
+		cfg->DecCfg.downMatrix=reg.GetSetByte("Downmatrix",0);
+		cfg->DecCfg.useOldADTSFormat=reg.GetSetByte("Old ADTS",0);
+		cfg->DecCfg.dontUpSampleImplicitSBR=reg.GetSetByte("Don\'t upsample implicit SBR",1);
+//		cfg->Channels=reg.GetSetByte("Channels",2);
 	}
 	else
 		MessageBox(0,"Can't open registry!",0,MB_OK|MB_ICONSTOP);
@@ -334,16 +334,16 @@ void Cfaad::WriteCfgDec(MY_DEC_CFG *cfg)
 { 
 CRegistry reg;
 
-	if(reg.openCreateReg(HKEY_LOCAL_MACHINE,REGISTRY_PROGRAM_NAME  "\\FAAD"))
+	if(reg.OpenCreate(HKEY_LOCAL_MACHINE, REGISTRY_PROGRAM_NAME "\\FAAD"))
 	{
-		reg.setRegBool("Default",cfg->DefaultCfg);
-		reg.setRegByte("Profile",cfg->DecCfg.defObjectType);
-		reg.setRegDword("SampleRate",cfg->DecCfg.defSampleRate);
-		reg.setRegByte("Bps",cfg->DecCfg.outputFormat);
-		reg.setRegByte("Downmatrix",cfg->DecCfg.downMatrix);
-		reg.setRegByte("Old ADTS",cfg->DecCfg.useOldADTSFormat);
-		reg.setRegByte("Don\'t upsample implicit SBR",cfg->DecCfg.dontUpSampleImplicitSBR);
-//		reg.setRegByte("Channels",cfg->Channels);
+		reg.SetBool("Default",cfg->DefaultCfg);
+		reg.SetByte("Profile",cfg->DecCfg.defObjectType);
+		reg.SetDword("SampleRate",cfg->DecCfg.defSampleRate);
+		reg.SetByte("Bps",cfg->DecCfg.outputFormat);
+		reg.SetByte("Downmatrix",cfg->DecCfg.downMatrix);
+		reg.SetByte("Old ADTS",cfg->DecCfg.useOldADTSFormat);
+		reg.SetByte("Don\'t upsample implicit SBR",cfg->DecCfg.dontUpSampleImplicitSBR);
+//		reg.SetByte("Channels",cfg->Channels);
 	}
 	else
 		MessageBox(0,"Can't open registry!",0,MB_OK|MB_ICONSTOP);

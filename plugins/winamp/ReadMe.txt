@@ -12,13 +12,14 @@ but WITHOUT ANY WARRANTY.
 
 ----------------------------------------------------------------------------
 
-out_AAC is an encoder plugin for Winamp 2 and 5.
+out_AAC is an encoder plugin for Winamp 2 and 5 to export .aac/.mp4 files.
 
 To use it:
 ----------
 
-In visual studio set "Active Configuration = out_FAAC - win32 Release" and compile then
-copy out_AAC.dll into Winamp\plugins folder.
+1) put FAAC and FAAD2 packages into the same folder;
+2) open the project, set "Active Configuration = FAAC - win32 Release" and compile;
+3) copy out_AAC.dll into Winamp\plugins folder.
 
 ----------------------------------------------------------------------------
 
