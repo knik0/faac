@@ -16,7 +16,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: main.c,v 1.34 2003/05/10 09:40:35 knik Exp $
+ * $Id: main.c,v 1.35 2003/06/21 08:59:31 knik Exp $
  */
 
 #ifdef HAVE_CONFIG_H
@@ -98,8 +98,11 @@ int main(int argc, char *argv[])
 
     unsigned char *bitbuf;
     int bytesInput = 0;
-    int rawInput = 0;
     int dieUsage = 0;
+
+    int rawChans = 0; // disabled by default
+    int rawBits = 16;
+    int rawRate = 44100;
 
     FILE *outfile;
 
@@ -217,57 +220,33 @@ int main(int argc, char *argv[])
             break;
         }
    case 'P':
-     {
-       rawInput = 1;
-       infile = malloc(sizeof(*infile));
-       if (infile == NULL) {
-              fprintf(stderr, "%s: unable to allocate memory\n", progName);
-         return 1;
-       }
-       infile->f = NULL;
-       infile->channels = 2;
-       infile->samplerate = 44100;
-       infile->samplebits = 16;
-       infile->samples = 0;
+	  rawChans = 2; // enable raw input
        break;
-       }
    case 'R':
      {
        unsigned int i;
-       if (rawInput != 1) {
-         fprintf(stderr, "%s: for raw pcm input -P needs to be specified first\n",
-         progName);
-         dieUsage = 1;
-         break;
-      }
        if (sscanf(optarg, "%u", &i) > 0)
-         infile->samplerate = i;
+	    {
+	      rawRate = i;
+	      rawChans = (rawChans > 0) ? rawChans : 2;
+	    }
        break;
        }
    case 'B':
      {
        unsigned int i;
-       if (rawInput != 1) {
-         fprintf(stderr, "%s: for raw pcm input -P needs to be specified first\n",
-         progName);
-         dieUsage = 1;
-         break;
-       }
        if (sscanf(optarg, "%u", &i) > 0)
-         infile->samplebits = i;
+	    {
+	      rawBits = i;
+	      rawChans = (rawChans > 0) ? rawChans : 2;
+	    }
        break;
        }
    case 'C':
      {
        unsigned int i;
-       if (rawInput != 1) {
-         fprintf(stderr, "%s: for raw pcm input -P needs to be specified first\n",
-         progName);
-         dieUsage = 1;
-         break;
-       }
        if (sscanf(optarg, "%u", &i) > 0)
-         infile->channels = i;
+	      rawChans = i;
        break;
        }
         case '?':
@@ -305,29 +284,11 @@ int main(int argc, char *argv[])
     aacFileName = argv[optind++];
 
     /* open the audio input file */
-    if (rawInput == 1) {
-      if (!strcmp(audioFileName, "-")) {
-#ifdef WIN32
-   setmode(fileno(stdin), O_BINARY);
-#endif
-   infile->f = stdin;
-   infile->samples = 0;
-      }
-      else {
-   if (!(infile->f = fopen(audioFileName, "rb")))
-        {
-          fprintf(stderr, "Couldn't open input file %s\n", audioFileName);
-     perror("Reason");
-     return 1;
-        }
-   fseek(infile->f, 0 , SEEK_END);
-   infile->samples = ftell(infile->f) /
-     (((infile->samplebits > 8) ? 2 : 1) * infile->channels);
-   rewind(infile->f);
-      }
-    } else {
-      infile = wav_open_read(audioFileName);
-    }
+    if (rawChans > 0) // use raw input
+      infile = wav_open_read(audioFileName, rawChans, rawBits, rawRate);
+    else // header input
+      infile = wav_open_read(audioFileName, 0, 0, 0);
+
     if (infile == NULL)
     {
         fprintf(stderr, "Couldn't open input file %s\n", audioFileName);
@@ -513,6 +474,9 @@ int main(int argc, char *argv[])
 
 /*
 $Log: main.c,v $
+Revision 1.35  2003/06/21 08:59:31  knik
+raw input support moved to input.c
+
 Revision 1.34  2003/05/10 09:40:35  knik
 added approximate ABR option
 
