@@ -52,9 +52,9 @@ Copyright (c) 1997.
 
 Source file:
 
-$Id: psych.c,v 1.49 2000/02/24 02:39:31 thebard Exp $
-$Id: psych.c,v 1.49 2000/02/24 02:39:31 thebard Exp $
-$Id: psych.c,v 1.49 2000/02/24 02:39:31 thebard Exp $
+$Id: psych.c,v 1.50 2000/02/24 02:42:15 thebard Exp $
+$Id: psych.c,v 1.50 2000/02/24 02:42:15 thebard Exp $
+$Id: psych.c,v 1.50 2000/02/24 02:42:15 thebard Exp $
 
 **********************************************************************/
 
@@ -62,12 +62,10 @@ $Id: psych.c,v 1.49 2000/02/24 02:39:31 thebard Exp $
 #include <stdlib.h>
 #include <math.h>
 #include <memory.h>
-#include <pthread.h>
 #include "tf_main.h"
 #include "psych.h"
 #include "transfo.h"
 #include "all.h"
-#include "semaphore.h"
 
 double sqrt2048, sqrt256;
 
