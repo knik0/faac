@@ -15,10 +15,18 @@ SetDateSave on
 InstallDir $PROGRAMFILES\FAAC
 InstallDirRegKey HKEY_LOCAL_MACHINE SOFTWARE\FAAC ""
 
-Section "FAAC GUI executable"
+Section "FAAC GUI Executable"
 SectionIn 1
 SetOutPath $INSTDIR
 File wingui\Release\faac_wingui.exe
+
+Section "FAAC GUI Shell Extensions"
+SectionIn 1
+WriteRegStr HKEY_CLASSES_ROOT ".jbl" "" "FAAC.JoblistFile"
+WriteRegStr HKEY_CLASSES_ROOT "FAAC.JoblistFile" "" "FAAC JoblistFile"
+WriteRegStr HKEY_CLASSES_ROOT "FAAC.JoblistFile\shell" "" "open"
+WriteRegStr HKEY_CLASSES_ROOT "FAAC.JoblistFile\DefaultIcon" "" $INSTDIR\faac_wingui.exe,0
+WriteRegStr HKEY_CLASSES_ROOT "FAAC.JoblistFile\shell\open\command" "" '$INSTDIR\faac_wingui.exe "%1"'
 
 Section -post
 WriteRegStr HKEY_LOCAL_MACHINE SOFTWARE\FAAC "" $INSTDIR
