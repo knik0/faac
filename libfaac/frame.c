@@ -16,7 +16,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: frame.c,v 1.66 2004/11/04 12:51:09 aforanna Exp $
+ * $Id: frame.c,v 1.67 2004/11/17 14:26:06 menno Exp $
  */
 
 /*
@@ -749,6 +749,11 @@ int FAACAPI faacEncEncode(faacEncHandle hEncoder,
 
     MSEncode(coderInfo, channelInfo, hEncoder->freqBuff, numChannels, allowMidside);
 
+    for (channel = 0; channel < numChannels; channel++)
+    {
+        CalcAvgEnrg(&coderInfo[channel], hEncoder->freqBuff[channel]);
+    }
+
 #ifdef DRM
     /* loop the quantization until the desired bit-rate is reached */
     diff = 1; /* to enter while loop */
@@ -1111,6 +1116,10 @@ static SR_INFO srInfo[12+1] =
 
 /*
 $Log: frame.c,v $
+Revision 1.67  2004/11/17 14:26:06  menno
+Infinite loop fix
+dunno if this is good, encoder might be tuned to use energies from before MS encoding. But since the MS encoded samples are used in quantisation this might actually be better. Please test.
+
 Revision 1.66  2004/11/04 12:51:09  aforanna
 version number updated to 1.24.1 due to changes in Winamp and CoolEdit plugins
 
