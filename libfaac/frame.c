@@ -16,7 +16,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: frame.c,v 1.32 2003/03/27 17:08:23 knik Exp $
+ * $Id: frame.c,v 1.33 2003/04/13 08:37:23 knik Exp $
  */
 
 /*
@@ -46,8 +46,9 @@
 #include "tns.h"
 #include "ltp.h"
 #include "backpred.h"
+#include "version.h"
 
-static char *libfaacName = "1.15 beta (" __DATE__ ")";
+static char *libfaacName = FAAC_VERSION " (" __DATE__ ")";
 
 static const psymodellist_t psymodellist[] = {
   {&psymodel2, "knipsycho psychoacoustic"},
@@ -688,6 +689,9 @@ static SR_INFO srInfo[12+1] =
 
 /*
 $Log: frame.c,v $
+Revision 1.33  2003/04/13 08:37:23  knik
+version number moved to version.h
+
 Revision 1.32  2003/03/27 17:08:23  knik
 added quantizer quality and bandwidth setting
 
