@@ -129,6 +129,18 @@ SOURCE=.\aacinfo.h
 # End Source File
 # Begin Source File
 
+SOURCE="E:\Program Files\Microsoft Visual Studio\VC98\Include\BASETSD.H"
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\include\faac.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\..\faad\include\faad.h
+# End Source File
+# Begin Source File
+
 SOURCE=.\filters.h
 # End Source File
 # Begin Source File
