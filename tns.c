@@ -138,7 +138,7 @@ int TnsEncode(int numberOfBands,       /* Number of bands per window */
 #if 1
 	if (use_tns)
 	/* Doesn't work well on short windows. */
-	if (blockType == ONLY_LONG_WINDOW)
+//	if (blockType == ONLY_LONG_WINDOW)
 	/* Perform analysis and filtering for each window */
 	for (w=0;w<numberOfWindows;w++) {
 

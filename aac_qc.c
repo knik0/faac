@@ -502,6 +502,7 @@ int tf_encode_spectrum_aac(
 	int output_book_vector[SFB_NUM_MAX*2];
 	double SigMaskRatio[SFB_NUM_MAX];
 	IS_Info *is_info;
+	MS_Info *ms_info;
 	int *ptr_book_vector;
 
 	/* Set up local pointers to quantInfo elements for convenience */
@@ -617,10 +618,11 @@ int tf_encode_spectrum_aac(
 	}
 
 	/* PNS prepare */
+	ms_info=&(ch_info->ms_info);
     for(sb=0; sb < quantInfo->nr_of_sfb; sb++ )
 		quantInfo->pns_sfb_flag[sb] = 0;
 
-	if (block_type[MONO_CHAN] != ONLY_SHORT_WINDOW) {     /* long blocks only */
+//	if (block_type[MONO_CHAN] != ONLY_SHORT_WINDOW) {     /* long blocks only */
 		for(sb = pns_sfb_start; sb < quantInfo->nr_of_sfb; sb++ ) {
 			/* Calc. pseudo scalefactor */
 			if (energy[0][sb] == 0.0) {
@@ -628,23 +630,25 @@ int tf_encode_spectrum_aac(
 				continue;
 			}
 
-			if (!((is_info->is_present)&&(is_info->is_used[k]))) {
-				if ((10*log10(energy[MONO_CHAN][sb]+1e-60)<50)||(SigMaskRatio[sb] > 1.0)) {
-					quantInfo->pns_sfb_flag[sb] = 1;
-					quantInfo->pns_sfb_nrg[sb] = (int) (2.0 * log(energy[0][sb]*sfb_width_table[0][sb]+1e-60) / log(2.0) + 0.5) + PNS_SF_OFFSET;
-					
-					/* Erase spectral lines */
-					for( i=sfb_offset[sb]; i<sfb_offset[sb+1]; i++ ) {
-						p_spectrum[0][i] = 0.0;
+			if ((is_info->is_present)&&(!is_info->is_used[sb])) {
+				if ((ms_info->is_present)&&(!ms_info->ms_used[sb])) {
+					if ((10*log10(energy[MONO_CHAN][sb]+1e-60)<50)||(SigMaskRatio[sb] > 1.0)) {
+						quantInfo->pns_sfb_flag[sb] = 1;
+						quantInfo->pns_sfb_nrg[sb] = (int) (2.0 * log(energy[0][sb]*sfb_width_table[0][sb]+1e-60) / log(2.0) + 0.5) + PNS_SF_OFFSET;
+						
+						/* Erase spectral lines */
+						for( i=sfb_offset[sb]; i<sfb_offset[sb+1]; i++ ) {
+							p_spectrum[0][i] = 0.0;
+						}
 					}
 				}
 			}
 		}
-	}
+//	}
 
 	/* Compute allowed distortion */
 	for(sb = 0; sb < quantInfo->nr_of_sfb; sb++) {
-		allowed_dist[MONO_CHAN][sb] = energy[MONO_CHAN][sb] * SigMaskRatio[sb] * 2;
+		allowed_dist[MONO_CHAN][sb] = energy[MONO_CHAN][sb] * SigMaskRatio[sb];
 //		if (allowed_dist[MONO_CHAN][sb] < ATH[sb]) {
 //			printf("%d Yes\n", sb);
 //			allowed_dist[MONO_CHAN][sb] = ATH[sb];
