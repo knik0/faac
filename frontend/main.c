@@ -16,7 +16,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: main.c,v 1.31 2002/12/23 19:02:43 knik Exp $
+ * $Id: main.c,v 1.32 2003/03/27 17:11:06 knik Exp $
  */
 
 #ifdef HAVE_CONFIG_H
@@ -85,13 +85,11 @@ int main(int argc, char *argv[])
     unsigned int mpegVersion = MPEG2;
     unsigned int objectType = LOW;
     unsigned int useMidSide = 1;
-    unsigned int useTns = 0;
+    static unsigned int useTns = 1;
     unsigned int useAdts = 1;
     int cutOff = -1;
-    unsigned long bitRate = 0;
+    unsigned long quantqual = 0;
     int psymodelidx = -1;
-    const double bwbrfac = 1.3;
-    const int bwdefault = 16000;
 
     char *audioFileName;
     char *aacFileName;
@@ -105,7 +103,21 @@ int main(int argc, char *argv[])
 
     FILE *outfile;
 
-    fprintf(stderr, "FAAC version " FAACENC_VERSION " (" __DATE__ ")\n");
+    fprintf(stderr, "FAAC - Freeware Advanced Audio Coder\n");
+    // get faac version
+    hEncoder = faacEncOpen(44100, 2, &samplesInput, &maxBytesOutput);
+    myFormat = faacEncGetCurrentConfiguration(hEncoder);
+    if (myFormat->version == FAAC_CFG_VERSION)
+    {
+      fprintf(stderr, "libfaac version %s\n", myFormat->name);
+      faacEncClose(hEncoder);
+    }
+    else
+    {
+      fprintf(stderr, __FILE__ "(%d): wrong libfaac version\n", __LINE__);
+      faacEncClose(hEncoder);
+      return 1;
+    }
 
     /* begin process command line */
     progName = argv[0];
@@ -117,21 +129,25 @@ int main(int argc, char *argv[])
             { "objecttype", 0, 0, 'o' },
             { "raw", 0, 0, 'r' },
             { "nomidside", 0, 0, 'n' },
-            { "usetns", 0, 0, 't' },
+            { "notns", 0, &useTns, 0 },
             { "cutoff", 1, 0, 'c' },
-            { "bitrate", 1, 0, 'b' },
+            { "quality", 1, 0, 'q' },
             { "acousticmodel", 1, 0, 'p'},
             { "pcmraw", 0, 0, 'P'},
             { "pcmsamplerate", 1, 0, 'R'},
             { "pcmsamplebits", 1, 0, 'B'},
-            { "pcmchannels", 1, 0, 'C'}
+            { "pcmchannels", 1, 0, 'C'},
+            { 0, 0, 0, 0}
         };
 
-    c = getopt_long(argc, argv, "m:o:rntc:b:p:PR:B:C:",
+    c = getopt_long(argc, argv, "m:o:rnc:q:p:PR:B:C:",
             long_options, &option_index);
 
         if (c == -1)
             break;
+
+	if (!c)
+	  continue;
 
         switch (c) {
         case 'm': {
@@ -176,10 +192,6 @@ int main(int argc, char *argv[])
             useMidSide = 0;
             break;
         }
-        case 't': {
-            useTns = 1;
-            break;
-        }
         case 'c': {
             unsigned int i;
         if (sscanf(optarg, "%u", &i) > 0) {
@@ -187,13 +199,13 @@ int main(int argc, char *argv[])
             }
             break;
         }
-    case 'b':
+    case 'q':
       {
             unsigned int i;
         if (sscanf(optarg, "%u", &i) > 0)
         {
           if (i > 0 && i < 1000)
-        bitRate = i * 1000;
+	    quantqual = i;
             }
             break;
         }
@@ -287,15 +299,15 @@ int main(int argc, char *argv[])
     }
         fprintf(stderr, "  -n     Don\'t use mid/side coding.\n");
         fprintf(stderr, "  -r     RAW AAC output file.\n");
-        fprintf(stderr, "  -t     Use TNS coding.\n");
+        fprintf(stderr, "  --notns\tDisable TNS coding.\n");
         fprintf(stderr,
-            "  -c X   Set the bandwidth, X in Hz. (default=automatic)\n");
-        fprintf(stderr, "  -b X   Set the bitrate per channel, X in kbps."
-            " (default is auto)\n");
+"  -c <bandwidth>\tSet the bandwidth in Hz. (default=automatic)\n");
+        fprintf(stderr, "  -q <quality>\tSet quantizer quality.\n");
         fprintf(stderr, "  -P     Raw PCM input mode (default 44100Hz 16bit stereo).\n");
         fprintf(stderr, "  -R     Raw PCM input rate.\n");
         fprintf(stderr, "  -B     Raw PCM input sample size (16 default or 8bits).\n");
-        fprintf(stderr, "  -C     Raw PCM input channels.\n\n");
+        fprintf(stderr, "  -C     Raw PCM input channels.\n");
+	fprintf(stderr, "\n Note: output bitrate depends on -c and -q.\n");
 
         faacEncClose(hEncoder);
 
@@ -354,28 +366,15 @@ int main(int argc, char *argv[])
     pcmbuf = (short*)malloc(samplesInput*sizeof(short));
     bitbuf = (unsigned char*)malloc(maxBytesOutput*sizeof(unsigned char));
 
-    if (!bitRate)
-    {
-      bitRate = pow((double)(sr / 2) / bwdefault, 1.0 / bwbrfac) * 64000;
-      bitRate = ((bitRate + 500) / 500) * 500;
-      if (bitRate > 64000)
-    bitRate = 64000;
-    }
     if (cutOff <= 0)
     {
       if (cutOff < 0) // default
-    cutOff = pow((double)bitRate / 64000, bwbrfac) * bwdefault;
+	cutOff = 0;
       else // disabled
     cutOff = sr / 2;
     }
     if (cutOff > (sr / 2))
       cutOff = sr / 2;
-    fprintf(stderr, "Bit rate: %ld bps per channel\n", bitRate);
-    fprintf(stderr, "Cutoff frequency is ");
-    if (cutOff == sr / 2)
-      fprintf(stderr, "disabled\n");
-    else
-      fprintf(stderr, "%d Hz\n", cutOff);
 
     /* put the options in the configuration struct */
     myFormat = faacEncGetCurrentConfiguration(hEncoder);
@@ -383,8 +382,10 @@ int main(int argc, char *argv[])
     myFormat->mpegVersion = mpegVersion;
     myFormat->useTns = useTns;
     myFormat->allowMidside = useMidSide;
-    myFormat->bitRate = bitRate;
+    //myFormat->bitRate = bitRate;
     myFormat->bandWidth = cutOff;
+    if (quantqual > 0)
+      myFormat->quantqual = quantqual;
     myFormat->outputFormat = useAdts;
     if (psymodelidx >= 0)
       myFormat->psymodelidx = psymodelidx;
@@ -392,6 +393,15 @@ int main(int argc, char *argv[])
         fprintf(stderr, "Unsupported output format!\n");
         return 1;
     }
+
+    cutOff = myFormat->bandWidth;
+    quantqual = myFormat->quantqual;
+    fprintf(stderr, "Quantization quality: %ld\n", quantqual);
+    fprintf(stderr, "Bandwidth: %d Hz\n", cutOff);
+    if (myFormat->useTns | myFormat->allowMidside)
+      fprintf(stderr, "Using:%s%s\n",
+	      myFormat->useTns ? " TNS" : "",
+	      myFormat->allowMidside ? " M/S" : "");
 
     if (outfile)
     {
@@ -515,6 +525,11 @@ int main(int argc, char *argv[])
 
 /*
 $Log: main.c,v $
+Revision 1.32  2003/03/27 17:11:06  knik
+updated library interface
+-b bitrate option replaced with -q quality option
+TNS enabled by default
+
 Revision 1.31  2002/12/23 19:02:43  knik
 added some headers
 
