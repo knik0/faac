@@ -73,40 +73,6 @@ void tf_init_encode_spectrum_aac( int quality )
 	}
 }
 
-#if 0
-int quantize(AACQuantInfo *quantInfo,
-			 double *p_spectrum,
-			 double *pow_spectrum,
-			 int quant[NUM_COEFF]
-			 )
-{
-	int i, sb;
-	double quantFac;
-
-	for (sb = 0; sb < quantInfo->nr_of_sfb; sb++) {
-
-		quantFac = pow(2.0, 0.1875*(quantInfo->scale_factor[sb] -
-			quantInfo->common_scalefac ));
-
-		for (i = quantInfo->sfb_offset[sb]; i < quantInfo->sfb_offset[sb+1]; i++){
-			quant[i] = (int)(pow_spectrum[i] * quantFac + MAGIC_NUMBER);
-
-			if (quant[i] > MAX_QUANT) {
-				return 1;
-			}
-			quant[i] = sgn(p_spectrum[i]) * quant[i];  /* restore the original sign */
-		}
-	}
-
-	if (quantInfo->block_type==ONLY_SHORT_WINDOW)
-		quantInfo->pulseInfo.pulse_data_present = 0;
-	else
-		PulseCoder(quantInfo, quant);
-
-	return 0;
-}
-#else
-
 int quantize(AACQuantInfo *quantInfo,
 			 double *p_spectrum,
 			 double *pow_spectrum,
@@ -139,7 +105,6 @@ int quantize(AACQuantInfo *quantInfo,
 
 	return 0;
 }
-#endif
 
 int calc_noise(AACQuantInfo *quantInfo,
 				double *p_spectrum,
@@ -337,7 +302,6 @@ int tf_encode_spectrum_aac(
 	int store_common_scalefac;
 	int best_scale_factor[SFB_NUM_MAX];
 	double pow_spectrum[NUM_COEFF];
-	int sfb_amplify_check[SFB_NUM_MAX];
 	double requant[NUM_COEFF];
 	int sb;
 	int extra_bits;
@@ -465,22 +429,21 @@ int tf_encode_spectrum_aac(
 		}
 	}
 
-//	if (old_startsf < 40) {
+	if (old_startsf < 40) {
 		if (max_dct_line!=0.0) {
-			start_com_sf = (int)(16/3 * (log(ABS(pow(max_dct_line,0.75)/MAX_QUANT)/log(2.0))));
+			start_com_sf = 30 + (int)(16/3 * (log(ABS(pow(max_dct_line,0.75)/MAX_QUANT)/log(2.0))));
 		} else {
 			start_com_sf = 40;
 		}
-//	} else {
-//		start_com_sf = old_startsf;
-//	}
+	} else {
+		start_com_sf = old_startsf;
+	}
 	if ((start_com_sf>200) || (start_com_sf<40) )
 		start_com_sf = 40;
 
 	/* initialize the scale_factors that aren't intensity stereo bands */
 	is_info=&(ch_info->is_info);
 	for(k=0; k< quantInfo -> nr_of_sfb ;k++) {
-		sfb_amplify_check[k] = 0;
 		scale_factor[k]=((is_info->is_present)&&(is_info->is_used[k])) ? scale_factor[k] : 0;
 	}
 
