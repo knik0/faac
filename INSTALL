@@ -1,8 +1,8 @@
 ___________________________________
 General FAAC compiling instructions
 
-1. Make sure you have autoconf, automake and libtool installed.
-   For MP4 support, you must have libmp4v2 (included in faad2) installed.
+1. Make sure you have recent versions of autoconf, automake and libtool installed.
+   For MP4 writing and tagging support, you must enable compiling with internal libmp4v2 (included in /common/mp4v2/).
 2. cd to FAAC source dir
 3. Run:
 	./bootstrap
