@@ -16,7 +16,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: frame.c,v 1.57 2004/03/15 20:16:42 knik Exp $
+ * $Id: frame.c,v 1.58 2004/03/17 13:34:20 danchr Exp $
  */
 
 /*
@@ -61,9 +61,13 @@ static const psymodellist_t psymodellist[] = {
 };
 
 static SR_INFO srInfo[12+1];
-static const int bwmax = 16000;
-static const double bwfac = 0.45;
 
+// base bandwidth for q=100
+static const int bwbase = 16000;
+// bandwidth multiplier (for quantiser)
+static const int bwmult = 120;
+// max bandwidth/samplerate ratio
+static const double bwfac = 0.45;
 
 
 int FAACAPI faacEncGetVersion( char **faac_id_string,
@@ -224,17 +228,15 @@ int FAACAPI faacEncSetConfiguration(faacEncHandle hEncoder,
 				(double)config->bandWidth * hEncoder->sampleRate / 44100;
 				config->bitRate = (double)config->bitRate * hEncoder->sampleRate / 44100;
 
-		if (config->bandWidth > bwmax)
-		  config->bandWidth = bwmax;
+		if (config->bandWidth > bwbase)
+		  config->bandWidth = bwbase;
 	}
 
     hEncoder->config.bitRate = config->bitRate;
 
     if (!config->bandWidth)
     {
-		config->bandWidth = bwfac * hEncoder->sampleRate;
-		if (config->bandWidth > bwmax)
-			config->bandWidth = bwmax;
+                config->bandWidth = (config->quantqual - 100) * bwmult + bwbase;
     }
 
     hEncoder->config.bandWidth = config->bandWidth;
@@ -308,8 +310,8 @@ faacEncHandle FAACAPI faacEncOpen(unsigned long sampleRate,
     hEncoder->config.useTns = 0;
     hEncoder->config.bitRate = 0; /* default bitrate / channel */
     hEncoder->config.bandWidth = bwfac * hEncoder->sampleRate;
-    if (hEncoder->config.bandWidth > bwmax)
-		hEncoder->config.bandWidth = bwmax;
+    if (hEncoder->config.bandWidth > bwbase)
+		hEncoder->config.bandWidth = bwbase;
     hEncoder->config.quantqual = 100;
     hEncoder->config.psymodellist = (psymodellist_t *)psymodellist;
     hEncoder->config.psymodelidx = 0;
@@ -942,6 +944,9 @@ static SR_INFO srInfo[12+1] =
 
 /*
 $Log: frame.c,v $
+Revision 1.58  2004/03/17 13:34:20  danchr
+Automatic, untuned setting of lowpass for VBR.
+
 Revision 1.57  2004/03/15 20:16:42  knik
 fixed copyright notice
 
