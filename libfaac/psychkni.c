@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: psychkni.c,v 1.10 2003/07/07 16:31:46 knik Exp $
+ * $Id: psychkni.c,v 1.11 2003/08/07 08:17:00 knik Exp $
  */
 #include <stdio.h>
 #include <stdlib.h>
@@ -333,9 +333,8 @@ static void PsyCalculate(ChannelInfo * channelInfo, GlobalPsyInfo * gpsyInfo,
       else if (!channelInfo[channel].cpe &&
 	       channelInfo[channel].lfe)
       {				/* LFE */
-
-	/* NOT FINISHED */
-
+        // Only set block type and it should be OK
+	psyInfo[channel].block_type = ONLY_LONG_WINDOW;
       }
       else if (!channelInfo[channel].cpe)
       {				/* SCE */

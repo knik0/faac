@@ -16,7 +16,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: frame.c,v 1.39 2003/08/02 11:32:10 stux Exp $
+ * $Id: frame.c,v 1.40 2003/08/07 08:17:00 knik Exp $
  */
 
 /*
@@ -485,9 +485,13 @@ int FAACAPI faacEncEncode(faacEncHandle hEncoder,
         }
 
         /* Psychoacoustics */
-        /* Update buffers and run FFT on new samples */
-	hEncoder->psymodel->PsyBufferUpdate(&hEncoder->gpsyInfo, &hEncoder->psyInfo[channel],
-				  hEncoder->next3SampleBuff[channel], bandWidth);
+	/* Update buffers and run FFT on new samples */
+	/* LFE psychoacoustic can run without it */
+	if (!channelInfo[channel].lfe || channelInfo[channel].cpe)
+	{
+	  hEncoder->psymodel->PsyBufferUpdate(&hEncoder->gpsyInfo, &hEncoder->psyInfo[channel],
+					      hEncoder->next3SampleBuff[channel], bandWidth);
+	}
     }
 
     if (hEncoder->frameNum <= 3) /* Still filling up the buffers */
@@ -626,6 +630,12 @@ int FAACAPI faacEncEncode(faacEncHandle hEncoder,
 			hEncoder->freqBuff[channel]);
       }
       CalcAvgEnrg(&coderInfo[channel], hEncoder->freqBuff[channel]);
+
+      // reduce LFE bandwidth
+      if (!channelInfo[channel].cpe && channelInfo[channel].lfe)
+      {
+	coderInfo[channel].nr_of_sfb = coderInfo[channel].max_sfb = 3;
+      }
     }
 
     MSEncode(coderInfo, channelInfo, hEncoder->freqBuff, numChannels, allowMidside);
@@ -828,6 +838,9 @@ static SR_INFO srInfo[12+1] =
 
 /*
 $Log: frame.c,v $
+Revision 1.40  2003/08/07 08:17:00  knik
+Better LFE support (reduced bandwidth)
+
 Revision 1.39  2003/08/02 11:32:10  stux
 added config.inputFormat, and associated defines and code, faac now handles native endian 16bit, 24bit and float input. Added faacEncGetDecoderSpecificInfo to the dll exports, needed for MP4. Updated DLL .dsp to compile without error. Updated CFG_VERSION to 102. Version number might need to be updated as the API has technically changed. Did not update libfaac.pdf
 
