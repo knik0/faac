@@ -24,7 +24,7 @@ copyright notice must be included in all copies or derivative works.
 Copyright (c) 1997.
 **********************************************************************/
 /*
- * $Id: bitstream.c,v 1.24 2002/08/19 16:35:20 knik Exp $
+ * $Id: bitstream.c,v 1.25 2003/03/24 10:08:10 menno Exp $
  */
 
 #include <stdlib.h>
@@ -288,8 +288,11 @@ static int WriteADTSHeader(faacEncHandle hEncoder,
                                                         configuration should be written */
         PutBit(bitStream, 0, 1); /* original/copy */
         PutBit(bitStream, 0, 1); /* home */
+
+#if 0 // Removed in corrigendum 14496-3:2002
         if (hEncoder->config.mpegVersion == 0)
             PutBit(bitStream, 0, 2); /* emphasis */
+#endif
 
         /* Variable ADTS header */
         PutBit(bitStream, 0, 1); /* copyr. id. bit */
@@ -309,8 +312,10 @@ static int WriteADTSHeader(faacEncHandle hEncoder,
         bits += ByteAlign(bitStream, writeFlag);
     */
 
+#if 0 // Removed in corrigendum 14496-3:2002
     if (hEncoder->config.mpegVersion == 0)
         bits += 2; /* emphasis */
+#endif
 
     return bits;
 }
