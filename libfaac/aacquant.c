@@ -17,7 +17,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: aacquant.c,v 1.21 2003/08/11 09:43:47 menno Exp $
+ * $Id: aacquant.c,v 1.22 2003/08/11 09:52:20 menno Exp $
  */
 
 #include <math.h>
@@ -35,7 +35,8 @@
 #define QUANTFAC(rx)  adj43[rx]
 #define ROUNDFAC 0.4054
 
-static int FixNoise(CoderInfo *coderInfo,
+static int FixNoise(faacEncHandle hEncoder,
+			CoderInfo *coderInfo,
 		    const double *xr,
 		    double *xr_pow,
 		    int *xi,
@@ -194,7 +195,7 @@ int AACQuantize(faacEncHandle hEncoder,
     if (do_q) {
         CalcAllowedDist(coderInfo, psyInfo, xr, xmin, quality);
 	coderInfo->global_gain = 0;
-	FixNoise(coderInfo, xr, xr_pow, xi, xmin);
+	FixNoise(hEncoder, coderInfo, xr, xr_pow, xi, xmin);
 	BalanceEnergy(hEncoder, coderInfo, xr, xi);
 	UpdateRequant(hEncoder, coderInfo, xi);
 
