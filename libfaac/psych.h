@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: psych.h,v 1.11 2003/06/26 19:20:42 knik Exp $
+ * $Id: psych.h,v 1.12 2003/09/07 16:45:48 knik Exp $
  */
 
 #ifndef PSYCH_H
@@ -67,8 +67,9 @@ typedef struct {
 			PsyInfo *psyInfo, int *cb_width_long, int num_cb_long,
 			int *cb_width_short, int num_cb_short,
 			unsigned int numChannels);
-  void (*PsyBufferUpdate) (GlobalPsyInfo *gpsyInfo, PsyInfo *psyInfo,
-			   double *newSamples, unsigned int bandwidth);
+  void (*PsyBufferUpdate) (GlobalPsyInfo * gpsyInfo, PsyInfo * psyInfo,
+			    double *newSamples, unsigned int bandwidth,
+			    int *cb_width_short, int num_cb_short);
   void (*BlockSwitch) (CoderInfo *coderInfo, PsyInfo *psyInfo,
 		       unsigned int numChannels);
 } psymodel_t;
