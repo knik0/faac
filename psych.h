@@ -324,7 +324,7 @@ void psy_step14(SR_INFO *p_sri,
 		int ch);
 
 void psy_step15(int use_ms_l[49],
-				int use_ms_s[8][14],
+				int use_ms_s[8][15],
 				SR_INFO *p_sri,
 				PSY_VARIABLE_LONG *psy_var_long, 
 				PSY_VARIABLE_SHORT *psy_var_short,

@@ -100,7 +100,7 @@ enum WIN_SWITCH_MODE {
 };
 
 #define NSFB_LONG  49
-#define NSFB_SHORT 14
+#define NSFB_SHORT 15
 #define MAX_SHORT_IN_LONG_BLOCK 8
 
 #define MAX_SHORT_WINDOWS 8
@@ -111,7 +111,7 @@ enum WIN_SWITCH_MODE {
 #define MAX_TIME_CHANNELS 2 //6
 
 /* max. number of scale factor bands */
-#define MAX_SCFAC_BANDS ((NSFB_SHORT/*+1*/)*MAX_SHORT_IN_LONG_BLOCK)
+#define MAX_SCFAC_BANDS ((NSFB_SHORT+1)*MAX_SHORT_IN_LONG_BLOCK)
 
 void freq2buffer(
   double           p_in_data[], 

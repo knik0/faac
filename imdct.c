@@ -11,7 +11,7 @@
 
 static double zero = 0;
 
-static void vcopy( double src[], double dest[], int inc_src, int inc_dest, int vlen )
+void vcopy( double src[], double dest[], int inc_src, int inc_dest, int vlen )
 {
 	int i;
 
@@ -22,20 +22,31 @@ static void vcopy( double src[], double dest[], int inc_src, int inc_dest, int v
 	}
 }
 
-static void vmult( double src1[], double src2[], double dest[], 
-            int inc_src1, int inc_src2, int inc_dest, int vlen )
+void vmult1(double src1[], double src2[], double dest[], int vlen )
 {
 	int i;
 
 	for( i=0; i<vlen; i++ ) {
 		*dest = *src1 * *src2;
-		dest += inc_dest;
-		src1 += inc_src1;
-		src2 += inc_src2;
+		dest++;
+		src1++;
+		src2++;
 	}
 }
 
-static void vadd( double src1[], double src2[], double dest[], 
+void vmult2( double src1[], double src2[], double dest[], int vlen)
+{
+	int i;
+
+	for( i=0; i<vlen; i++ ) {
+		*dest = *src1 * *src2;
+		dest++;
+		src1++;
+		src2--;
+	}
+}
+
+void vadd( double src1[], double src2[], double dest[], 
             int inc_src1, int inc_src2, int inc_dest, int vlen )
 {
 	int i;
@@ -143,32 +154,32 @@ void buffer2freq(
 	/* Separate action for each Block Type */
 	switch( block_type ) {
 	case ONLY_LONG_WINDOW :
-		vmult( p_o_buf, window_long_prev, windowed_buf,       1, 1,  1, nlong );
-		vmult( p_o_buf+nlong, window_long+nlong-1, windowed_buf+nlong, 1, -1, 1, nlong );
+		vmult1( p_o_buf, window_long_prev, windowed_buf, nlong );
+		vmult2( p_o_buf+nlong, window_long+nlong-1, windowed_buf+nlong, nlong );
 		mdct( windowed_buf, p_out_mdct, 2*nlong );    
 		break;
 		
 	case LONG_SHORT_WINDOW :
-		vmult( p_o_buf, window_long_prev, windowed_buf, 1, 1, 1, nlong );
+		vmult1( p_o_buf, window_long_prev, windowed_buf, nlong );
 		vcopy( p_o_buf+nlong, windowed_buf+nlong, 1, 1, nflat_ls );
-		vmult( p_o_buf+nlong+nflat_ls, window_short+nshort-1, windowed_buf+nlong+nflat_ls, 1, -1, 1, nshort );
+		vmult2( p_o_buf+nlong+nflat_ls, window_short+nshort-1, windowed_buf+nlong+nflat_ls, nshort );
 		vcopy( &zero, windowed_buf+2*nlong-1, 0, -1, nflat_ls );
 		mdct( windowed_buf, p_out_mdct, 2*nlong );
 		break;
 
 	case SHORT_LONG_WINDOW :
 		vcopy( &zero, windowed_buf, 0, 1, nflat_ls );
-		vmult( p_o_buf+nflat_ls, window_short_prev_ptr, windowed_buf+nflat_ls, 1, 1, 1, nshort );
+		vmult1( p_o_buf+nflat_ls, window_short_prev_ptr, windowed_buf+nflat_ls, nshort );
 		vcopy( p_o_buf+nflat_ls+nshort, windowed_buf+nflat_ls+nshort, 1, 1, nflat_ls );
-		vmult( p_o_buf+nlong, window_long+nlong-1, windowed_buf+nlong, 1, -1, 1, nlong );
+		vmult2( p_o_buf+nlong, window_long+nlong-1, windowed_buf+nlong, nlong );
 		mdct( windowed_buf, p_out_mdct, 2*nlong );
 		break;
 
 	case ONLY_SHORT_WINDOW :
 		p_o_buf += nflat_ls;
 		for (k=transfak_ls-1; k-->=0; ) {
-			vmult( p_o_buf,        window_short_prev_ptr,          windowed_buf,        1, 1,  1, nshort );
-			vmult( p_o_buf+nshort, window_short+nshort-1, windowed_buf+nshort, 1, -1, 1, nshort );
+			vmult1( p_o_buf, window_short_prev_ptr, windowed_buf, nshort );
+			vmult2( p_o_buf+nshort, window_short+nshort-1, windowed_buf+nshort, nshort );
 			mdct( windowed_buf, p_out_mdct, 2*nshort );
 
 			p_out_mdct += nshort;

@@ -26,30 +26,8 @@
 /* Tables for maximum nomber of scalefactor bands */
 /* Needs more fine-tuning. Only the values for 44.1kHz have been changed
    on lower bitrates. */
-int max_sfb_s[/*bitrate_idx*/][/*srate_idx*/12] = {
-   /* 96  88  64  48  44  32  24  22  16  12  11   8 kHz */
-	{ 12, 12, 12, 13, 12, 13, 15, 15, 15, 15, 15, 15 }, /*  64000 bps */
-	{ 12, 12, 12, 13, 12, 13, 15, 15, 15, 15, 15, 15 }, /*  80000 bps */
-	{ 12, 12, 12, 13, 13, 13, 15, 15, 15, 15, 15, 15 }, /*  96000 bps */
-	{ 12, 12, 12, 13, 13, 13, 15, 15, 15, 15, 15, 15 }, /* 112000 bps */
-	{ 12, 12, 12, 13, 14, 13, 15, 15, 15, 15, 15, 15 }, /* 128000 bps */
-	{ 12, 12, 12, 13, 14, 13, 15, 15, 15, 15, 15, 15 }, /* 160000 bps */
-	{ 12, 12, 12, 13, 14, 13, 15, 15, 15, 15, 15, 15 }, /* 192000 bps */
-	{ 12, 12, 12, 13, 14, 13, 15, 15, 15, 15, 15, 15 }, /* 224000 bps */
-	{ 12, 12, 12, 13, 14, 13, 15, 15, 15, 15, 15, 15 }  /* 256000 bps */
-};
-int max_sfb_l[/*bitrate_idx*/][/*srate_idx*/12] = {
-   /* 96  88  64  48  44  32  24  22  16  12  11   8 kHz */
-	{ 49, 49, 47, 48, 42, 51, 47, 47, 43, 43, 43, 40 }, /*  64000 bps */
-	{ 49, 49, 47, 48, 42, 51, 47, 47, 43, 43, 43, 40 }, /*  80000 bps */
-	{ 49, 49, 47, 48, 45, 51, 47, 47, 43, 43, 43, 40 }, /*  96000 bps */
-	{ 49, 49, 47, 48, 45, 51, 47, 47, 43, 43, 43, 40 }, /* 112000 bps */
-	{ 49, 49, 47, 48, 49, 51, 47, 47, 43, 43, 43, 40 }, /* 128000 bps */
-	{ 49, 49, 47, 48, 49, 51, 47, 47, 43, 43, 43, 40 }, /* 160000 bps */
-	{ 49, 49, 47, 48, 49, 51, 47, 47, 43, 43, 43, 40 }, /* 192000 bps */
-	{ 49, 49, 47, 48, 49, 51, 47, 47, 43, 43, 43, 40 }, /* 224000 bps */
-	{ 49, 49, 47, 48, 49, 51, 47, 47, 43, 43, 43, 40 }  /* 256000 bps */
-};
+int max_sfb_s[] = { 12, 12, 12, 13, 14, 13, 15, 15, 15, 15, 15, 15 };
+int max_sfb_l[] = { 49, 49, 47, 48, 49, 51, 47, 47, 43, 43, 43, 40 };
 
 
 static int     block_size_samples = 1024;  /* nr of samples per block in one! audio channel */
@@ -83,7 +61,6 @@ static int useShortWindows=0;  /* don't use shorter windows */
 // TEMPORARY HACK
 
 int srate_idx;
-int bitrate_idx;
 
 int sampling_rate;
 int bit_rate;
@@ -146,13 +123,6 @@ void EncTfInit (faacAACConfig *ac, int VBR_setting)
 	{
 		if (SampleRates[i] == sampling_rate) {
 			srate_idx = i;
-			break;
-		}
-	}
-	for (i = 0; ; i++)
-	{
-		if (BitRates[i] == bit_rate) {
-			bitrate_idx = i;
 			break;
 		}
 	}
@@ -376,7 +346,7 @@ int EncTfFrame (faacAACStream *as, BsBitStream  *fixed_stream)
 			case ONLY_SHORT_WINDOW  :
 				no_sub_win   = short_win_in_long;
 				sub_win_size = block_size_samples/short_win_in_long;
-				quantInfo[chanNum].max_sfb = max_sfb_s[bitrate_idx][srate_idx];
+				quantInfo[chanNum].max_sfb = max_sfb_s[srate_idx];
 #if 0
 				quantInfo[chanNum].num_window_groups = 4;
 				quantInfo[chanNum].window_group_length[0] = 1;
@@ -392,7 +362,7 @@ int EncTfFrame (faacAACStream *as, BsBitStream  *fixed_stream)
 			default:
 				no_sub_win   = 1;
 				sub_win_size = block_size_samples;
-				quantInfo[chanNum].max_sfb = max_sfb_l[bitrate_idx][srate_idx];
+				quantInfo[chanNum].max_sfb = max_sfb_l[srate_idx];
 				quantInfo[chanNum].num_window_groups = 1;
 				quantInfo[chanNum].window_group_length[0]=1;
 				break;
