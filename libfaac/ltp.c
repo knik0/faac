@@ -24,7 +24,7 @@ Copyright (c)1997.
 
 ***************************************************************************/
 /*
- * $Id: ltp.c,v 1.8 2001/12/06 19:11:04 menno Exp $
+ * $Id: ltp.c,v 1.9 2003/06/26 19:20:31 knik Exp $
  */
 
 #include <stdio.h>
@@ -313,8 +313,14 @@ void LtpEnd(faacEncHandle hEncoder)
     for (channel = 0; channel < hEncoder->numChannels; channel++) {
         LtpInfo *ltpInfo = &(hEncoder->coderInfo[channel].ltpInfo);
 
-        if (ltpInfo->buffer) FreeMemory(ltpInfo->buffer);
-        if (ltpInfo->mdct_predicted) FreeMemory(ltpInfo->mdct_predicted);
+	if (ltpInfo->buffer)
+	  FreeMemory(ltpInfo->buffer);
+	if (ltpInfo->mdct_predicted)
+	  FreeMemory(ltpInfo->mdct_predicted);
+	if (ltpInfo->time_buffer)
+	  FreeMemory(ltpInfo->time_buffer);
+	if (ltpInfo->ltp_overlap_buffer)
+	  FreeMemory(ltpInfo->ltp_overlap_buffer);
     }
 }
 
