@@ -21,10 +21,12 @@
 /**************************************************************************
   Version Control Information			Method: CVS
   Identifiers:
-  $Revision: 1.3 $
-  $Date: 2000/10/05 08:39:03 $ (check in)
+  $Revision: 1.4 $
+  $Date: 2000/10/06 14:47:27 $ (check in)
   $Author: menno $
   *************************************************************************/
+
+#include <math.h>
 
 #include "quant.h"
 #include "huffman.h"

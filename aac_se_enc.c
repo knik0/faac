@@ -21,8 +21,8 @@
 /**************************************************************************
   Version Control Information			Method: CVS
   Identifiers:
-  $Revision: 1.13 $
-  $Date: 2000/10/05 13:04:05 $ (check in)
+  $Revision: 1.14 $
+  $Date: 2000/10/06 14:47:27 $ (check in)
   $Author: menno $
   *************************************************************************/
 
@@ -315,10 +315,10 @@ int WriteICSInfo(AACQuantInfo* quantInfo,    /* AACQuantInfo structure */
     if (writeFlag) {
       BsPutBit(fixed_stream,max_sfb,LEN_MAX_SFBS);
       grouping_bits = find_grouping_bits(quantInfo->window_group_length,quantInfo->num_window_groups);
-      BsPutBit(fixed_stream,grouping_bits,MAX_SHORT_IN_LONG_BLOCK - 1);  /* the grouping bits */
+      BsPutBit(fixed_stream,grouping_bits,MAX_SHORT_WINDOWS - 1);  /* the grouping bits */
     }
     bit_count += LEN_MAX_SFBS;
-    bit_count += MAX_SHORT_IN_LONG_BLOCK - 1;
+    bit_count += MAX_SHORT_WINDOWS - 1;
   }
   /* Otherwise, write out max_sfb and predictor data */
   else { /* block type is either start, stop, or long */
@@ -341,7 +341,7 @@ int WriteLTP_PredictorData(AACQuantInfo* quantInfo,    /* AACQuantInfo structure
 {
   int bit_count = 0;
 
-  bit_count += nok_ltp_encode (fixed_stream, quantInfo->block_type, quantInfo->nr_of_sfb,
+  bit_count += ltp_encode (fixed_stream, quantInfo->block_type, quantInfo->nr_of_sfb,
                                quantInfo->ltpInfo, writeFlag);
 
   return (bit_count);
@@ -413,7 +413,7 @@ int WriteTNSData(AACQuantInfo* quantInfo,    /* AACQuantInfo structure */
 
   /* Set window-dependent TNS parameters */
   if (quantInfo->block_type == ONLY_SHORT_WINDOW) {
-    numWindows = MAX_SHORT_IN_LONG_BLOCK;
+    numWindows = MAX_SHORT_WINDOWS;
     len_tns_nfilt = LEN_TNS_NFILTS;
     len_tns_length = LEN_TNS_LENGTHS;
     len_tns_order = LEN_TNS_ORDERS;

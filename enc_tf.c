@@ -21,12 +21,13 @@
 /**************************************************************************
   Version Control Information			Method: CVS
   Identifiers:
-  $Revision: 1.63 $
-  $Date: 2000/10/05 13:04:05 $ (check in)
+  $Revision: 1.64 $
+  $Date: 2000/10/06 14:47:27 $ (check in)
   $Author: menno $
   *************************************************************************/
 
 #include <stdlib.h>
+#include <memory.h>
 
 #include "aacenc.h"
 #include "bitstream.h"
@@ -37,7 +38,7 @@
 #include "ms.h"
 #include "quant.h"
 #include "aac_se_enc.h"
-#include "nok_ltp_enc.h"
+#include "ltp_enc.h"
 #include "transfo.h"
 
 
@@ -53,15 +54,13 @@ int max_sfb_s[] = { 12, 12, 12, 13, 14, 13, 15, 15, 15, 15, 15, 15 };
 int max_sfb_l[] = { 49, 49, 47, 48, 49, 51, 47, 47, 43, 43, 43, 40 };
 
 
-int     block_size_samples = 1024;  /* nr of samples per block in one! audio channel */
-int     short_win_in_long  = 8;
 int     max_ch;    /* no of of audio channels */
 double *spectral_line_vector[MAX_TIME_CHANNELS];
 double *reconstructed_spectrum[MAX_TIME_CHANNELS];
 double *overlap_buffer[MAX_TIME_CHANNELS];
 double *DTimeSigBuf[MAX_TIME_CHANNELS];
 double *DTimeSigLookAheadBuf[MAX_TIME_CHANNELS*2];
-double *nok_tmp_DTimeSigBuf[MAX_TIME_CHANNELS]; /* temporary fix to the buffer size problem. */
+double *tmp_DTimeSigBuf[MAX_TIME_CHANNELS]; /* temporary fix to the buffer size problem. */
 
 /* variables used by the T/F mapping */
 enum WINDOW_TYPE block_type[MAX_TIME_CHANNELS];
@@ -69,17 +68,13 @@ enum WINDOW_TYPE desired_block_type[MAX_TIME_CHANNELS];
 enum WINDOW_TYPE next_desired_block_type[MAX_TIME_CHANNELS];
 
 /* Additional variables for AAC */
-int aacAllowScalefacs = 1;              /* Allow AAC scalefactors to be nonconstant */
 TNS_INFO tnsInfo[MAX_TIME_CHANNELS];
-NOK_LT_PRED_STATUS nok_lt_status[MAX_TIME_CHANNELS];
+LT_PRED_STATUS ltp_status[MAX_TIME_CHANNELS];
 
 AACQuantInfo quantInfo[MAX_TIME_CHANNELS];               /* Info structure for AAC quantization and coding */
 
 /* Channel information */
 Ch_Info channelInfo[MAX_TIME_CHANNELS];
-
-/* AAC shorter windows 960-480-120 */
-int useShortWindows=0;  /* don't use shorter windows */
 
 
 /* EncTfFree() */
@@ -95,8 +90,8 @@ void EncTfFree (void)
 
     if (reconstructed_spectrum[chanNum]) free(reconstructed_spectrum[chanNum]);
     if (overlap_buffer[chanNum]) free(overlap_buffer[chanNum]);
-    if (nok_lt_status[chanNum].delay) free(nok_lt_status[chanNum].delay);
-    if (nok_tmp_DTimeSigBuf[chanNum]) free(nok_tmp_DTimeSigBuf[chanNum]);
+    if (ltp_status[chanNum].delay) free(ltp_status[chanNum].delay);
+    if (tmp_DTimeSigBuf[chanNum]) free(tmp_DTimeSigBuf[chanNum]);
   }
   for (chanNum=0;chanNum<MAX_TIME_CHANNELS*2;chanNum++) {
     if (DTimeSigLookAheadBuf[chanNum]) free(DTimeSigLookAheadBuf[chanNum]);
@@ -147,21 +142,21 @@ void EncTfInit (faacAACStream *as)
 
   /* some global initializations */
   for (chanNum=0;chanNum<MAX_TIME_CHANNELS;chanNum++) {
-    DTimeSigBuf[chanNum]            = (double*)malloc(block_size_samples*sizeof(double));
-    memset(DTimeSigBuf[chanNum],0,(block_size_samples)*sizeof(double));
-    spectral_line_vector[chanNum]   = (double*)malloc(2*block_size_samples*sizeof(double));
-    reconstructed_spectrum[chanNum] = (double*)malloc(block_size_samples*sizeof(double));
-    memset(reconstructed_spectrum[chanNum], 0, block_size_samples*sizeof(double));
-    overlap_buffer[chanNum] = (double*)malloc(sizeof(double)*block_size_samples);
-    memset(overlap_buffer[chanNum],0,(block_size_samples)*sizeof(double));
+    DTimeSigBuf[chanNum]            = (double*)malloc(BLOCK_LEN_LONG*sizeof(double));
+    memset(DTimeSigBuf[chanNum],0,BLOCK_LEN_LONG*sizeof(double));
+    spectral_line_vector[chanNum]   = (double*)malloc(2*BLOCK_LEN_LONG*sizeof(double));
+    reconstructed_spectrum[chanNum] = (double*)malloc(BLOCK_LEN_LONG*sizeof(double));
+    memset(reconstructed_spectrum[chanNum], 0, BLOCK_LEN_LONG*sizeof(double));
+    overlap_buffer[chanNum] = (double*)malloc(sizeof(double)*BLOCK_LEN_LONG);
+    memset(overlap_buffer[chanNum],0,(BLOCK_LEN_LONG)*sizeof(double));
     block_type[chanNum] = ONLY_LONG_WINDOW;
-    nok_lt_status[chanNum].delay =  (int*)malloc(MAX_SHORT_WINDOWS*sizeof(int));
-    nok_tmp_DTimeSigBuf[chanNum]  = (double*)malloc(2*block_size_samples*sizeof(double));
-    memset(nok_tmp_DTimeSigBuf[chanNum],0,(2*block_size_samples)*sizeof(double));
+    ltp_status[chanNum].delay =  (int*)malloc(MAX_SHORT_WINDOWS*sizeof(int));
+    tmp_DTimeSigBuf[chanNum]  = (double*)malloc(2*BLOCK_LEN_LONG*sizeof(double));
+    memset(tmp_DTimeSigBuf[chanNum],0,(2*BLOCK_LEN_LONG)*sizeof(double));
   }
   for (chanNum=0;chanNum<MAX_TIME_CHANNELS*2;chanNum++) {
-    DTimeSigLookAheadBuf[chanNum]   = (double*)malloc((block_size_samples)*sizeof(double));
-    memset(DTimeSigLookAheadBuf[chanNum],0,(block_size_samples)*sizeof(double));
+    DTimeSigLookAheadBuf[chanNum]   = (double*)malloc((BLOCK_LEN_LONG)*sizeof(double));
+    memset(DTimeSigLookAheadBuf[chanNum],0,(BLOCK_LEN_LONG)*sizeof(double));
   }
 
   /* initialize psychoacoustic module */
@@ -179,8 +174,8 @@ void EncTfInit (faacAACStream *as)
 
   /* Init LTP predictor */
   for (chanNum=0;chanNum<MAX_TIME_CHANNELS;chanNum++) {
-    nok_init_lt_pred (&nok_lt_status[chanNum]);
-    quantInfo[chanNum].ltpInfo = &nok_lt_status[chanNum];  /* Set pointer to LTP data */
+    init_lt_pred (&ltp_status[chanNum]);
+    quantInfo[chanNum].ltpInfo = &ltp_status[chanNum];  /* Set pointer to LTP data */
     quantInfo[chanNum].prev_window_shape = WS_SIN;
   }
 
@@ -270,7 +265,7 @@ int EncTfFrame (faacAACStream *as, BsBitStream  *fixed_stream)
 				  int rightChan = channelInfo[chanNum].paired_ch;
 
 				  if (as->use_MS == 1) {
-					  for(i = 0; i < block_size_samples; i++){
+					  for(i = 0; i < BLOCK_LEN_LONG; i++){
 						  DTimeSigLookAheadBuf[leftChan][i] = (as->inputBuffer[leftChan][i]+as->inputBuffer[rightChan][i])*0.5;
 						  DTimeSigLookAheadBuf[rightChan][i] = (as->inputBuffer[leftChan][i]-as->inputBuffer[rightChan][i])*0.5;
 					  }
@@ -278,12 +273,12 @@ int EncTfFrame (faacAACStream *as, BsBitStream  *fixed_stream)
 			  }
 
 			  if(as->use_LTP) {
-				  for( i=0; i<block_size_samples; i++ ) {
-					  nok_tmp_DTimeSigBuf[chanNum][i] = DTimeSigBuf[chanNum][i];
-					  nok_tmp_DTimeSigBuf[chanNum][block_size_samples + i] = DTimeSigLookAheadBuf[chanNum][i];
+				  for( i=0; i< BLOCK_LEN_LONG; i++ ) {
+					  tmp_DTimeSigBuf[chanNum][i] = DTimeSigBuf[chanNum][i];
+					  tmp_DTimeSigBuf[chanNum][BLOCK_LEN_LONG + i] = DTimeSigLookAheadBuf[chanNum][i];
 				  }
 			  }
-			  for( i=0; i<block_size_samples; i++ ) {
+			  for( i=0; i< BLOCK_LEN_LONG; i++ ) {
 				  DTimeSigBuf[chanNum][i] = DTimeSigLookAheadBuf[chanNum][i];
 				  DTimeSigLookAheadBuf[chanNum][i] = as->inputBuffer[chanNum][i];
 			  }
@@ -558,41 +553,41 @@ int EncTfFrame (faacAACStream *as, BsBitStream  *fixed_stream)
 	    int leftChan=chanNum;
 	    int rightChan=channelInfo[chanNum].paired_ch;
 
-  	    nok_ltp_enc(spectral_line_vector[leftChan],
-		        nok_tmp_DTimeSigBuf[leftChan],
+  	    ltp_enc(spectral_line_vector[leftChan],
+		        tmp_DTimeSigBuf[leftChan],
 		        block_type[leftChan],
 		        WS_SIN,
 		        &sfb_offset_table[leftChan][0],
 		        nr_of_sfb[leftChan],
-		        &nok_lt_status[leftChan]);
+		        &ltp_status[leftChan]);
 
-            nok_lt_status[rightChan].global_pred_flag = nok_lt_status[leftChan].global_pred_flag;
+            ltp_status[rightChan].global_pred_flag = ltp_status[leftChan].global_pred_flag;
   	    for(i = 0; i < BLOCK_LEN_LONG; i++)
-    	      nok_lt_status[rightChan].pred_mdct[i] = nok_lt_status[leftChan].pred_mdct[i];
+    	      ltp_status[rightChan].pred_mdct[i] = ltp_status[leftChan].pred_mdct[i];
   	    for(i = 0; i < MAX_SCFAC_BANDS; i++)
-  	      nok_lt_status[rightChan].sfb_prediction_used[i] = nok_lt_status[leftChan].sfb_prediction_used[i];
-  	    nok_lt_status[rightChan].weight = nok_lt_status[leftChan].weight;
-	    nok_lt_status[rightChan].delay[0] = nok_lt_status[leftChan].delay[0];
+  	      ltp_status[rightChan].sfb_prediction_used[i] = ltp_status[leftChan].sfb_prediction_used[i];
+  	    ltp_status[rightChan].weight = ltp_status[leftChan].weight;
+	    ltp_status[rightChan].delay[0] = ltp_status[leftChan].delay[0];
 
 	    if (!channelInfo[leftChan].common_window) {
-	      nok_ltp_enc(spectral_line_vector[rightChan],
-			  nok_tmp_DTimeSigBuf[rightChan],
+	      ltp_enc(spectral_line_vector[rightChan],
+			  tmp_DTimeSigBuf[rightChan],
 			  block_type[rightChan],
 			  WS_SIN,
 			  &sfb_offset_table[rightChan][0],
 			  nr_of_sfb[rightChan],
-			  &nok_lt_status[rightChan]);
+			  &ltp_status[rightChan]);
             }
           } /* if(channelInfo[chanNum].ch_is_left) */
         } /* if(channelInfo[chanNum].cpe) */
         else
-	  nok_ltp_enc(spectral_line_vector[chanNum],
-		      nok_tmp_DTimeSigBuf[chanNum],
+	  ltp_enc(spectral_line_vector[chanNum],
+		      tmp_DTimeSigBuf[chanNum],
 		      block_type[chanNum],
 		      WS_SIN,
 		      &sfb_offset_table[chanNum][0],
 		      nr_of_sfb[chanNum],
-		      &nok_lt_status[chanNum]);
+		      &ltp_status[chanNum]);
       } /* if(channelInfo[chanNum].present... */
       else
         quantInfo[chanNum].ltpInfo->global_pred_flag = 0;
@@ -686,12 +681,12 @@ int EncTfFrame (faacAACStream *as, BsBitStream  *fixed_stream)
     if(as->use_LTP)
       for (chanNum=0;chanNum<max_ch;chanNum++) {
 		  if (!channelInfo[chanNum].lfe) {  /* no reconstruction needed for LFE channel*/
-			  nok_ltp_reconstruct(reconstructed_spectrum[chanNum],
+			  ltp_reconstruct(reconstructed_spectrum[chanNum],
 				  block_type[chanNum],
 				  WS_SIN,
 				  &sfb_offset_table[chanNum][0],
 				  nr_of_sfb[chanNum],
-				  &nok_lt_status[chanNum]);
+				  &ltp_status[chanNum]);
 		  }
       }
 

@@ -21,8 +21,8 @@
 /**************************************************************************
   Version Control Information			Method: CVS
   Identifiers:
-  $Revision: 1.4 $
-  $Date: 2000/10/05 13:04:05 $ (check in)
+  $Revision: 1.5 $
+  $Date: 2000/10/06 14:47:27 $ (check in)
   $Author: menno $
   *************************************************************************/
 
@@ -32,7 +32,7 @@
 #include "pulse.h"
 #include "interface.h"
 #include "tns.h"
-#include "nok_ltp_common.h"
+#include "ltp_enc.h"
 #include "bitstream.h"
 
 #ifdef __cplusplus
@@ -76,8 +76,7 @@ typedef struct {
                                            5 elements are required: 1*(esc)+2*(sign)+2*(esc value)=5 */
   int len[5*BLOCK_LEN_LONG];                 /* Lengths of spectral bitstream elements */
   int num_window_groups;                /* Number of window groups */
-  int window_group_length
-    [MAX_SHORT_IN_LONG_BLOCK];          /* Length (in windows) of each window group */
+  int window_group_length[MAX_SHORT_WINDOWS]; /* Length (in windows) of each window group */
   int common_scalefac;                  /* Global gain */
   Window_shape window_shape;            /* Window shape parameter */
   Window_shape prev_window_shape;       /* Previous window shape parameter */
@@ -86,7 +85,7 @@ typedef struct {
   int reset_group_number;               /* Prediction reset group number */
   TNS_INFO* tnsInfo;                    /* Ptr to tns data */
   AACPulseInfo pulseInfo;
-  NOK_LT_PRED_STATUS *ltpInfo;          /* Prt to LTP data */
+  LT_PRED_STATUS *ltpInfo;              /* Prt to LTP data */
   int pns_sfb_nrg[MAX_SCFAC_BANDS];
   int pns_sfb_flag[MAX_SCFAC_BANDS];
   int profile;

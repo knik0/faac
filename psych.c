@@ -21,12 +21,14 @@
 /**************************************************************************
   Version Control Information			Method: CVS
   Identifiers:
-  $Revision: 1.68 $
-  $Date: 2000/10/05 13:04:05 $ (check in)
+  $Revision: 1.69 $
+  $Date: 2000/10/06 14:47:27 $ (check in)
   $Author: menno $
   *************************************************************************/
 
 #include <math.h>
+#include <memory.h>
+
 #include "psych.h"
 #include "transfo.h"
 

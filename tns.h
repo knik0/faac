@@ -21,8 +21,8 @@
 /**************************************************************************
   Version Control Information			Method: CVS
   Identifiers:
-  $Revision: 1.6 $
-  $Date: 2000/10/05 13:04:05 $ (check in)
+  $Revision: 1.7 $
+  $Date: 2000/10/06 14:47:27 $ (check in)
   $Author: menno $
   *************************************************************************/
  
@@ -78,7 +78,7 @@ typedef struct {
   int tnsMaxBandsShort;
   int tnsMaxOrderLong;
   int tnsMaxOrderShort;
-  TNS_WINDOW_DATA windowData[MAX_SHORT_IN_LONG_BLOCK];	/* TNS data per window */
+  TNS_WINDOW_DATA windowData[MAX_SHORT_WINDOWS];	/* TNS data per window */
 } TNS_INFO;
 
 

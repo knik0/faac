@@ -21,8 +21,8 @@
 /**************************************************************************
   Version Control Information			Method: CVS
   Identifiers:
-  $Revision: 1.12 $
-  $Date: 2000/10/05 13:04:05 $ (check in)
+  $Revision: 1.13 $
+  $Date: 2000/10/06 14:47:27 $ (check in)
   $Author: menno $
   *************************************************************************/
 
@@ -131,7 +131,7 @@ int TnsEncode(int numberOfBands,       /* Number of bands per window */
 
 	switch( blockType ) {
 	case ONLY_SHORT_WINDOW :
-		numberOfWindows = MAX_SHORT_IN_LONG_BLOCK;
+		numberOfWindows = MAX_SHORT_WINDOWS;
 		windowSize = BLOCK_LEN_SHORT;
 		startBand = tnsInfo->tnsMinBandNumberShort;
 		stopBand = numberOfBands; 

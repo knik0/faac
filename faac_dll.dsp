@@ -120,19 +120,15 @@ SOURCE=.\huffman.c
 # End Source File
 # Begin Source File
 
+SOURCE=.\ltp_enc.c
+# End Source File
+# Begin Source File
+
 SOURCE=.\mc_enc.c
 # End Source File
 # Begin Source File
 
 SOURCE=.\ms.c
-# End Source File
-# Begin Source File
-
-SOURCE=.\nok_ltp_enc.c
-# End Source File
-# Begin Source File
-
-SOURCE=.\nok_pitch.c
 # End Source File
 # Begin Source File
 

@@ -21,8 +21,8 @@
 /**************************************************************************
   Version Control Information			Method: CVS
   Identifiers:
-  $Revision: 1.7 $
-  $Date: 2000/10/05 13:04:05 $ (check in)
+  $Revision: 1.8 $
+  $Date: 2000/10/06 14:47:27 $ (check in)
   $Author: menno $
   *************************************************************************/
 
@@ -31,7 +31,7 @@
 
 #include "bitstream.h"
 #include "quant.h"
-#include "nok_ltp_enc.h"
+#include "ltp_enc.h"
 
 extern int max_pred_sfb;
 

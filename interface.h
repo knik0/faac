@@ -21,8 +21,8 @@
 /**************************************************************************
   Version Control Information			Method: CVS
   Identifiers:
-  $Revision: 1.3 $
-  $Date: 2000/10/05 13:04:05 $ (check in)
+  $Revision: 1.4 $
+  $Date: 2000/10/06 14:47:27 $ (check in)
   $Author: menno $
   *************************************************************************/
 
@@ -44,83 +44,29 @@ enum WINDOW_TYPE {
 
 #define NSFB_LONG  51
 #define NSFB_SHORT 15
-#define MAX_SHORT_IN_LONG_BLOCK 8
 
 #define MAX_SHORT_WINDOWS 8
 
 /* if static memory allocation is used, this value tells the max. nr of
    audio channels to be supported */
-/*#define MAX_TIME_CHANNELS (MAX_CHANNELS)*/
 #define MAX_TIME_CHANNELS 6
 
 /* max. number of scale factor bands */
-#define MAX_SCFAC_BANDS ((NSFB_SHORT+1)*MAX_SHORT_IN_LONG_BLOCK)
-
-#define IN_DATATYPE  double
-#define OUT_DATATYPE double
+#define MAX_SCFAC_BANDS ((NSFB_SHORT+1)*MAX_SHORT_WINDOWS)
 
 #define BLOCK_LEN_LONG	   1024
 #define BLOCK_LEN_SHORT    128
 
-#define NWINLONG	(BLOCK_LEN_LONG)
-#define ALFALONG	4.0
-#define NWINSHORT	(BLOCK_LEN_SHORT)
-#define ALFASHORT	7.0
-
-#define	NWINFLAT	(NWINLONG)					/* flat params */
-#define	NWINADV		(NWINLONG-NWINSHORT)		/* Advanced flat params */
-#define NFLAT		((NWINFLAT-NWINSHORT)/2)
-#define NADV0		((NWINADV-NWINSHORT)/2)
-
 
 typedef enum {
     WS_SIN, WS_KBD, N_WINDOW_SHAPES
-} 
-Window_shape;
+} Window_shape;
 
-/* YT 970615 for Son_PP  */
 typedef enum {
 	MOVERLAPPED,
 	MNON_OVERLAPPED
-}
-Mdct_in,Imdct_out;
+} Mdct_in,Imdct_out;
 
-typedef enum {
-    WT_LONG, 
-    WT_SHORT, 
-    WT_FLAT, 
-    WT_ADV,			/* Advanced flat window */
-    N_WINDOW_TYPES
-} 
-WINDOW_TYPE_AAC; 
-
-typedef enum {                  /* ADVanced transform types */
-    LONG_BLOCK,
-    START_BLOCK,
-    SHORT_BLOCK,
-    STOP_BLOCK,
-    START_ADV_BLOCK,
-    STOP_ADV_BLOCK,
-    START_FLAT_BLOCK,
-    STOP_FLAT_BLOCK,
-    N_BLOCK_TYPES
-} 
-BLOCK_TYPE;
-
-typedef enum {  		/* Advanced window sequence (frame) types */
-    ONLY_LONG,
-    LONG_START, 
-    LONG_STOP,
-    SHORT_START, 
-    SHORT_STOP,
-    EIGHT_SHORT, 
-    SHORT_EXT_STOP,
-    NINE_SHORT,
-    OLD_START,
-    OLD_STOP,
-    N_WINDOW_SEQUENCES
-} 
-WINDOW_SEQUENCE;
 
 
 /* 
