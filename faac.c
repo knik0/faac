@@ -139,14 +139,22 @@ int parse_arg(int argc, char *argv[],faacAACStream *as, char *InFileNames[100], 
 	    faac_SetParam(as,PNS,USE_PNS);
           else if ((argv[i][2] == 'l') || (argv[i][2] == 'L'))
             faac_SetParam(as,PROFILE,LOW_PROFILE);
-	  else
+	  else if ((argv[i][2] == 'm') || (argv[i][2] == 'M'))
 	    faac_SetParam(as,PROFILE,MAIN_PROFILE);
+          else {
+            printf("Unknown option: %s\n", argv[i]);
+            return 0;
+          }
           break;
         case 'n': case 'N':
 	  if ((argv[i][2] == 'm') || (argv[i][2] == 'M'))
 	    faac_SetParam(as,MS_STEREO,NO_MS);
           else if ((argv[i][2] == 'p') || (argv[i][2] == 'P'))
 	    faac_SetParam(as,LTP,NO_LTP);
+          else {
+            printf("Unknown option: %s\n", argv[i]);
+            return 0;
+          }
 	  break;
         case 'h': case 'H':
           if ((argv[i][2] == 'i') || (argv[i][2] == 'I'))
@@ -155,6 +163,10 @@ int parse_arg(int argc, char *argv[],faacAACStream *as, char *InFileNames[100], 
 	    faac_SetParam(as,HEADER_TYPE,ADTS_HEADER);
           else if ((argv[i][2] == 'n') || (argv[i][2] == 'N'))
 	    faac_SetParam(as,HEADER_TYPE,NO_HEADER);
+          else {
+            printf("Unknown option: %s\n", argv[i]);
+            return 0;
+          }
 	  break;
         case 'm': case 'M':
 	  faac_SetParam(as,MS_STEREO,FORCE_MS);
@@ -183,7 +195,10 @@ int parse_arg(int argc, char *argv[],faacAACStream *as, char *InFileNames[100], 
 	  break;
 	case '?':
 	  usage();
-	  return 1;
+	  return 0;
+        default:
+          printf("Unknown option: %s\n", argv[i]);
+          return 0;
       }
     }   // else  of:  if ((argv[i][0] != '-')&&(argv[i][0] != '/')) {
   } //   for (i = 1; i < argc; i++) {
@@ -264,7 +279,7 @@ int main(int argc, char *argv[])
   printVersion();
 
   /* Process command line params */
-  if ((FileCount=parse_arg(argc, argv, as, InFileNames, OutFileNames))<0) return 0;
+  if ((FileCount=parse_arg(argc, argv, as, InFileNames, OutFileNames)) < 1) return 0;
 
   /* Print configuration */
   printConf(as);
@@ -290,7 +305,7 @@ int main(int argc, char *argv[])
         printf("Error while encoding %s.\n", InFileNames[i]);
 	break;
       }
-      printf("%.2f%%\tBusy encoding %s.\r", min(((double)currentFrame/(double)frames)*100,100),InFileNames[i]);
+      printf("%.2f%%\tBusy encoding %s.\r", min((double)(currentFrame*100)/frames,100),InFileNames[i]);
 
     } while (result != F_FINISH);
 
@@ -312,9 +327,10 @@ int main(int argc, char *argv[])
     if(OutFileNames[i]) free(OutFileNames[i]);
   }
   if (as) free (as);
-  exit(FNO_ERROR);
+//  exit(FNO_ERROR); // Uncomment to use profiling on *nix systems
+  return FNO_ERROR;
 }
 
 #endif // end of not dll
 
- 
+
