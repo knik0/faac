@@ -340,7 +340,7 @@ faacVersion *faacEncodeVersion(void)
 	faacv->DLLMajorVersion = 2;
 	faacv->DLLMinorVersion = 20;
 	faacv->MajorVersion = 0;
-	faacv->MinorVersion = 60;
+	faacv->MinorVersion = 61;
 	strcpy(faacv->HomePage, "http://www.slimline.net/aac/");
 
 	return faacv;
@@ -517,19 +517,19 @@ int main(int argc, char *argv[])
 		} else {
 			switch(argv[i][1]) {
 			case 'p': case 'P':
-				if (argv[i][2] == 'n' || 'N')
+				if ((argv[i][2] == 'n') || (argv[i][2] == 'N'))
 					use_PNS = 1;
-				else if (argv[i][2] == 'l' || 'L')
+				else if ((argv[i][2] == 'l') || (argv[i][2] == 'L'))
 					profile = LOW_PROFILE;
 				else
 					profile = MAIN_PROFILE;
 				break;
 			case 'n': case 'N':
-				if (argv[i][2] == 'm' || 'M')
+				if ((argv[i][2] == 'm') || (argv[i][2] == 'M'))
 					use_MS = -1;
-				else if (argv[i][2] == 't' || 'T')
+				else if ((argv[i][2] == 't') || (argv[i][2] == 'T'))
 					use_TNS = 0;
-				else if (argv[i][2] == 'p' || 'P')
+				else if ((argv[i][2] == 'p') || (argv[i][2] == 'P'))
 					use_LTP = 0;
 				else
 					no_header = 1;
