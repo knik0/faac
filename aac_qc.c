@@ -97,7 +97,7 @@ void tf_init_encode_spectrum_aac( int quality )
 #  define QUANTFAC(rx)  adj_quant_asm[rx]
 #  define XRPOW_FTOI(src, dest) \
      asm ("fistpl %0 " : "=m"(dest) : "t"(src) : "st")
-#elif 0 //defined (_MSC_VER)
+#elif defined (_MSC_VER)
 #  define QUANTFAC(rx)  adj_quant_asm[rx]
 #  define XRPOW_FTOI(src, dest) do { \
      double src_ = (src); \
@@ -109,7 +109,7 @@ void tf_init_encode_spectrum_aac( int quality )
      (dest) = dest_; \
    } while (0)
 #else
-#  define QUANTFAC(rx)  adj_quant[min(rx,8999)]
+#  define QUANTFAC(rx)  adj_quant[rx]
 #  define XRPOW_FTOI(src,dest) ((dest) = (int)(src))
 #endif
 
@@ -131,7 +131,7 @@ void quantize(AACQuantInfo *quantInfo,
 {
 	const double istep = pow(2.0, -0.1875*quantInfo->common_scalefac);
 
-#if 1 //ndef _MSC_VER
+#ifndef _MSC_VER
 	{
 		double x;
 		int j, rx;
@@ -620,7 +620,7 @@ int tf_encode_spectrum_aac(
     for(sb=0; sb < quantInfo->nr_of_sfb; sb++ )
 		quantInfo->pns_sfb_flag[sb] = 0;
 
-    if (block_type[MONO_CHAN] != ONLY_SHORT_WINDOW) {     /* long blocks only */
+	if (block_type[MONO_CHAN] != ONLY_SHORT_WINDOW) {     /* long blocks only */
 		for(sb = pns_sfb_start; sb < quantInfo->nr_of_sfb; sb++ ) {
 			/* Calc. pseudo scalefactor */
 			if (energy[0][sb] == 0.0) {
@@ -628,17 +628,19 @@ int tf_encode_spectrum_aac(
 				continue;
 			}
 
-			if ((10*log10(energy[MONO_CHAN][sb]*sfb_width_table[0][sb]+1e-60)<70)||(SigMaskRatio[sb] > 1.0)) {
-				quantInfo->pns_sfb_flag[sb] = 1;
-				quantInfo->pns_sfb_nrg[sb] = (int) (2.0 * log(energy[0][sb]*sfb_width_table[0][sb]+1e-60) / log(2.0) + 0.5) + PNS_SF_OFFSET;
-				
-				/* Erase spectral lines */
-				for( i=sfb_offset[sb]; i<sfb_offset[sb+1]; i++ ) {
-					p_spectrum[0][i] = 0.0;
+			if (!((is_info->is_present)&&(is_info->is_used[k]))) {
+				if ((10*log10(energy[MONO_CHAN][sb]+1e-60)<50)||(SigMaskRatio[sb] > 1.0)) {
+					quantInfo->pns_sfb_flag[sb] = 1;
+					quantInfo->pns_sfb_nrg[sb] = (int) (2.0 * log(energy[0][sb]*sfb_width_table[0][sb]+1e-60) / log(2.0) + 0.5) + PNS_SF_OFFSET;
+					
+					/* Erase spectral lines */
+					for( i=sfb_offset[sb]; i<sfb_offset[sb+1]; i++ ) {
+						p_spectrum[0][i] = 0.0;
+					}
 				}
 			}
 		}
-    }
+	}
 
 	/* Compute allowed distortion */
 	for(sb = 0; sb < quantInfo->nr_of_sfb; sb++) {

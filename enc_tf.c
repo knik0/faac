@@ -517,7 +517,7 @@ int EncTfFrame (faacAACStream *as, BsBitStream  *fixed_stream)
 	}
 
 	MSPreprocess(p_ratio_long, p_ratio_short, chpo_long, chpo_short,
-		channelInfo, block_type, quantInfo, as->use_MS, max_ch);
+		channelInfo, block_type, quantInfo, as->use_MS, as->use_IS, max_ch);
 
 	MSEnergy(spectral_line_vector, energy, chpo_long, chpo_short, sfb_width_table,
 		channelInfo, block_type, quantInfo, as->use_MS, max_ch);
@@ -577,7 +577,7 @@ int EncTfFrame (faacAACStream *as, BsBitStream  *fixed_stream)
 		/******************************************/
 		/* Apply Intensity Stereo                 */
 		/******************************************/
-		if (as->use_IS) {
+		if (as->use_IS && (as->use_MS != 1)) {
 			ISEncode(spectral_line_vector,
 				channelInfo,
 				sfb_offset_table,
@@ -721,7 +721,7 @@ int EncTfFrame (faacAACStream *as, BsBitStream  *fixed_stream)
 		/**********************************************************/
 		/* Reconstruct Intensity Stereo bands for prediction     */
 		/**********************************************************/
-		if (as->use_IS && (pns_sfb_start > 51)) {  /* do intensity only if pns is off  */
+		if ((as->use_IS)&& (pns_sfb_start > 51)) {  /* do intensity only if pns is off  */
 			ISReconstruct(reconstructed_spectrum,
 				channelInfo,
 				sfb_offset_table,

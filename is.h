@@ -17,8 +17,8 @@
 #include "aac_qc.h"
 #include <math.h>
 
-#define IS_MIN_BAND_L 28
-#define IS_MIN_BAND_S 7
+#define IS_MIN_BAND_L 0 //28
+#define IS_MIN_BAND_S 0 //7
 
 void ISEncode(double *spectrum[MAX_TIME_CHANNELS],   /* array of pointers to spectral data */
 	      Ch_Info *channelInfo,                  /* Pointer to Ch_Info */

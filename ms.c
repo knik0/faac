@@ -34,6 +34,7 @@ Copyright(c)1996.
 
 #include "psych.h"
 #include "ms.h"
+#include "is.h"
 
 void MSPreprocess(double p_ratio_long[][MAX_SCFAC_BANDS],
 				  double p_ratio_short[][MAX_SCFAC_BANDS],
@@ -42,7 +43,7 @@ void MSPreprocess(double p_ratio_long[][MAX_SCFAC_BANDS],
 				  Ch_Info *channelInfo,                  /* Pointer to Ch_Info */
 				  enum WINDOW_TYPE block_type[MAX_TIME_CHANNELS], /* Block type */
 				  AACQuantInfo* quantInfo,               /* Quant info */
-				  int use_ms,
+				  int use_ms, int use_is,
 				  int numberOfChannels
 				  )
 {
@@ -67,7 +68,7 @@ void MSPreprocess(double p_ratio_long[][MAX_SCFAC_BANDS],
 
 					int numGroups;
 					int groupIndex = 0;
-					int maxSfb;
+					int maxSfb, isBand;
 					int g,b,j;
 					int use_ms_short;
 					MS_Info *msInfo;
@@ -77,6 +78,12 @@ void MSPreprocess(double p_ratio_long[][MAX_SCFAC_BANDS],
 
 					/* Determine which bands should be enabled */
 					msInfo = &(channelInfo[leftChan].ms_info);
+					if (use_is) {
+						isBand = (block_type[rightChan]==ONLY_SHORT_WINDOW) ? IS_MIN_BAND_S : IS_MIN_BAND_L;
+						isBand = (isBand>maxSfb) ? maxSfb : isBand;
+					} else {
+						isBand = maxSfb;
+					}
 
 					for (g=0;g<numGroups;g++) {
 						for (sfbNum=0;sfbNum<maxSfb;sfbNum++) {
@@ -88,7 +95,13 @@ void MSPreprocess(double p_ratio_long[][MAX_SCFAC_BANDS],
 								for (j = groupIndex; j < quantInfo[leftChan].window_group_length[g]+groupIndex; j++) {
 									use_ms_short = min(use_ms_short, p_chpo_short[1][j].use_ms[sfbNum]);
 								}
-								msInfo->ms_used[b] = use_ms_short;
+								if (sfbNum < isBand) {
+									msInfo->ms_used[b] = use_ms_short;
+								} else {
+									msInfo->ms_used[b] = 0;
+									use_ms_short = 0;
+								}
+
 								if (msInfo->ms_used[b]) {
 									realyused = 1;
 									used++;
@@ -108,7 +121,12 @@ void MSPreprocess(double p_ratio_long[][MAX_SCFAC_BANDS],
 
 							} else {
 
-								msInfo->ms_used[b] = p_chpo_long[1].use_ms[sfbNum];
+								if (sfbNum < isBand) {
+									msInfo->ms_used[b] = p_chpo_long[1].use_ms[sfbNum];
+								} else {
+									msInfo->ms_used[b] = 0;
+									p_chpo_long[1].use_ms[sfbNum] = 0;
+								}
 								if (msInfo->ms_used[b]) {
 									realyused = 1;
 									used++;
