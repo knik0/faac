@@ -15,10 +15,8 @@
 #include "all.h"
 #include "aac_se_enc.h"
 #include "nok_ltp_enc.h"
-#include "winswitch.h"
 #include "transfo.h"
 
-#define SQRT2 C_SQRT2
 
 /* AAC tables */
 
@@ -172,7 +170,6 @@ void EncTfInit (faacAACStream *as)
 	/* initialize psychoacoustic module */
 	EncTf_psycho_acoustic_init();
 
-//	winSwitchInit(max_ch);
 
 	/* initialize spectrum processing */
 	/* initialize quantization and coding */
@@ -340,38 +337,6 @@ int EncTfFrame (faacAACStream *as, BsBitStream  *fixed_stream)
 	* block_switch processing
 	*
 	******************************************************************************************************************************/
-#if 0
-	/* Window switching taken from the NTT source code in the MPEG4 VM. */
-	{
-		static int ntt_InitFlag = 1;
-		static double *sig_tmptmp, *sig_tmp;
-		int ismp, i_ch, top;
-		/* initialize */
-		if (ntt_InitFlag){
-			sig_tmptmp = malloc(max_ch*block_size_samples*3*sizeof(double));
-			sig_tmp = sig_tmptmp + block_size_samples * max_ch;
-			for (i_ch=0; i_ch<max_ch; i_ch++){
-				top = i_ch * block_size_samples;
-				for (ismp=0; ismp<block_size_samples; ismp++){
-					sig_tmp[ismp+top] = DTimeSigBuf[i_ch][ismp];
-				}
-			}
-		}
-		for (i_ch=0; i_ch<max_ch; i_ch++){
-			top = i_ch * block_size_samples;
-			for (ismp=0; ismp<block_size_samples; ismp++){
-				sig_tmp[ismp+block_size_samples*max_ch+top] =
-					DTimeSigLookAheadBuf[i_ch][ismp];
-			}
-		}
-		/* automatic switching module */
-		winSwitch(sig_tmp, &block_type[0], ntt_InitFlag);
-		for (ismp=0; ismp<block_size_samples*2*max_ch; ismp++){
-			sig_tmp[ismp-block_size_samples*max_ch] = sig_tmp[ismp];
-		}
-		ntt_InitFlag = 0;
-	}
-#else
 	{
 		int chanNum;
 		for (chanNum=0;chanNum<max_ch;chanNum++) {
@@ -400,7 +365,6 @@ int EncTfFrame (faacAACStream *as, BsBitStream  *fixed_stream)
 			desired_block_type[chanNum]=next_desired_block_type[chanNum];
 		}
 	}
-#endif
 
 //	printf("%d\t\n", block_type[0]);
 //	block_type[0] = ONLY_LONG_WINDOW;

@@ -108,6 +108,10 @@ SOURCE=.\encoder.c
 # End Source File
 # Begin Source File
 
+SOURCE=.\faac.c
+# End Source File
+# Begin Source File
+
 SOURCE=.\fastfft.c
 # End Source File
 # Begin Source File
@@ -149,14 +153,6 @@ SOURCE=.\tns.c
 # Begin Source File
 
 SOURCE=.\transfo.c
-# End Source File
-# Begin Source File
-
-SOURCE=.\winswitch.c
-# End Source File
-# Begin Source File
-
-SOURCE=.\faac.c
 # End Source File
 # End Group
 # End Target
