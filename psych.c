@@ -52,9 +52,9 @@ Copyright (c) 1997.
 
 Source file:
 
-$Id: psych.c,v 1.20 2000/01/06 15:52:32 menno Exp $
-$Id: psych.c,v 1.20 2000/01/06 15:52:32 menno Exp $
-$Id: psych.c,v 1.20 2000/01/06 15:52:32 menno Exp $
+$Id: psych.c,v 1.21 2000/01/07 17:17:56 lenox Exp $
+$Id: psych.c,v 1.21 2000/01/07 17:17:56 lenox Exp $
+$Id: psych.c,v 1.21 2000/01/07 17:17:56 lenox Exp $
 
 **********************************************************************/
 
@@ -590,8 +590,9 @@ void EncTf_psycho_acoustic(
 		psy_step11(part_tbl_long, part_tbl_short, &psy_stvar_long[no_of_chan], &psy_stvar_short[no_of_chan], ch);
 		psy_step12(part_tbl_long, part_tbl_short, &psy_stvar_long[no_of_chan], &psy_stvar_short[no_of_chan],
 			&psy_var_long, &psy_var_short, ch);
-		psy_step13(&psy_var_long, block_type, no_of_chan);
-		psy_step14(p_sri, part_tbl_long, part_tbl_short, &psy_stvar_long[no_of_chan], 
+//		psy_step13(&psy_var_long, block_type, no_of_chan);
+		psy_step13(&psy_var_long, block_type, ch);
+		psy_step14(p_sri, part_tbl_long, part_tbl_short, &psy_stvar_long[no_of_chan],
 			&psy_stvar_short[no_of_chan], &psy_var_long, &psy_var_short, ch);
 		psy_step15(psy_stvar_long[no_of_chan].use_ms, psy_stvar_short[no_of_chan].use_ms, p_sri, &psy_stvar_long[0], &psy_stvar_short[0], &psy_var_long, &psy_var_short, no_of_chan);
 	}	
