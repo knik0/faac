@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: psychkni.c,v 1.3 2002/11/23 17:33:28 knik Exp $
+ * $Id: psychkni.c,v 1.4 2002/11/27 17:20:34 knik Exp $
  */
 #include <stdio.h>
 #include <stdlib.h>
@@ -79,37 +79,29 @@ static void PsyThreshold(GlobalPsyInfo * gpsyInfo, PsyInfo * psyInfo, int *cb_wi
   int lastband;
   int offset;
   psydata_t *psydata = psyInfo->data;
-  const double globalthr = 70;
-  double tmp;
-  double thr;
+  const double globalthr = 140;
 
 
   /* Long window */
-  offset = 1;
+  offset = 0;
   for (b = 0; b < num_cb_long; b++)
   {
-    tmp = (double)(offset + cb_width_long[b]) / offset;
-
-    thr = log(tmp) * globalthr;
+    offset += cb_width_long[b];
 
     psyInfo->maskEn[b] = 1.0;
-    psyInfo->maskThr[b] = 1.0 / thr;
-    offset += cb_width_long[b];
+    psyInfo->maskThr[b] = offset / globalthr;
   }
 
   /* Short windows */
-  offset = 1;
+  offset = 0;
   for (j = 0; j < 8; j++)
   {
     for (b = 0; b < num_cb_short; b++)
     {
-      tmp = (double)(offset + cb_width_short[b]) / offset;
-
-      thr = log(tmp) * globalthr;
+      offset += cb_width_short[b];
 
       psyInfo->maskEnS[j][b] = 1.0;
-      psyInfo->maskThrS[j][b] = 1.0 / thr;
-      offset += cb_width_short[b];
+      psyInfo->maskThrS[j][b] = offset / globalthr;
     }
   }
 
