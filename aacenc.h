@@ -60,7 +60,6 @@ typedef struct {
 	long frames;
 	long cur_frame;
 	int is_first_frame;
-	int is_last_frames;
 	int channels;
 	int out_sampling_rate;
 	int in_sampling_rate;
@@ -93,6 +92,7 @@ typedef struct {
 
 int faac_EncodeInit(faacAACStream *as, char *in_file, char *out_file);
 int faac_EncodeFrame(faacAACStream *as);
+int faac_BlockEncodeFrame(faacAACStream *as, short *input_samples, int Samples);
 void faac_EncodeFree(faacAACStream *as);
 void faac_EncodeFinish(faacAACStream *as);
 faacVersion *faac_Version(void);
@@ -103,6 +103,7 @@ void faac_SetParam(faacAACStream *as, int param, int value);
 
 __declspec(dllexport) int faac_EncodeInit(faacAACStream *as, char *in_file, char *out_file);
 __declspec(dllexport) int faac_EncodeFrame(faacAACStream *as);
+__declspec(dllexport) int faac_BlockEncodeFrame(faacAACStream *as, short *input_samples, int Samples);
 __declspec(dllexport) void faac_EncodeFree(faacAACStream *as);
 __declspec(dllexport) void faac_EncodeFinish(faacAACStream *as);
 __declspec(dllexport) faacVersion *faac_Version(void);

@@ -91,9 +91,13 @@ int faac_EncodeInit(faacAACStream *as, char *in_file, char *out_file)
     sf_info.samplerate = 44100;
   }
 
-  as->in_file = sf_open_read(in_file, &sf_info);
-  if (as->in_file == NULL)
-    return -1;
+  if ( strcmp(in_file,"") ) {
+    as->in_file = sf_open_read(in_file, &sf_info);
+    if (as->in_file == NULL)
+      return -1;
+    }
+  else
+    as->in_file = NULL;
 
   as->out_file = fopen(out_file, "wb");
   if (as->out_file == NULL)
@@ -124,7 +128,6 @@ int faac_EncodeInit(faacAACStream *as, char *in_file, char *out_file)
   as->frames = 0;
   as->cur_frame = 0;
   as->is_first_frame = 1;
-  as->is_last_frames = 0;
 
   if (as->in_sampling_rate != as->out_sampling_rate)
     as->rc_needed = 1;
@@ -175,28 +178,15 @@ int faac_EncodeInit(faacAACStream *as, char *in_file, char *out_file)
   return frames;
 }
 ////////////////////////////////////////////////////////////////////////////////
-int faac_EncodeFrame(faacAACStream *as)
+int faac_EncodeFrameCore(faacAACStream *as, int Samples)
 {
   int i, j, error;
   int usedNumBit, usedBytes;
-  int samplesOut, curSample = 0, Samples;
+  int samplesOut, curSample = 0;
   BsBitStream *bitBuf;
   float *dataOut;
   float *data = NULL;
   int totalBytes = 0;
-
-  if (!as->is_last_frames){
-    Samples = sf_read_short(as->in_file, as->sampleBuffer, as->samplesToRead);
-    if (Samples < as->samplesToRead)
-      as->is_last_frames = 1;
-  }
-  else {
-      Samples = 0;
-      if(as->sampleBuffer){
-        free(as->sampleBuffer);
-        as->sampleBuffer = NULL;
-      }
-  }
 
   // Is this the last (incomplete) frame
   if ((Samples < as->samplesToRead)&&(Samples > 0)) {
@@ -305,17 +295,37 @@ int faac_EncodeFrame(faacAACStream *as)
   if (data)
     free(data);
 
-   fwrite(as->bitBuffer, 1, as->bitBufferSize, as->out_file);
+  fwrite(as->bitBuffer, 1, as->bitBufferSize, as->out_file);
+  return FNO_ERROR;
+}
+////////////////////////////////////////////////////////////////////////////////
+int faac_EncodeFrame(faacAACStream *as)
+{
+  int Samples;
+
+  Samples = sf_read_short(as->in_file, as->sampleBuffer, as->samplesToRead);
+  if ( Samples > 0 )
+    if ( faac_EncodeFrameCore(as, Samples) == FERROR)
+      return FERROR;
   if (Samples < as->samplesToRead)
     return F_FINISH;
-  else
-    return FNO_ERROR;
+  return FNO_ERROR;
+}
+////////////////////////////////////////////////////////////////////////////////
+int faac_BlockEncodeFrame(faacAACStream *as, short *input_samples, int Samples)
+{
+  memcpy(as->sampleBuffer,input_samples,sizeof(short)*Samples);
+  return faac_EncodeFrameCore(as, Samples);
 }
 ////////////////////////////////////////////////////////////////////////////////
 void faac_EncodeFinish(faacAACStream *as)
 {
-  faac_EncodeFrame(as);
-  faac_EncodeFrame(as);
+  if(as->sampleBuffer){
+    free(as->sampleBuffer);
+    as->sampleBuffer = NULL;
+  }
+  faac_EncodeFrameCore(as,0);
+  faac_EncodeFrameCore(as,0);
 }
 ////////////////////////////////////////////////////////////////////////////////
 void faac_EncodeFree(faacAACStream *as)
@@ -336,7 +346,8 @@ void faac_EncodeFree(faacAACStream *as)
   if (as->header_type == ADIF_HEADER)
     write_ADIF_header(as);
 
-  sf_close(as->in_file);
+  if ( as->in_file != NULL )
+    sf_close(as->in_file);
   fclose(as->out_file);
 
   if (as->bitBuffer)
