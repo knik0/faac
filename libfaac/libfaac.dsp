@@ -119,15 +119,11 @@ SOURCE=.\huffman.c
 # End Source File
 # Begin Source File
 
-SOURCE=.\joint.c
-# End Source File
-# Begin Source File
-
 SOURCE=.\ltp.c
 # End Source File
 # Begin Source File
 
-SOURCE=.\psychiso.c
+SOURCE=.\midside.c
 # End Source File
 # Begin Source File
 

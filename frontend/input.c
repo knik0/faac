@@ -16,7 +16,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: input.c,v 1.7 2003/07/10 19:18:38 knik Exp $
+ * $Id: input.c,v 1.8 2003/07/28 17:12:57 menno Exp $
  */
 
 #ifdef HAVE_CONFIG_H
@@ -213,7 +213,7 @@ pcmfile_t *wav_open_read(const char *name, int rawinput)
 static void chan_remap(int32_t *buf, int channels, int blocks, int *map)
 {
   int i;
-  int32_t *tmp = alloca(channels * sizeof(int32_t));
+  int32_t *tmp = malloc(channels * sizeof(int32_t));
 
   for (i = 0; i < blocks; i++)
   {
@@ -262,7 +262,7 @@ size_t wav_read_int24(pcmfile_t *sndf, int32_t *buf, size_t num, int *map)
 
 	s = SWAP16(s);
 
-	buf[i] = ((uint32_t)s) << 8;
+	buf[i] = ((u_int32_t)s) << 8;
       }
     }
     else
