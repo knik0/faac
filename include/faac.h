@@ -16,7 +16,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: faac.h,v 1.25 2003/03/27 17:12:46 knik Exp $
+ * $Id: faac.h,v 1.26 2003/04/29 08:45:27 menno Exp $
  */
 
 #ifndef FAACLIB_H
@@ -52,10 +52,10 @@ extern "C" {
 typedef struct faacEncConfiguration
 {
     /* config version */
-    const int version;
+    /*const*/ int version;
 
     /* library version */
-    const char *name;
+    /*const*/ char *name;
 
 	/* MPEG version, 2 or 4 */
 	unsigned int mpegVersion;
@@ -90,7 +90,7 @@ typedef struct faacEncConfiguration
 	unsigned int outputFormat;
 
 	// psychoacoustic model list
-	const struct {
+	/*const*/ struct {
 	  void *ptr;
 	  char *name;
 	} *psymodellist;

@@ -1,3 +1,7 @@
+
+#ifndef _STRUCTS___
+#define _STRUCTS___
+
 typedef struct mec
 {
 bool					AutoCfg;
@@ -12,3 +16,5 @@ BYTE					Channels;
 DWORD					BitRate;
 faacDecConfiguration	DecCfg;
 } MY_DEC_CFG;
+
+#endif

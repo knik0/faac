@@ -165,7 +165,7 @@ BOOL DialogMsgProcAbout(HWND hWndDlg, UINT Message, WPARAM wParam, LPARAM lParam
 					"This program is free software and can be distributed/modifyed under the terms of the GNU General Public License.\n"
 					"This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY.\n\n"
 					"Compiled on %s\n",
-					FAACENC_VERSION,
+					/*FAACENC_VERSION*/ FAAC_CFG_VERSION,
 					__DATE__
 					);
 			SetDlgItemText(hWndDlg, IDC_L_ABOUT, buf);
