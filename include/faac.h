@@ -16,7 +16,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: faac.h,v 1.17 2001/09/21 12:39:01 eraser Exp $
+ * $Id: faac.h,v 1.18 2001/09/21 12:59:29 eraser Exp $
  */
 
 #ifndef FAACLIB_H
@@ -37,8 +37,8 @@ extern "C" {
   #endif
 #endif
 
-#define FAACENC_VERSION 1.5
-#define FAACENC_VERSIONB 0 /* If 1 this version is still in beta */
+#define FAACENC_VERSION 1.9
+#define FAACENC_VERSIONB 1 /* If 1 this version is still in beta */
 
 /* MPEG ID's */
 #define MPEG2 1
