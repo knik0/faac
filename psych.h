@@ -191,6 +191,7 @@ void EncTf_psycho_acoustic(
   /* input */
   double sampling_rate,
   int    no_of_chan,         /* no of audio channels */
+  int max_ch,
   double *p_time_signal[],
   enum WINDOW_TYPE block_type[],
   int qcSelect,
