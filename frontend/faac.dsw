@@ -36,7 +36,7 @@ Package=<4>
 
 ###############################################################################
 
-Project: "libmp4v2_st"=..\..\faad2\common\mp4v2\libmp4v2_st60.dsp - Package Owner=<4>
+Project: "libmp4v2_st"=..\common\mp4v2\libmp4v2_st60.dsp - Package Owner=<4>
 
 Package=<5>
 {{{
