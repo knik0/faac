@@ -3,16 +3,48 @@
 
 typedef struct RCBufStruct RCBuf;	/* buffer handle */
 
-#define MAIN_PROFILE 0
+#define PROFILE         1
+#define HEADER_TYPE     2
+#define MS_STEREO       3
+#define IS_STEREO       4
+#define BITRATE         5         // default: 128
+#define CUT_OFF         6         // default: 0
+#define OUT_SAMPLING_RATE       7 // default: 0
+#define RAW_AUDIO       8         // default: 0
+#define TNS             9
+#define LTP             10
+#define PNS             11
+
+#define MAIN_PROFILE 0           // default
 #define LOW_PROFILE 1
+
+#define NO_HEADER	0
+#define ADIF_HEADER     1
+#define ADTS_HEADER     2        // default
+
+#define NO_MS           -1
+#define FORCE_MS        1
+#define SWITCHING_MS    0        // default
+
+#define USE_IS          1
+#define NO_IS           0        // default
+
+#define USE_TNS         1
+#define NO_TNS          0        // default
+
+#define USE_LTP         1        // default
+#define NO_LTP          0
+
+#define USE_PNS         1
+#define NO_PNS          0        // default
+
+#define USE_RAW_AUDIO   1
+#define NO_RAW_AUDIO    0        //default
 
 #define FNO_ERROR 0
 #define FERROR 1
 #define F_FINISH 2
 
-#define NO_HEADER	0
-#define ADIF_HEADER     1
-#define ADTS_HEADER     2
 
 typedef struct {
 	int DLLMajorVersion; // These 2 values should always be checked, because the DLL
@@ -65,6 +97,7 @@ void faac_EncodeFree(faacAACStream *as);
 void faac_EncodeFinish(faacAACStream *as);
 faacVersion *faac_Version(void);
 void faac_InitParams(faacAACStream *as);
+void faac_SetParam(faacAACStream *as, int param, int value);
 
 #else
 
@@ -74,6 +107,7 @@ __declspec(dllexport) void faac_EncodeFree(faacAACStream *as);
 __declspec(dllexport) void faac_EncodeFinish(faacAACStream *as);
 __declspec(dllexport) faacVersion *faac_Version(void);
 __declspec(dllexport) void faac_InitParams(faacAACStream *as);
+__declspec(dllexport) void faac_SetParam(faacAACStream *as, int param, int value);
 
 #endif
 
