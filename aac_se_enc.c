@@ -340,7 +340,6 @@ int WritePulseData(AACQuantInfo* quantInfo,    /* AACQuantInfo structure */
 {
 	int i, bit_count = 0;
 
-	/* Currently write no pulse data present */
 	if (quantInfo->pulseInfo.pulse_data_present) {
 		if (writeFlag) {
 			BsPutBit(fixed_stream,1,LEN_PULSE_PRES);  /* no pulse_data_present */

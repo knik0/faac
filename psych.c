@@ -52,9 +52,9 @@ Copyright (c) 1997.
 
 Source file: 
 
-$Id: psych.c,v 1.3 1999/12/16 17:20:55 menno Exp $
-$Id: psych.c,v 1.3 1999/12/16 17:20:55 menno Exp $
-$Id: psych.c,v 1.3 1999/12/16 17:20:55 menno Exp $
+$Id: psych.c,v 1.4 1999/12/16 19:39:15 menno Exp $
+$Id: psych.c,v 1.4 1999/12/16 19:39:15 menno Exp $
+$Id: psych.c,v 1.4 1999/12/16 19:39:15 menno Exp $
 
 **********************************************************************/
 
@@ -66,7 +66,7 @@ $Id: psych.c,v 1.3 1999/12/16 17:20:55 menno Exp $
 #include "psych.h"
 
 
-static SR_INFO sr_info_aac[MAX_SAMPLING_RATES+1] =
+SR_INFO sr_info_aac[MAX_SAMPLING_RATES+1] =
 {
   { 8000  },
   { 11025 },
@@ -117,7 +117,7 @@ static SR_INFO sr_info_aac[MAX_SAMPLING_RATES+1] =
 };
 
 /* added by T. Araki (1997.07.10) */
-static PARTITION_TABLE_LONG  part_tbl_long_all[MAX_SAMPLING_RATES+1] =
+PARTITION_TABLE_LONG  part_tbl_long_all[MAX_SAMPLING_RATES+1] =
 {
   { 8000  },
   { 11025 },
@@ -199,7 +199,7 @@ static PARTITION_TABLE_LONG  part_tbl_long_all[MAX_SAMPLING_RATES+1] =
   { -1 }
 };
 
-static PARTITION_TABLE_SHORT  part_tbl_short_all[MAX_SAMPLING_RATES+1] =
+PARTITION_TABLE_SHORT  part_tbl_short_all[MAX_SAMPLING_RATES+1] =
 {
   { 8000  },
   { 11025 },
@@ -265,18 +265,18 @@ static PARTITION_TABLE_SHORT  part_tbl_short_all[MAX_SAMPLING_RATES+1] =
 /* added by T. Araki (1997.07.10) end */
 
 /* added by T. Araki (1997.10.16) */
-static double          sample[MAX_TIME_CHANNELS+2][BLOCK_LEN_LONG*2];
+double          sample[MAX_TIME_CHANNELS+2][BLOCK_LEN_LONG*2];
                                /* sample value */
 
-static FFT_TABLE_LONG    fft_tbl_long;  /* table for long fft */
-static FFT_TABLE_SHORT    fft_tbl_short;  /* table for short fft */
-static PARTITION_TABLE_LONG    *part_tbl_long;  
+FFT_TABLE_LONG    fft_tbl_long;  /* table for long fft */
+FFT_TABLE_SHORT    fft_tbl_short;  /* table for short fft */
+PARTITION_TABLE_LONG    *part_tbl_long;  
                                /* partition table for long block */
-static PARTITION_TABLE_SHORT    *part_tbl_short;
+PARTITION_TABLE_SHORT    *part_tbl_short;
                                /* partition table for short block */
-static PSY_STATVARIABLE_LONG    psy_stvar_long[MAX_TIME_CHANNELS+2];
+PSY_STATVARIABLE_LONG    psy_stvar_long[MAX_TIME_CHANNELS+2];
                                /* static variables for long block */
-static PSY_STATVARIABLE_SHORT    psy_stvar_short[MAX_TIME_CHANNELS+2];
+PSY_STATVARIABLE_SHORT    psy_stvar_short[MAX_TIME_CHANNELS+2];
                                /* static variables for short block */
 /* added by T. Araki (1997.10.16) end */
 
@@ -656,14 +656,14 @@ void EncTf_psycho_acoustic(
 		p_chpo_long[no_of_chan].cb_width  = p_sri->cb_width_long;
 		p_chpo_long[no_of_chan].no_of_cb = p_sri->num_cb_long;
 		if (no_of_chan == 1)
-			memcpy(p_chpo_long[no_of_chan].use_ms, use_ms_l, NPART_LONG*sizeof(int));
+			memcpy(p_chpo_long[no_of_chan].use_ms, use_ms_l, NSFB_LONG*sizeof(int));
 
 		for( i=0; i<MAX_SHORT_WINDOWS; i++ ) {
 			p_chpo_short[no_of_chan][i].p_ratio  = psy_stvar_short[no_of_chan].ismr[i];
 			p_chpo_short[no_of_chan][i].cb_width = p_sri->cb_width_short;
 			p_chpo_short[no_of_chan][i].no_of_cb = p_sri->num_cb_short;
 			if (no_of_chan == 1)
-				memcpy(p_chpo_short[no_of_chan][i].use_ms, use_ms_s[i], NPART_SHORT*sizeof(int));
+				memcpy(p_chpo_short[no_of_chan][i].use_ms, use_ms_s[i], NSFB_SHORT*sizeof(int));
 		}
 
 	}

@@ -30,25 +30,25 @@ int max_sfb_s[] = { 12, 12, 12, 13, 14, 13, 15, 15, 15, 15, 15, 15 };
 int max_sfb_l[] = { 49, 49, 47, 48, 49, 51, 47, 47, 43, 43, 43, 40 };
 
 
-static int     block_size_samples = 1024;  /* nr of samples per block in one! audio channel */
-static int     short_win_in_long  = 8;
-static int     max_ch;    /* no of of audio channels */
-static double *spectral_line_vector[MAX_TIME_CHANNELS];
-static double *reconstructed_spectrum[MAX_TIME_CHANNELS];
-static double *overlap_buffer[MAX_TIME_CHANNELS];
-static double *DTimeSigBuf[MAX_TIME_CHANNELS];
-static double *DTimeSigLookAheadBuf[MAX_TIME_CHANNELS+2];
+int     block_size_samples = 1024;  /* nr of samples per block in one! audio channel */
+int     short_win_in_long  = 8;
+int     max_ch;    /* no of of audio channels */
+double *spectral_line_vector[MAX_TIME_CHANNELS];
+double *reconstructed_spectrum[MAX_TIME_CHANNELS];
+double *overlap_buffer[MAX_TIME_CHANNELS];
+double *DTimeSigBuf[MAX_TIME_CHANNELS];
+double *DTimeSigLookAheadBuf[MAX_TIME_CHANNELS+2];
 
 /* static variables used by the T/F mapping */
-static enum QC_MOD_SELECT qc_select = AAC_QC;                   /* later f(encPara) */
-static enum AAC_PROFILE profile = MAIN;
-static enum WINDOW_TYPE block_type[MAX_TIME_CHANNELS];
-static enum WINDOW_TYPE desired_block_type[MAX_TIME_CHANNELS];
-static enum WINDOW_TYPE next_desired_block_type[MAX_TIME_CHANNELS+2];
+enum QC_MOD_SELECT qc_select = AAC_QC;                   /* later f(encPara) */
+enum AAC_PROFILE profile = MAIN;
+enum WINDOW_TYPE block_type[MAX_TIME_CHANNELS];
+enum WINDOW_TYPE desired_block_type[MAX_TIME_CHANNELS];
+enum WINDOW_TYPE next_desired_block_type[MAX_TIME_CHANNELS+2];
 
 /* Additional variables for AAC */
-static int aacAllowScalefacs = 1;              /* Allow AAC scalefactors to be nonconstant */
-static TNS_INFO tnsInfo[MAX_TIME_CHANNELS];
+int aacAllowScalefacs = 1;              /* Allow AAC scalefactors to be nonconstant */
+TNS_INFO tnsInfo[MAX_TIME_CHANNELS];
 
 AACQuantInfo quantInfo[MAX_TIME_CHANNELS];               /* Info structure for AAC quantization and coding */
 
@@ -56,7 +56,7 @@ AACQuantInfo quantInfo[MAX_TIME_CHANNELS];               /* Info structure for A
 Ch_Info channelInfo[MAX_TIME_CHANNELS];
 
 /* AAC shorter windows 960-480-120 */
-static int useShortWindows=0;  /* don't use shorter windows */
+int useShortWindows=0;  /* don't use shorter windows */
 
 // TEMPORARY HACK
 
@@ -222,10 +222,10 @@ int EncTfFrame (faacAACStream *as, BsBitStream  *fixed_stream)
 	CH_PSYCH_OUTPUT_LONG chpo_long[MAX_TIME_CHANNELS+2];
 	CH_PSYCH_OUTPUT_SHORT chpo_short[MAX_TIME_CHANNELS+2][MAX_SHORT_WINDOWS];
 
-	memset(chpo_long,0,sizeof(CH_PSYCH_OUTPUT_LONG)*(MAX_TIME_CHANNELS+2));
-	memset(chpo_short,0,sizeof(CH_PSYCH_OUTPUT_SHORT)*(MAX_TIME_CHANNELS+2)*MAX_SHORT_WINDOWS);
-	memset(p_ratio_long,0,sizeof(double)*(MAX_TIME_CHANNELS)*MAX_SCFAC_BANDS);
-	memset(p_ratio_short,0,sizeof(double)*(MAX_TIME_CHANNELS)*MAX_SCFAC_BANDS);
+//	memset(chpo_long,0,sizeof(CH_PSYCH_OUTPUT_LONG)*(MAX_TIME_CHANNELS+2));
+//	memset(chpo_short,0,sizeof(CH_PSYCH_OUTPUT_SHORT)*(MAX_TIME_CHANNELS+2)*MAX_SHORT_WINDOWS);
+//	memset(p_ratio_long,0,sizeof(double)*(MAX_TIME_CHANNELS)*MAX_SCFAC_BANDS);
+//	memset(p_ratio_short,0,sizeof(double)*(MAX_TIME_CHANNELS)*MAX_SCFAC_BANDS);
 
 	{ /* convert float input to double, which is the internal format */
 		/* store input data in look ahead buffer which may be necessary for the window switching decision */
@@ -412,6 +412,37 @@ int EncTfFrame (faacAACStream *as, BsBitStream  *fixed_stream)
 	*
 	******************************************************************************************************************************/
 
+	{
+		int chanNum;
+		for (chanNum=0;chanNum<max_ch;chanNum++) {
+			switch( block_type[chanNum] ) {
+			case ONLY_LONG_WINDOW:
+				memcpy( (char*)sfb_width_table[chanNum], (char*)chpo_long[chanNum].cb_width, (NSFB_LONG+1)*sizeof(int) );
+				nr_of_sfb[chanNum] = chpo_long[chanNum].no_of_cb;
+				p_ratio[chanNum]   = p_ratio_long[chanNum];
+				break;
+			case LONG_SHORT_WINDOW:
+				memcpy( (char*)sfb_width_table[chanNum], (char*)chpo_long[chanNum].cb_width, (NSFB_LONG+1)*sizeof(int) );
+				nr_of_sfb[chanNum] = chpo_long[chanNum].no_of_cb;
+				p_ratio[chanNum]   = p_ratio_long[chanNum];
+				break;
+			case ONLY_SHORT_WINDOW:
+				memcpy( (char*)sfb_width_table[chanNum], (char*)chpo_short[chanNum][0].cb_width, (NSFB_SHORT+1)*sizeof(int) );
+				nr_of_sfb[chanNum] = chpo_short[chanNum][0].no_of_cb;
+				p_ratio[chanNum]   = p_ratio_short[chanNum];
+				break;
+			case SHORT_LONG_WINDOW:
+				memcpy( (char*)sfb_width_table[chanNum], (char*)chpo_long[chanNum].cb_width, (NSFB_LONG+1)*sizeof(int) );
+				nr_of_sfb[chanNum] = chpo_long[chanNum].no_of_cb;
+				p_ratio[chanNum]   = p_ratio_long[chanNum];
+				break;
+			}
+		}
+	}
+
+		MSEnergy(spectral_line_vector, energy, chpo_long, chpo_short,
+			  sfb_width_table, channelInfo, block_type, quantInfo, max_ch);
+
 //	if (as->use_MS) {
 		MSPreprocess(p_ratio_long, p_ratio_short, chpo_long, chpo_short,
 			channelInfo, block_type, quantInfo,max_ch);
@@ -430,37 +461,6 @@ int EncTfFrame (faacAACStream *as, BsBitStream  *fixed_stream)
 //			}
 //		}
 //	}
-
-	{
-		int chanNum;
-		for (chanNum=0;chanNum<max_ch;chanNum++) {
-			switch( block_type[chanNum] ) {
-			case ONLY_LONG_WINDOW:
-				memcpy( (char*)sfb_width_table[chanNum], (char*)chpo_long[chanNum].cb_width, (NSFB_LONG+1)*sizeof(int) );
-				nr_of_sfb[chanNum] = 49; //chpo_long[chanNum].no_of_cb;
-				p_ratio[chanNum]   = p_ratio_long[chanNum];
-				break;
-			case LONG_SHORT_WINDOW:
-				memcpy( (char*)sfb_width_table[chanNum], (char*)chpo_long[chanNum].cb_width, (NSFB_LONG+1)*sizeof(int) );
-				nr_of_sfb[chanNum] = 49; //chpo_long[chanNum].no_of_cb;
-				p_ratio[chanNum]   = p_ratio_long[chanNum];
-				break;
-			case ONLY_SHORT_WINDOW:
-				memcpy( (char*)sfb_width_table[chanNum], (char*)chpo_short[chanNum][0].cb_width, (NSFB_SHORT+1)*sizeof(int) );
-				nr_of_sfb[chanNum] = 14; //chpo_short[chanNum][0].no_of_cb;
-				p_ratio[chanNum]   = p_ratio_short[chanNum];
-				break;
-			case SHORT_LONG_WINDOW:
-				memcpy( (char*)sfb_width_table[chanNum], (char*)chpo_long[chanNum].cb_width, (NSFB_LONG+1)*sizeof(int) );
-				nr_of_sfb[chanNum] = 49; //chpo_long[chanNum].no_of_cb;
-				p_ratio[chanNum]   = p_ratio_long[chanNum];
-				break;
-			}
-		}
-	}
-
-		MSEnergy(spectral_line_vector, energy, chpo_long, chpo_short,
-			  sfb_width_table, channelInfo, block_type, quantInfo, max_ch);
 
 	{
 		int chanNum;   

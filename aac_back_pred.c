@@ -61,13 +61,13 @@ reset_group: number for the reset group => if -1, then no reset
 #include "aac_back_pred.h"
 
 
-static int psy_init_mc[MAX_TIME_CHANNELS];
-static double dr_mc[MAX_TIME_CHANNELS][LPC+1][FLEN_LONG/2],e_mc[MAX_TIME_CHANNELS][LPC+1+1][FLEN_LONG/2];
-static double K_mc[MAX_TIME_CHANNELS][LPC+1][FLEN_LONG/2], R_mc[MAX_TIME_CHANNELS][LPC+1][FLEN_LONG/2];
-static double VAR_mc[MAX_TIME_CHANNELS][LPC+1][FLEN_LONG/2], KOR_mc[MAX_TIME_CHANNELS][LPC+1][FLEN_LONG/2];
-static double sb_samples_pred_mc[MAX_TIME_CHANNELS][FLEN_LONG/2];
-static int thisLineNeedsResetting_mc[MAX_TIME_CHANNELS][FLEN_LONG/2];
-static int reset_count_mc[MAX_TIME_CHANNELS];
+int psy_init_mc[MAX_TIME_CHANNELS];
+double dr_mc[MAX_TIME_CHANNELS][LPC+1][FLEN_LONG/2],e_mc[MAX_TIME_CHANNELS][LPC+1+1][FLEN_LONG/2];
+double K_mc[MAX_TIME_CHANNELS][LPC+1][FLEN_LONG/2], R_mc[MAX_TIME_CHANNELS][LPC+1][FLEN_LONG/2];
+double VAR_mc[MAX_TIME_CHANNELS][LPC+1][FLEN_LONG/2], KOR_mc[MAX_TIME_CHANNELS][LPC+1][FLEN_LONG/2];
+double sb_samples_pred_mc[MAX_TIME_CHANNELS][FLEN_LONG/2];
+int thisLineNeedsResetting_mc[MAX_TIME_CHANNELS][FLEN_LONG/2];
+int reset_count_mc[MAX_TIME_CHANNELS];
 
 void PredInit()
 {

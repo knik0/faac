@@ -9,7 +9,7 @@
 
 #define DPI	3.14159265358979323846264338327950288
 
-static double zero = 0;
+double zero = 0;
 
 void vcopy( double src[], double dest[], int inc_src, int inc_dest, int vlen )
 {

@@ -48,9 +48,9 @@ void compute_ath(AACQuantInfo *quantInfo, double ATH[SFB_NUM_MAX])
 		end   = quantInfo->sfb_offset[sfb+1];
 		ATH[sfb]=1e99;
 		for (i=start ; i < end; i++) {
-//			if (quantInfo->block_type==ONLY_SHORT_WINDOW)
-//				ATH_f = ATHformula(samp_freq*i/(2*128)); /* freq in kHz */
-//			else
+			if (quantInfo->block_type==ONLY_SHORT_WINDOW)
+				ATH_f = ATHformula(samp_freq*i/(2*128)); /* freq in kHz */
+			else
 				ATH_f = ATHformula(samp_freq*i/(2*1024)); /* freq in kHz */
 			ATH[sfb]=min(ATH[sfb],ATH_f);
 		}
@@ -190,7 +190,9 @@ int calc_noise(AACQuantInfo *quantInfo,
 			double fac  = pow(diff/max_sb_noise,4);
 			error_energy[sb] += diff*fac;
 		}
-		error_energy[sb] = 10*log10(max(0.001,error_energy[sb] / allowed_dist[sb]));
+		if (allowed_dist[sb] != 0.0)
+			error_energy[sb] = 10*log10(error_energy[sb] / allowed_dist[sb]);
+		else error_energy[sb] = 0;
 		if (error_energy[sb] > 0) {
 			over++;
 			*over_noise += error_energy[sb];
@@ -243,6 +245,16 @@ int quant_compare(int best_over, double best_tot_noise, double best_over_noise,
 #if 1
 	better =   (over_noise <  best_over_noise)
 		|| ((over_noise == best_over_noise)&&(tot_noise < best_tot_noise));
+#if 0
+	better = (over_noise < best_over_noise)
+		||( (over_noise == best_over_noise)
+		&&( (max_noise < best_max_noise)
+		||( (max_noise == best_max_noise)
+		&&(tot_noise <= best_tot_noise)
+		)
+		) 
+		);
+#endif
 #endif
 #endif
 #endif
@@ -346,6 +358,7 @@ int tf_encode_spectrum_aac(
 	int over = 0, best_over = 100, better;
 	int sfb_overflow, amp_over;
 	int best_common_scalefac;
+	int prev_scfac, prev_is_scfac;
 	double noise_thresh;
 	double over_noise, tot_noise, max_noise;
 	double noise[SFB_NUM_MAX];
@@ -422,7 +435,8 @@ int tf_encode_spectrum_aac(
 					int bandNum = (w+windowOffset)*maxBand + b;
 					sum += energy[MONO_CHAN][bandNum];
 				}
-				energy[MONO_CHAN][sfb_index++]=sum;
+				energy[MONO_CHAN][sfb_index] = sum;
+				sfb_index++;
 			}
 			windowOffset += numWindowsThisGroup;
 		}
@@ -432,6 +446,8 @@ int tf_encode_spectrum_aac(
 	for(sb = 0; sb < quantInfo->nr_of_sfb; sb++) {
 		if (10*log10(energy[MONO_CHAN][sb]+1e-15)>70) {
 			allowed_dist[MONO_CHAN][sb] = energy[MONO_CHAN][sb] * SigMaskRatio[sb];
+//			if (allowed_dist[MONO_CHAN][sb] < ATH[sb])
+//				allowed_dist[MONO_CHAN][sb] = ATH[sb];
 //			printf("%d\t\t%.3f\n", sb, SigMaskRatio[sb]);
 		} else {
 			allowed_dist[MONO_CHAN][sb] = energy[MONO_CHAN][sb] * 1.1;
@@ -567,16 +583,24 @@ int tf_encode_spectrum_aac(
 					sfb_overflow = 0;
 			}
 		}
-		for (sb = 0; sb < quantInfo->nr_of_sfb-1; sb++) {
-			if (scale_factor[sb] > (scale_factor[sb+1]+60))
-				sfb_overflow = 1;
-			if (scale_factor[sb] < (scale_factor[sb+1]-60))
-				sfb_overflow = 1;
+
+		prev_is_scfac = 0;
+		prev_scfac = store_common_scalefac;
+		for (sb = 0; sb < quantInfo->nr_of_sfb; sb++) {
+			if (ch_info->is_info.is_used[sb]) {
+				if (prev_is_scfac >= (scale_factor[sb]+60))
+					sfb_overflow = 1;
+				if (prev_is_scfac <= (scale_factor[sb]-60))
+					sfb_overflow = 1;
+				prev_is_scfac = scale_factor[sb];
+			} else {
+				if (prev_scfac >= (scale_factor[sb]+60))
+					sfb_overflow = 1;
+				if (prev_scfac <= (scale_factor[sb]-60))
+					sfb_overflow = 1;
+				prev_scfac = scale_factor[sb];
+			}
 		}
-		if (scale_factor[quantInfo->nr_of_sfb-1] > (scale_factor[quantInfo->nr_of_sfb-2]+60))
-			sfb_overflow = 1;
-		if (scale_factor[quantInfo->nr_of_sfb-1] < (scale_factor[quantInfo->nr_of_sfb-2]-60))
-			sfb_overflow = 1;
 
 		if ((amp_over == 0)||(over == 0)||(amp_over==quantInfo->nr_of_sfb)||(sfb_overflow))
 			break;

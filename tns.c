@@ -7,7 +7,7 @@
 /***********************************************/
 /* TNS Profile/Frequency Dependent Parameters  */
 /***********************************************/
-static unsigned long tnsSupportedSamplingRates[13] = 
+unsigned long tnsSupportedSamplingRates[13] = 
   {8000,11025,12000,16000,22050,24000,32000,44100,48000,64000,88200,96000,0};
 
 /* Limit bands to > 1.5 kHz */
@@ -17,35 +17,35 @@ static unsigned short tnsMinBandNumberShort[12] =
   { 10, 9, 8, 8, 5, 4, 3, 3, 2, 2, 1, 1 }; */
        
 /* Limit bands to > 2.0 kHz */
-static unsigned short tnsMinBandNumberLong[12] = 
+unsigned short tnsMinBandNumberLong[12] = 
   { 31, 30, 28, 24, 26, 25, 20, 17, 16, 15, 12, 11 };
-static unsigned short tnsMinBandNumberShort[12] = 
+unsigned short tnsMinBandNumberShort[12] = 
   { 12, 10, 10, 8, 6, 6, 4, 3, 3, 2, 2, 2 };
        
 /**************************************/
 /* Main/Low Profile TNS Parameters    */
 /**************************************/
-static unsigned short tnsMaxBandsLongMainLow[12] = 
+unsigned short tnsMaxBandsLongMainLow[12] = 
   { 39, 42, 42, 42, 46, 46, 51, 42, 40, 34, 31, 31 };
 
-static unsigned short tnsMaxBandsShortMainLow[12] = 
+unsigned short tnsMaxBandsShortMainLow[12] = 
   { 14, 14, 14, 14, 14, 14, 14, 14, 14, 10, 9, 9 };
 
-static unsigned short tnsMaxOrderLongMain = 20;
-static unsigned short tnsMaxOrderLongLow = 12;
-static unsigned short tnsMaxOrderShortMainLow = 7;
+unsigned short tnsMaxOrderLongMain = 20;
+unsigned short tnsMaxOrderLongLow = 12;
+unsigned short tnsMaxOrderShortMainLow = 7;
 
 /**************************************/
 /* SSR Profile TNS Parameters         */
 /**************************************/
-static unsigned short tnsMaxBandsLongSSR[12] = 
+unsigned short tnsMaxBandsLongSSR[12] = 
   { 19, 23, 23, 23, 29, 29, 26, 26, 26, 27, 28, 28 };
 
-static unsigned short tnsMaxBandsShortSSR[12] = 
+unsigned short tnsMaxBandsShortSSR[12] = 
   { 7, 8, 8, 8, 7, 7, 6, 6, 6, 7, 7, 7 };
 
-static unsigned short tnsMaxOrderLongSSR = 12;
-static unsigned short tnsMaxOrderShortSSR = 7;
+unsigned short tnsMaxOrderLongSSR = 12;
+unsigned short tnsMaxOrderShortSSR = 7;
 
 
 /*****************************************************/
