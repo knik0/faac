@@ -1,6 +1,6 @@
 #include <math.h>
 #include <string.h>
-#include "aacenc.h" 
+#include "aacenc.h"
 #include "bitstream.h"
 #include "tf_main.h"
 #include "pulse.h"
@@ -16,19 +16,10 @@ double adj_quant_asm[9000];
 int sign[1024];
 int g_Count;
 int old_startsf;
-int pns_sfb_start = 1000;         /* lower border for Perceptual Noise Substitution 
+int pns_sfb_start = 1000;         /* lower border for Perceptual Noise Substitution
                                       (off by default) */
 
 double ATH[SFB_NUM_MAX];
-
-__inline int output_bits(AACQuantInfo* quantInfo,
-	/*int huff[13][MAXINDEX][NUMINTAB],*/
-		int book,
-		int quant[NUM_COEFF],
-		int offset,
-		int length,
-		int write_flag);
-
 
 double ATHformula(double f)
 {
@@ -105,30 +96,19 @@ void tf_init_encode_spectrum_aac( int quality )
 #  define QUANTFAC(rx)  adj_quant_asm[rx]
 #  define XRPOW_FTOI(src, dest) \
      asm ("fistpl %0 " : "=m"(dest) : "t"(src) : "st")
-#elif defined (_MSC_VER)
-#  define QUANTFAC(rx)  adj_quant_asm[rx]
-#  define XRPOW_FTOI(src, dest) do { \
-     double src_ = (src); \
-     int dest_; \
-     { \
-       __asm fld src_ \
-       __asm fistp dest_ \
-     } \
-     (dest) = dest_; \
-   } while (0)
 #else
 #  define QUANTFAC(rx)  adj_quant[rx]
 #  define XRPOW_FTOI(src,dest) ((dest) = (int)(src))
 #endif
 
 /*********************************************************************
- * nonlinear quantization of xr 
+ * nonlinear quantization of xr
  * More accurate formula than the ISO formula.  Takes into account
- * the fact that we are quantizing xr -> ix, but we want ix^4/3 to be 
+ * the fact that we are quantizing xr -> ix, but we want ix^4/3 to be
  * as close as possible to x^4/3.  (taking the nearest int would mean
  * ix is as close as possible to xr, which is different.)
  * From Segher Boessenkool <segher@eastsite.nl>  11/1999
- * ASM optimization from 
+ * ASM optimization from
  *    Mathew Hendry <scampi@dial.pipex.com> 11/1999
  *    Acy Stapp <AStapp@austin.rr.com> 11/1999
  *    Takehiro Tominaga <tominaga@isoternet.org> 11/1999
@@ -139,30 +119,7 @@ void quantize(AACQuantInfo *quantInfo,
 {
 	const double istep = pow(2.0, -0.1875*quantInfo->common_scalefac);
 
-#ifndef _MSC_VER
-	{
-		double x;
-		int j, rx;
-		for (j = 1024 / 4; j > 0; --j) {
-			x = *pow_spectrum++ * istep;
-			XRPOW_FTOI(x, rx);
-			XRPOW_FTOI(x + QUANTFAC(rx), *quant++);
-
-			x = *pow_spectrum++ * istep;
-			XRPOW_FTOI(x, rx);
-			XRPOW_FTOI(x + QUANTFAC(rx), *quant++);
-
-			x = *pow_spectrum++ * istep;
-			XRPOW_FTOI(x, rx);
-			XRPOW_FTOI(x + QUANTFAC(rx), *quant++);
-
-			x = *pow_spectrum++ * istep;
-			XRPOW_FTOI(x, rx);
-			XRPOW_FTOI(x + QUANTFAC(rx), *quant++);
-		}
-	}
-#else
-	/* def _MSC_VER */
+#if ((defined _MSC_VER) || (defined __BORLAND__))
 	{
 		/* asm from Acy Stapp <AStapp@austin.rr.com> */
 		int rx[4];
@@ -229,6 +186,28 @@ loop1:
 			mov dword ptr [pow_spectrum], esi
 			mov dword ptr [quant], edx
 			fstp st(0)
+		}
+	}
+#else
+	{
+		double x;
+		int j, rx;
+		for (j = 1024 / 4; j > 0; --j) {
+			x = *pow_spectrum++ * istep;
+			XRPOW_FTOI(x, rx);
+			XRPOW_FTOI(x + QUANTFAC(rx), *quant++);
+
+			x = *pow_spectrum++ * istep;
+			XRPOW_FTOI(x, rx);
+			XRPOW_FTOI(x + QUANTFAC(rx), *quant++);
+
+			x = *pow_spectrum++ * istep;
+			XRPOW_FTOI(x, rx);
+			XRPOW_FTOI(x + QUANTFAC(rx), *quant++);
+
+			x = *pow_spectrum++ * istep;
+			XRPOW_FTOI(x, rx);
+			XRPOW_FTOI(x + QUANTFAC(rx), *quant++);
 		}
 	}
 #endif
@@ -1049,7 +1028,7 @@ int bit_search(int quant[NUM_COEFF],  /* Quantized spectral values */
   /*
   This function inputs a vector of quantized spectral data, quant[][], and returns a vector,
   'book_vector[]' that describes how to group together the scalefactor bands into a smaller
-  number of sections.  There are SFB_NUM_MAX elements in book_vector (equal to 49 in the 
+  number of sections.  There are SFB_NUM_MAX elements in book_vector (equal to 49 in the
   case of long blocks and 112 for short blocks), and each element has a huffman codebook 
   number assigned to it.
 
@@ -1199,7 +1178,7 @@ int noiseless_bit_count(int quant[NUM_COEFF],
 				if (ABS(quant[j]) > max_sb_coeff)
 					max_sb_coeff = ABS(quant[j]);
 			}
-			
+
 			j = 0;
 			offset = sfb_offset[i];
 			if ((i+hop) > nr_of_sfb){
@@ -1212,7 +1191,7 @@ int noiseless_bit_count(int quant[NUM_COEFF],
 			/* all spectral coefficients in this section are zero */
 			if (max_sb_coeff == 0) { 
 				book_choice[j][0] = output_bits(quantInfo,0,quant,offset,length,write_flag);
-				book_choice[j++][1] = 0; 
+				book_choice[j++][1] = 0;
 
 			}
 			else {  /* if the section does have non-zero coefficients */
@@ -1296,7 +1275,7 @@ int calculate_esc_sequence(int input,
 						   int *len_esc_sequence
 						   )
 /* 
-   This function takes an element that is larger than 16 and generates the base10 value of the 
+   This function takes an element that is larger than 16 and generates the base10 value of the
    equivalent escape sequence.  It returns the escape sequence in the variable, 'output'.  It
    also passed the length of the escape sequence through the parameter, 'len_esc_sequence'.
 */
@@ -1322,14 +1301,16 @@ int calculate_esc_sequence(int input,
 }
 
 
-
-__inline int output_bits(AACQuantInfo* quantInfo,
-				/*int huff[13][MAXINDEX][NUMINTAB],*/
+#ifndef __BORLANDC__
+__inline
+#endif
+int output_bits(AACQuantInfo* quantInfo,
+		/*int huff[13][MAXINDEX][NUMINTAB],*/
                 int book,
-				int quant[NUM_COEFF],
+		int quant[NUM_COEFF],
                 int offset,
-				int length,
-				int write_flag)
+		int length,
+		int write_flag)
 {
   /* 
      This function inputs 
@@ -1363,7 +1344,7 @@ __inline int output_bits(AACQuantInfo* quantInfo,
 	int len_esc;
 	int index;
 	int bits=0;
-	int tmp = 0;
+	int tmp;
 	int codebook,i,j;
 	int counter;
 
@@ -1575,7 +1556,7 @@ __inline int output_bits(AACQuantInfo* quantInfo,
 				}
 
 				/* then code and transmit the second escape_sequence */
-				esc_sequence = calculate_esc_sequence(quant[i+1],&len_esc); 
+				esc_sequence = calculate_esc_sequence(quant[i+1],&len_esc);
 				bits += len_esc;
 				if (write_flag) {
 					data[counter] = esc_sequence;
