@@ -52,9 +52,9 @@ Copyright (c) 1997.
 
 Source file: 
 
-$Id: psych.c,v 1.7 1999/12/23 14:34:51 menno Exp $
-$Id: psych.c,v 1.7 1999/12/23 14:34:51 menno Exp $
-$Id: psych.c,v 1.7 1999/12/23 14:34:51 menno Exp $
+$Id: psych.c,v 1.8 1999/12/23 15:21:19 menno Exp $
+$Id: psych.c,v 1.8 1999/12/23 15:21:19 menno Exp $
+$Id: psych.c,v 1.8 1999/12/23 15:21:19 menno Exp $
 
 **********************************************************************/
 
@@ -66,6 +66,7 @@ $Id: psych.c,v 1.7 1999/12/23 14:34:51 menno Exp $
 #include "psych.h"
 
 void fft(float *x_real, float *energy, int N);
+void fft_side(float x_real0[],float x_real1[], float *x_real, float *energy, int N, int sign);
 
 SR_INFO sr_info_aac[MAX_SAMPLING_RATES+1] =
 {
@@ -520,8 +521,8 @@ void EncTf_psycho_acoustic(
 	{
 		ch = 0;
 		psy_step1(p_time_signal,sample, no_of_chan);
-		psy_step2(&sample[no_of_chan], part_tbl_long, part_tbl_short, psy_stvar_long,
-			psy_stvar_short, ch);
+		psy_step2(sample, part_tbl_long, part_tbl_short, psy_stvar_long,
+			psy_stvar_short, no_of_chan);
 		if (no_of_chan < 2) {
 			psy_step4(&psy_stvar_long[no_of_chan], &psy_stvar_short[no_of_chan], &psy_var_long, &psy_var_short, no_of_chan);
 		}
