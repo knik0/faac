@@ -52,9 +52,9 @@ Copyright (c) 1997.
 
 Source file:
 
-$Id: psych.c,v 1.32 2000/02/04 21:24:20 menno Exp $
-$Id: psych.c,v 1.32 2000/02/04 21:24:20 menno Exp $
-$Id: psych.c,v 1.32 2000/02/04 21:24:20 menno Exp $
+$Id: psych.c,v 1.33 2000/02/05 14:23:42 menno Exp $
+$Id: psych.c,v 1.33 2000/02/05 14:23:42 menno Exp $
+$Id: psych.c,v 1.33 2000/02/05 14:23:42 menno Exp $
 
 **********************************************************************/
 
@@ -912,16 +912,16 @@ void psy_step8(PARTITION_TABLE_LONG *part_tbl_long,
 	       PSY_VARIABLE_SHORT *psy_var_short)
 {
 	int b,i;
-	double tmn = 18.0, nmt = 6.0;
+	double tmn = 14.5, nmt = 6.0;
 
 	for(b = 0; b < part_tbl_long->len; b++) {
-		psy_var_long->snr[b] = psy_var_long->tb[b] * tmn + (1.0 - psy_var_long->tb[b] ) * nmt;
+		psy_var_long->snr[b] = psy_var_long->tb[b] * (tmn+(b/3.0)) + (1.0 - psy_var_long->tb[b] ) * nmt;
 	}
 
 	/* added by T. Araki (1997.10.16) */
 	for(i = 0;  i < MAX_SHORT_WINDOWS; i++){
 		for(b = 0; b < part_tbl_short->len; b++)
-			psy_var_short->snr[i][b] = psy_var_short->tb[i][b] * tmn + (1.0 - psy_var_short->tb[i][b] ) * nmt ;
+			psy_var_short->snr[i][b] = psy_var_short->tb[i][b] * (tmn+b) + (1.0 - psy_var_short->tb[i][b] ) * nmt ;
 	}
 	/* added by T. Araki (1997.10.16) end */
 }    
