@@ -1,43 +1,30 @@
-/***********
+/*
+ *	Function prototypes for writing/counting AAC syntactic elements
+ *
+ *	Copyright (c) 1999 M. Bakker
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2, or (at your option)
+ * any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; see the file COPYING.  If not, write to
+ * the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
 
-This software module was originally developed by Texas 
-Instruments in the course of development of the MPEG-2 NBC/MPEG-4 
-Audio standard ISO/IEC13818-7, 14496-1, 2 and 3. This software module is an 
-implementation of a part of one or more MPEG-2 NBC/MPEG-4 Audio tools as 
-specified by the MPEG-2 NBC/MPEG-4 Audio standard. ISO/IEC  gives users of the
-MPEG-2NBC/MPEG-4 Audio standards free license to this software module
-or modifications thereof for use in hardware or software products
-claiming conformance to the MPEG-2 NBC/MPEG-4 Audio  standards. Those
-intending to use this software module in hardware or software products
-are advised that this use may infringe existing patents. The original
-developer of this software module, the subsequent
-editors and their companies, and ISO/IEC have no liability for use of
-this software module or modifications thereof in an
-implementation. Copyright is not released for non MPEG-2 NBC/MPEG-4
-Audio conforming products. The original developer retains full right to
-use the code for the developer's own purpose, assign or donate the code to a
-third party and to inhibit third party from using the code for non
-MPEG-2 NBC/MPEG-4 Audio conforming products. This copyright notice
-must be included in all copies or derivative works. Copyright 1996.  
-
-***********/
-/*********************************************************************
- *
- * Function prototypes for writing/counting AAC syntactic elements
- *
- * Authors:
- * CL    Chuck Lueck, TI <lueck@ti.com>
- * RG    Ralf Geiger, FhG/IIS
- *
- * Changes:
- * 07-jun-97   CL   Initial revision.
- * 14-sep-97   CL   Updated WritePredictorData to support prediction.
- * 20-oct-97   CL   Updated WriteTNSData to support TNS.
- * 22-Jan-98   CL   Added support for CPE's and common windows.
- * 07-Apr-98   RG   Added WriteLFE to write LFE channel element.
- *
-**********************************************************************/
-
+/**************************************************************************
+  Version Control Information			Method: CVS
+  Identifiers:
+  $Revision: 1.6 $
+  $Date: 2000/10/05 08:39:02 $ (check in)
+  $Author: menno $
+  *************************************************************************/
 
 #ifndef AAC_SE_ENC
 #define AAC_SE_ENC

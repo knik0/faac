@@ -1,24 +1,30 @@
-/**********************************************************************
-Header file: enc.h
+/*
+ *	Function prototypes for frame encoding
+ *
+ *	Copyright (c) 1999 M. Bakker
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2, or (at your option)
+ * any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; see the file COPYING.  If not, write to
+ * the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
 
-$Id: enc.h,v 1.5 2000/02/18 09:21:05 lenox Exp $
-
-Authors:
-HP    Heiko Purnhagen, Uni Hannover <purnhage@tnt.uni-hannover.de>
-RG    Ralf Geiger, FhG/IIS
-
-Changes:
-14-jun-96   HP    first version
-18-jun-96   HP    added bit reservoir handling
-04-jul-96   HP    joined with t/f code by BG (check "DISABLE_TF")
-09-aug-96   HP    added EncXxxInfo(), EncXxxFree()
-15-aug-96   HP    changed EncXxxInit(), EncXxxFrame() interfaces to
-                  enable multichannel signals / float fSample, bitRate
-26-aug-96   HP    CVS
-19-feb-97   HP    added include <stdio.h>
-07-apr-98   RG    added argument lfePresent in EncTfFrame()
-**********************************************************************/
-
+/**************************************************************************
+  Version Control Information			Method: CVS
+  Identifiers:
+  $Revision: 1.6 $
+  $Date: 2000/10/05 08:39:02 $ (check in)
+  $Author: menno $
+  *************************************************************************/
 
 #ifndef _enc_h_
 #define _enc_h_

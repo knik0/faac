@@ -1,21 +1,30 @@
-/*********************************************************************
+/*
+ *	Writing/counting AAC syntactic elements
  *
- * Module for writing/counting AAC syntactic elements
+ *	Copyright (c) 1999 M. Bakker
  *
- * Authors:
- * CL    Chuck Lueck, TI <lueck@ti.com>
- * ADD   Alberto Duenas, TI <alberto@ndsuk.com>
- * RG    Ralf Geiger,  FhG/IIS
- * Changes:
- * 07-jun-97   CL   Initial revision.
- * 14-sep-97   CL   Modified WritePredictorData to actually write
- *                  predictor data.  Still need to add resets.
- * 20-oct-97   CL   Updated WriteTNSData to support TNS.
- * 03-Dec-97   ADD  Addding the prediction reset
- * 22-Jan-98   CL   Added support for CPE's and common windows.
- * 07-Apr-98   RG   Added WriteLFE to write LFE channel element.
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2, or (at your option)
+ * any later version.
  *
-**********************************************************************/
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; see the file COPYING.  If not, write to
+ * the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+/**************************************************************************
+  Version Control Information			Method: CVS
+  Identifiers:
+  $Revision: 1.12 $
+  $Date: 2000/10/05 08:39:02 $ (check in)
+  $Author: menno $
+  *************************************************************************/
 
 #include <stdlib.h>
 #include "aac_se_enc.h"

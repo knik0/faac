@@ -1,44 +1,30 @@
-/**************************************************************************
-
-This software module was originally developed by
-Nokia in the course of development of the MPEG-2 AAC/MPEG-4 
-Audio standard ISO/IEC13818-7, 14496-1, 2 and 3.
-This software module is an implementation of a part
-of one or more MPEG-2 AAC/MPEG-4 Audio tools as specified by the
-MPEG-2 aac/MPEG-4 Audio standard. ISO/IEC  gives users of the
-MPEG-2aac/MPEG-4 Audio standards free license to this software module
-or modifications thereof for use in hardware or software products
-claiming conformance to the MPEG-2 aac/MPEG-4 Audio  standards. Those
-intending to use this software module in hardware or software products
-are advised that this use may infringe existing patents. The original
-developer of this software module, the subsequent
-editors and their companies, and ISO/IEC have no liability for use of
-this software module or modifications thereof in an
-implementation. Copyright is not released for non MPEG-2 aac/MPEG-4
-Audio conforming products. The original developer retains full right to
-use the code for the developer's own purpose, assign or donate the code to a
-third party and to inhibit third party from using the code for non
-MPEG-2 aac/MPEG-4 Audio conforming products. This copyright notice
-must be included in all copies or derivative works.
-Copyright (c)1997.  
-
-***************************************************************************/
-/**************************************************************************
-  nok_pitch.c  - Long Term Prediction (LTP) subroutines.
- 
-  Author(s): Juha Ojanpera, Lin Yin
-  	     Nokia Research Center, Speech and Audio Systems.
-  *************************************************************************/
-
+/*
+ *	Long Term Prediction functions
+ *
+ *	Copyright (c) 1999 M. Bakker
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2, or (at your option)
+ * any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; see the file COPYING.  If not, write to
+ * the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
 
 /**************************************************************************
   Version Control Information			Method: CVS
   Identifiers:
-  $Revision: 1.7 $
-  $Date: 2000/02/28 12:18:36 $ (check in)
-  $Author: lenox $
+  $Revision: 1.8 $
+  $Date: 2000/10/05 08:39:02 $ (check in)
+  $Author: menno $
   *************************************************************************/
-
 
 /**************************************************************************
   External Objects Needed
