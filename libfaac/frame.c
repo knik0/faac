@@ -16,7 +16,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: frame.c,v 1.50 2003/10/29 10:31:25 stux Exp $
+ * $Id: frame.c,v 1.51 2003/11/10 17:48:00 knik Exp $
  */
 
 /*
@@ -123,6 +123,7 @@ int FAACAPI faacEncSetConfiguration(faacEncHandle hEncoder,
     hEncoder->config.mpegVersion = config->mpegVersion;
     hEncoder->config.outputFormat = config->outputFormat;
     hEncoder->config.inputFormat = config->inputFormat;
+    hEncoder->config.shortctl = config->shortctl;
 
     assert((hEncoder->config.outputFormat == 0) || (hEncoder->config.outputFormat == 1));
 
@@ -158,7 +159,7 @@ int FAACAPI faacEncSetConfiguration(faacEncHandle hEncoder,
         return 0;
 #endif
 
-    if (config->bitRate)
+    if (config->bitRate && !config->bandWidth)
     {	
 		static struct {
 			int rate; // per channel at 44100 sampling frequency
@@ -207,6 +208,9 @@ int FAACAPI faacEncSetConfiguration(faacEncHandle hEncoder,
 		config->bandWidth =
 				(double)config->bandWidth * hEncoder->sampleRate / 44100;
 				config->bitRate = (double)config->bitRate * hEncoder->sampleRate / 44100;
+
+		if (config->bandWidth > bwmax)
+		  config->bandWidth = bwmax;
 	}
 
     hEncoder->config.bitRate = config->bitRate;
@@ -296,6 +300,7 @@ faacEncHandle FAACAPI faacEncOpen(unsigned long sampleRate,
     hEncoder->config.psymodelidx = 0;
     hEncoder->psymodel =
       hEncoder->config.psymodellist[hEncoder->config.psymodelidx].model;
+    hEncoder->config.shortctl = SHORTCTL_NORMAL;
 
 	/* default channel map is straight-through */
 	for( channel = 0; channel < 64; channel++ )
@@ -794,10 +799,10 @@ int FAACAPI faacEncEncode(faacEncHandle hEncoder,
 		if (((diff > 0) && (fix > 0.0)) || ((diff < 0) && (fix < 0.0)))
 		{
 			hEncoder->aacquantCfg.quality *= (1.0 - fix);
-			if (hEncoder->aacquantCfg.quality > 200)
-				hEncoder->aacquantCfg.quality = 200;
-			if (hEncoder->aacquantCfg.quality < 70)
-				hEncoder->aacquantCfg.quality = 70;
+			if (hEncoder->aacquantCfg.quality > 300)
+				hEncoder->aacquantCfg.quality = 300;
+			if (hEncoder->aacquantCfg.quality < 50)
+				hEncoder->aacquantCfg.quality = 50;
 		}
     }
 
@@ -912,6 +917,10 @@ static SR_INFO srInfo[12+1] =
 
 /*
 $Log: frame.c,v $
+Revision 1.51  2003/11/10 17:48:00  knik
+Allowed independent bitRate and bandWidth setting.
+Small fixes.
+
 Revision 1.50  2003/10/29 10:31:25  stux
 Added channel_map to FaacEncHandle, facilitates free generalised channel remapping in the faac core. Default is straight-through, should be *zero* performance hit... and even probably an immeasurable performance gain, updated FAAC_CFG_VERSION to 104 and FAAC_VERSION to 1.22.0
 
