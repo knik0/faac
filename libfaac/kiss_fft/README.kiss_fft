@@ -1,28 +1,6 @@
-To install kiss_fft library please visit http://kissfft.sourceforge.net
-and download latest kiss_fft package from there.
+See README and COPYING files for author and copyright information.
 
-Uncompress kiss_fft_v1_2_1.tar.gz in this catalog.
+kiss_fft.c is modified in order to eliminate static variables.
 
-Source tree shall be:
-
-/libfaac
-	/kiss_fft	<-- you are here
-		/test
-		/tools
-		CHANGELOG
-		COPYING
-		kiss_fft.c
-		kiss_fft.h
-		Makefile
-		README
-		TIPS
-		_kiss_fft_guts.h
-
-Copy kiss_fftr.c and kiss_fftr.h from ./tools catalog to kiss_fft catalog.
-
-kiss_fft library is distributed under its own license (non GPL), so I cannot
-include its sources here.
-
-See README and COPYING files from original package for author and copyright
-information.
+-- sur.
 
