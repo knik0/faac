@@ -3,6 +3,7 @@
 // Used by FAAC.rc
 //
 #define IDD_COMPRESSION                 101
+#define IDD_ENCODER                     101
 #define IDB_LOGO                        104
 #define IDB_BROWSE                      105
 #define IDC_RADIO_MPEG4                 1000
@@ -12,8 +13,11 @@
 #define IDC_RADIO_SSR                   1004
 #define IDC_RADIO_LTP                   1005
 #define IDC_ALLOWMIDSIDE                1006
+#define IDC_CHK_ALLOWMIDSIDE            1006
 #define IDC_USETNS                      1007
+#define IDC_CHK_USETNS                  1007
 #define IDC_USELFE                      1008
+#define IDC_CHK_USELFE                  1008
 #define IDC_CB_BANDWIDTH                1009
 #define IDC_CB_BITRATE                  1010
 #define IDC_CHK_AUTOCFG                 1011
@@ -23,6 +27,9 @@
 #define IDC_RADIO_RAW                   1014
 #define IDC_BTN_ABOUT                   1015
 #define IDC_RADIO_ADTS                  1015
+#define IDC_RADIO_BITRATE               1022
+#define IDC_RADIO_QUALITY               1023
+#define IDC_CB_QUALITY                  1024
 
 // Next default values for new objects
 // 

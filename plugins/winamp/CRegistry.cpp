@@ -22,7 +22,7 @@ kreel@interfree.it
 //#include "stdafx.h"
 #include <windows.h>
 #include <string.h>
-#include <memory.h>
+#include <stdlib.h>		// malloc, free
 #include "CRegistry.h"
 
 CRegistry::CRegistry()

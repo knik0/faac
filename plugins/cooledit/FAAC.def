@@ -13,6 +13,6 @@ EXPORTS
 	FilterOptionsString
 	FilterGetOptions
 	GetSuggestedSampleType
-	DIALOGMsgProc
-	FilterOptions
-	FilterSetOptions
+;	DIALOGMsgProc
+;	FilterOptions
+;	FilterSetOptions

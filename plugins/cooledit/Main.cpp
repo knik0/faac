@@ -21,7 +21,7 @@ kreel@tiscali.it
 
 #include <windows.h>
 #include "filters.h"	//CoolEdit
-#include "faac.h"
+//#include "faac.h"
 #include "Defines.h"	// my defines
 
 // Plugins of CoolEdit can be unloaded between each call of its exported funcs,
@@ -92,17 +92,19 @@ short FAR PASCAL QueryCoolFilter(COOLQUERY far * cq)
 	lstrcpy(cq->szExt,"AAC");
 	lstrcpy(cq->szExt2,"MP4"); 
 	cq->lChunkSize=16384; 
-	cq->dwFlags=QF_RATEADJUSTABLE|QF_CANLOAD|QF_CANSAVE|QF_HASOPTIONSBOX;
- 	cq->Mono8=0;		// no support
- 	cq->Mono16=0xFF;
- 	cq->Mono24=0xFF;
- 	cq->Mono32=0xFF;
- 	cq->Stereo8=0xFF;
- 	cq->Stereo16=0xFF;
- 	cq->Stereo24=0xFF;
- 	cq->Stereo32=0xFF;
+	cq->dwFlags=QF_RATEADJUSTABLE|QF_CANLOAD|QF_CANSAVE|QF_HASOPTIONSBOX|QF_CANDO32BITFLOATS;
+ 	cq->Mono8=R_5500|R_11025|R_22050|R_32075|R_44100|R_48000;
+ 	cq->Mono12=0;		// no support
+ 	cq->Mono16=R_5500|R_11025|R_22050|R_32075|R_44100|R_48000;
+ 	cq->Mono24=0;
+ 	cq->Mono32=R_5500|R_11025|R_22050|R_32075|R_44100|R_48000;
+ 	cq->Stereo8=R_5500|R_11025|R_22050|R_32075|R_44100|R_48000;
+ 	cq->Stereo12=0;
+ 	cq->Stereo16=R_5500|R_11025|R_22050|R_32075|R_44100|R_48000;
+ 	cq->Stereo24=0;
+ 	cq->Stereo32=R_5500|R_11025|R_22050|R_32075|R_44100|R_48000;
  	cq->Quad8=0;
- 	cq->Quad16=0xFF;
- 	cq->Quad32=0xFF;
+ 	cq->Quad16=0;
+ 	cq->Quad32=0;
  	return C_VALIDLIBRARY;
 }

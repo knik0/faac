@@ -23,9 +23,9 @@ kreel@tiscali.it
 #include <stdio.h>		// FILE *
 #include "resource.h"
 #include "filters.h"	// CoolEdit
+#include <mp4.h>
 #include <faac.h>
 #include <faad.h>
-#include <mp4.h>
 extern "C" {
 #include <aacinfo.h>	// get_AAC_format()
 }
@@ -45,9 +45,6 @@ extern BOOL DialogMsgProcAbout(HWND hWndDlg, UINT Message, WPARAM wParam, LPARAM
 
 #define MAX_CHANNELS	2
 #define	FAAD_STREAMSIZE	(FAAD_MIN_STREAMSIZE*MAX_CHANNELS)
-#define RAW		0
-#define ADIF	1
-#define ADTS	2
 
 // *********************************************************************************************
 
@@ -89,9 +86,9 @@ static const char* mpeg4AudioNames[]=
 {
 	"Raw PCM",
 	"AAC Main",
-	"AAC Low Complexity",
+	"AAC LC (Low Complexity)",
 	"AAC SSR",
-	"AAC LTP",
+	"AAC LTP (Long Term Prediction)",
 	"Reserved",
 	"AAC Scalable",
 	"TwinVQ",
@@ -105,13 +102,13 @@ static const char* mpeg4AudioNames[]=
 	"General MIDI",
 	"Algorithmic Synthesis and Audio FX",
 // defined in MPEG-4 version 2
-	"ER AAC LC",
+	"ER AAC LC (Low Complexity)",
 	"Reserved",
-	"ER AAC LTP",
+	"ER AAC LTP (Long Term Prediction)",
 	"ER AAC Scalable",
 	"ER TwinVQ",
 	"ER BSAC",
-	"ER AAC LD",
+	"ER AAC LD (Low Delay)",
 	"ER CELP",
 	"ER HVXC",
 	"ER HILN",
@@ -182,10 +179,11 @@ CRegistry reg;
 
 	if(reg.openCreateReg(HKEY_LOCAL_MACHINE,REGISTRY_PROGRAM_NAME  "\\FAAD"))
 	{
+		cfg->DefaultCfg=reg.getSetRegBool("Default",true);
 		cfg->DecCfg.defObjectType=reg.getSetRegByte("Profile",LOW);
 		cfg->DecCfg.defSampleRate=reg.getSetRegDword("SampleRate",44100);
 		cfg->DecCfg.outputFormat=reg.getSetRegByte("Bps",FAAD_FMT_16BIT);
-		cfg->Channels=reg.getSetRegByte("Channels",2);
+//		cfg->Channels=reg.getSetRegByte("Channels",2);
 	}
 	else
 		MessageBox(0,"Can't open registry!",0,MB_OK|MB_ICONSTOP);
@@ -198,13 +196,22 @@ CRegistry reg;
 
 	if(reg.openCreateReg(HKEY_LOCAL_MACHINE,REGISTRY_PROGRAM_NAME  "\\FAAD"))
 	{
-		reg.setRegByte("Profile",cfg->DecCfg.defObjectType); 
-		reg.setRegDword("SampleRate",cfg->DecCfg.defSampleRate); 
+		reg.setRegBool("Default",cfg->DefaultCfg);
+		reg.setRegByte("Profile",cfg->DecCfg.defObjectType);
+		reg.setRegDword("SampleRate",cfg->DecCfg.defSampleRate);
 		reg.setRegByte("Bps",cfg->DecCfg.outputFormat);
-		reg.setRegByte("Channels",cfg->Channels);
+//		reg.setRegByte("Channels",cfg->Channels);
 	}
 	else
 		MessageBox(0,"Can't open registry!",0,MB_OK|MB_ICONSTOP);
+}
+// -----------------------------------------------------------------------------------------------
+
+#define INIT_CB(hWnd,nID,list,IdSelected) \
+{ \
+	for(int i=0; list[i]; i++) \
+		SendMessage(GetDlgItem(hWnd, nID), CB_ADDSTRING, 0, (LPARAM)list[i]); \
+	SendMessage(GetDlgItem(hWnd, nID), CB_SETCURSEL, IdSelected, 0); \
 }
 // -----------------------------------------------------------------------------------------------
 
@@ -214,6 +221,7 @@ CRegistry reg;
     EnableWindow(GetDlgItem(hWndDlg, IDC_RADIO_MAIN), Enabled); \
     EnableWindow(GetDlgItem(hWndDlg, IDC_RADIO_LOW), Enabled); \
     EnableWindow(GetDlgItem(hWndDlg, IDC_RADIO_LTP), Enabled); \
+    EnableWindow(GetDlgItem(hWndDlg, IDC_CB_SAMPLERATE), Enabled); \
 }
 // -----------------------------------------------------------------------------------------------
 
@@ -231,7 +239,14 @@ BOOL DialogMsgProcDecoder(HWND hWndDlg, UINT Message, WPARAM wParam, LPARAM lPar
 				EndDialog(hWndDlg, 0);
 				return TRUE;
 			}
+
+		char buf[50];
+		char *SampleRate[]={"6000","8000","16000","22050","32000","44100","48000","64000","88200","96000","192000",0};
 			CfgDecoder=(MY_DEC_CFG *)lParam;
+
+			INIT_CB(hWndDlg,IDC_CB_SAMPLERATE,SampleRate,5);
+			sprintf(buf,"%lu",CfgDecoder->DecCfg.defSampleRate);
+			SetDlgItemText(hWndDlg, IDC_CB_SAMPLERATE, buf);
 
 			switch(CfgDecoder->DecCfg.defObjectType)
 			{
@@ -248,6 +263,9 @@ BOOL DialogMsgProcDecoder(HWND hWndDlg, UINT Message, WPARAM wParam, LPARAM lPar
 				CheckDlgButton(hWndDlg,IDC_RADIO_LTP,TRUE);
 				break;
 			}
+
+			CheckDlgButton(hWndDlg,IDC_CHK_DEFAULTCFG, CfgDecoder->DefaultCfg);
+			DISABLE_CTRL(!CfgDecoder->DefaultCfg);
 		}
 		break; // End of WM_INITDIALOG                                 
 
@@ -259,6 +277,13 @@ BOOL DialogMsgProcDecoder(HWND hWndDlg, UINT Message, WPARAM wParam, LPARAM lPar
 	case WM_COMMAND:
 		switch(LOWORD(wParam))
 		{
+		case IDC_CHK_DEFAULTCFG:
+			{
+			char Enabled=!IsDlgButtonChecked(hWndDlg,IDC_CHK_DEFAULTCFG);
+				DISABLE_CTRL(Enabled);
+			}
+			break;
+
 		case IDOK:
 			{
 				if(IsDlgButtonChecked(hWndDlg,IDC_RADIO_MAIN))
@@ -269,6 +294,10 @@ BOOL DialogMsgProcDecoder(HWND hWndDlg, UINT Message, WPARAM wParam, LPARAM lPar
 					CfgDecoder->DecCfg.defObjectType=SSR;
 				if(IsDlgButtonChecked(hWndDlg,IDC_RADIO_LTP))
 					CfgDecoder->DecCfg.defObjectType=LTP;
+
+				CfgDecoder->DecCfg.defSampleRate=GetDlgItemInt(hWndDlg, IDC_CB_SAMPLERATE, 0, FALSE);
+				CfgDecoder->DefaultCfg=IsDlgButtonChecked(hWndDlg,IDC_CHK_DEFAULTCFG) ? TRUE : FALSE;
+				WriteCfgDec(CfgDecoder);
 
 				EndDialog(hWndDlg, (DWORD)CfgDecoder);
 			}
@@ -346,7 +375,7 @@ MYINPUT	*mi;
 		case RAW:
 			lstrcpy(szString,"AAC\nRaw");
 			GlobalUnlock(hInput);
-			return 0; // call FilterGetOptions()
+			return 1;//0; // call FilterGetOptions()
 		case ADIF:
 			lstrcat(szString,"ADIF\n");
 			break;
@@ -361,13 +390,13 @@ MYINPUT	*mi;
 			lstrcat(szString,"Main");
 			break;
 		case LOW:
-			lstrcat(szString,"Low Complexity");
+			lstrcat(szString,"LC (Low Complexity)");
 			break;
 		case SSR:
 			lstrcat(szString,"SSR (unsupported)");
 			break;
 		case LTP:
-			lstrcat(szString,"Main LTP");
+			lstrcat(szString,"LTP (Long Term Prediction)");
 			break;
 		}
 	}
@@ -378,21 +407,20 @@ MYINPUT	*mi;
 	return 1; // don't call FilterGetOptions()
 }
 // *********************************************************************************************
-
+/*
 DWORD FAR PASCAL FilterOptions(HANDLE hInput)
 {
-/*
-	FilterGetOptions() is called if this function and FilterSetOptions() are exported and FilterOptionsString() returns 0
-	FilterSetOptions() is called only if this function is exported and and it returns 0
-*/
-	return 0;
+//	FilterGetOptions() is called if this function and FilterSetOptions() are exported and FilterOptionsString() returns 0
+//	FilterSetOptions() is called only if this function is exported and and it returns 0
+
+	return 1;
 }
 // ---------------------------------------------------------------------------------------------
 
 DWORD FAR PASCAL FilterSetOptions(HANDLE hInput, DWORD dwOptions, LONG lSamprate, WORD wChannels, WORD wBPS)
 {
 	return dwOptions;
-}
+}*/
 // *********************************************************************************************
 
 void FAR PASCAL CloseFilterInput(HANDLE hInput)
@@ -587,20 +615,20 @@ start_point:
 			ERROR_OFI("Can't open library");
 
 		if(mi->file_info.headertype==RAW)
-			if(!*lSamprate && !*wBitsPerSample && !*wChannels)
+			if(!*lSamprate || !*wBitsPerSample || !*wChannels)
 			{
-			CRegistry	reg;
+/*			CRegistry	reg;
 
 				if(reg.openCreateReg(HKEY_LOCAL_MACHINE,REGISTRY_PROGRAM_NAME  "\\FAAD"))
 					reg.setRegBool("OpenDialog",TRUE);
 				else
-					ERROR_OFI("Can't open registry!");
-			/*
-			CoolEdit resamples audio if the following code is activated
-				*wBitsPerSample=BitsPerSample;
-				*wChannels=2;
+					ERROR_OFI("Can't open registry!");*/
+
+//			CoolEdit ask for format if the following code isn't activated
 				*lSamprate=44100;
-			*/
+				*wBitsPerSample=16;
+				*wChannels=2;
+
 				GlobalUnlock(hInput);
 				return hInput;
 			}
@@ -609,10 +637,20 @@ start_point:
 			MY_DEC_CFG	Cfg;
 
 				ReadCfgDec(&Cfg);
+				if(!Bitrate4RawAAC)
+					DialogBoxParam((HINSTANCE)hInst,(LPCSTR)MAKEINTRESOURCE(IDD_DECODER),(HWND)hWnd, (DLGPROC)DialogMsgProcDecoder, (DWORD)&Cfg);
 				config=faacDecGetCurrentConfiguration(mi->hDecoder);
-				config->defObjectType=Cfg.DecCfg.defObjectType;
-				config->defSampleRate=Cfg.DecCfg.defSampleRate;//*lSamprate; // doesn't work! Why???
-				config->outputFormat=Cfg.DecCfg.outputFormat;
+				if(Cfg.DefaultCfg)
+				{
+					config->defObjectType=mi->file_info.object_type;
+					config->defSampleRate=mi->file_info.sampling_rate;//*lSamprate; // doesn't work!
+				}
+				else
+				{
+					config->defObjectType=Cfg.DecCfg.defObjectType;
+					config->defSampleRate=Cfg.DecCfg.defSampleRate;
+				}
+				config->outputFormat=FAAD_FMT_16BIT;
 				faacDecSetConfiguration(mi->hDecoder, config);
 
 				if(Bitrate4RawAAC)
@@ -637,12 +675,12 @@ start_point:
 					Channels4RawAAC=(BYTE)mi->Channels;
 					if(!Channels4RawAAC)
 						ERROR_OFI("Channels reported by decoder: 0");
-					if(Channels4RawAAC!=Cfg.Channels)
+/*					if(Channels4RawAAC!=Cfg.Channels)
 					{
 					char	buf[256]="";
 						sprintf(buf,"Channels reported by decoder: %d",mi->Channels);
 						MessageBox(0,buf,0,MB_OK|MB_ICONWARNING);
-					}
+					}*/
 					GlobalUnlock(hInput);
 					CloseFilterInput(hInput);
 					goto start_point;

@@ -21,8 +21,8 @@ kreel@tiscali.it
 
 //#include "stdafx.h"
 #include <windows.h>
+#include <stdlib.h>		// malloc, free
 #include <string.h>
-#include <memory.h>
 #include "CRegistry.h"
 
 

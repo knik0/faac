@@ -20,9 +20,12 @@ kreel@tiscali.it
 */
 
 #include <windows.h>
+#include <shellapi.h>	// ShellExecute
 #include <stdio.h>		// FILE *
+#include <stdlib.h>		// malloc, free
 #include "resource.h"
 #include "filters.h"	// CoolEdit
+#include <mp4.h>		// int32_t, ...
 #include <faac.h>
 #include <faad.h>		// FAAD2 version
 #include <win32_ver.h>	// mpeg4ip version
@@ -42,8 +45,10 @@ extern void WriteCfgDec(MY_DEC_CFG *cfg);
 
 // *********************************************************************************************
 
-#define RAW		0
-#define ADTS	1
+#ifdef	ADTS
+#undef	ADTS
+#define ADTS 1
+#endif
 
 // *********************************************************************************************
 
@@ -57,11 +62,167 @@ WORD			Channels;
 //char			*dst_name;		// name of compressed file
 
 faacEncHandle	hEncoder;
+int32_t			*buffer;
 unsigned char	*bitbuf;
 DWORD			maxBytesOutput;
 long			samplesInput;
 } MYOUTPUT;
+
+
+
 // *********************************************************************************************
+
+
+
+#define SWAP32(x) (((x & 0xff) << 24) | ((x & 0xff00) << 8) \
+	| ((x & 0xff0000) >> 8) | ((x & 0xff000000) >> 24))
+#define SWAP16(x) (((x & 0xff) << 8) | ((x & 0xff00) >> 8))
+
+inline void To32bit(int32_t *buf, BYTE *bufi, int size, BYTE samplebytes, BYTE bigendian)
+{
+int i;
+
+	switch(samplebytes)
+	{
+	case 1:
+		// this is endian clean
+		for (i = 0; i < size; i++)
+			buf[i] = (bufi[i] - 128) * 65536;
+		break;
+		
+	case 2:
+#ifdef WORDS_BIGENDIAN
+		if (!bigendian)
+#else
+			if (bigendian)
+#endif
+			{
+				// swap bytes
+				for (i = 0; i < size; i++)
+				{
+					int16_t s = ((int16_t *)bufi)[i];
+					
+					s = SWAP16(s);
+					
+					buf[i] = ((u_int32_t)s) << 8;
+				}
+			}
+			else
+			{
+				// no swap
+				for (i = 0; i < size; i++)
+				{
+					int s = ((int16_t *)bufi)[i];
+					
+					buf[i] = s << 8;
+				}
+			}
+			break;
+			
+	case 3:
+		if (!bigendian)
+		{
+			for (i = 0; i < size; i++)
+			{
+				int s = bufi[3 * i] | (bufi[3 * i + 1] << 8) | (bufi[3 * i + 2] << 16);
+				
+				// fix sign
+				if (s & 0x800000)
+					s |= 0xff000000;
+				
+				buf[i] = s;
+			}
+		}
+		else // big endian input
+		{
+			for (i = 0; i < size; i++)
+			{
+				int s = (bufi[3 * i] << 16) | (bufi[3 * i + 1] << 8) | bufi[3 * i + 2];
+				
+				// fix sign
+				if (s & 0x800000)
+					s |= 0xff000000;
+				
+				buf[i] = s;
+			}
+		}
+		break;
+		
+	case 4:		
+#ifdef WORDS_BIGENDIAN
+		if (!bigendian)
+#else
+			if (bigendian)
+#endif
+			{
+				// swap bytes
+				for (i = 0; i < size; i++)
+				{
+					int s = bufi[i];
+					
+					buf[i] = SWAP32(s);
+				}
+			}
+			else
+				memcpy(buf,bufi,size*sizeof(u_int32_t));
+		/*
+		int exponent, mantissa;
+		float *bufo=(float *)buf;
+			
+			for (i = 0; i < size; i++)
+			{
+				exponent=bufi[(i<<2)+3]<<1;
+				if(bufi[i*4+2] & 0x80)
+					exponent|=0x01;
+				exponent-=126;
+				mantissa=(DWORD)bufi[(i<<2)+2]<<16;
+				mantissa|=(DWORD)bufi[(i<<2)+1]<<8;
+				mantissa|=bufi[(i<<2)];
+				bufo[i]=(float)ldexp(mantissa,exponent);
+			}*/
+			break;
+	}
+}
+// *********************************************************************************************
+/*
+DWORD PackCfg(MY_ENC_CFG *cfg)
+{
+DWORD dwOptions=0;
+
+	if(cfg->AutoCfg)
+		dwOptions=1<<31;
+	dwOptions|=(DWORD)cfg->EncCfg.mpegVersion<<30;
+	dwOptions|=(DWORD)cfg->EncCfg.aacObjectType<<28;
+	dwOptions|=(DWORD)cfg->EncCfg.allowMidside<<27;
+	dwOptions|=(DWORD)cfg->EncCfg.useTns<<26;
+	dwOptions|=(DWORD)cfg->EncCfg.useLfe<<25;
+	dwOptions|=(DWORD)cfg->EncCfg.outputFormat<<24;
+	if(cfg->UseQuality)
+		dwOptions|=(((DWORD)cfg->EncCfg.quantqual>>1)&0xff)<<16; // [2,512]
+	else
+		dwOptions|=(((DWORD)cfg->EncCfg.bitRate>>1)&0xff)<<16; // [2,512]
+	if(cfg->UseQuality)
+		dwOptions|=1<<15;
+	dwOptions|=((DWORD)cfg->EncCfg.bandWidth>>1)&&0x7fff; // [0,65536]
+
+	return dwOptions;
+}
+// -----------------------------------------------------------------------------------------------
+
+void UnpackCfg(MY_ENC_CFG *cfg, DWORD dwOptions)
+{
+	cfg->AutoCfg=dwOptions>>31;
+	cfg->EncCfg.mpegVersion=(dwOptions>>30)&1;
+	cfg->EncCfg.aacObjectType=(dwOptions>>28)&3;
+	cfg->EncCfg.allowMidside=(dwOptions>>27)&1;
+	cfg->EncCfg.useTns=(dwOptions>>26)&1;
+	cfg->EncCfg.useLfe=(dwOptions>>25)&1;
+	cfg->EncCfg.outputFormat=(dwOptions>>24)&1;
+	cfg->EncCfg.bitRate=((dwOptions>>16)&0xff)<<1;
+	cfg->UseQuality=(dwOptions>>15)&1;
+	cfg->EncCfg.bandWidth=(dwOptions&0x7fff)<<1;
+}*/
+// -----------------------------------------------------------------------------------------------
 
 void ReadCfgEnc(MY_ENC_CFG *cfg) 
 { 
@@ -70,11 +231,13 @@ CRegistry reg;
 	if(reg.openCreateReg(HKEY_LOCAL_MACHINE,REGISTRY_PROGRAM_NAME "\\FAAC"))
 	{
 		cfg->AutoCfg=reg.getSetRegBool("Auto",true);
-		cfg->EncCfg.mpegVersion=reg.getSetRegDword("MPEG version",MPEG2); 
+		cfg->EncCfg.mpegVersion=reg.getSetRegDword("MPEG version",MPEG4); 
 		cfg->EncCfg.aacObjectType=reg.getSetRegDword("Profile",LOW); 
 		cfg->EncCfg.allowMidside=reg.getSetRegDword("MidSide",true); 
 		cfg->EncCfg.useTns=reg.getSetRegDword("TNS",true); 
 		cfg->EncCfg.useLfe=reg.getSetRegDword("LFE",false);
+		cfg->UseQuality=reg.getSetRegBool("Use quality",false);
+		cfg->EncCfg.quantqual=reg.getSetRegDword("Quality",100); 
 		cfg->EncCfg.bitRate=reg.getSetRegDword("BitRate",0); 
 		cfg->EncCfg.bandWidth=reg.getSetRegDword("BandWidth",0); 
 		cfg->EncCfg.outputFormat=reg.getSetRegDword("Header",ADTS); 
@@ -96,6 +259,8 @@ CRegistry reg;
 		reg.setRegDword("MidSide",cfg->EncCfg.allowMidside); 
 		reg.setRegDword("TNS",cfg->EncCfg.useTns); 
 		reg.setRegDword("LFE",cfg->EncCfg.useLfe); 
+		reg.setRegBool("Use quality",cfg->UseQuality); 
+		reg.setRegDword("Quality",cfg->EncCfg.quantqual); 
 		reg.setRegDword("BitRate",cfg->EncCfg.bitRate); 
 		reg.setRegDword("BandWidth",cfg->EncCfg.bandWidth); 
 		reg.setRegDword("Header",cfg->EncCfg.outputFormat); 
@@ -213,12 +378,14 @@ BOOL DIALOGMsgProc(HWND hWndDlg, UINT Message, WPARAM wParam, LPARAM lParam)
 	case WM_INITDIALOG:
 		{
 		char buf[50];
-		char *BitRate[]={"Auto","8","18","20","24","32","40","48","56","64","96","112","128","160","192","256",0};
-		char *BandWidth[]={"Auto","Full","4000","8000","16000","22050","24000","48000",0};
+		char *Quality[]={"Default","10","20","30","40","50","60","70","80","90","100","110","120","130","140","150","200","300","400","500",0};
+		char *BitRate[]={"Auto","8","18","20","24","32","40","48","56","64","96","112","128","160","192","224","256","320","384",0};
+		char *BandWidth[]={"Auto","Full","4000","8000","11025","16000","22050","24000","32000","44100","48000",0};
 		MY_ENC_CFG cfg;
 
 			ReadCfgEnc(&cfg);
 
+			INIT_CB(hWndDlg,IDC_CB_QUALITY,Quality,0);
 			INIT_CB(hWndDlg,IDC_CB_BITRATE,BitRate,0);
 			INIT_CB(hWndDlg,IDC_CB_BANDWIDTH,BandWidth,0);
 
@@ -257,6 +424,26 @@ BOOL DIALOGMsgProc(HWND hWndDlg, UINT Message, WPARAM wParam, LPARAM lParam)
 			CheckDlgButton(hWndDlg, IDC_CHK_ALLOWMIDSIDE, cfg.EncCfg.allowMidside);
 			CheckDlgButton(hWndDlg, IDC_CHK_USETNS, cfg.EncCfg.useTns);
 			CheckDlgButton(hWndDlg, IDC_CHK_USELFE, cfg.EncCfg.useLfe);
+
+			if(cfg.UseQuality)
+				CheckDlgButton(hWndDlg,IDC_RADIO_QUALITY,TRUE);
+			else
+				CheckDlgButton(hWndDlg,IDC_RADIO_BITRATE,TRUE);
+
+			switch(cfg.EncCfg.quantqual)
+			{
+			case 100:
+				SendMessage(GetDlgItem(hWndDlg, IDC_CB_QUALITY), CB_SETCURSEL, 0, 0);
+				break;
+			default:
+				if(cfg.EncCfg.quantqual<10)
+					cfg.EncCfg.quantqual=10;
+				if(cfg.EncCfg.quantqual>500)
+					cfg.EncCfg.quantqual=500;
+				sprintf(buf,"%lu",cfg.EncCfg.quantqual);
+				SetDlgItemText(hWndDlg, IDC_CB_QUALITY, buf);
+				break;
+			}
 			switch(cfg.EncCfg.bitRate)
 			{
 			case 0:
@@ -342,6 +529,16 @@ BOOL DIALOGMsgProc(HWND hWndDlg, UINT Message, WPARAM wParam, LPARAM lParam)
 				default:
 					cfg.EncCfg.bandWidth=GetDlgItemInt(hWndDlg, IDC_CB_BANDWIDTH, 0, FALSE);
 				}
+				cfg.UseQuality=IsDlgButtonChecked(hWndDlg,IDC_RADIO_QUALITY) ? TRUE : FALSE;
+				GetDlgItemText(hWndDlg, IDC_CB_QUALITY, buf, 50);
+				switch(*buf)
+				{
+				case 'D': // Default
+					cfg.EncCfg.quantqual=100;
+					break;
+				default:
+					cfg.EncCfg.quantqual=GetDlgItemInt(hWndDlg, IDC_CB_QUALITY, 0, FALSE);
+				}
 				cfg.EncCfg.outputFormat=IsDlgButtonChecked(hWndDlg,IDC_RADIO_RAW) ? RAW : ADTS;
 
 				WriteCfgEnc(&cfg);
@@ -395,7 +592,7 @@ CRegistry	reg;
 long		retVal;
 BOOL		OpenDialog=FALSE;
 
-	if(!reg.openCreateReg(HKEY_LOCAL_MACHINE,REGISTRY_PROGRAM_NAME  "\\FAAD"))
+/*	if(!reg.openCreateReg(HKEY_LOCAL_MACHINE,REGISTRY_PROGRAM_NAME  "\\FAAD"))
 		ERROR_FGO("Can't open registry!")
 	else
 		if(OpenDialog=reg.getSetRegBool("OpenDialog",FALSE))
@@ -427,7 +624,7 @@ BOOL		OpenDialog=FALSE;
 		WriteCfgDec(Cfg);
 		FREE(Cfg);
 	}
-	else
+	else*/
 		retVal=DialogBoxParam((HINSTANCE)hInst,(LPCSTR)MAKEINTRESOURCE(IDD_ENCODER), (HWND)hWnd, (DLGPROC)DIALOGMsgProc, dwOptions);
 
 	if(retVal==-1)
@@ -441,7 +638,7 @@ BOOL		OpenDialog=FALSE;
 void FAR PASCAL GetSuggestedSampleType(LONG *lplSamprate, WORD *lpwBitsPerSample, WORD *wChannels)
 {
 	*lplSamprate=0; // don't care
-	*lpwBitsPerSample= *lpwBitsPerSample==16 ? 0: 16;
+	*lpwBitsPerSample= *lpwBitsPerSample<=16 ? 0: 16;
 	*wChannels= *wChannels<49 ? 0 : 48;
 }
 // *********************************************************************************************
@@ -464,11 +661,8 @@ MYOUTPUT *mo;
 	if(mo->hEncoder)
 		faacEncClose(mo->hEncoder);
 	
-	if(mo->bitbuf)
-	{
-		free(mo->bitbuf);
-		mo->bitbuf=0;
-	}
+	FREE(mo->bitbuf)
+	FREE(mo->buffer)
 	
 //	FREE(mi->dst_name);
 	
@@ -498,7 +692,9 @@ MY_ENC_CFG		cfg;
 DWORD			samplesInput,
 				maxBytesOutput;
 
-	if(wBitsPerSample!=16)	// FAAC supports 16 bit audio only!
+//	if(wBitsPerSample!=8 && wBitsPerSample!=16) // 32 bit audio from cooledit is in unsupported format
+//		return 0;
+	if(wChannels>=49)	// FAAC supports max 48 tracks!
 		return 0;
 
     if(!(hOutput=GlobalAlloc(GMEM_MOVEABLE|GMEM_SHARE|GMEM_ZEROINIT,sizeof(MYOUTPUT))))
@@ -517,8 +713,11 @@ DWORD			samplesInput,
 	if(!(mo->hEncoder=faacEncOpen(lSamprate, wChannels, &samplesInput, &maxBytesOutput)))
 		ERROR_OFO("Can't open library");
 
-	if(!(mo->bitbuf=(unsigned char*)malloc(maxBytesOutput*sizeof(unsigned char))))
+	if(!(mo->bitbuf=(unsigned char *)malloc(maxBytesOutput*sizeof(unsigned char))))
 		ERROR_OFO("Memory allocation error: output buffer");
+
+	if(!(mo->buffer=(int32_t *)malloc(samplesInput*sizeof(int32_t))))
+		ERROR_OFO("Memory allocation error: input buffer");
 
 	ReadCfgEnc(&cfg);
 	if(!cfg.AutoCfg)
@@ -526,10 +725,16 @@ DWORD			samplesInput,
     faacEncConfigurationPtr myFormat=&cfg.EncCfg;
     faacEncConfigurationPtr CurFormat=faacEncGetCurrentConfiguration(mo->hEncoder);
 
-		if(!myFormat->bitRate)
+		if(cfg.UseQuality)
+		{
+			myFormat->quantqual=cfg.EncCfg.quantqual;
 			myFormat->bitRate=CurFormat->bitRate;
+		}
 		else
-			myFormat->bitRate*=1000;
+			if(!myFormat->bitRate)
+				myFormat->bitRate=CurFormat->bitRate;
+			else
+				myFormat->bitRate*=1000;
 
 		switch(myFormat->bandWidth)
 		{
@@ -546,7 +751,7 @@ DWORD			samplesInput,
 			ERROR_OFO("Unsupported parameters");
 	}
 
-	*lpChunkSize=samplesInput*2;
+	*lpChunkSize=samplesInput*(wBitsPerSample>>3);
 
 //	mo->src_size=lSize;
 	mo->Samprate=lSamprate;
@@ -555,6 +760,17 @@ DWORD			samplesInput,
 	mo->samplesInput=samplesInput;
 	mo->maxBytesOutput=maxBytesOutput;
 //	mi->dst_name=strdup(lpstrFilename);
+
+	// init flushing process
+int bytesEncoded, tmp;
+
+    bytesEncoded=faacEncEncode(mo->hEncoder, 0, 0, mo->bitbuf, maxBytesOutput); // initializes the flushing process
+    if(bytesEncoded>0)
+	{
+		tmp=fwrite(mo->bitbuf, 1, bytesEncoded, mo->aacFile);
+		if(tmp!=bytesEncoded)
+			ERROR_OFO("fwrite()");
+	}
 
 	GlobalUnlock(hOutput);
 
@@ -572,7 +788,7 @@ DWORD			samplesInput,
 }
 // -----------------------------------------------------------------------------------------------
 
-DWORD FAR PASCAL WriteFilterOutput(HANDLE hOutput, unsigned char far *buf, long lBytes)
+DWORD FAR PASCAL WriteFilterOutput(HANDLE hOutput, unsigned char far *bufIn, long lBytes)
 {
 	if(!hOutput)
 		return 0;
@@ -582,21 +798,25 @@ int bytesEncoded;
 MYOUTPUT far *mo;
 
 	GLOBALLOCK(mo,hOutput,MYOUTPUT,return 0);
-	
+
+int32_t *buf=mo->buffer;
+
+	To32bit(buf,bufIn,mo->samplesInput,mo->BitsPerSample>>3,false);
+
 	// call the actual encoding routine
-	bytesEncoded=faacEncEncode(mo->hEncoder, (short *)buf, mo->samplesInput, mo->bitbuf, mo->maxBytesOutput);
-	if(bytesEncoded<1) // end of flushing process
-	{
-		if(bytesEncoded<0)
-			ERROR_WFO("faacEncEncode");
-		bytesWritten=lBytes ? 1 : 0; // bytesWritten==0 stops CoolEdit. 1 is used when intializing flushing process
-	}
-	else
+	bytesEncoded=faacEncEncode(mo->hEncoder, (int32_t *)buf, mo->samplesInput, mo->bitbuf, mo->maxBytesOutput);
+	if(bytesEncoded>0)
 	{
 		// write bitstream to aac file 
 		bytesWritten=fwrite(mo->bitbuf, 1, bytesEncoded, mo->aacFile);
 		if(bytesWritten!=bytesEncoded)
-			ERROR_WFO("fwrite");
+			ERROR_WFO("bytesWritten and bytesEncoded are different");
+	}
+	else
+	{
+		if(bytesEncoded<0)
+			ERROR_WFO("faacEncEncode()");
+		bytesWritten=lBytes ? 1 : 0; // bytesWritten==0 stops CoolEdit
 	}
 	
 	GlobalUnlock(hOutput);
