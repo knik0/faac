@@ -52,9 +52,9 @@ Copyright (c) 1997.
 
 Source file:
 
-$Id: psych.c,v 1.17 2000/01/06 10:15:51 menno Exp $
-$Id: psych.c,v 1.17 2000/01/06 10:15:51 menno Exp $
-$Id: psych.c,v 1.17 2000/01/06 10:15:51 menno Exp $
+$Id: psych.c,v 1.18 2000/01/06 10:39:33 lenox Exp $
+$Id: psych.c,v 1.18 2000/01/06 10:39:33 lenox Exp $
+$Id: psych.c,v 1.18 2000/01/06 10:39:33 lenox Exp $
 
 **********************************************************************/
 
@@ -669,7 +669,7 @@ void psy_step2(double sample[][BLOCK_LEN_LONG*2],
 		FFTarray[i].im = 0.0;
     }
 
-    pfftw_d_2048(FFTarray);
+    pfftw_2048(FFTarray);
 
         for(w = 0; w < BLOCK_LEN_LONG; w++){
  		unscambled = unscambled2048[w];
@@ -705,7 +705,7 @@ void psy_step2(double sample[][BLOCK_LEN_LONG*2],
 			FFTarray[i].im = 0.0;
 		}
 
-                pfftw_d_256(FFTarray);
+                pfftw_256(FFTarray);
 
 		for(w = 0; w < BLOCK_LEN_SHORT; w++){
          		unscambled = unscambled256[w];
