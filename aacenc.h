@@ -1,3 +1,5 @@
+#include <stdio.h>
+#include <sndfile.h>
 
 typedef struct RCBufStruct RCBuf;	/* buffer handle */
 
@@ -6,6 +8,7 @@ typedef struct RCBufStruct RCBuf;	/* buffer handle */
 
 #define FNO_ERROR 0
 #define FERROR 1
+#define F_FINISH 2
 
 #define NO_HEADER	0
 #define ADIF_HEADER     1
@@ -19,12 +22,13 @@ typedef struct {
 	char HomePage[255];
 } faacVersion;
 
-// This structure is for internal use of the encoder only.
+// This structure is for AAC stream object
 typedef struct {
 	long total_bits;
 	long frames;
 	long cur_frame;
 	int is_first_frame;
+	int is_last_frames;
 	int channels;
 	int out_sampling_rate;
 	int in_sampling_rate;
@@ -40,110 +44,36 @@ typedef struct {
 	double **inputBuffer;
 	RCBuf *rc_buf;
 	int rc_needed;
-	int samplesToRead;
 	int savedSize;
 	float saved[2048];
 	int cut_off;
 	int bit_rate;
-	char out_dir[255];
-	int out_dir_set;
 	int raw_audio;
+        SNDFILE *in_file;
+        FILE *out_file;
+        unsigned char *bitBuffer;
+        int bitBufferSize;
+        short *sampleBuffer;
+	int samplesToRead;
 } faacAACStream;
 
 #ifndef FAAC_DLL
 
-
-//
-// The main() function in encoder.c gives an example of how to use these functions
-//
-
-// faacAACStream* faacEncodeInit(faacAACConfig *ac, int *samplesToRead, int *bitBufferSize,
-//  int *headerSize);
-//
-// Purpose:
-//  Initializes the DLL.
-// Parameters:
-//  Input:
-//   ac: Completely filled faacAACConfig structure
-//  Output:
-//   samplesToRead: Number of samples that should be read before every call to faacEncodeFrame()
-//   bitBufferSize: Size of the buffer in bytes that should be initialized for writing
-//   headerSize: Size of the buffer in bytes that should be initialized for writing the header
-//               This number of bytes should be skipped in the file before writing any frames.
-//               Later, after calling faacAACFree() the headerBuf should be written to this space in the AAC file.
-// Return value:
-//  faacAACStream structure that should be used in calls to other functions
-typedef int (*FAACENCODEINIT) (faacAACStream *as, int *samplesToRead, int *bitBufferSize, int *headerSize);
-
-
-// int faacEncodeFrame(faacAACStream *as, short *Buffer, int Samples, unsigned char *bitBuffer,
-//  int *bitBufSize);
-//
-// Purpose:
-//  Encodes a chunk of samples.
-// Parameters:
-//  Input:
-//   as: faacAACStream returned by faacEncodeInit()
-//   Buffer: Sample data from audio file
-//   Samples: Number of samples in buffer
-//  Output:
-//   bitBuffer: Output data that should be written to the AAC file.
-//   bitBufSize: Size of bitBuffer in bytes
-// Return value:
-//  FERROR or FNO_ERROR
-typedef int (*FAACENCODEFRAME) (faacAACStream *as, short *Buffer, int Samples, unsigned char *bitBuffer, int *bitBufSize);
-
-
-// int faacEncodeFinish(faacAACStream *as, unsigned char *bitBuffer, int *bitBufSize);
-//
-// Purpose:
-//  Flushes the last pieces of data.
-// Parameters:
-//  Input:
-//   as: faacAACStream returned by faacEncodeInit()
-//  Output:
-//   bitBuffer: Output data that should be written to the AAC file.
-//   bitBufSize: Size of bitBuffer in bytes
-// Return value:
-//  FERROR or FNO_ERROR
-typedef int (*FAACENCODEFINISH) (faacAACStream *as, unsigned char *bitBuffer, int *bitBufSize);
-
-// int faacEncodeFree(faacAACStream *as, unsigned char *headerBuf);
-//
-// Purpose:
-//  Frees encoder memory and fills in headerBuf.
-// Parameters:
-//  Input:
-//   as: faacAACStream returned by faacEncodeInit()
-//  Output:
-//   headerBuf: Header data that should be written to the AAC file, size of 
-//         the data is headerSize returned by faacEncodeInit().
-// Return value:
-//  FERROR or FNO_ERROR
-typedef int (*FAACENCODEFREE) (faacAACStream *as, unsigned char *headerBuf);
-
-
-// int faacEncodeVersion(void);
-//
-// Purpose:
-//  Gives version information from the DLL.
-// Return value:
-//  Filled in faacVersion structure
-typedef faacVersion* (*FAACENCODEVERSION) (void);
-
-#define TEXT_FAACENCODEINIT    "faacEncodeInit"
-#define TEXT_FAACENCODEFRAME   "faacEncodeFrame"
-#define TEXT_FAACENCODEFINISH  "faacEncodeFinish"
-#define TEXT_FAACENCODEFREE    "faacEncodeFree"
-#define TEXT_FAACENCODEVERSION "faacEncodeVersion"
+int faac_EncodeInit(faacAACStream *as, char *in_file, char *out_file);
+int faac_EncodeFrame(faacAACStream *as);
+void faac_EncodeFree(faacAACStream *as);
+void faac_EncodeFinish(faacAACStream *as);
+faacVersion *faac_Version(void);
+void faac_InitParams(faacAACStream *as);
 
 #else
 
-__declspec(dllexport) int faacEncodeInit(faacAACStream *as, int *samplesToRead, int *bitBufferSize, int *headerSize);
-__declspec(dllexport) int faacEncodeFrame(faacAACStream *as, short *Buffer, int Samples, unsigned char *bitBuffer, int *bitBufSize);
-__declspec(dllexport) int faacEncodeFree(faacAACStream *as, unsigned char *headerBuf);
-__declspec(dllexport) int faacEncodeFinish(faacAACStream *as, unsigned char *bitBuffer, int *bitBufSize);
-__declspec(dllexport) faacVersion *faacEncodeVersion(void);
+__declspec(dllexport) int faac_EncodeInit(faacAACStream *as, char *in_file, char *out_file);
+__declspec(dllexport) int faac_EncodeFrame(faacAACStream *as);
+__declspec(dllexport) void faac_EncodeFree(faacAACStream *as);
+__declspec(dllexport) void faac_EncodeFinish(faacAACStream *as);
+__declspec(dllexport) faacVersion *faac_Version(void);
+__declspec(dllexport) void faac_InitParams(faacAACStream *as);
 
 #endif
 

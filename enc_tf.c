@@ -112,7 +112,7 @@ void EncTfFree (void)
  ***
  ****************************************************************************************/
 
-void EncTfInit (faacAACStream *as, int VBR_setting)
+void EncTfInit (faacAACStream *as)
 {
 	int chanNum, i;
 	int SampleRates[] = {
