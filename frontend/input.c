@@ -16,7 +16,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: input.c,v 1.5 2003/03/26 17:20:05 knik Exp $
+ * $Id: input.c,v 1.6 2003/06/21 08:58:27 knik Exp $
  */
 
 #ifdef HAVE_CONFIG_H
@@ -77,7 +77,8 @@ typedef struct
 }
 WAVEFORMATEX;
 
-pcmfile_t *wav_open_read(const char *name)
+pcmfile_t *wav_open_read(const char *name,
+			 int rawchans, int rawbits, int rawrate)
 {
   int i;
   int skip;
@@ -91,6 +92,7 @@ pcmfile_t *wav_open_read(const char *name)
   char *datal = "data";
   int fmtsize;
   pcmfile_t *sndf;
+  int dostdin = 0;
 
   if (!strcmp(name, "-"))
   {
@@ -98,6 +100,7 @@ pcmfile_t *wav_open_read(const char *name)
     setmode(fileno(stdin), O_BINARY);
 #endif
     wave_f = stdin;
+    dostdin = 1;
   }
   else if (!(wave_f = fopen(name, "rb")))
   {
@@ -105,6 +108,8 @@ pcmfile_t *wav_open_read(const char *name)
     return NULL;
   }
 
+  if (rawchans < 1) // header input
+  {
   if (fread(&riff, 1, sizeof(riff), wave_f) != sizeof(riff))
     return NULL;
   if (memcmp(&(riff.label), riffl, 4))
@@ -140,14 +145,35 @@ pcmfile_t *wav_open_read(const char *name)
   }
   if (UINT16(wave.wFormatTag) != WAVE_FORMAT_PCM)
     return NULL;
+  }
 
   sndf = malloc(sizeof(*sndf));
   sndf->f = wave_f;
+  if (rawchans > 0) // raw input
+  {
+    sndf->bigendian = 1;
+    sndf->channels = rawchans;
+    sndf->samplebits = rawbits;
+    sndf->samplerate = rawrate;
+    if (dostdin)
+      sndf->samples = 0;
+    else
+    {
+      fseek(sndf->f, 0 , SEEK_END);
+      sndf->samples = ftell(sndf->f) /
+	(((sndf->samplebits > 8) ? 2 : 1) * sndf->channels);
+      rewind(sndf->f);
+    }
+  }
+  else
+  {
+    sndf->bigendian = 0;
   sndf->channels = UINT16(wave.nChannels);
   sndf->samplebits = UINT16(wave.wBitsPerSample);
   sndf->samplerate = UINT32(wave.nSamplesPerSec);
   sndf->samples = riffsub.len /
     (((UINT16(wave.wBitsPerSample) > 8) ? 2 : 1) * sndf->channels);
+  }
   return sndf;
 }
 
@@ -158,9 +184,17 @@ size_t wav_read_short(pcmfile_t *sndf, short *buf, size_t num)
 
   if (sndf->samplebits > 8) {
     size = fread(buf, 2, num, sndf->f);
-    for (i = 0; i < size; i++) {
-      /* change endianess for big endian (ppc, sparc) machines */
-      buf[i] = UINT16(buf[i]);
+    // fix endianness
+#ifdef WORDS_BIGENDIAN
+    if (!sndf->bigendian)
+#else
+    if (sndf->bigendian)
+#endif
+      // swap bytes
+      for (i = 0; i < size; i++)
+      {
+	int s = buf[i];
+	buf[i] = ((s & 0xff) << 8) | ((s & 0xff00) >> 8);
     }
     return size;
   }
