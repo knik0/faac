@@ -23,7 +23,7 @@ must be included in all copies or derivative works. Copyright 1996.
 
 ***********/
 /*
- * $Id: huffman.c,v 1.7 2001/09/04 18:39:35 menno Exp $
+ * $Id: huffman.c,v 1.8 2002/08/30 16:22:46 knik Exp $
  */
 
 #include <math.h>
@@ -94,13 +94,13 @@ int BitSearch(CoderInfo *coderInfo,
     int bit_stats[240][3];
     int total_bit_count;
     int levels;
-    double fraction;
+    int pow2levels;
+    int fracpow2lev;
 
     /* Set local pointer to coderInfo book_vector */
     int* book_vector = coderInfo -> book_vector;
 
     levels = (int) ((log((double)coderInfo->nr_of_sfb)/log((double)2.0))+1);
-    fraction = (pow(2,levels)+coderInfo->nr_of_sfb)/(double)(pow(2,levels));
 
 /* #define SLOW */
 
@@ -117,11 +117,15 @@ int BitSearch(CoderInfo *coderInfo,
         k=0;
         total_bit_count = 0;
 
-        for (j=(int)(pow(2,levels-i)); j<(int)(fraction*pow(2,levels-i)); j++)
+	pow2levels = 1 << (levels - i);
+	fracpow2lev = pow2levels + (coderInfo->nr_of_sfb >> i);
+
+        for (j=pow2levels; j < fracpow2lev; j++)
         {
             bit_stats[j][0] = min_book_choice[k][0]; /* the minimum bit cost for this section */
             bit_stats[j][1] = min_book_choice[k][1]; /* used with this huffman book number */
 
+#ifdef SLOW
             if (i>0){  /* not on the lowest level, grouping more than one signle scalefactor band per section*/
                 if  (bit_stats[j][0] < bit_stats[2*j][0] + bit_stats[2*j+1][0]){
 
@@ -134,7 +138,9 @@ int BitSearch(CoderInfo *coderInfo,
                 } else {  /* it was cheaper to transmit the smaller huffman table sections */
                     bit_stats[j][0] = bit_stats[2*j][0] + bit_stats[2*j+1][0];
                 }
-            } else {  /* during the first stage of the iteration, all sfb's are individual sections */
+	    } else
+#endif
+	    {  /* during the first stage of the iteration, all sfb's are individual sections */
                 if ( (book_vector[k]!=INTENSITY_HCB)&&(book_vector[k]!=INTENSITY_HCB2) ) {
                     book_vector[k] = bit_stats[j][1];  /* initially, set all sfb's to their own optimal section table values */
                 }
@@ -193,9 +199,11 @@ int NoiselessBitCount(CoderInfo *coderInfo,
 
     /* each section is 'hop' scalefactor bands wide */
     for (i=0; i < nr_of_sfb; i=i+hop){
+#ifdef SLOW
         if ((i+hop) > nr_of_sfb)
             q = nr_of_sfb;
         else
+#endif
             q = i+hop;
 
         {
@@ -209,9 +217,11 @@ int NoiselessBitCount(CoderInfo *coderInfo,
 
             j = 0;
             offset = sfb_offset[i];
+#ifdef SLOW
             if ((i+hop) > nr_of_sfb){
                 end = sfb_offset[nr_of_sfb];
             } else
+#endif
                 end = sfb_offset[q];
             length = end - offset;
 
@@ -268,9 +278,10 @@ int NoiselessBitCount(CoderInfo *coderInfo,
             }
 
             /* find the minimum bit cost and table number for huffman coding this scalefactor section */
-            min_book_choice[i][0] = 100000;
+            min_book_choice[i][1] = book_choice[0][1];
+            min_book_choice[i][0] = book_choice[0][0];
 
-            for(k=0;k<j;k++){
+            for(k=1;k<j;k++){
                 if (book_choice[k][0] < min_book_choice[i][0]){
                     min_book_choice[i][1] = book_choice[k][1];
                     min_book_choice[i][0] = book_choice[k][0];
