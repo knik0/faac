@@ -16,9 +16,10 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: tns.c,v 1.1 2001/02/28 18:39:34 menno Exp $
+ * $Id: tns.c,v 1.2 2001/03/05 21:24:02 oxygene Exp $
  */
 
+#include <math.h>
 #include <malloc.h>
 #include "frame.h"
 #include "coder.h"
