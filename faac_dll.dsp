@@ -43,7 +43,7 @@ RSC=rc.exe
 # PROP Ignore_Export_Lib 0
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /MT /W3 /GX /O2 /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /D "_MBCS" /D "_USRDLL" /D "FAAC_DLL_EXPORTS" /YX /FD /c
-# ADD CPP /nologo /MT /W1 /O2 /D "NDEBUG" /D "FAAC_DLL" /D "WIN32" /D "_WINDOWS" /D "_MBCS" /D "_USRDLL" /D "FAAC_DLL_EXPORTS" /YX /FD /c
+# ADD CPP /nologo /MT /O2 /D "NDEBUG" /D "FAAC_DLL" /D "WIN32" /D "_WINDOWS" /D "_MBCS" /D "_USRDLL" /D "FAAC_DLL_EXPORTS" /YX /FD /c
 # ADD BASE MTL /nologo /D "NDEBUG" /mktyplib203 /win32
 # ADD MTL /nologo /D "NDEBUG" /mktyplib203 /win32
 # ADD BASE RSC /l 0x413 /d "NDEBUG"
@@ -116,6 +116,14 @@ SOURCE=.\encoder.c
 # End Source File
 # Begin Source File
 
+SOURCE=.\fastfft.c
+# End Source File
+# Begin Source File
+
+SOURCE=.\fft.c
+# End Source File
+# Begin Source File
+
 SOURCE=.\imdct.c
 # End Source File
 # Begin Source File
@@ -145,10 +153,6 @@ SOURCE=.\tns.c
 # Begin Source File
 
 SOURCE=.\transfo.c
-# End Source File
-# Begin Source File
-
-SOURCE=.\fastfft.c
 # End Source File
 # End Group
 # Begin Group "Resource Files"

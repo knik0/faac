@@ -63,16 +63,14 @@ typedef struct {
 
 /* added by T. Araki (1997.07.10) */
 typedef struct {
-  double hw[BLOCK_LEN_LONG*2];     /* Hann window table */
-  double st[BLOCK_LEN_LONG*5/2];   /* sin table*/
-  int    brt[BLOCK_LEN_LONG*2];    /* bit inverse table */
-} FFT_TABLE_LONG;
-
-typedef struct {
-  double hw[BLOCK_LEN_SHORT*2];     /* Hann window table */
-  double st[BLOCK_LEN_SHORT*5/2];   /* sin table*/
-  int    brt[BLOCK_LEN_SHORT*2];    /* bit inverse table */
-} FFT_TABLE_SHORT;
+  double bval[NPART_LONG];
+  double qsthr[NPART_LONG];
+  double e_qsthr[NPART_LONG]; /* absolute threshold (energy) in each partition */  
+  double rnorm[NPART_LONG];
+  double bmax[NPART_LONG];
+  double spreading[NPART_LONG][NPART_LONG];
+  double hw[BLOCK_LEN_LONG*2];
+} DYN_PARTITION_TABLE_LONG;
  
 typedef struct {
   int    sampling_rate;
@@ -80,13 +78,18 @@ typedef struct {
   int    w_low[NPART_LONG];
   int    w_high[NPART_LONG];
   int    width[NPART_LONG];
-  double bval[NPART_LONG];
-  double qsthr[NPART_LONG];
-  double e_qsthr[NPART_LONG]; /* absolute threshold (energy) in each partition */  
-  double rnorm[NPART_LONG];
-  double bmax[NPART_LONG];
-  double spreading[NPART_LONG][NPART_LONG];
+  DYN_PARTITION_TABLE_LONG *dyn;
 } PARTITION_TABLE_LONG;
+
+typedef struct {
+  double bval[NPART_SHORT];
+  double qsthr[NPART_SHORT];
+  double e_qsthr[NPART_SHORT]; /* absolute threshold (energy) in each partition */  
+  double rnorm[NPART_SHORT];
+  double bmax[NPART_SHORT];
+  double spreading[NPART_SHORT][NPART_SHORT];
+  double hw[BLOCK_LEN_SHORT*2];
+} DYN_PARTITION_TABLE_SHORT;
 
 typedef struct {
   int    sampling_rate;
@@ -94,18 +97,12 @@ typedef struct {
   int    w_low[NPART_SHORT];
   int    w_high[NPART_SHORT];
   int    width[NPART_SHORT];
-  double bval[NPART_SHORT];
-  double qsthr[NPART_SHORT];
-  double e_qsthr[NPART_SHORT]; /* absolute threshold (energy) in each partition */  
-  double rnorm[NPART_SHORT];
-  double bmax[NPART_SHORT];
-  double spreading[NPART_SHORT][NPART_SHORT];
+  DYN_PARTITION_TABLE_SHORT *dyn;
 } PARTITION_TABLE_SHORT;
 
 typedef struct {
-  double fft_r[BLOCK_LEN_LONG*3];
-  double fft_f[BLOCK_LEN_LONG*3];
-  int    p_fft; /* pointer for fft_r and fft_f */
+  float xreal[BLOCK_LEN_LONG*2];
+  float fft_energy[BLOCK_LEN_LONG*2];
   double nb[NPART_LONG*2];
   double en[NPART_LONG];
   double save_npart_l[NSFB_LONG];
@@ -114,8 +111,6 @@ typedef struct {
 } PSY_STATVARIABLE_LONG;
 
 typedef struct {
-  double r_pred[BLOCK_LEN_LONG];
-  double f_pred[BLOCK_LEN_LONG];
   double c[BLOCK_LEN_LONG];
   double e[NPART_LONG];
   double cw[NPART_LONG];
@@ -131,12 +126,8 @@ typedef struct {
 } PSY_VARIABLE_LONG;
 
 typedef struct {
-  double fft_r[MAX_SHORT_WINDOWS][BLOCK_LEN_SHORT];
-  double fft_f[MAX_SHORT_WINDOWS][BLOCK_LEN_SHORT];
-  double last6_fft_r[BLOCK_LEN_SHORT];
-  double last6_fft_f[BLOCK_LEN_SHORT];
-  double last7_fft_r[BLOCK_LEN_SHORT];
-  double last7_fft_f[BLOCK_LEN_SHORT];
+  float xreal[MAX_SHORT_WINDOWS][BLOCK_LEN_SHORT*2];
+  float fft_energy[MAX_SHORT_WINDOWS][BLOCK_LEN_SHORT*2];
   double nb[MAX_SHORT_WINDOWS][NPART_SHORT];
   double en[MAX_SHORT_WINDOWS][NPART_SHORT];
   double save_npart_s[MAX_SHORT_WINDOWS][NSFB_SHORT];
@@ -145,8 +136,6 @@ typedef struct {
 } PSY_STATVARIABLE_SHORT;
 
 typedef struct {
-  double r_pred[MAX_SHORT_WINDOWS][BLOCK_LEN_SHORT];
-  double f_pred[MAX_SHORT_WINDOWS][BLOCK_LEN_SHORT];
   double c[MAX_SHORT_WINDOWS][BLOCK_LEN_SHORT];
   double e[MAX_SHORT_WINDOWS][NPART_SHORT];
   double cw[MAX_SHORT_WINDOWS][NPART_SHORT];
@@ -203,10 +192,6 @@ void EncTf_psycho_acoustic(
 
 double psy_get_absthr(double f); /* Jul 8 */
 
-void psy_fft_table_init(FFT_TABLE_LONG *fft_tbl_long, 
-			FFT_TABLE_SHORT *fft_tbl_short
-			);
-
 void psy_part_table_init(double sampling_rate,
 			 PARTITION_TABLE_LONG **part_tbl_long, 
 			 PARTITION_TABLE_SHORT **part_tbl_short
@@ -223,12 +208,12 @@ void psy_step1(double* p_time_signal[],
 	       );
 
 void psy_step2(double sample[][BLOCK_LEN_LONG*2], 
-               PSY_STATVARIABLE_LONG *psy_stvar_long, 
+               PARTITION_TABLE_LONG *part_tbl_long, 
+			   PARTITION_TABLE_SHORT *part_tbl_short, 
+			   PSY_STATVARIABLE_LONG *psy_stvar_long, 
                PSY_STATVARIABLE_SHORT *psy_stvar_short,
-	       FFT_TABLE_LONG *fft_tbl_long,
-	       FFT_TABLE_SHORT *fft_tbl_short,
-	       int ch
-	       );
+			   int ch
+			   );
 
 void psy_step3(PSY_STATVARIABLE_LONG *psy_stvar_long, 
                PSY_STATVARIABLE_SHORT *psy_stvar_short, 
