@@ -1,0 +1,8 @@
+*.ncb
+*.plg
+*.aps
+*.opt
+*.aac
+*.wav
+Release
+Debug
