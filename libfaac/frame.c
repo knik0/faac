@@ -16,7 +16,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: frame.c,v 1.48 2003/10/12 14:29:53 knik Exp $
+ * $Id: frame.c,v 1.49 2003/10/12 16:43:39 knik Exp $
  */
 
 /*
@@ -747,22 +747,25 @@ int FAACAPI faacEncEncode(faacEncHandle hEncoder,
     if (hEncoder->config.bitRate)
     {
       double fix;
-      int desbits = numChannels * ((hEncoder->config.bitRate * 1024)
-				   / hEncoder->sampleRate);
+      int desbits = numChannels * (hEncoder->config.bitRate * 1024)
+	/ hEncoder->sampleRate;
+      int diff = (frameBytes * 8) - desbits;
 
-      hEncoder->bitDiff += frameBytes * 8;
-      hEncoder->bitDiff -= desbits;
+      hEncoder->bitDiff += diff;
 
       fix = (double)hEncoder->bitDiff / desbits;
       fix *= 0.01;
       fix = max(fix, -0.2);
       fix = min(fix, 0.2);
 
-      hEncoder->aacquantCfg.quality *= (1.0 - fix);
-      if (hEncoder->aacquantCfg.quality > 200)
-        hEncoder->aacquantCfg.quality = 200;
-      if (hEncoder->aacquantCfg.quality < 70)
-        hEncoder->aacquantCfg.quality = 70;
+      if (((diff > 0) && (fix > 0.0)) || ((diff < 0) && (fix < 0.0)))
+      {
+	hEncoder->aacquantCfg.quality *= (1.0 - fix);
+	if (hEncoder->aacquantCfg.quality > 200)
+	  hEncoder->aacquantCfg.quality = 200;
+	if (hEncoder->aacquantCfg.quality < 70)
+	  hEncoder->aacquantCfg.quality = 70;
+      }
     }
 
     return frameBytes;
@@ -876,6 +879,9 @@ static SR_INFO srInfo[12+1] =
 
 /*
 $Log: frame.c,v $
+Revision 1.49  2003/10/12 16:43:39  knik
+average bitrate control made more stable
+
 Revision 1.48  2003/10/12 14:29:53  knik
 more accurate average bitrate control
 

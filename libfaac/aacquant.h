@@ -16,7 +16,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: aacquant.h,v 1.8 2003/09/24 16:26:28 knik Exp $
+ * $Id: aacquant.h,v 1.9 2003/10/12 16:43:39 knik Exp $
  */
 
 #ifndef AACQUANT_H
@@ -42,7 +42,7 @@ typedef struct
   {
     double *pow43;
     double *adj43;
-    int quality;
+    double quality;
   } AACQuantCfg;
 #pragma pack(pop)
 
