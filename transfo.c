@@ -1,17 +1,12 @@
-
-#define d2PI  6.283185307179586
-
-#define SWAP(a,b) tempr=a;a=b;b=tempr   
-
+#include <math.h>
 #include "all.h"
 #include "transfo.h"
-#include "util.h"
-#include <math.h>
-#include <stdlib.h>
+
+    float FFTarray [1024];    /* the array for in-place FFT */
+
 #ifndef PI
 #define PI 3.141592653589795
 #endif
-
 
 /*****************************
   Fast MDCT Code
@@ -19,23 +14,22 @@
 
 void MDCT (double *data, int N) {
 
-    static Float *FFTarray = 0;    /* the array for in-place FFT */
 	static int init = 1;
-    Float tempr, tempi, c, s, cold, cfreq, sfreq; /* temps for pre and post twiddle */
-    Float freq = 2. * PI / N;
-    Float fac;
+    float tempr, tempi, c, s, cold, cfreq, sfreq; /* temps for pre and post twiddle */
+    float freq = 2. * PI / N;
+    float fac;
     int i, n;
 	int isign = 1;
 	int b = N >> 1;
+	int N4 = N >> 2;
+	int N2 = N >> 1;
     int a = N - b;
+	int a2 = a >> 1;
+	int a4 = a >> 2;
+	int b4 = b >> 2;
 
     /* Choosing to allocate 2/N factor to Inverse Xform! */
     fac = 2.; /* 2 from MDCT inverse  to forward */
-
-	if (init) {
-		init = 0;
-		FFTarray = NewFloat (1024);
-	}
 
     /* prepare for recurrence relation in pre-twiddle */
     cfreq = cos (freq);
@@ -43,20 +37,20 @@ void MDCT (double *data, int N) {
     c = cos (freq * 0.125);
     s = sin (freq * 0.125);
 
-    for (i = 0; i < N / 4; i++) {
+    for (i = 0; i < N4; i++) {
 		/* calculate real and imaginary parts of g(n) or G(p) */
 		
 		n = N / 2 - 1 - 2 * i;
-		if (i < b / 4) {
-			tempr = data [a / 2 + n] + data [N + a / 2 - 1 - n]; /* use second form of e(n) for n = N / 2 - 1 - 2i */
+		if (i < b4) {
+			tempr = data [a2 + n] + data [N + a2 - 1 - n]; /* use second form of e(n) for n = N / 2 - 1 - 2i */
 		} else {
-			tempr = data [a / 2 + n] - data [a / 2 - 1 - n]; /* use first form of e(n) for n = N / 2 - 1 - 2i */
+			tempr = data [a2 + n] - data [a2 - 1 - n]; /* use first form of e(n) for n = N / 2 - 1 - 2i */
 		}
 		n = 2 * i;
-		if (i < a / 4) {
-			tempi = data [a / 2 + n] - data [a / 2 - 1 - n]; /* use first form of e(n) for n=2i */
+		if (i < a4) {
+			tempi = data [a2 + n] - data [a2 - 1 - n]; /* use first form of e(n) for n=2i */
 		} else {
-			tempi = data [a / 2 + n] + data [N + a / 2 - 1 - n]; /* use second form of e(n) for n=2i*/
+			tempi = data [a2 + n] + data [N + a2 - 1 - n]; /* use second form of e(n) for n=2i*/
 		}
 
 		/* calculate pre-twiddled FFT input */
@@ -70,24 +64,24 @@ void MDCT (double *data, int N) {
     }
     
     /* Perform in-place complex FFT of length N/4 */
-    FFT (FFTarray, N / 4, -1);
+    FFT (FFTarray, N4, -1);
 
     /* prepare for recurrence relations in post-twiddle */
     c = cos (freq * 0.125);
     s = sin (freq * 0.125);
     
     /* post-twiddle FFT output and then get output data */
-    for (i = 0; i < N / 4; i++) {
+    for (i = 0; i < N4; i++) {
 		
 		/* get post-twiddled FFT output  */
 		/* Note: fac allocates 4/N factor from IFFT to forward and inverse */
 		tempr = fac * (FFTarray [2 * i] * c + FFTarray [2 * i + 1] * s);
 		tempi = fac * (FFTarray [2 * i + 1] * c - FFTarray [2 * i] * s);
-		
+
 		/* fill in output values */
 		data [2 * i] = -tempr;   /* first half even */
-		data [N / 2 - 1 - 2 * i] = tempi;  /* first half odd */
-		data [N / 2 + 2 * i] = -tempi;  /* second half even */
+		data [N2 - 1 - 2 * i] = tempi;  /* first half odd */
+		data [N2 + 2 * i] = -tempi;  /* second half even */
 		data [N - 1 - 2 * i] = tempr;  /* second half odd */
 		
 		/* use recurrence to prepare cosine and sine for next value of i */
@@ -97,7 +91,7 @@ void MDCT (double *data, int N) {
     }
 }
 
-void FFT (Float *data, int nn, int isign)  {
+void FFT (float *data, int nn, int isign)  {
 /* Varient of Numerical Recipes code from off the internet.  It takes nn
 interleaved complex input data samples in the array data and returns nn interleaved
 complex data samples in place where the output is the FFT of input if isign==1 and it
@@ -112,9 +106,9 @@ transform!!!!)
  * a power of 2  */
 
     static int n, mmax, m, j, i;
-    static Float wtemp, wr, wpr, wpi, wi, theta, wpin;
-    static Float tempr, tempi, datar, datai;
-    static Float data1r, data1i;
+    static float wtemp, wr, wpr, wpi, wi, theta, wpin;
+    static float tempr, tempi, datar, datai;
+    static float data1r, data1i;
 
     n = nn * 2;
 
@@ -147,14 +141,14 @@ transform!!!!)
 		wi = 0;
 		for (m = 0; m < mmax; m += 2) {
 			j = m + mmax;
-			tempr = (Float) wr * (data1r = data [j]);
-			tempi = (Float) wi * (data1i = data [j + 1]);
+			tempr = (float) wr * (data1r = data [j]);
+			tempi = (float) wi * (data1i = data [j + 1]);
 			for (i = m; i < n - mmax * 2; i += mmax * 2) {
 /* mixed precision not significantly more
  * accurate here; if removing float casts,
  * tempr and tempi should be double */
 				tempr -= tempi;
-				tempi = (Float) wr *data1i + (Float) wi *data1r;
+				tempi = (float) wr *data1i + (float) wi *data1r;
 /* don't expect compiler to analyze j > i + 1 */
 				data1r = data [j + mmax * 2];
 				data1i = data [j + mmax * 2 + 1];
@@ -162,12 +156,12 @@ transform!!!!)
 				data [i + 1] = (datai = data [i + 1]) + tempi;
 				data [j] = datar - tempr;
 				data [j + 1] = datai - tempi;
-				tempr = (Float) wr *data1r;
-				tempi = (Float) wi *data1i;
+				tempr = (float) wr *data1r;
+				tempi = (float) wi *data1i;
 				j += mmax * 2;
 				}
 			tempr -= tempi;
-			tempi = (Float) wr * data1i + (Float) wi *data1r;
+			tempi = (float) wr * data1i + (float) wi *data1r;
 			data [i] = (datar = data [i]) + tempr;
 			data [i + 1] = (datai = data [i + 1]) + tempi;
 			data [j] = datar - tempr;
@@ -177,4 +171,3 @@ transform!!!!)
 			}
 		}
 }
-
