@@ -50,11 +50,11 @@ and its copyright belongs to Graphics Communication Laboratories.
 Copyright (c) 1997.
 
 
-Source file: 
+Source file:
 
-$Id: psych.c,v 1.12 1999/12/30 13:52:54 menno Exp $
-$Id: psych.c,v 1.12 1999/12/30 13:52:54 menno Exp $
-$Id: psych.c,v 1.12 1999/12/30 13:52:54 menno Exp $
+$Id: psych.c,v 1.13 2000/01/03 18:51:58 lenox Exp $
+$Id: psych.c,v 1.13 2000/01/03 18:51:58 lenox Exp $
+$Id: psych.c,v 1.13 2000/01/03 18:51:58 lenox Exp $
 
 **********************************************************************/
 
@@ -64,6 +64,7 @@ $Id: psych.c,v 1.12 1999/12/30 13:52:54 menno Exp $
 #include <memory.h>
 #include "tf_main.h"
 #include "psych.h"
+#include "transfo.h"
 
 
 SR_INFO sr_info_aac[MAX_SAMPLING_RATES+1] =
@@ -106,7 +107,7 @@ SR_INFO sr_info_aac[MAX_SAMPLING_RATES+1] =
      { /*  cb_width_long[NSFB_LONG] */
       4,  4,  4,  4,  4,  4,  4,  4,  4,  4,  8,  8,  8,  8,  8,  8,  8, 
       12, 12, 12, 12, 16, 16, 20, 20, 24, 24, 28, 28, 32, 32, 32, 32, 32, 32,
-      32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 96 
+      32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 96
      }, 
      { /* cb_width_short[NSFB_SHORT] */
       4,  4,  4,  4,  4,  8,  8,  8, 12, 12, 12, 16, 16, 16 
@@ -295,97 +296,20 @@ void EncTf_psycho_acoustic_init( void )
 }
 
 /* added by T. Okada (1997.07.10) */
-void psy_fft_table_init(FFT_TABLE_LONG *fft_tbl_long, 
+void psy_fft_table_init(FFT_TABLE_LONG *fft_tbl_long,
 			FFT_TABLE_SHORT *fft_tbl_short
 			)
-{    
+{
 
-	int i,j,k,n,n2,n4,n8;
-	double c,s,dc,ds,t;
+int i;
 
-	/* generating Hann window */
-	for(i = 0; i < BLOCK_LEN_LONG*2; i++)
-		fft_tbl_long->hw[i] = 0.5 * (1-cos(2.0*M_PI*(i+0.5)/(BLOCK_LEN_LONG*2)));
-	for(i = 0; i < BLOCK_LEN_SHORT*2; i++)
-		fft_tbl_short->hw[i] = 0.5 * (1-cos(2.0*M_PI*(i+0.5)/(BLOCK_LEN_SHORT*2)));
+/* generating Hann window */
+for(i = 0; i < BLOCK_LEN_LONG*2; i++)
+	fft_tbl_long->hw[i] = 0.5 * (1-cos(2.0*M_PI*(i+0.5)/(BLOCK_LEN_LONG*2)));
+for(i = 0; i < BLOCK_LEN_SHORT*2; i++)
+	fft_tbl_short->hw[i] = 0.5 * (1-cos(2.0*M_PI*(i+0.5)/(BLOCK_LEN_SHORT*2)));
 
-	/* generating sin table (long) */
-    n = BLOCK_LEN_LONG * 2;
-    n2 = n/2;  
-    n4 = n2/2;  
-    n8 = n4/2;
-
-    t = sin(M_PI / (double)n);
-    dc = 2.0*t*t;
-    ds = sqrt(dc * (2.0 - dc));
-    t = 2*dc;
-    c = fft_tbl_long->st[n4] = 1.0;
-    s = fft_tbl_long->st[0] = 0;
-
-    for(i = 1; i < n8; i++){
-	c -= dc;  dc += t * c;
-	s += ds;  ds -= t * s;
-	fft_tbl_long->st[i] = s;  fft_tbl_long->st[n4 - i] = c;
-    }
-    if (n8 != 0) fft_tbl_long->st[n8] = sqrt(0.5);
-    for (i = 0; i < n4; i++)
-	fft_tbl_long->st[n2 - i] = fft_tbl_long->st[i];
-    for (i = 0; i < n2 + n4; i++)
-	fft_tbl_long->st[i + n2] = -fft_tbl_long->st[i];
-
-    /* generating sin table (short) */
-    n = BLOCK_LEN_SHORT * 2;
-    n2 = n/2;  
-    n4 = n2/2;  
-    n8 = n4/2;
-
-    t = sin(M_PI / (double)n);
-    dc = 2*t*t;
-    ds = sqrt(dc * (2.0 - dc));
-    t = 2*dc;
-    c = fft_tbl_short->st[n4] = 1.0;
-    s = fft_tbl_short->st[0] = 0;
-
-    for(i = 1; i < n8; i++){
-		c -= dc;  dc += t * c;
-		s += ds;  ds -= t * s;
-		fft_tbl_short->st[i] = s;  fft_tbl_short->st[n4 - i] = c;
-    }
-    if (n8 != 0) fft_tbl_short->st[n8] = sqrt(0.5);
-    for (i = 0; i < n4; i++)
-		fft_tbl_short->st[n2 - i] = fft_tbl_short->st[i];
-    for (i = 0; i < n2 + n4; i++)
-		fft_tbl_short->st[i + n2] = - fft_tbl_short->st[i];
-
-    /* generating bit inverse table (long) */
-    n = BLOCK_LEN_LONG * 2;
-    n2 = n/2; i = j = 0;
-
-    for(;;){
-		fft_tbl_long->brt[i] = j;
-		if( ++i >= n ) break;
-		k = n2;
-		while(k <= j){
-			j -= k;
-			k /= 2;
-		}
-		j += k;
-    }
-
-    /* generating bit inverse table (short) */
-    n = BLOCK_LEN_SHORT * 2;
-    n2 = n/2; i = j = 0;
-
-    for(;;){
-	fft_tbl_short->brt[i] = j;
-	if( ++i >= n ) break;
-	k = n2;
-	while(k <= j){
-	    j -= k;
-	    k /= 2;
-	}
-	j += k;
-    }
+MakeFFTOrder();
 }
 /* added by T. Okada (1997.07.10) end */
 
@@ -683,7 +607,7 @@ void EncTf_psycho_acoustic(
 
 		psy_step11andahalf(part_tbl_long, part_tbl_short, psy_stvar_long, psy_stvar_short, no_of_chan);
 
-		psy_step12(part_tbl_long, part_tbl_short, &psy_stvar_long[no_of_chan], &psy_stvar_short[no_of_chan], 
+		psy_step12(part_tbl_long, part_tbl_short, &psy_stvar_long[no_of_chan], &psy_stvar_short[no_of_chan],
 			&psy_var_long, &psy_var_short, ch);
 		psy_step13(&psy_var_long, block_type, ch);
 		psy_step14(p_sri, part_tbl_long, part_tbl_short, &psy_stvar_long[no_of_chan], 
@@ -714,7 +638,7 @@ void EncTf_psycho_acoustic(
 
 void psy_step1(double* p_time_signal[], 
 	       double sample[][BLOCK_LEN_LONG*2], 
-	       int ch) 
+	       int ch)
 {
 	int i;
 
@@ -724,154 +648,97 @@ void psy_step1(double* p_time_signal[],
 	}
 }
 
-void psy_step2(double sample[][BLOCK_LEN_LONG*2], 
-               PSY_STATVARIABLE_LONG *psy_stvar_long, 
+void psy_step2(double sample[][BLOCK_LEN_LONG*2],
+               PSY_STATVARIABLE_LONG *psy_stvar_long,
                PSY_STATVARIABLE_SHORT *psy_stvar_short,
 	       FFT_TABLE_LONG *fft_tbl_long,
 	       FFT_TABLE_SHORT *fft_tbl_short,
 	       int ch
 	       )
 {
-    int w,i,j,k,l,h,n,d,ik,k2,n4;
-    double t,s,c,dx,dy;
-	double *xl,*yl;
+    int w,i,l,unscambled;
+    double t_re,t_im;
 
     /* FFT for long */
-	xl = (double *)malloc( sizeof(double) * BLOCK_LEN_LONG * 2 );
-	yl = (double *)malloc( sizeof(double) * BLOCK_LEN_LONG * 2 );
-
     psy_stvar_long->p_fft += BLOCK_LEN_LONG;
 
     if(psy_stvar_long->p_fft == BLOCK_LEN_LONG * 3)
 		psy_stvar_long->p_fft = 0;
 
-    /* window *//* static int it = 0; */
+    /* windowing */
     for(i = 0; i < BLOCK_LEN_LONG*2; i++){
-		xl[i] = fft_tbl_long->hw[i] * sample[ch][i];
-		yl[i] = 0.0;
+		FFTarray[i].re = fft_tbl_long->hw[i] * sample[ch][i];
+		FFTarray[i].im = 0.0;
     }
 
-    n = BLOCK_LEN_LONG*2;
-    n4 = n/4;
+    pfftw_d_2048(FFTarray);
 
-    for (i = 0; i < n; i++) {    /* bit inverse */
-		j = fft_tbl_long->brt[i];
-		if (i < j) {
-			t = xl[i];  xl[i] = xl[j];  xl[j] = t;
-			t = yl[i];  yl[i] = yl[j];  yl[j] = t;
-		}
-    }
-    for (k = 1; k < n; k = k2) {    /* translation */
-		h = 0;  k2 = k + k;  d = n / k2;
-		for (j = 0; j < k; j++) {
-			c = fft_tbl_long->st[h + n4];
-			s = fft_tbl_long->st[h];
-			for (i = j; i < n; i += k2) {
-				ik = i + k;
-				dx = s * yl[ik] + c * xl[ik];
-				dy = c * yl[ik] - s * xl[ik];
-				xl[ik] = xl[i] - dx;  xl[i] += dx;
-				yl[ik] = yl[i] - dy;  yl[i] += dy;
-			}
-			h += d;
-		}
-    }
+        for(w = 0; w < BLOCK_LEN_LONG; w++){
+ 		unscambled = unscambled2048[w];
+                t_re = FFTarray[unscambled].re;
+                t_im = FFTarray[unscambled].im;
+		psy_stvar_long->fft_r[w+psy_stvar_long->p_fft]
+			= sqrt(t_re*t_re + t_im*t_im);
 
-    for(w = 0; w < BLOCK_LEN_LONG; w++){
-		psy_stvar_long->fft_r[w+psy_stvar_long->p_fft] 
-			= sqrt(xl[w]*xl[w] + yl[w]*yl[w]);
-
-		if( xl[w] > 0.0 ){
-			if( yl[w] >= 0.0 )
-				psy_stvar_long->fft_f[w+psy_stvar_long->p_fft] = atan( yl[w] / xl[w] );
+		if( t_re > 0.0 ){
+			if( t_im >= 0.0 )
+				psy_stvar_long->fft_f[w+psy_stvar_long->p_fft] = atan( t_im / t_re );
 			else
-				psy_stvar_long->fft_f[w+psy_stvar_long->p_fft] = atan( yl[w] / xl[w] )+ M_PI * 2.0;
-		} else if( xl[w] < 0.0 ) {
-			psy_stvar_long->fft_f[w+psy_stvar_long->p_fft] = atan( yl[w] / xl[w] ) + M_PI;
+				psy_stvar_long->fft_f[w+psy_stvar_long->p_fft] = atan( t_im / t_re )+ M_PI * 2.0;
+		} else if( t_re < 0.0 ) {
+			psy_stvar_long->fft_f[w+psy_stvar_long->p_fft] = atan( t_im / t_re ) + M_PI;
 		} else {
-			if( yl[w] > 0.0 )
+			if( t_im > 0.0 )
 				psy_stvar_long->fft_f[w+psy_stvar_long->p_fft] = M_PI * 0.5;
-			else if( yl[w] < 0.0 )
+			else if( t_im < 0.0 )
 				psy_stvar_long->fft_f[w+psy_stvar_long->p_fft] = M_PI * 1.5;
 			else
 				psy_stvar_long->fft_f[w+psy_stvar_long->p_fft] = 0.0; /* tmp */
 		}
     }
 
-	if (xl) free(xl);
-	if (yl) free(yl);
-
-
-	/* added by T. Araki (1997.10.16) */
 	/* FFT for short */
-	xl = (double *)malloc( sizeof(double) * BLOCK_LEN_SHORT * 2 );
-	yl = (double *)malloc( sizeof(double) * BLOCK_LEN_SHORT * 2 );
 
 	for(l = 0; l < MAX_SHORT_WINDOWS; l++){
 
-        /* window */        
+        /* windowing */
         for(i = 0; i < BLOCK_LEN_SHORT*2; i++){
-			xl[i] = fft_tbl_short->hw[i] * sample[ch][/*OFFSET_FOR_SHORT +*/ BLOCK_LEN_SHORT * l + i];
-			yl[i] = 0.0;
+			FFTarray[i].re = fft_tbl_short->hw[i] * sample[ch][/*OFFSET_FOR_SHORT +*/ BLOCK_LEN_SHORT * l + i];
+			FFTarray[i].im = 0.0;
 		}
 
-		n = BLOCK_LEN_SHORT*2;
-		n4 = n/4;
-
-		for (i = 0; i < n; i++) {    /* bit inverse */
-			j = fft_tbl_short->brt[i];
-			if (i < j) {
-				t = xl[i];  xl[i] = xl[j];  xl[j] = t;
-				t = yl[i];  yl[i] = yl[j];  yl[j] = t;
-			}
-		}
-		for (k = 1; k < n; k = k2) {    /* translation */
-			h = 0;  k2 = k + k;  d = n / k2;
-			for (j = 0; j < k; j++) {
-				c = fft_tbl_short->st[h + n4];
-				s = fft_tbl_short->st[h];
-				for (i = j; i < n; i += k2) {
-					ik = i + k;
-					dx = s * yl[ik] + c * xl[ik];
-					dy = c * yl[ik] - s * xl[ik];
-					xl[ik] = xl[i] - dx;  xl[i] += dx;
-					yl[ik] = yl[i] - dy;  yl[i] += dy;
-				}
-				h += d;
-			}
-		}
+                pfftw_d_256(FFTarray);
 
 		for(w = 0; w < BLOCK_LEN_SHORT; w++){
-			psy_stvar_short->fft_r[l][w] 
-				= sqrt(xl[w]*xl[w] + yl[w]*yl[w]);
+         		unscambled = unscambled256[w];
+                        t_re = FFTarray[unscambled].re;
+                        t_im = FFTarray[unscambled].im;
+			psy_stvar_short->fft_r[l][w]
+				= sqrt(t_re*t_re + t_im*t_im);
 
-			if( xl[w] > 0.0 ){
-				if( yl[w] >= 0.0 )
-					psy_stvar_short->fft_f[l][w] = atan( yl[w] / xl[w] );
+			if( t_re > 0.0 ){
+				if( t_im >= 0.0 )
+					psy_stvar_short->fft_f[l][w] = atan( t_im / t_re );
 				else
-					psy_stvar_short->fft_f[l][w] = atan( yl[w] / xl[w] )+ M_PI * 2.0;
-			} else if( xl[w] < 0.0 ) {
-				psy_stvar_short->fft_f[l][w] = atan( yl[w] / xl[w] ) + M_PI;
+					psy_stvar_short->fft_f[l][w] = atan( t_im / t_re )+ M_PI * 2.0;
+			} else if( t_re < 0.0 ) {
+				psy_stvar_short->fft_f[l][w] = atan( t_im / t_re ) + M_PI;
 			} else {
-				if( yl[w] > 0.0 )
+				if( t_im > 0.0 )
 					psy_stvar_short->fft_f[l][w] = M_PI * 0.5;
-				else if( yl[w] < 0.0 )
+				else if( t_im < 0.0 )
 					psy_stvar_short->fft_f[l][w] = M_PI * 1.5;
 				else
 					psy_stvar_short->fft_f[l][w] = 0.0; /* tmp */
 			}
 		}
     }
-
-	if (xl) free(xl);
-	if (yl) free(yl);
-	/* added by T. Araki (1997.10.16) end */
 }
 
-void psy_step3(PSY_STATVARIABLE_LONG *psy_stvar_long, 
-               PSY_STATVARIABLE_SHORT *psy_stvar_short, 
-               PSY_VARIABLE_LONG *psy_var_long, 
-               PSY_VARIABLE_SHORT *psy_var_short, 
+void psy_step3(PSY_STATVARIABLE_LONG *psy_stvar_long,
+               PSY_STATVARIABLE_SHORT *psy_stvar_short,
+               PSY_VARIABLE_LONG *psy_var_long,
+               PSY_VARIABLE_SHORT *psy_var_short,
                int ch
 	       )
 {
@@ -916,7 +783,7 @@ void psy_step3(PSY_STATVARIABLE_LONG *psy_stvar_long,
 
 void psy_step4(PSY_STATVARIABLE_LONG *psy_stvar_long,
                PSY_STATVARIABLE_SHORT *psy_stvar_short,
-	       PSY_VARIABLE_LONG *psy_var_long, 
+	       PSY_VARIABLE_LONG *psy_var_long,
 	       PSY_VARIABLE_SHORT *psy_var_short,
 	       int ch
 	       )
@@ -929,7 +796,7 @@ void psy_step4(PSY_STATVARIABLE_LONG *psy_stvar_long,
 		f = psy_stvar_long->fft_f[psy_stvar_long->p_fft+w];
 		rp = psy_var_long->r_pred[w];
 		fp = psy_var_long->f_pred[w];
-		
+
 		if( r + fabs(rp) != 0.0 )
 			psy_var_long->c[w] = sqrt( psy_sqr(r*cos(f) - rp*cos(fp))
 				+psy_sqr(r*sin(f) - rp*sin(fp)) )/ ( r + fabs(rp) ) ;
@@ -944,7 +811,7 @@ void psy_step4(PSY_STATVARIABLE_LONG *psy_stvar_long,
 			f = psy_stvar_short->fft_f[i][w];
 			rp = psy_var_short->r_pred[i][w];
 			fp = psy_var_short->f_pred[i][w];
-			
+
 			if( r + fabs(rp) != 0.0 )
 				psy_var_short->c[i][w] = sqrt( psy_sqr(r*cos(f) - rp*cos(fp))
 					+psy_sqr(r*sin(f) - rp*sin(fp)) )/ ( r + fabs(rp) ) ;
