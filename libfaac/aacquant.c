@@ -17,7 +17,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: aacquant.c,v 1.19 2003/05/12 17:52:47 knik Exp $
+ * $Id: aacquant.c,v 1.20 2003/06/26 19:19:21 knik Exp $
  */
 
 #include <math.h>
@@ -40,13 +40,7 @@ static int FixNoise(CoderInfo *coderInfo,
 		    int *xi,
 		    double *xmin);
 
-static int SortForGrouping(CoderInfo* coderInfo,
-                           PsyInfo *psyInfo,
-                           ChannelInfo *channelInfo,
-                           int *sfb_width_table,
-                           double *xr);
-
-static void CalcAllowedDist(PsyInfo *psyInfo, int *cb_offset, int num_cb,
+static void CalcAllowedDist(CoderInfo *coderInfo, PsyInfo *psyInfo,
 			    double *xr, double *xmin, int quality);
 
 
@@ -176,18 +170,6 @@ int AACQuantize(CoderInfo *coderInfo,
     /* Use local copy's */
     int *scale_factor = coderInfo->scale_factor;
 
-    if (coderInfo->block_type == ONLY_SHORT_WINDOW) {
-        SortForGrouping(coderInfo, psyInfo, channelInfo, cb_width, xr);
-    } else {
-        for (sb = 0; sb < coderInfo->nr_of_sfb; sb++) {
-            if (channelInfo->msInfo.is_present && channelInfo->msInfo.ms_used[sb]) {
-                psyInfo->maskThr[sb] = psyInfo->maskThrMS[sb];
-                psyInfo->maskEn[sb] = psyInfo->maskEnMS[sb];
-            }
-        }
-    }
-
-
     /* Set all scalefactors to 0 */
     coderInfo->global_gain = 0;
     for (sb = 0; sb < coderInfo->nr_of_sfb; sb++)
@@ -201,8 +183,7 @@ int AACQuantize(CoderInfo *coderInfo,
     }
 
     if (do_q) {
-        CalcAllowedDist(psyInfo, coderInfo->sfb_offset,
-			coderInfo->nr_of_sfb, xr, xmin, quality);
+        CalcAllowedDist(coderInfo, psyInfo, xr, xmin, quality);
 	coderInfo->global_gain = 0;
 	FixNoise(coderInfo, xr, xr_pow, xi, xmin);
 	BalanceEnergy(coderInfo, xr, xi);
@@ -358,34 +339,23 @@ static void Quantize(const double *xr, int *ix, double istep)
 }
 #endif
 
-static void CalcAllowedDist(PsyInfo *psyInfo, int *cb_offset, int num_cb,
+static void CalcAllowedDist(CoderInfo *coderInfo, PsyInfo *psyInfo,
                             double *xr, double *xmin, int quality)
 {
   int sfb, start, end, l;
-  const double globalthr = 31.1 / (double)quality;
-  int last = 0, lastsb = 0;
-  double totnrg = 0.0;
+  const double globalthr = 29.7 / (double)quality;
+  int last = coderInfo->lastx;
+  int lastsb = 0;
   static const double minfix = 1.5;
-
-  end = cb_offset[num_cb];
-  for (l = 0; l < end; l++)
-  {
-    if (xr[l])
-    {
-      last = l;
-    totnrg += xr[l] * xr[l];
-    }
-  }
-  last++;
-
-  totnrg /= last;
+  int *cb_offset = coderInfo->sfb_offset;
+  int num_cb = coderInfo->nr_of_sfb;
+  double avgenrg = coderInfo->avgenrg;
 
     for (sfb = 0; sfb < num_cb; sfb++)
     {
     if (last > cb_offset[sfb])
       lastsb = sfb;
   }
-
 
   for (sfb = 0; sfb < num_cb; sfb++)
   {
@@ -404,13 +374,14 @@ static void CalcAllowedDist(PsyInfo *psyInfo, int *cb_offset, int num_cb,
     for (l = start; l < end; l++)
       enrg += xr[l]*xr[l];
 
-    thr = pow((double)(end-start)*totnrg/enrg, 0.425*(lastsb-sfb)/lastsb + 0.075);
+    thr = pow((double)(end-start)*avgenrg/enrg, 0.425*(lastsb-sfb)/lastsb + 0.075);
 
     tmp = minfix * (double)(start + 400) / (double)last;
     if (tmp < thr)
       thr = tmp;
 
-    xmin[sfb] = psyInfo->maskThr[sfb] * globalthr * thr;
+    xmin[sfb] = ((coderInfo->block_type == ONLY_SHORT_WINDOW) ? 0.7 : 1.0)
+      * globalthr * thr;
     }
 }
 
@@ -569,7 +540,7 @@ static int FixNoise(CoderInfo *coderInfo,
     return 0;
 }
 
-static int SortForGrouping(CoderInfo* coderInfo,
+int SortForGrouping(CoderInfo* coderInfo,
                            PsyInfo *psyInfo,
                            ChannelInfo *channelInfo,
                            int *sfb_width_table,
@@ -578,8 +549,6 @@ static int SortForGrouping(CoderInfo* coderInfo,
     int i,j,ii;
     int index = 0;
     double xr_tmp[1024];
-    double thr_tmp[150];
-    double en_tmp[150];
     int group_offset=0;
     int k=0;
     int windowOffset = 0;
@@ -624,34 +593,6 @@ static int SortForGrouping(CoderInfo* coderInfo,
     windowOffset = 0;
     for (i=0; i < num_window_groups; i++) {
         for (k=0 ; k <*nr_of_sfb; k++) {
-            int w;
-            double worstTHR;
-            double worstEN;
-
-            /* for this window group and this band, find worst case inverse sig-mask-ratio */
-            if (channelInfo->msInfo.is_present && channelInfo->msInfo.ms_usedS[windowOffset][k]) {
-                worstTHR = psyInfo->maskThrSMS[windowOffset][k];
-                worstEN = psyInfo->maskEnSMS[windowOffset][k];
-            } else {
-                worstTHR = psyInfo->maskThrS[windowOffset][k];
-                worstEN = psyInfo->maskEnS[windowOffset][k];
-            }
-
-            for (w=1;w<window_group_length[i];w++) {
-                if (channelInfo->msInfo.is_present && channelInfo->msInfo.ms_usedS[w+windowOffset][k]) {
-                    if (psyInfo->maskThrSMS[w+windowOffset][k] < worstTHR) {
-                        worstTHR = psyInfo->maskThrSMS[w+windowOffset][k];
-                        worstEN = psyInfo->maskEnSMS[w+windowOffset][k];
-                    }
-                } else {
-                    if (psyInfo->maskThrS[w+windowOffset][k] < worstTHR) {
-                        worstTHR = psyInfo->maskThrS[w+windowOffset][k];
-                        worstEN = psyInfo->maskEnS[w+windowOffset][k];
-                    }
-                }
-            }
-            thr_tmp[k+ i* *nr_of_sfb] = worstTHR;
-            en_tmp[k+ i* *nr_of_sfb] = worstEN;
             sfb_offset[index] = sfb_offset[index-1] + sfb_width_table[k]*window_group_length[i] ;
             index++;
         }
@@ -660,10 +601,27 @@ static int SortForGrouping(CoderInfo* coderInfo,
 
     *nr_of_sfb = *nr_of_sfb * num_window_groups;  /* Number interleaved bands. */
 
-    for (k = 0; k < *nr_of_sfb; k++){
-        psyInfo->maskThr[k] = thr_tmp[k];
-        psyInfo->maskEn[k] = en_tmp[k];
-    }
-
     return 0;
+}
+
+void CalcAvgEnrg(CoderInfo *coderInfo,
+		 const double *xr)
+{
+  int end, l;
+  int last = 0;
+  double totenrg = 0.0;
+
+  end = coderInfo->sfb_offset[coderInfo->nr_of_sfb];
+  for (l = 0; l < end; l++)
+  {
+    if (xr[l])
+    {
+      last = l;
+      totenrg += xr[l] * xr[l];
+    }
+    }
+  last++;
+
+  coderInfo->lastx = last;
+  coderInfo->avgenrg = totenrg / last;
 }
