@@ -313,9 +313,8 @@ int EncTfFrame (faacAACStream *as, BsBitStream  *fixed_stream)
 			EncTf_psycho_acoustic(
 				sampling_rate,
 				chanNum,
-				channels,
 				&DTimeSigLookAheadBuf[chanNum],
-				next_desired_block_type,
+				&next_desired_block_type[chanNum],
 				(int)qc_select,
 				block_size_samples,
 				chpo_long,
