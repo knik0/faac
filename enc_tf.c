@@ -45,7 +45,7 @@ enum QC_MOD_SELECT qc_select = AAC_QC;                   /* later f(encPara) */
 enum AAC_PROFILE profile = MAIN;
 enum WINDOW_TYPE block_type[MAX_TIME_CHANNELS];
 enum WINDOW_TYPE desired_block_type[MAX_TIME_CHANNELS];
-enum WINDOW_TYPE next_desired_block_type[MAX_TIME_CHANNELS+2];
+enum WINDOW_TYPE next_desired_block_type[MAX_TIME_CHANNELS];
 
 /* Additional variables for AAC */
 int aacAllowScalefacs = 1;              /* Allow AAC scalefactors to be nonconstant */
@@ -193,6 +193,37 @@ void EncTfInit (faacAACStream *as)
   initrft();
 }
 
+
+#define NZEROS 10
+#define NPOLES 10
+#define GAIN   1.769346444e+01
+
+static float xv1[NZEROS+1], yv1[NPOLES+1];
+static float xv2[NZEROS+1], yv2[NPOLES+1];
+
+static double filter(double in, int ch)
+  {
+	float *xv, *yv;
+	if (ch == 0) { xv = xv1; yv = yv1; }
+	else {xv = xv2; yv = yv2; }
+      { xv[0] = xv[1]; xv[1] = xv[2]; xv[2] = xv[3]; xv[3] = xv[4]; xv[4] = xv[5]; xv[5] = xv[6]; xv[6] = xv[7]; xv[7] = xv[8]; xv[8] = xv[9]; xv[9] = xv[10]; 
+        xv[10] = in / GAIN;
+        yv[0] = yv[1]; yv[1] = yv[2]; yv[2] = yv[3]; yv[3] = yv[4]; yv[4] = yv[5]; yv[5] = yv[6]; yv[6] = yv[7]; yv[7] = yv[8]; yv[8] = yv[9]; yv[9] = yv[10]; 
+        yv[10] =   (xv[0] + xv[10]) + 10 * (xv[1] + xv[9]) + 45 * (xv[2] + xv[8])
+                     + 120 * (xv[3] + xv[7]) + 210 * (xv[4] + xv[6]) + 252 * xv[5]
+                     + ( -0.0031942899 * yv[0]) + ( -0.0495126652 * yv[1])
+                     + ( -0.3523340657 * yv[2]) + ( -1.5191103652 * yv[3])
+                     + ( -4.4065847179 * yv[4]) + ( -9.0160440949 * yv[5])
+                     + (-13.2344234780 * yv[6]) + (-13.8407183240 * yv[7])
+                     + ( -9.9529291465 * yv[8]) + ( -4.4996258124 * yv[9]);
+        return yv[10];
+      }
+}
+
+
+
+
+
 /*******************************************************************************
  ***
  *** Function:    EncTfFrame
@@ -251,38 +282,38 @@ int EncTfFrame (faacAACStream *as, BsBitStream  *fixed_stream)
     available_bitreservoir_bits += 58;
 
   {
-    /* store input data in look ahead buffer which may be necessary for the window switching decision */
-    int i;
-    int chanNum;
+	  /* store input data in look ahead buffer which may be necessary for the window switching decision */
+	  int i;
+	  int chanNum;
 
-    for (chanNum=0;chanNum<max_ch;chanNum++) {
-      if(as->use_LTP)
-	for( i=0; i<block_size_samples; i++ ) {
-	  /* temporary fix: a linear buffer for LTP containing the whole time frame */
-	  nok_tmp_DTimeSigBuf[chanNum][i] = DTimeSigBuf[chanNum][i];
-	  nok_tmp_DTimeSigBuf[chanNum][block_size_samples + i] = DTimeSigLookAheadBuf[chanNum][i];
-        }
-	for( i=0; i<block_size_samples; i++ ) {
-	  /* last frame input data are encoded now */
-	  DTimeSigBuf[chanNum][i] = DTimeSigLookAheadBuf[chanNum][i];
-	  DTimeSigLookAheadBuf[chanNum][i] = as->inputBuffer[chanNum][i];
-        } /* end for(i ..) */
-    } /* end for(chanNum ... ) */
+	  for (chanNum=0;chanNum<max_ch;chanNum++) {
+		  if(as->use_LTP)
+			  for( i=0; i<block_size_samples; i++ ) {
+				  /* temporary fix: a linear buffer for LTP containing the whole time frame */
+				  nok_tmp_DTimeSigBuf[chanNum][i] = DTimeSigBuf[chanNum][i];
+				  nok_tmp_DTimeSigBuf[chanNum][block_size_samples + i] = DTimeSigLookAheadBuf[chanNum][i];
+			  }
+			  for( i=0; i<block_size_samples; i++ ) {
+				  /* last frame input data are encoded now */
+				  DTimeSigBuf[chanNum][i] = DTimeSigLookAheadBuf[chanNum][i];
+				  DTimeSigLookAheadBuf[chanNum][i] = as->inputBuffer[chanNum][i];
+			  } /* end for(i ..) */
+	  } /* end for(chanNum ... ) */
 
-    if (as->use_MS == 1) {
-      for (chanNum=0;chanNum<2;chanNum++) {
-	if (chanNum == 0) {
-	  for(i = 0; i < block_size_samples; i++){
-	    DTimeSigLookAheadBuf[chanNum][i] = (as->inputBuffer[0][i]+as->inputBuffer[1][i])*0.5;
-          }
-        }
-        else {
-	  for(i = 0; i < block_size_samples; i++){
-	    DTimeSigLookAheadBuf[chanNum][i] = (as->inputBuffer[0][i]-as->inputBuffer[1][i])*0.5;
-          }
-        }
-      }
-    }
+	  if (as->use_MS == 1) {
+		  for (chanNum=0;chanNum<2;chanNum++) {
+			  if (chanNum == 0) {
+				  for(i = 0; i < block_size_samples; i++){
+					  DTimeSigLookAheadBuf[chanNum][i] = (as->inputBuffer[0][i]+as->inputBuffer[1][i])*0.5;
+				  }
+			  }
+			  else {
+				  for(i = 0; i < block_size_samples; i++){
+					  DTimeSigLookAheadBuf[chanNum][i] = (as->inputBuffer[0][i]-as->inputBuffer[1][i])*0.5;
+				  }
+			  }
+		  }
+	  }
   }
 
   if (fixed_stream == NULL) {
@@ -296,35 +327,23 @@ int EncTfFrame (faacAACStream *as, BsBitStream  *fixed_stream)
   /***********************************************************************/
   /* Determine channel elements      */
   /***********************************************************************/
-  DetermineChInfo(channelInfo,max_ch);
+  DetermineChInfo(channelInfo, max_ch);
 
   /*****************************************************************************
   *
   * psychoacoustic
   *
   *****************************************************************************/
-  {
-    int chanNum, channels;
-
-    if (as->use_MS == 0)
-      channels = max_ch+2;
-    else
-      channels = max_ch;
-
-    for (chanNum = 0; chanNum < channels; chanNum++) {
-
-    EncTf_psycho_acoustic(
-			  sampling_rate,
-			  chanNum,
-			  &DTimeSigLookAheadBuf[chanNum],
-			  &next_desired_block_type[chanNum],
-//			  (int)qc_select,
-//			  block_size_samples,
-			  chpo_long,
-			  chpo_short
-			  );
-    }
-  }
+  EncTf_psycho_acoustic(
+	  sampling_rate,
+	  max_ch,
+	  channelInfo,
+	  DTimeSigLookAheadBuf,
+	  next_desired_block_type,
+	  as->use_MS,
+	  chpo_long,
+	  chpo_short
+	  );
 
   /*****************************************************************************
   *
@@ -334,9 +353,6 @@ int EncTfFrame (faacAACStream *as, BsBitStream  *fixed_stream)
   {
     int chanNum;
 	
-	if (next_desired_block_type[1] == ONLY_SHORT_WINDOW)
-		next_desired_block_type[0] = ONLY_SHORT_WINDOW;
-
     for (chanNum=0;chanNum<max_ch;chanNum++) {
     /* A few definitions:                                                      */
     /*   block_type:  Initially, the block_type used in the previous frame.    */
@@ -372,7 +388,6 @@ int EncTfFrame (faacAACStream *as, BsBitStream  *fixed_stream)
 //	block_type[1] = ONLY_LONG_WINDOW;
 //	block_type[0] = ONLY_SHORT_WINDOW;
 //	block_type[1] = ONLY_SHORT_WINDOW;
-  block_type[1] = block_type[0];
 
   {
     int chanNum;
@@ -496,8 +511,7 @@ int EncTfFrame (faacAACStream *as, BsBitStream  *fixed_stream)
 		channelInfo, block_type, quantInfo, as->use_MS, as->use_IS, max_ch);
 
   MSEnergy(spectral_line_vector, energy, chpo_long, chpo_short, sfb_width_table,
-//		channelInfo, block_type, quantInfo, as->use_MS, max_ch);
-		block_type, quantInfo, as->use_MS, max_ch);
+		channelInfo, block_type, quantInfo, as->use_MS, max_ch);
 
   {
     int chanNum;
@@ -630,8 +644,8 @@ int EncTfFrame (faacAACStream *as, BsBitStream  *fixed_stream)
 		     channelInfo,
 		     sfb_offset_table,
 //		     block_type,
-		     quantInfo
-//		     ,max_ch
+		     quantInfo,
+		     max_ch
                      );
     }
 

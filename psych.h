@@ -123,6 +123,7 @@ typedef struct {
   double cw[NPART_LONG];
   double en[NPART_LONG];
   double cb[NPART_LONG];
+  double cbb[NPART_LONG];
   double tb[NPART_LONG];
   double snr[NPART_LONG];
   double bc[NPART_LONG];
@@ -157,6 +158,7 @@ typedef struct {
   double cw[MAX_SHORT_WINDOWS][NPART_SHORT];
   double en[MAX_SHORT_WINDOWS][NPART_SHORT];
   double cb[MAX_SHORT_WINDOWS][NPART_SHORT];
+  double cbb[MAX_SHORT_WINDOWS][NPART_SHORT];
   double tb[MAX_SHORT_WINDOWS][NPART_SHORT];
   double snr[MAX_SHORT_WINDOWS][NPART_SHORT];
   double bc[MAX_SHORT_WINDOWS][NPART_SHORT];
@@ -191,8 +193,10 @@ void EncTf_psycho_acoustic(
   /* input */
   double sampling_rate,
   int    no_of_chan,         /* no of audio channels */
+  Ch_Info* chInfo,
   double *p_time_signal[],
   enum WINDOW_TYPE block_type[],
+  int use_MS,
 //  int qcSelect,
 //  int frameLength,
   /* output */
@@ -336,15 +340,33 @@ void psy_step14(SR_INFO *p_sri,
 //		,int ch
                 );
 
-void psy_step15(int use_ms_l[NSFB_LONG],
-				int use_ms_s[MAX_SHORT_WINDOWS][NSFB_SHORT],
-				SR_INFO *p_sri,
+void psy_step15(SR_INFO *p_sri,
 				PSY_STATVARIABLE_LONG *psy_stvar_long,
 				PSY_STATVARIABLE_SHORT *psy_stvar_short,
-				PSY_VARIABLE_LONG *psy_var_long,
-				PSY_VARIABLE_SHORT *psy_var_short,
-				int ch
+				PSY_VARIABLE_LONG *psy_var_long, PSY_VARIABLE_SHORT *psy_var_short,
+				int leftChan, int rightChan, int midChan, int sideChan
 				);
+
+void psy_step2MS(PSY_STATVARIABLE_LONG *psy_stvar_long,
+			PSY_STATVARIABLE_SHORT *psy_stvar_short,
+			int leftChan, int rightChan,
+			int midChan, int sideChan);
+
+void psy_step4MS(PSY_VARIABLE_LONG *psy_var_long,
+			PSY_VARIABLE_SHORT *psy_var_short,
+			int leftChan, int rightChan,
+			int midChan, int sideChan);
+
+void psy_step7MS(PSY_VARIABLE_LONG *psy_var_long,
+				 PSY_VARIABLE_SHORT *psy_var_short,
+				 int leftChan, int rightChan,
+				 int midChan, int sideChan);
+
+void psy_step11MS(PARTITION_TABLE_LONG *part_tbl_long, 
+						PARTITION_TABLE_SHORT *part_tbl_short, 
+						PSY_STATVARIABLE_LONG *psy_stvar_long, 
+						PSY_STATVARIABLE_SHORT *psy_stvar_short, 
+						int ch);
 
 #ifdef __cplusplus
 }
