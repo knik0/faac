@@ -53,11 +53,12 @@ BEGIN
     CONTROL         "ADTS",IDC_RADIO_ADTS,"Button",BS_AUTORADIOBUTTON,59,42,
                     41,9
     CONTROL         "Allow Mid/Side",IDC_CHK_ALLOWMIDSIDE,"Button",
-                    BS_AUTOCHECKBOX | WS_TABSTOP,108,21,63,10
+                    BS_AUTOCHECKBOX | WS_TABSTOP,109,29,63,10
     CONTROL         "Use TNS",IDC_CHK_USETNS,"Button",BS_AUTOCHECKBOX | 
-                    WS_TABSTOP,108,33,45,10
+                    WS_TABSTOP,109,41,45,10
     CONTROL         "Use LFE channel",IDC_CHK_USELFE,"Button",
-                    BS_AUTOCHECKBOX | WS_DISABLED | WS_TABSTOP,108,46,67,10
+                    BS_AUTOCHECKBOX | NOT WS_VISIBLE | WS_DISABLED | 
+                    WS_TABSTOP,4,122,67,10
     CONTROL         "Quality",IDC_RADIO_QUALITY,"Button",BS_AUTORADIOBUTTON | 
                     WS_GROUP,61,73,37,10
     COMBOBOX        IDC_CB_QUALITY,138,71,48,97,CBS_DROPDOWN | WS_VSCROLL | 
@@ -72,31 +73,39 @@ BEGIN
     GROUPBOX        "Profile",IDC_STATIC,4,62,48,59
     LTEXT           "Bandwidth",IDC_STATIC,73,111,34,8
     GROUPBOX        "Header",IDC_STATIC,55,18,48,38
-    GROUPBOX        "Encoding mode",IDC_STATIC,56,62,135,42
+    GROUPBOX        "Encoding mode",IDC_STATIC,56,62,137,42
+    CONTROL         "Write .mp4",IDC_CHK_WRITEMP4,"Button",BS_AUTOCHECKBOX | 
+                    NOT WS_VISIBLE | WS_DISABLED | WS_TABSTOP,4,132,50,10
 END
 
-IDD_DECODER DIALOG DISCARDABLE  0, 0, 141, 94
+IDD_DECODER DIALOG DISCARDABLE  0, 0, 141, 105
 STYLE DS_MODALFRAME | WS_POPUP | WS_VISIBLE | WS_CAPTION | WS_SYSMENU
 CAPTION "Raw .AAC options"
 FONT 8, "MS Sans Serif"
 BEGIN
-    DEFPUSHBUTTON   "&OK",IDOK,24,73,36,14
-    PUSHBUTTON      "&Cancel",IDCANCEL,61,73,36,14
-    PUSHBUTTON      "&About",IDC_BTN_ABOUT,97,73,36,14
+    DEFPUSHBUTTON   "&OK",IDOK,24,84,36,14
+    PUSHBUTTON      "&Cancel",IDCANCEL,61,84,36,14
+    PUSHBUTTON      "&About",IDC_BTN_ABOUT,97,84,36,14
     CONTROL         "Main",IDC_RADIO_MAIN,"Button",BS_AUTORADIOBUTTON | 
                     WS_GROUP,93,17,31,10
-    CONTROL         "Low",IDC_RADIO_LOW,"Button",BS_AUTORADIOBUTTON,93,30,29,
+    CONTROL         "Low",IDC_RADIO_LOW,"Button",BS_AUTORADIOBUTTON,93,28,29,
                     10
     CONTROL         "SSR",IDC_RADIO_SSR,"Button",BS_AUTORADIOBUTTON | 
-                    WS_DISABLED,93,41,31,10
-    CONTROL         "LTP",IDC_RADIO_LTP,"Button",BS_AUTORADIOBUTTON,93,54,29,
+                    WS_DISABLED,93,40,31,10
+    CONTROL         "LTP",IDC_RADIO_LTP,"Button",BS_AUTORADIOBUTTON,93,52,29,
                     10
-    GROUPBOX        "Profile",IDC_STATIC,85,7,48,61
-    COMBOBOX        IDC_CB_SAMPLERATE,13,48,62,87,CBS_DROPDOWN | WS_VSCROLL | 
+    GROUPBOX        "Profile",IDC_STATIC,85,7,48,70
+    COMBOBOX        IDC_CB_SAMPLERATE,13,57,62,87,CBS_DROPDOWN | WS_VSCROLL | 
                     WS_TABSTOP
     CONTROL         "Default settings",IDC_CHK_DEFAULTCFG,"Button",
                     BS_AUTOCHECKBOX | WS_TABSTOP,7,11,64,10
-    GROUPBOX        "Sample rate",IDC_STATIC,7,37,73,31
+    GROUPBOX        "Sample rate",IDC_STATIC,7,46,73,31
+    CONTROL         "HE",IDC_RADIO_HE,"Button",BS_AUTORADIOBUTTON,93,64,26,
+                    10
+    CONTROL         "Downmatrix",IDC_CHK_DOWNMATRIX,"Button",BS_AUTOCHECKBOX | 
+                    WS_TABSTOP,7,24,53,10
+    CONTROL         "Old ADTS",IDC_CHK_OLDADTS,"Button",BS_AUTOCHECKBOX | 
+                    WS_TABSTOP,7,36,48,10
 END
 
 
@@ -147,7 +156,7 @@ BEGIN
         LEFTMARGIN, 7
         RIGHTMARGIN, 133
         TOPMARGIN, 7
-        BOTTOMMARGIN, 87
+        BOTTOMMARGIN, 98
     END
 END
 #endif    // APSTUDIO_INVOKED
@@ -182,7 +191,7 @@ BEGIN
                     SS_SUNKEN,7,203,59,19
     CONTROL         106,IDC_EMAIL,"Static",SS_BITMAP | SS_NOTIFY,77,204,43,
                     18
-    LTEXT           "Static",IDC_L_ABOUT,7,55,177,142
+    LTEXT           "Text",IDC_L_ABOUT,7,55,177,142
 END
 
 

@@ -1,7 +1,7 @@
 +-----------------------------------------------------------------+
 |                                                                 |
-|                            FAAC Readme                          |
-|                            -----------                          |
+|                    Cooledit/Audition plugin                     |
+|                    ------------------------                     |
 |                                                                 |
 +-----------------------------------------------------------------+
 
@@ -12,17 +12,21 @@ but WITHOUT ANY WARRANTY.
 
 ----------------------------------------------------------------------------
 
-FAAC is a codec plugin for Cooledit
-to import .aac/.mp4 files and to export in AAC format.
+FAAC is a codec plugin for Cooledit/Audition to import and export .aac/.mp4 files.
 
-To use it:
-----------
+To compile it:
+--------------
 
 1) put FAAC and FAAD2 packages into the same folder;
 2) open the project, set "Active Configuration = FAAC - win32 Release" and compile;
 3) copy FAAC.flt into CoolEdit folder and delete flt.dat
 
+To write .mp4 files:
+--------------------
+
+Append .mp4 extension to the name of file in the "Save waveform as" dialog.
+
 ----------------------------------------------------------------------------
 
 For suggestions, bugs report, etc., you can contact me at
-kreel@tiscali.it
+ntnfrn_email-temp@yahoo.it

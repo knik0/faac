@@ -15,6 +15,7 @@
 #define IDC_RADIO_SSR                   1004
 #define IDC_RADIO_LTP                   1005
 #define IDC_RADIO_RAW                   1006
+#define IDC_RADIO_HE                    1006
 #define IDC_RADIO_ADTS                  1007
 #define IDC_CB_BANDWIDTH                1008
 #define IDC_CB_BITRATE                  1009
@@ -32,6 +33,9 @@
 #define IDC_RADIO_BITRATE               1022
 #define IDC_RADIO_QUALITY               1023
 #define IDC_CB_QUALITY                  1024
+#define IDC_CHK_DOWNMATRIX              1025
+#define IDC_CHK_OLDADTS                 1026
+#define IDC_CHK_WRITEMP4                1027
 
 // Next default values for new objects
 // 
@@ -39,7 +43,7 @@
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NEXT_RESOURCE_VALUE        108
 #define _APS_NEXT_COMMAND_VALUE         40001
-#define _APS_NEXT_CONTROL_VALUE         1025
+#define _APS_NEXT_CONTROL_VALUE         1028
 #define _APS_NEXT_SYMED_VALUE           101
 #endif
 #endif
