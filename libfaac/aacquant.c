@@ -17,7 +17,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: aacquant.c,v 1.24 2003/08/18 16:23:30 knik Exp $
+ * $Id: aacquant.c,v 1.25 2003/09/07 16:46:22 knik Exp $
  */
 
 #include <math.h>
@@ -353,10 +353,9 @@ static void CalcAllowedDist(CoderInfo *coderInfo, PsyInfo *psyInfo,
                             double *xr, double *xmin, int quality)
 {
   int sfb, start, end, l;
-  const double globalthr = 39.0 / (double)quality;
+  const double globalthr = 34.7 / (double)quality;
   int last = coderInfo->lastx;
   int lastsb = 0;
-  static const double minfix = 1.7;
   int *cb_offset = coderInfo->sfb_offset;
   int num_cb = coderInfo->nr_of_sfb;
   double avgenrg = coderInfo->avgenrg;
@@ -384,19 +383,15 @@ static void CalcAllowedDist(CoderInfo *coderInfo, PsyInfo *psyInfo,
     for (l = start; l < end; l++)
       enrg += xr[l]*xr[l];
 
-    thr = (double)(end-start)*avgenrg/enrg;
-    if (sfb == 0)
-      thr = pow(thr, 0.4);
-    else if ((sfb == 1) && (coderInfo->block_type != ONLY_SHORT_WINDOW))
-      thr = pow(thr, 0.3);
-    else
-      thr = pow(thr, 0.2);
+    thr = enrg/((double)(end-start)*avgenrg);
+    thr = pow(thr, 0.4*(lastsb-sfb)/lastsb + 0.2);
 
-    tmp = (double)start / (double)last - 0.1;
-    if (tmp < 0.0)
-      tmp = 0.0;
-    tmp = minfix * (tmp + 0.77);
-    thr = 1.0 / ((1.0 / thr) + (1.0 / tmp));
+    tmp = (double)start / (double)last;
+    if (tmp < 0.3)
+      tmp = 0.2 + 0.3333 * tmp;
+
+    tmp = 0.13 / tmp;
+    thr = 1.0 / (thr + tmp);
 
     xmin[sfb] = ((coderInfo->block_type == ONLY_SHORT_WINDOW) ? 0.65 : 1.0)
       * globalthr * thr;
@@ -461,23 +456,24 @@ static int FixNoise(faacEncHandle hEncoder,
       QuantizeBand(hEncoder, xr_pow, xi, IPOW20(coderInfo->global_gain), start, end);
       //printf("\tsfac: %d\n", sfac);
 
-    calcdist:
-      quantfac = pow(2.0, 0.25*(coderInfo->scale_factor[sb] - coderInfo->global_gain));
-
       quantvol = 0.0;
+      for (i = start; i < end; i++)
+	quantvol += xr[i] * xr[i];
+
+    calcdist:
+      quantfac = pow(2.0, -0.25*(coderInfo->scale_factor[sb] - coderInfo->global_gain));
+
       diffvol = 0.0;
       for (i = start; i < end; i++)
       {
-	tmp = hEncoder->pow43[xi[i]];
-	quantvol += tmp * tmp;
-
-	diffvol += fabs(fabs(xr[i]) * quantfac - tmp);
+	tmp = (hEncoder->pow43[xi[i]] * quantfac) - fabs(xr[i]);
+	diffvol += tmp * tmp;
     }
 
-      quantvol = sqrt(quantvol/(double)(end-start)) * (double)(end-start);
-      //printf("\tdiffvol: %f, qvol: %f\n", diffvol, quantvol);
-
-      tmp = diffvol / quantvol;
+      tmp = quantvol - diffvol;
+      if (tmp < (1e-6 * quantvol))
+        tmp = 1e-6 * quantvol;
+      tmp = sqrt(diffvol / tmp);
 
       if (fabs(fixstep) > maxstep)
       {
