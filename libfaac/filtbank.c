@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: filtbank.c,v 1.2 2001/01/17 15:51:15 menno Exp $
+ * $Id: filtbank.c,v 1.3 2001/02/25 18:41:16 menno Exp $
  */
 
 /*
@@ -35,9 +35,8 @@
 #include "frame.h"
 #include "fft.h"
 
-#include "kbd_win.h"
-
 #define  TWOPI       6.28318530717958647692
+
 
 void FilterBankInit(faacEncHandle hEncoder)
 {
@@ -51,13 +50,16 @@ void FilterBankInit(faacEncHandle hEncoder)
 
 	hEncoder->sin_window_long = (double*)malloc(BLOCK_LEN_LONG*sizeof(double));
 	hEncoder->sin_window_short = (double*)malloc(BLOCK_LEN_SHORT*sizeof(double));
-	hEncoder->kbd_window_long = kbd_window_long;
-	hEncoder->kbd_window_short = kbd_window_short;
+	hEncoder->kbd_window_long = (double*)malloc(BLOCK_LEN_LONG*sizeof(double));
+	hEncoder->kbd_window_short = (double*)malloc(BLOCK_LEN_SHORT*sizeof(double));
 
 	for( i=0; i<BLOCK_LEN_LONG; i++ )
 		hEncoder->sin_window_long[i] = sin((M_PI/(2*BLOCK_LEN_LONG)) * (i + 0.5));
 	for( i=0; i<BLOCK_LEN_SHORT; i++ )
 		hEncoder->sin_window_short[i] = sin((M_PI/(2*BLOCK_LEN_SHORT)) * (i + 0.5));
+
+	CalculateKBDWindow(hEncoder->kbd_window_long, 4, BLOCK_LEN_LONG*2);
+	CalculateKBDWindow(hEncoder->kbd_window_short, 6, BLOCK_LEN_SHORT*2);
 }
 
 void FilterBankEnd(faacEncHandle hEncoder)
@@ -71,6 +73,8 @@ void FilterBankEnd(faacEncHandle hEncoder)
 
 	if (hEncoder->sin_window_long) free(hEncoder->sin_window_long);
 	if (hEncoder->sin_window_short) free(hEncoder->sin_window_short);
+	if (hEncoder->kbd_window_long) free(hEncoder->kbd_window_long);
+	if (hEncoder->kbd_window_short) free(hEncoder->kbd_window_short);
 }
 
 void FilterBank(faacEncHandle hEncoder,
@@ -187,6 +191,52 @@ void specFilter(double *freqBuff,
 	xlowpass = (lowpass < specLen) ? lowpass : specLen ;
 
 	memset(freqBuff+xlowpass,0,(specLen-xlowpass)*sizeof(double));
+}
+
+static double Izero(double x)
+{
+	const double IzeroEPSILON = 1E-41;  /* Max error acceptable in Izero */
+	double sum, u, halfx, temp;
+	int n;
+
+	sum = u = n = 1;
+	halfx = x/2.0;
+	do {
+		temp = halfx/(double)n;
+		n += 1;
+		temp *= temp;
+		u *= temp;
+		sum += u;
+	} while (u >= IzeroEPSILON*sum);
+
+	return(sum);
+}
+
+static void CalculateKBDWindow(double* win, double alpha, int length)
+{
+	int i;
+	double IBeta;
+	double tmp;
+	double sum = 0.0;
+
+	alpha *= M_PI;
+	IBeta = 1.0/Izero(alpha);
+	
+	/* calculate lower half of Kaiser Bessel window */
+	for(i=0; i<(length>>1); i++) {
+		tmp = 4.0*(double)i/(double)length - 1.0;
+		win[i] = Izero(alpha*sqrt(1.0-tmp*tmp))*IBeta;
+		sum += win[i];
+	}
+
+	sum = 1.0/sum;
+	tmp = 0.0;
+
+	/* calculate lower half of window */
+	for(i=0; i<(length>>1); i++) {
+		tmp += win[i];
+		win[i] = sqrt(tmp*sum);
+	}
 }
 
 static void MDCT(double *data, int N)

@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: filtbank.h,v 1.3 2001/02/04 17:50:47 oxygene2000 Exp $
+ * $Id: filtbank.h,v 1.4 2001/02/25 18:41:16 menno Exp $
  */
 
 #ifndef FILTBANK_H
@@ -58,6 +58,8 @@ void specFilter(double *freqBuff,
 				int specLen
 				);
 
+static void CalculateKBDWindow(double* win, double alpha, int length);
+static double Izero(double x);
 static void MDCT(double *data, int N);
 static void IMDCT(double *data, int N);
 

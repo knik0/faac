@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: maingui.c,v 1.5 2001/02/12 14:39:14 menno Exp $
+ * $Id: maingui.c,v 1.6 2001/02/25 18:41:16 menno Exp $
  */
 
 #include <windows.h>
@@ -24,7 +24,7 @@
 #include <commctrl.h>
 #include <stdio.h>
 
-#include <sndfile.h>
+#include <sndfile.h>  /* http://www.zip.com.au/~erikd/libsndfile/ */
 
 #include "faac.h"
 #include "resource.h"
