@@ -17,7 +17,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: aacquant.c,v 1.27 2003/09/24 16:26:00 knik Exp $
+ * $Id: aacquant.c,v 1.28 2003/10/30 08:38:21 knik Exp $
  */
 
 #include <math.h>
@@ -370,15 +370,15 @@ static void CalcAllowedDist(CoderInfo *coderInfo, PsyInfo *psyInfo,
                             double *xr, double *xmin, int quality)
 {
   int sfb, start, end, l;
-  const double globalthr = 37.3 / (double)quality;
+  const double globalthr = 120.0 / (double)quality;
   int last = coderInfo->lastx;
   int lastsb = 0;
   int *cb_offset = coderInfo->sfb_offset;
   int num_cb = coderInfo->nr_of_sfb;
   double avgenrg = coderInfo->avgenrg;
 
-    for (sfb = 0; sfb < num_cb; sfb++)
-    {
+  for (sfb = 0; sfb < num_cb; sfb++)
+  {
     if (last > cb_offset[sfb])
       lastsb = sfb;
   }
@@ -388,8 +388,8 @@ static void CalcAllowedDist(CoderInfo *coderInfo, PsyInfo *psyInfo,
     double thr, tmp;
     double enrg = 0.0;
 
-        start = cb_offset[sfb];
-        end = cb_offset[sfb + 1];
+    start = cb_offset[sfb];
+    end = cb_offset[sfb + 1];
 
     if (sfb > lastsb)
     {
@@ -397,22 +397,45 @@ static void CalcAllowedDist(CoderInfo *coderInfo, PsyInfo *psyInfo,
       continue;
     }
 
+    if (coderInfo->block_type != ONLY_SHORT_WINDOW)
+    {
+      double enmax = -1.0;
+      double lmax;
+
+      lmax = start;
+      for (l = start; l < end; l++)
+      {
+	if (enmax < (xr[l] * xr[l]))
+	{
+	  enmax = xr[l] * xr[l];
+	  lmax = l;
+	}
+      }
+
+      start = lmax - 2;
+      end = lmax + 3;
+      if (start < 0)
+	start = 0;
+      if (end > last)
+	end = last;
+    }
+
     for (l = start; l < end; l++)
+    {
       enrg += xr[l]*xr[l];
+    }
 
     thr = enrg/((double)(end-start)*avgenrg);
-    thr = pow(thr, 0.2*(lastsb-sfb)/lastsb + 0.2);
+    thr = pow(thr, 0.1*(lastsb-sfb)/lastsb + 0.3);
 
-    tmp = (double)start / (double)last;
-    if (tmp < 0.3)
-      tmp = 0.2 + 0.3333 * tmp;
+    tmp = 1.0 - ((double)start / (double)last);
+    tmp = tmp * tmp * tmp + 0.075;
 
-    tmp = 0.13 / tmp;
-    thr = 1.0 / (thr + tmp);
+    thr = 1.0 / (1.4*thr + tmp);
 
-    xmin[sfb] = ((coderInfo->block_type == ONLY_SHORT_WINDOW) ? 0.65 : 1.0)
+    xmin[sfb] = ((coderInfo->block_type == ONLY_SHORT_WINDOW) ? 0.65 : 1.12)
       * globalthr * thr;
-    }
+  }
 }
 
 static int FixNoise(CoderInfo *coderInfo,
@@ -425,8 +448,7 @@ static int FixNoise(CoderInfo *coderInfo,
 {
     int i, sb;
     int start, end;
-    double quantvol, diffvol;
-    double quantfac;
+    double diffvol;
     double tmp;
     const double ifqstep = pow(2.0, 0.1875);
     const double log_ifqstep = 1.0 / log(ifqstep);
@@ -475,24 +497,17 @@ static int FixNoise(CoderInfo *coderInfo,
 		   adj43);
       //printf("\tsfac: %d\n", sfac);
 
-      quantvol = 0.0;
-      for (i = start; i < end; i++)
-	quantvol += xr[i] * xr[i];
-
     calcdist:
-      quantfac = pow(2.0, -0.25*(coderInfo->scale_factor[sb] - coderInfo->global_gain));
-
       diffvol = 0.0;
       for (i = start; i < end; i++)
       {
-	tmp = (pow43[xi[i]] * quantfac) - fabs(xr[i]);
-	diffvol += tmp * tmp;
-    }
+	tmp = xi[i];
+	diffvol += tmp * tmp;  // ~x^(3/2)
+      }
 
-      tmp = quantvol - diffvol;
-      if (tmp < (1e-6 * quantvol))
-        tmp = 1e-6 * quantvol;
-      tmp = sqrt(diffvol / tmp);
+      if (diffvol < 1e-6)
+	diffvol = 1e-6;
+      tmp = pow(diffvol / (double)(end - start), -0.666);
 
       if (fabs(fixstep) > maxstep)
       {
@@ -571,8 +586,7 @@ static int FixNoise(CoderInfo *coderInfo,
 	  goto calcdist;
 	}
       }
-      //printf("%d: %g\t%g - %g(%d)\n", sb, quantvol, diffvol/quantvol, xmin[sb], coderInfo->scale_factor[sb]);
-            }
+    }
     return 0;
 }
 
