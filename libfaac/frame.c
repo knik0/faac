@@ -16,7 +16,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: frame.c,v 1.59 2004/04/02 14:56:17 danchr Exp $
+ * $Id: frame.c,v 1.60 2004/04/13 13:47:33 danchr Exp $
  */
 
 /*
@@ -48,7 +48,11 @@
 #include "backpred.h"
 #include "version.h"
 
-static char *libfaacName = FAAC_VERSION " (" __DATE__ ")";
+#if FAAC_RELEASE
+static char *libfaacName = FAAC_VERSION;
+#else
+static char *libfaacName = FAAC_VERSION " (" __DATE__ ") UNSTABLE";
+#endif
 static char *libCopyright =
   "FAAC - Freeware Advanced Audio Coder (http://www.audiocoding.com/)\n"
   " Copyright (C) 1999,2000,2001  Menno Bakker\n"
@@ -944,6 +948,9 @@ static SR_INFO srInfo[12+1] =
 
 /*
 $Log: frame.c,v $
+Revision 1.60  2004/04/13 13:47:33  danchr
+clarify release <> unstable status
+
 Revision 1.59  2004/04/02 14:56:17  danchr
 fix name clash w/ libavcodec: fft_init -> fft_initialize
 bump version number to 1.24 beta
