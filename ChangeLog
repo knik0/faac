@@ -1,3 +1,170 @@
+2003-11-24  knik
+	* frontend/main.c:
+		using new version info interface
+
+	* libfaac/frame.h, include/faac.h:
+		A safe version of faacEncGetVersion() without string length problem.
+
+	* libfaac/frame.c:
+		A safe version of faacEncGetVersion() without string length problem.
+		Removed Stux from copyright notice. I don't think he contributed something very
+		substantial to faac and this is not the right place to list all contributors.
+
+	* libfaac/: filtbank.c, filtbank.h, tns.c, tns.h:
+		static prototypes removed from header
+
+	* README, docs/faac.html:
+		Added a few names to contributor list, but still it doesn't seem to be very complete.
+
+2003-11-16  stux
+	* README:
+		added a new Contributor ;)
+
+	* libfaac/: fft.c, fft.h, filtbank.c, filtbank.h, frame.c, frame.h,
+	psych.h, psychkni.c, version.h:
+		moved global tables from fft.c into hEncoder FFT_Tables. Add fft_init and fft_terminate, flowed through all necessary changes. This should remove at least one instance of a memory leak, and fix some thread-safety problems. Version update to 1.23.3
+
+2003-11-15  stux
+	* include/faac.h, libfaac/frame.c, libfaac/frame.h,
+	libfaac/libfaac.def, libfaac/version.h:
+		added FaacEncGetVersion(), version 1.23.2, added myself to faacCopyright :-P, does vanity know no bound ;)
+
+2003-11-13  knik
+	* frontend/main.c:
+		raw input bugfix
+
+2003-11-10  knik
+	* libfaac/version.h:
+		1.23.1
+
+	* libfaac/frame.c:
+		Allowed independent bitRate and bandWidth setting.
+		Small fixes.
+
+2003-11-03  knik
+	* configure.in:
+		added AC_PREREQ(2.50)
+
+2003-10-30  knik
+	* libfaac/version.h:
+		1.23.0
+
+	* libfaac/aacquant.c:
+		improved psymodel/quantizer
+
+2003-10-29  stux
+	* include/faaccfg.h, libfaac/frame.c, libfaac/version.h:
+		Added channel_map to FaacEncHandle, facilitates free generalised channel remapping in the faac core. Default is straight-through, should be *zero* performance hit... and even probably an immeasurable performance gain, updated FAAC_CFG_VERSION to 104 and FAAC_VERSION to 1.22.0
+
+2003-10-17  knik
+	* configure.in:
+		fixed CFLAGS setting
+
+	* frontend/: input.c, main.c:
+		fixed raw input
+
+2003-10-17  ca5e
+	* plugins/foo_faac/foo_faac.cpp, frontend/faac.dsp:
+		Gapless mode change
+
+2003-10-17  knik
+	* configure.in, libfaac/Makefile.am, frontend/Makefile.am:
+		CFLAGS setting moved to configure
+
+2003-10-14  ca5e
+	* plugins/foo_faac/: foo_faac.cpp, foo_faac.rc, resource.h:
+		Fixed AAC object type selection, some minor cleanups
+
+2003-10-14  menno
+	* libfaac/bitstream.c:
+		bugfix LTP
+
+2003-10-12  knik
+	* libfaac/version.h:
+		1.21.2
+
+	* libfaac/: aacquant.h, frame.c:
+		average bitrate control made more stable
+
+	* libfaac/frame.c, libfaac/frame.h, frontend/main.c:
+		more accurate average bitrate control
+
+2003-10-04  knik
+	* Makefile.am, configure.in, include/Makefile.am:
+		library headers included in automake stuff
+
+2003-10-02  ca5e
+	* plugins/foo_faac/foo_faac.cpp:
+		Removed writing of gapless info for raw AAC files
+		Added few more pre set samplerates to drop-down list
+
+2003-09-24  knik
+	* frontend/main.c:
+		Added option to enforce block type.
+
+	* include/: faac.h, faaccfg.h:
+		config struct definition moved to faaccfg.h
+
+	* libfaac/frame.h:
+		config struct definition moved to faaccfg.h.
+
+	* libfaac/frame.c:
+		faacEncStruct: quantizer specific data enclosed in AACQuantCfg structure.
+		Added config option to enforce block type.
+
+	* libfaac/aacquant.h:
+		faacEncStruct: quantizer specific data enclosed in AACQuantCfg structure.
+
+	* libfaac/aacquant.c:
+		faacEncStruct: quantizer specific data enclosed in AACQuantCfg structure.
+		Fixed normal/takehiro_hack conditional compilation.
+
+2003-09-17  ca5e
+	* plugins/foo_faac/foo_faac.cpp:
+		Fix for last fix...
+
+2003-09-14  ca5e
+	* plugins/foo_faac/: foo_faac.cpp, foo_faac.dsp:
+		version 0.3.1, fixed potential memory access violation
+
+2003-09-08  knik
+	* frontend/Makefile.am:
+		faac.c replaced by main.c
+
+	* frontend/main.c:
+		conditional libmp4v2 compilation
+
+	* libfaac/version.h:
+		1.21.1 beta
+
+	* libfaac/aacquant.c:
+		fixed noise allocation
+
+2003-09-07  ca5e
+	* frontend/main.c:
+		length calculations/silence padding changed to match current libfaac behavior
+		changed tabs to spaces, fixes to indentation
+
+2003-09-07  knik
+	* libfaac/version.h:
+		1.21 beta
+
+	* libfaac/frame.c:
+		Updated psymodel call. Updated bitrate/cutoff mapping table.
+
+	* libfaac/fft.c:
+		reduced arrays size
+
+	* libfaac/aacquant.c:
+		modified distortion allocation
+
+	* libfaac/: psych.h, psychkni.c:
+		Better block switch. Removed long fft code.
+
+2003-09-05  knik
+	* ChangeLog:
+		updated
+
 2003-08-23  knik
 	* libfaac/frame.c, frontend/faac.c:
 		last frame moved back to the library
