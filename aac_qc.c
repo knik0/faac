@@ -540,6 +540,26 @@ int tf_encode_spectrum_aac(
 		better = quant_compare(best_over, best_tot_noise, best_over_noise,
 				  best_max_noise, over, tot_noise, over_noise, max_noise);
 
+		prev_is_scfac = 0;
+		prev_scfac = store_common_scalefac;
+		for (sb = 0; sb < quantInfo->nr_of_sfb; sb++) {
+			if (ch_info->is_info.is_used[sb]) {
+				if ((scale_factor[sb] - prev_is_scfac) <= -59)
+					sfb_overflow = 1;
+				if ((scale_factor[sb] - prev_is_scfac) >= 59)
+					sfb_overflow = 1;
+				prev_is_scfac = scale_factor[sb];
+			} else {
+				if ((scale_factor[sb] - prev_scfac) <= -59)
+					sfb_overflow = 1;
+				if ((scale_factor[sb] - prev_scfac) >= 59)
+					sfb_overflow = 1;
+				prev_scfac = scale_factor[sb];
+			}
+			if (sfb_overflow == 1)
+				better = 0;
+		}
+
 		if (outer_loop_count == 1)
 			better = 1;
 
@@ -581,24 +601,6 @@ int tf_encode_spectrum_aac(
 			for (sb = 0; sb < quantInfo->nr_of_sfb; sb++) {
 				if (scale_factor[sb] == 0)
 					sfb_overflow = 0;
-			}
-		}
-
-		prev_is_scfac = 0;
-		prev_scfac = store_common_scalefac;
-		for (sb = 0; sb < quantInfo->nr_of_sfb; sb++) {
-			if (ch_info->is_info.is_used[sb]) {
-				if (prev_is_scfac >= (scale_factor[sb]+60))
-					sfb_overflow = 1;
-				if (prev_is_scfac <= (scale_factor[sb]-60))
-					sfb_overflow = 1;
-				prev_is_scfac = scale_factor[sb];
-			} else {
-				if (prev_scfac >= (scale_factor[sb]+60))
-					sfb_overflow = 1;
-				if (prev_scfac <= (scale_factor[sb]-60))
-					sfb_overflow = 1;
-				prev_scfac = scale_factor[sb];
 			}
 		}
 
@@ -695,6 +697,9 @@ int sort_for_grouping(AACQuantInfo* quantInfo,        /* ptr to quantization inf
 	
 	/* calc org sfb_offset just for shortblock */
 	sfb_offset[k]=0;
+	for (k=0; k < 1024; k++) {
+		tmp[k] = 0.0;
+	}
 	for (k=1 ; k <*nr_of_sfb+1; k++) {
 		sfb_offset[k] = sfb_offset[k-1] + sfb_width_table[k-1];
 	}
@@ -1478,7 +1483,9 @@ int write_scalefactor_bitstream(BsBitStream* fixed_stream,             /* Bitstr
 				(quantInfo->book_vector[index]==INTENSITY_HCB2) ) {
 				/* only send scalefactors if using non-zero codebooks */
 				diff = scale_factors[index] - previous_is_factor;
-				length = huff12[diff+60][FIRSTINTAB];
+				if ((diff < 60)&&(diff >= -60))
+					length = huff12[diff+60][FIRSTINTAB];
+				else length = 0;
 				k+=length;
 				previous_is_factor = scale_factors[index];
 				if (write_flag == 1 ) {   
@@ -1488,7 +1495,9 @@ int write_scalefactor_bitstream(BsBitStream* fixed_stream,             /* Bitstr
 			} else if (quantInfo->book_vector[index]) {
 				/* only send scalefactors if using non-zero codebooks */
 				diff = scale_factors[index] - previous_scale_factor;
-				length = huff12[diff+60][FIRSTINTAB];
+				if ((diff < 60)&&(diff >= -60))
+					length = huff12[diff+60][FIRSTINTAB];
+				else length = 0;
 				k+=length;
 				previous_scale_factor = scale_factors[index];
 				if (write_flag == 1 ) {   
