@@ -53,7 +53,7 @@ void usage(void)
   printf(" -pX   AAC profile (X can be LOW, or MAIN (default).\n");
   printf(" -bX   Bitrate in kbps (in steps of 1kbps, min. 16kbps)\n");
   printf(" -pns  Use PNS (Perceptual Noise Substitution).\n");
-  printf(" -tns  Use TNS (Temporal Noise Shaping).\n");
+  printf(" -nt   Don't use TNS (Temporal Noise Shaping).\n");
   printf(" -is   Use intensity stereo coding.\n");
   printf(" -ms   Use mid/side stereo coding.\n");
   printf(" -nm   Don't use mid/side stereo coding.\n");
@@ -151,6 +151,8 @@ int parse_arg(int argc, char *argv[],faacAACStream *as, char *InFileNames[100], 
 	    faac_SetParam(as,MS_STEREO,NO_MS);
           else if ((argv[i][2] == 'p') || (argv[i][2] == 'P'))
 	    faac_SetParam(as,LTP,NO_LTP);
+          else if ((argv[i][2] == 't') || (argv[i][2] == 'T'))
+	  faac_SetParam(as,TNS,NO_TNS);
           else {
             printf("Unknown option: %s\n", argv[i]);
             return 0;
@@ -176,9 +178,6 @@ int parse_arg(int argc, char *argv[],faacAACStream *as, char *InFileNames[100], 
 	  break;
 	case 'r': case 'R':
 	  faac_SetParam(as,RAW_AUDIO,USE_RAW_AUDIO);
-	  break;
-	case 't': case 'T':
-	  faac_SetParam(as,TNS,USE_TNS);
 	  break;
 	case 'b': case 'B':
 	  faac_SetParam(as,BITRATE,atoi(&argv[i][2]));

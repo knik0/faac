@@ -383,7 +383,7 @@ void faac_InitParams(faacAACStream *as)
   as->header_type = ADTS_HEADER;
   as->use_IS = 0;
   as->use_MS = 0;
-  as->use_TNS = 0;
+  as->use_TNS = 1;
   as->use_LTP = 1;
   as->use_PNS = 0;
   as->cut_off = 0;
