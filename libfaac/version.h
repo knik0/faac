@@ -1,6 +1,6 @@
 #ifndef _VERSION_H_
 #define _VERSION_H_
 
-#define FAAC_VERSION "1.23.4"
+#define FAAC_VERSION "1.23.5"
 
 #endif
