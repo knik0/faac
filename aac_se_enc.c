@@ -21,8 +21,8 @@
 /**************************************************************************
   Version Control Information			Method: CVS
   Identifiers:
-  $Revision: 1.14 $
-  $Date: 2000/10/06 14:47:27 $ (check in)
+  $Revision: 1.15 $
+  $Date: 2000/11/01 14:05:32 $ (check in)
   $Author: menno $
   *************************************************************************/
 
@@ -341,8 +341,7 @@ int WriteLTP_PredictorData(AACQuantInfo* quantInfo,    /* AACQuantInfo structure
 {
   int bit_count = 0;
 
-  bit_count += ltp_encode (fixed_stream, quantInfo->block_type, quantInfo->nr_of_sfb,
-                               quantInfo->ltpInfo, writeFlag);
+  bit_count += ltp_encode (quantInfo, fixed_stream, writeFlag);
 
   return (bit_count);
 }
@@ -399,7 +398,7 @@ int WriteTNSData(AACQuantInfo* quantInfo,    /* AACQuantInfo structure */
   unsigned long unsignedIndex;
   int w;
 
-  TNS_INFO* tnsInfoPtr = quantInfo->tnsInfo;
+  TNS_INFO* tnsInfoPtr = &quantInfo->tnsInfo;
 
   if (writeFlag) {
     BsPutBit(fixed_stream,tnsInfoPtr->tnsDataPresent,LEN_TNS_PRES);

@@ -21,8 +21,8 @@
 /**************************************************************************
   Version Control Information			Method: CVS
   Identifiers:
-  $Revision: 1.6 $
-  $Date: 2000/10/31 14:48:41 $ (check in)
+  $Revision: 1.7 $
+  $Date: 2000/11/01 14:05:32 $ (check in)
   $Author: menno $
   *************************************************************************/
 
@@ -64,7 +64,7 @@ extern int pns_sfb_start;                        /* lower border for PNS */
 /*********************************************************/
 /* AACQuantInfo, info for AAC quantization and coding.   */
 /*********************************************************/
-typedef struct {
+typedef struct _AACQuantInfo {
   int max_sfb;                          /* max_sfb, should = nr_of_sfb/num_window_groups */
   int nr_of_sfb;                        /* Number of scalefactor bands, interleaved */
   int spectralCount;                    /* Number of spectral data coefficients */
@@ -83,10 +83,12 @@ typedef struct {
   short pred_global_flag;               /* Global prediction enable flag */
   int pred_sfb_flag[MAX_SCFAC_BANDS];       /* Prediction enable flag for each scalefactor band */
   int reset_group_number;               /* Prediction reset group number */
-  TNS_INFO* tnsInfo;                    /* Ptr to tns data */
   AACPulseInfo pulseInfo;
-  LT_PRED_STATUS *ltpInfo;              /* Ptr to LTP data */
   SR_INFO *sr_info;
+  TNS_INFO tnsInfo;
+  struct _LT_PRED_STATUS ltpInfo;
+  Ch_Info channelInfo;
+
   int pns_sfb_nrg[MAX_SCFAC_BANDS];
   int pns_sfb_flag[MAX_SCFAC_BANDS];
   int profile;
@@ -135,21 +137,11 @@ int tf_encode_spectrum_aac(
 			   double      energy[MAX_TIME_CHANNELS][MAX_SCFAC_BANDS],
 			   enum WINDOW_TYPE block_type[MAX_TIME_CHANNELS],
 			   int         sfb_width_table[MAX_TIME_CHANNELS][MAX_SCFAC_BANDS],
-//			   int         nr_of_sfb[MAX_TIME_CHANNELS],
 			   int         average_block_bits,
-//			   int         available_bitreservoir_bits,
-//			   int         padding_limit,
 			   BsBitStream *fixed_stream,
-//			   BsBitStream *var_stream,
-//			   int         nr_of_chan,
 			   double      *p_reconstructed_spectrum[MAX_TIME_CHANNELS],
-//			   int         useShortWindows,
-//			   int         aacAllowScalefacs,
-			   AACQuantInfo* quantInfo,      /* AAC quantization information */
-			   Ch_Info *ch_info
-//			   ,int varBitRate
-//			   ,int bitRate
-                           );
+			   AACQuantInfo* quantInfo      /* AAC quantization information */
+			   );
 
 
 

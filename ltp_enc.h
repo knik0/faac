@@ -21,8 +21,8 @@
 /**************************************************************************
   Version Control Information			Method: CVS
   Identifiers:
-  $Revision: 1.1 $
-  $Date: 2000/10/06 14:47:27 $ (check in)
+  $Revision: 1.2 $
+  $Date: 2000/11/01 14:05:32 $ (check in)
   $Author: menno $
   *************************************************************************/
 
@@ -31,6 +31,7 @@
 
 #include "interface.h"
 #include "bitstream.h"
+#include "quant.h"
 
 /*
   Macro:	LT_BLEN
@@ -80,7 +81,7 @@ typedef double float_ext;
 /* Type:		LT_PRED_STATUS
    Purpose:	Type of the struct holding the LTP encoding parameters.
    Explanation:	-  */
-typedef struct
+typedef struct _LT_PRED_STATUS
 {
     short buffer[LT_BLEN];
     double pred_mdct[2 * BLOCK_LEN_LONG];
@@ -117,8 +118,7 @@ void ltp_reconstruct(double *p_spectrum, enum WINDOW_TYPE win_type,
                             int *sfb_offset, int num_of_sfb,
                             LT_PRED_STATUS *lt_status);
 
-int ltp_encode (BsBitStream *bs, enum WINDOW_TYPE win_type, int num_of_sfb, 
-                       LT_PRED_STATUS *lt_status, int write_flag);
+int ltp_encode (struct _AACQuantInfo *quantInfo, BsBitStream *bs, int write_flag);
 
 #endif /* not defined _LTP_ENC_H */
 

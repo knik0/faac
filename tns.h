@@ -21,8 +21,8 @@
 /**************************************************************************
   Version Control Information			Method: CVS
   Identifiers:
-  $Revision: 1.7 $
-  $Date: 2000/10/06 14:47:27 $ (check in)
+  $Revision: 1.8 $
+  $Date: 2000/11/01 14:05:32 $ (check in)
   $Author: menno $
   *************************************************************************/
  
@@ -104,7 +104,7 @@ int TruncateCoeffs(int fOrder,double threshold,double* kArray);
 void TnsFilter(int length,double* spec,TNS_FILTER_DATA* filter);
 int TnsInvFilter(int length,double* spec,TNS_FILTER_DATA* filter);
 void TnsInit(long samplingRate,enum AAC_PROFILE profile,TNS_INFO* tnsInfo); 
-int TnsEncode(int numberOfBands,int maxSfb,enum WINDOW_TYPE blockType,int* sfbOffsetTable,double* spec,TNS_INFO* tnsInfo,int use_tns);
+int TnsEncode(struct _AACQuantInfo *quantInfo,int numberOfBands,enum WINDOW_TYPE blockType,int* sfbOffsetTable,double* spec,int use_tns);
 
 #endif
 

@@ -21,14 +21,15 @@
 /**************************************************************************
   Version Control Information			Method: CVS
   Identifiers:
-  $Revision: 1.1 $
-  $Date: 2000/10/06 14:47:27 $ (check in)
+  $Revision: 1.2 $
+  $Date: 2000/11/01 14:05:32 $ (check in)
   $Author: menno $
   *************************************************************************/
 
 #include <stdio.h>
 #include <math.h>
 
+#include "quant.h"
 #include "interface.h"
 #include "transfo.h"
 #include "bitstream.h"
@@ -796,8 +797,7 @@ ltp_reconstruct(double *p_spectrum, enum WINDOW_TYPE win_type,
   *************************************************************************/
 
 int
-ltp_encode (BsBitStream *bs, enum WINDOW_TYPE win_type, int num_of_sfb, 
-            LT_PRED_STATUS *lt_status, int write_flag)
+ltp_encode (AACQuantInfo *quantInfo, BsBitStream *bs, int write_flag)
 {
 	int i, last_band;
 //	int first_subblock;
@@ -807,12 +807,12 @@ ltp_encode (BsBitStream *bs, enum WINDOW_TYPE win_type, int num_of_sfb,
 
 	bit_count += 1;
 	
-	if (lt_status->side_info > 1)
+	if (quantInfo->ltpInfo.side_info > 1)
 	{
 		if(write_flag)
 			BsPutBit (bs, 1, 1);    	/* LTP used */
 
-		switch(win_type)
+		switch(quantInfo->block_type)
 		{
 		case ONLY_LONG_WINDOW:
 		case LONG_SHORT_WINDOW:
@@ -821,16 +821,16 @@ ltp_encode (BsBitStream *bs, enum WINDOW_TYPE win_type, int num_of_sfb,
 			bit_count += LEN_LTP_COEF;
 			if(write_flag)
 			{
-				BsPutBit (bs, lt_status->delay[0], LEN_LTP_LAG);
-				BsPutBit (bs, lt_status->weight_idx,  LEN_LTP_COEF);
+				BsPutBit (bs, quantInfo->ltpInfo.delay[0], LEN_LTP_LAG);
+				BsPutBit (bs, quantInfo->ltpInfo.weight_idx,  LEN_LTP_COEF);
 			}
 
-			last_band = (num_of_sfb < MAX_LT_PRED_LONG_SFB) ? num_of_sfb : MAX_LT_PRED_LONG_SFB;
+			last_band = (quantInfo->nr_of_sfb < MAX_LT_PRED_LONG_SFB) ? quantInfo->nr_of_sfb : MAX_LT_PRED_LONG_SFB;
 			bit_count += last_band;
 			if(write_flag)
 			{
 				for (i = 0; i < last_band; i++)
-					BsPutBit (bs, lt_status->sfb_prediction_used[i], LEN_LTP_LONG_USED);
+					BsPutBit (bs, quantInfo->ltpInfo.sfb_prediction_used[i], LEN_LTP_LONG_USED);
 			}
 			break;
 			

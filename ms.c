@@ -21,8 +21,8 @@
 /**************************************************************************
   Version Control Information			Method: CVS
   Identifiers:
-  $Revision: 1.14 $
-  $Date: 2000/10/05 08:39:02 $ (check in)
+  $Revision: 1.15 $
+  $Date: 2000/11/01 14:05:32 $ (check in)
   $Author: menno $
   *************************************************************************/
 
@@ -33,7 +33,6 @@ void MSPreprocess(double p_ratio_long[][MAX_SCFAC_BANDS],
 		  double p_ratio_short[][MAX_SCFAC_BANDS],
 		  CH_PSYCH_OUTPUT_LONG p_chpo_long[],
 		  CH_PSYCH_OUTPUT_SHORT p_chpo_short[][MAX_SHORT_WINDOWS],
-		  Ch_Info *channelInfo,                  /* Pointer to Ch_Info */
 		  enum WINDOW_TYPE block_type[MAX_TIME_CHANNELS], /* Block type */
 		  AACQuantInfo* quantInfo,               /* Quant info */
 		  int use_ms,
@@ -48,12 +47,12 @@ void MSPreprocess(double p_ratio_long[][MAX_SCFAC_BANDS],
 
 	/* Look for channel_pair_elements */
 	for (chanNum=0;chanNum<numberOfChannels;chanNum++) {
-		if (channelInfo[chanNum].present) {
-			if ((channelInfo[chanNum].cpe)&&(channelInfo[chanNum].ch_is_left)) {
+		if (quantInfo[chanNum].channelInfo.present) {
+			if ((quantInfo[chanNum].channelInfo.cpe)&&(quantInfo[chanNum].channelInfo.ch_is_left)) {
 				int leftChan=chanNum;
-				int rightChan=channelInfo[chanNum].paired_ch;
-				channelInfo[leftChan].ms_info.is_present=0;
-				channelInfo[leftChan].common_window = 0;
+				int rightChan=quantInfo[chanNum].channelInfo.paired_ch;
+				quantInfo[leftChan].channelInfo.ms_info.is_present=0;
+				quantInfo[leftChan].channelInfo.common_window = 0;
 
 				/* Perform MS if block_types are the same */
 				if ((block_type[leftChan]==block_type[rightChan])&&(use_ms==0)) {
@@ -68,7 +67,7 @@ void MSPreprocess(double p_ratio_long[][MAX_SCFAC_BANDS],
 					maxSfb = quantInfo[leftChan].max_sfb;
 
 					/* Determine which bands should be enabled */
-					msInfo = &(channelInfo[leftChan].ms_info);
+					msInfo = &(quantInfo[leftChan].channelInfo.ms_info);
 					isBand = maxSfb;
 
 					for (g=0;g<numGroups;g++) {
@@ -131,10 +130,10 @@ void MSPreprocess(double p_ratio_long[][MAX_SCFAC_BANDS],
 					}
 
 					if (realyused) {
-						channelInfo[leftChan].common_window = 1;  /* Use common window */
-						channelInfo[leftChan].ms_info.is_present=1;
-						channelInfo[rightChan].common_window = 1;  /* Use common window */
-						channelInfo[rightChan].ms_info.is_present=1;
+						quantInfo[leftChan].channelInfo.common_window = 1;  /* Use common window */
+						quantInfo[leftChan].channelInfo.ms_info.is_present=1;
+						quantInfo[rightChan].channelInfo.common_window = 1;  /* Use common window */
+						quantInfo[rightChan].channelInfo.ms_info.is_present=1;
 					}
 				}
 				else if ((block_type[leftChan]==block_type[rightChan])&&(use_ms == 1)) {
@@ -145,10 +144,10 @@ void MSPreprocess(double p_ratio_long[][MAX_SCFAC_BANDS],
 					int g,b,j;
 					MS_Info *msInfo;
 
-					channelInfo[leftChan].ms_info.is_present = 1;
-					channelInfo[leftChan].common_window = 1;
-					channelInfo[rightChan].ms_info.is_present = 1;
-					channelInfo[rightChan].common_window = 1;
+					quantInfo[leftChan].channelInfo.ms_info.is_present = 1;
+					quantInfo[leftChan].channelInfo.common_window = 1;
+					quantInfo[rightChan].channelInfo.ms_info.is_present = 1;
+					quantInfo[rightChan].channelInfo.common_window = 1;
 
 					for (chan = 0; chan < 2; chan++) {
 						int chan2;
@@ -158,7 +157,7 @@ void MSPreprocess(double p_ratio_long[][MAX_SCFAC_BANDS],
 						maxSfb = quantInfo[chan].max_sfb;
 
 						/* Determine which bands should be enabled */
-						msInfo = &(channelInfo[leftChan].ms_info);
+						msInfo = &(quantInfo[leftChan].channelInfo.ms_info);
 						numGroups = quantInfo[chan2].num_window_groups;
 
 						for (g=0;g<numGroups;g++) {
@@ -199,7 +198,7 @@ void MSPreprocess(double p_ratio_long[][MAX_SCFAC_BANDS],
 						maxSfb = quantInfo[chan].max_sfb;
 
 						/* Determine which bands should be enabled */
-						msInfo = &(channelInfo[leftChan].ms_info);
+						msInfo = &(quantInfo[leftChan].channelInfo.ms_info);
 						numGroups = quantInfo[chan2].num_window_groups;
 
 						for (g=0;g<numGroups;g++) {
@@ -234,7 +233,6 @@ void MSEnergy(double *spectral_line_vector[MAX_TIME_CHANNELS],
 	      CH_PSYCH_OUTPUT_LONG p_chpo_long[],
 	      CH_PSYCH_OUTPUT_SHORT p_chpo_short[][MAX_SHORT_WINDOWS],
 	      int sfb_width_table[MAX_TIME_CHANNELS][MAX_SCFAC_BANDS],
-	      Ch_Info *channelInfo,                  /* Pointer to Ch_Info */
 	      enum WINDOW_TYPE block_type[MAX_TIME_CHANNELS], /* Block type */
 	      AACQuantInfo* quantInfo,               /* Quant info */
 	      int use_ms,
@@ -247,10 +245,10 @@ void MSEnergy(double *spectral_line_vector[MAX_TIME_CHANNELS],
 	double dtmp;
 
 	for (chanNum=0;chanNum<numberOfChannels;chanNum++) {
-		if (channelInfo[chanNum].present) {
-			if ((channelInfo[chanNum].cpe)&&(channelInfo[chanNum].ch_is_left)) {
+		if (quantInfo[chanNum].channelInfo.present) {
+			if ((quantInfo[chanNum].channelInfo.cpe)&&(quantInfo[chanNum].channelInfo.ch_is_left)) {
 				int leftChan = chanNum;
-				int rightChan = channelInfo[chanNum].paired_ch;
+				int rightChan = quantInfo[chanNum].channelInfo.paired_ch;
 
 				/* Compute energy in each scalefactor band of each window */
 				numWindows = (block_type[chanNum]==ONLY_SHORT_WINDOW) ?	8 : 1;
@@ -332,7 +330,6 @@ void MSEnergy(double *spectral_line_vector[MAX_TIME_CHANNELS],
 /* Perform MS encoding.  Spectrum is non-interleaved.  */
 /* This would be a lot simpler on interleaved spectral data */
 void MSEncode(double *spectrum[MAX_TIME_CHANNELS],   /* array of pointers to spectral data */
-	      Ch_Info *channelInfo,                  /* Pointer to Ch_Info */
 	      int sfb_offset_table[][MAX_SCFAC_BANDS+1],
 	      enum WINDOW_TYPE block_type[MAX_TIME_CHANNELS], /* Block type */
 	      AACQuantInfo* quantInfo,               /* Quant info */
@@ -342,9 +339,12 @@ void MSEncode(double *spectrum[MAX_TIME_CHANNELS],   /* array of pointers to spe
 	int sfbNum;
 	int lineNum;
 	double sum,diff;
+	Ch_Info *channelInfo;
 
 	/* Look for channel_pair_elements */
 	for (chanNum=0;chanNum<numberOfChannels;chanNum++) {
+		channelInfo = &quantInfo[chanNum].channelInfo;
+
 		if (channelInfo[chanNum].present) {
 			if ((channelInfo[chanNum].cpe)&&(channelInfo[chanNum].ch_is_left)) {
 				int leftChan=chanNum;
@@ -408,9 +408,7 @@ void MSEncode(double *spectrum[MAX_TIME_CHANNELS],   /* array of pointers to spe
 /* Perform MS encoding.  Spectrum is non-interleaved.  */
 /* This would be a lot simpler on interleaved spectral data */
 void MSEncodeSwitch(double *spectrum[MAX_TIME_CHANNELS],   /* array of pointers to spectral data */
-	      Ch_Info *channelInfo,                  /* Pointer to Ch_Info */
 	      int sfb_offset_table[][MAX_SCFAC_BANDS+1],
-//	      enum WINDOW_TYPE block_type[MAX_TIME_CHANNELS], /* Block type */
 	      AACQuantInfo* quantInfo,               /* Quant info */
 	      int numberOfChannels                 /* Number of channels */
               )
@@ -419,9 +417,12 @@ void MSEncodeSwitch(double *spectrum[MAX_TIME_CHANNELS],   /* array of pointers 
 	int sfbNum;
 	int lineNum;
 	double sum,diff;
+	Ch_Info *channelInfo;
 
 	/* Look for channel_pair_elements */
 	for (chanNum=0;chanNum<numberOfChannels;chanNum++) {
+		channelInfo = &quantInfo[chanNum].channelInfo;
+
 		if (channelInfo[0].ms_info.is_present) {
 			if ((channelInfo[chanNum].cpe)&&(channelInfo[chanNum].ch_is_left)) {
 				int leftChan=chanNum;
@@ -480,7 +481,6 @@ void MSEncodeSwitch(double *spectrum[MAX_TIME_CHANNELS],   /* array of pointers 
 
 
 void MSReconstruct(double *spectrum[MAX_TIME_CHANNELS],   /* array of pointers to spectral data */
-		   Ch_Info *channelInfo,                  /* Pointer to Ch_Info */
 		   int sfb_offset_table[][MAX_SCFAC_BANDS+1],
 //		   enum WINDOW_TYPE block_type[MAX_TIME_CHANNELS], /* Block type */
 		   AACQuantInfo* quantInfo,               /* Quant info */
@@ -490,9 +490,12 @@ void MSReconstruct(double *spectrum[MAX_TIME_CHANNELS],   /* array of pointers t
   int sfbNum;
   int lineNum;
   double sum,diff;
+  Ch_Info *channelInfo;
 
   /* Look for channel_pair_elements */
   for (chanNum=0;chanNum<numberOfChannels;chanNum++) {
+	  channelInfo = &quantInfo[chanNum].channelInfo;
+
     if (channelInfo[chanNum].present) {
       if ((channelInfo[chanNum].cpe)&&(channelInfo[chanNum].ch_is_left)) {
 	int leftChan=chanNum;

@@ -21,8 +21,8 @@
 /**************************************************************************
   Version Control Information			Method: CVS
   Identifiers:
-  $Revision: 1.5 $
-  $Date: 2000/10/05 13:04:05 $ (check in)
+  $Revision: 1.6 $
+  $Date: 2000/11/01 14:05:32 $ (check in)
   $Author: menno $
   *************************************************************************/
 
@@ -31,7 +31,7 @@
 
 #include "interface.h"
 
-void DetermineChInfo(Ch_Info* chInfo, int numChannels, int lfePresent);
+void DetermineChInfo(struct _AACQuantInfo *quantInfo, int numChannels, int lfePresent);
 
 
 #endif

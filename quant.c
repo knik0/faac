@@ -21,8 +21,8 @@
 /**************************************************************************
   Version Control Information			Method: CVS
   Identifiers:
-  $Revision: 1.11 $
-  $Date: 2000/10/06 14:47:27 $ (check in)
+  $Revision: 1.12 $
+  $Date: 2000/11/01 14:05:32 $ (check in)
   $Author: menno $
   *************************************************************************/
 
@@ -105,9 +105,9 @@ void tf_init_encode_spectrum_aac( int quality )
 	for (i=0;i<9000;i++){
 		pow_quant[i]=pow(i, ((double)4.0/(double)3.0));
 	}
-	for (i=0;i<8999;i++){
+    for (i = 0; i < 8999; i++)
 		adj_quant[i] = (i + 1) - pow(0.5 * (pow_quant[i] + pow_quant[i + 1]), 0.75);
-	}
+    adj_quant[i] = 0.5;
 
 	adj_quant_asm[0] = 0.0;
 	for (i = 1; i < 9000; i++) {
@@ -115,6 +115,70 @@ void tf_init_encode_spectrum_aac( int quality )
 	}
 }
 
+
+#if 0
+
+#define XRPOW_FTOI(src,dest) ((dest) = (int)(src))
+#define QUANTFAC(rx)  adj_quant[rx]
+#define ROUNDFAC 0.4054
+
+
+void quantize(AACQuantInfo *quantInfo,
+			  double *pow_spectrum,
+			  int *quant)
+{
+    int j, i;
+	double istep = pow(2.0,-((double)(quantInfo->common_scalefac)-210)*.1875);
+	double w = 8192 / pow(2.0,-((double)(quantInfo->common_scalefac)-210)*.1875);
+
+	for ( i = 0; i < 1024; i++ )  {
+		if (pow_spectrum[i] > w)
+		{
+			for (j = 0; j < 1024; j++)
+				quant[j] = 8192;
+			return;
+		}
+	}
+
+    for ( j = 1024/8; j > 0; --j) {
+	double	x1, x2, x3, x4, x5, x6, x7, x8;
+	int	rx1, rx2, rx3, rx4, rx5, rx6, rx7, rx8;
+	x1 = *pow_spectrum++ * istep;
+	x2 = *pow_spectrum++ * istep;
+	XRPOW_FTOI(x1, rx1);
+	x3 = *pow_spectrum++ * istep;
+	XRPOW_FTOI(x2, rx2);
+	x4 = *pow_spectrum++ * istep;
+	XRPOW_FTOI(x3, rx3);
+	x5 = *pow_spectrum++ * istep;
+	XRPOW_FTOI(x4, rx4);
+	x6 = *pow_spectrum++ * istep;
+	XRPOW_FTOI(x5, rx5);
+	x7 = *pow_spectrum++ * istep;
+	XRPOW_FTOI(x6, rx6);
+	x8 = *pow_spectrum++ * istep;
+	XRPOW_FTOI(x7, rx7);
+	x1 += QUANTFAC(rx1);
+	XRPOW_FTOI(x8, rx8);
+	x2 += QUANTFAC(rx2);
+	XRPOW_FTOI(x1,*quant++);
+	x3 += QUANTFAC(rx3);
+	XRPOW_FTOI(x2,*quant++);
+	x4 += QUANTFAC(rx4);
+	XRPOW_FTOI(x3,*quant++);
+	x5 += QUANTFAC(rx5);
+	XRPOW_FTOI(x4,*quant++);
+	x6 += QUANTFAC(rx6);
+	XRPOW_FTOI(x5,*quant++);
+	x7 += QUANTFAC(rx7);
+	XRPOW_FTOI(x6,*quant++);
+	x8 += QUANTFAC(rx8);
+	XRPOW_FTOI(x7,*quant++);
+	XRPOW_FTOI(x8,*quant++);
+    }
+}
+
+#else
 
 #if (defined(__GNUC__) && defined(__i386__))
 #define USE_GNUC_ASM
@@ -344,6 +408,7 @@ loop1:
   }
 #endif
 }
+#endif
 
 int inner_loop(AACQuantInfo *quantInfo,
 			   double *pow_spectrum,
@@ -578,21 +643,11 @@ int tf_encode_spectrum_aac(
 			   double      energy[MAX_TIME_CHANNELS][MAX_SCFAC_BANDS],
 			   enum WINDOW_TYPE block_type[MAX_TIME_CHANNELS],
 			   int         sfb_width_table[MAX_TIME_CHANNELS][MAX_SCFAC_BANDS],
-//			   int         nr_of_sfb[MAX_TIME_CHANNELS],
 			   int         average_block_bits,
-//			   int         available_bitreservoir_bits,
-//			   int         padding_limit,
 			   BsBitStream *fixed_stream,
-//			   BsBitStream *var_stream,
-//			   int         nr_of_chan,
 			   double      *p_reconstructed_spectrum[MAX_TIME_CHANNELS],
-//			   int         useShortWindows,
-//			   int aacAllowScalefacs,
-			   AACQuantInfo* quantInfo,      /* AAC quantization information */ 
-			   Ch_Info* ch_info
-//			   ,int varBitRate
-//			   ,int bitRate
-                           )
+			   AACQuantInfo* quantInfo      /* AAC quantization information */ 
+			   )
 {
 	int quant[BLOCK_LEN_LONG];
 	int s_quant[BLOCK_LEN_LONG];
@@ -722,7 +777,7 @@ int tf_encode_spectrum_aac(
 	}
 
 	/* PNS prepare */
-	ms_info=&(ch_info->ms_info);
+	ms_info=&(quantInfo->channelInfo.ms_info);
     for(sb=0; sb < quantInfo->nr_of_sfb; sb++ )
 		quantInfo->pns_sfb_flag[sb] = 0;
 
@@ -1025,333 +1080,9 @@ int sort_for_grouping(AACQuantInfo* quantInfo,        /* ptr to quantization inf
 	return 0;
 }
 
-
-#if 0 // VBR quantizer not finished yet
-
-#if (defined(__GNUC__) && defined(__i386__))
-#define USE_GNUC_ASM
-#endif
-#ifdef _MSC_VER
-#define USE_MSC_ASM
-#endif
-
-/*********************************************************************
- * XRPOW_FTOI is a macro to convert floats to ints.  
- * if XRPOW_FTOI(x) = nearest_int(x), then QUANTFAC(x)=adj43asm[x]
- *                                         ROUNDFAC= -0.0946
- *
- * if XRPOW_FTOI(x) = floor(x), then QUANTFAC(x)=asj43[x]   
- *                                   ROUNDFAC=0.4054
- *********************************************************************/
-#ifdef USE_GNUC_ASM
-#  define ROUNDFAC -0.0946
-#elif defined (USE_MSC_ASM)
-#  define ROUNDFAC -0.0946
-#else
-#  define ROUNDFAC 0.4054
-#endif
-
-
-
-int compute_scalefacs(AACQuantInfo* quantInfo,
-					  int sf[MAX_SCFAC_BANDS],
-					  int scalefac[MAX_SCFAC_BANDS])
-{
-	int sfb;
-	int maxover;
-	int ifqstep = 2;
-	
-
-//	if (cod_info->preflag)
-//		for ( sfb = 11; sfb < SBPSY_l; sfb++ ) 
-//			sf[sfb] += pretab[sfb]*ifqstep;
-
-
-	maxover = 0;
-	for (sfb = 0; sfb < quantInfo->nr_of_sfb; sfb++) {
-
-		if (sf[sfb]<0) {
-			/* ifqstep*scalefac >= -sf[sfb], so round UP */
-			scalefac[sfb]=-sf[sfb]/ifqstep  + (-sf[sfb] % ifqstep != 0);
-			if (scalefac[sfb] > /*max_range[sfb]*/10) scalefac[sfb]=10/*max_range[sfb]*/;
-			
-			/* sf[sfb] should now be positive: */
-			if (  -(sf[sfb] + scalefac[sfb]*ifqstep)  > maxover) {
-				maxover = -(sf[sfb] + scalefac[sfb]*ifqstep);
-			}
-		}
-	}
-
-	return maxover;
-}
-  
-  
-
-double calc_sfb_noise_ave(double *p_spectrum, double *pow_spectrum, int bw,int sf)
-{
-	int j;
-	double xfsf=0, xfsf_p1=0, xfsf_m1=0;
-	double sfpow34,sfpow34_p1,sfpow34_m1;
-	double sfpow,sfpow_p1,sfpow_m1;
-
-	sfpow = pow(2.0,((double)sf)*.25);
-	sfpow34  = pow(2.0,-((double)sf)*.1875);
-
-	sfpow_m1 = sfpow*.8408964153;
-	sfpow34_m1 = sfpow34*1.13878863476;
-
-	sfpow_p1 = sfpow*1.189207115;  
-	sfpow34_p1 = sfpow34*0.878126080187;
-
-	for ( j=0; j < bw ; j++) {
-		int ix;
-		double temp,temp_p1,temp_m1;
-
-		if (pow_quant[j]*sfpow34_m1 > 8191) return -1;
-
-		temp = pow_quant[j]*sfpow34;
-		XRPOW_FTOI(temp, ix);
-		XRPOW_FTOI(temp + QUANTFAC(ix), ix);
-		temp = fabs(p_spectrum[j])- pow_quant[ix]*sfpow;
-		temp *= temp;
-
-		temp_p1 = pow_quant[j]*sfpow34_p1;
-		XRPOW_FTOI(temp_p1, ix);
-		XRPOW_FTOI(temp_p1 + QUANTFAC(ix), ix);
-		temp_p1 = fabs(p_spectrum[j])- pow_quant[ix]*sfpow_p1;
-		temp_p1 *= temp_p1;
-		
-		temp_m1 = pow_quant[j]*sfpow34_m1;
-		XRPOW_FTOI(temp_m1, ix);
-		XRPOW_FTOI(temp_m1 + QUANTFAC(ix), ix);
-		temp_m1 = fabs(p_spectrum[j])- pow_quant[ix]*sfpow_m1;
-		temp_m1 *= temp_m1;
-
-		xfsf += temp;
-		xfsf_p1 += temp_p1;
-		xfsf_m1 += temp_m1;
-	}
-	if (xfsf_p1>xfsf) xfsf = xfsf_p1;
-	if (xfsf_m1>xfsf) xfsf = xfsf_m1;
-	return xfsf/bw;
-}
-
-int find_scalefac(double *p_spectrum,double *pow_quant,int sfb,
-				  double l3_xmin,int bw)
-{
-	double xfsf;
-	int i,sf,sf_ok,delsf;
-
-	/* search will range from sf:  -209 -> 45  */
-	sf = -82;
-	delsf = 128;
-
-	sf_ok=10000;
-	for (i=0; i<7; i++) {
-		delsf /= 2;
-		xfsf = calc_sfb_noise_ave(p_spectrum,pow_quant,bw,sf);
-
-		if (xfsf < 0) {
-			/* scalefactors too small */
-			sf += delsf;
-		}else{
-			if (sf_ok==10000) sf_ok=sf;  
-			if (xfsf > l3_xmin)  {
-				/* distortion.  try a smaller scalefactor */
-				sf -= delsf;
-			}else{
-				sf_ok = sf;
-				sf += delsf;
-			}
-		}
-	} 
-//	assert(sf_ok!=10000);
-
-	return sf;
-}
-
-int
-VBR_quantize_granule(AACQuantInfo* quantInfo,
-					 double *pow_spectrum,
-					 int quant[1024]
-					 )
-{
-	quantize(quantInfo, pow_spectrum, quant);
-
-	return count_bits(quantInfo, quant);
-}
-
-int
-VBR_noise_shaping(AACQuantInfo* quantInfo,
-				  double p_spectrum[1024],
-				  double pow_quant_orig[1024],
-				  double allowed_dist[SFB_NUM_MAX],
-				  int quant[1024], int minbits, int maxbits,
-				  int scalefac[MAX_SCFAC_BANDS])
-{
-	int start,end,bw,sfb,l, vbrmax;
-	int bits_used;
-	int vbrsf[MAX_SCFAC_BANDS];
-	int save_sf[MAX_SCFAC_BANDS];
-	int maxover0,maxover1,maxover,mover;
-	int ifqstep;
-	double pow_quant[1024];
-
-	
-//	for(i=0;i<1024;i++) {
-//		double temp=fabs(p_spectrum[i]);
-//		pow_quant[i]=sqrt(sqrt(temp)*temp);
-//	}
-	memcpy(pow_quant, pow_quant_orig, sizeof(pow_quant));
-
-	
-	vbrmax=-10000;
-	
-	for ( sfb = 0; sfb < quantInfo->nr_of_sfb; sfb++ )   {
-		start = quantInfo->sfb_offset[sfb];
-		end   = quantInfo->sfb_offset[sfb+1];
-		bw = end - start;
-		vbrsf[sfb] = find_scalefac(&p_spectrum[start],&pow_quant[start],sfb,
-			allowed_dist[sfb],bw);
-	}
-
-#define MAX_SF_DELTA 4
-
-	for ( sfb = 0; sfb < quantInfo->nr_of_sfb; sfb++ )   {
-		if (sfb>0) 
-			vbrsf[sfb] = min(vbrsf[sfb-1]+MAX_SF_DELTA,vbrsf[sfb]);
-		if (sfb< quantInfo->nr_of_sfb-1) 
-			vbrsf[sfb] = min(vbrsf[sfb+1]+MAX_SF_DELTA,vbrsf[sfb]);
-	}
-
-	for ( sfb = 0; sfb < quantInfo->nr_of_sfb; sfb++ )   
-		if (vbrsf[sfb]>vbrmax) vbrmax = vbrsf[sfb];
-
-
-	/* save a copy of vbrsf, incase we have to recomptue scalefacs */
-	memcpy(&save_sf,&vbrsf,sizeof(int)*MAX_SCFAC_BANDS);
-
-
-	do {
-
-		memset(scalefac,0,sizeof(int)*MAX_SCFAC_BANDS);
-
-		maxover0=0;
-		maxover1=0;
-		
-		
-		for ( sfb = 0; sfb < quantInfo->nr_of_sfb; sfb++ ) {
-			maxover0 = max(maxover0,(vbrmax - vbrsf[sfb]) - 2*/*max_range[sfb]*/10 );
-			maxover1 = max(maxover1,(vbrmax - vbrsf[sfb]) - 4*/*max_range[sfb]*/10 );
-		}
-		mover = maxover0;
-
-
-		vbrmax -= mover;
-		maxover0 -= mover;
-		maxover1 -= mover;
-
 #if 0
-		if (maxover0<=0) {
-			cod_info->preflag=0;
-			vbrmax -= maxover0;
-		} else if (maxover0p<=0) {
-			cod_info->preflag=1;
-			vbrmax -= maxover0p;
-		} else if (maxover1==0) {
-			cod_info->preflag=0;
-		} else if (maxover1p==0) {
-			cod_info->preflag=1;
-		}
-#endif
 
-		
-		quantInfo->common_scalefac = vbrmax +210;
-//		assert(cod_info->global_gain < 256);
-		if (quantInfo->common_scalefac>255) quantInfo->common_scalefac = 255;
-
-		
-		for ( sfb = 0; sfb < quantInfo->nr_of_sfb; sfb++ )   
-			vbrsf[sfb] -= vbrmax;
-		
-		
-		maxover = compute_scalefacs(quantInfo,vbrsf,scalefac);
-//		assert(maxover <=0);
-		
-		
-		/* quantize pow_quant[] based on computed scalefactors */
-		ifqstep = 2;
-		for ( sfb = 0; sfb < quantInfo->nr_of_sfb; sfb++ ) {
-			int ifac;
-			double fac;
-			ifac = ifqstep*scalefac[sfb];
-//			if (cod_info->preflag)
-//				ifac += ifqstep*pretab[sfb];
-
-//			if (ifac+210<330) 
-//				fac = 1/pow(2.0,-((double)ifac)*.1875);
-//			else
-				fac = pow(2.0,.75*ifac/4.0);
-
-			start = quantInfo->sfb_offset[sfb];
-			end   = quantInfo->sfb_offset[sfb+1];
-			for ( l = start; l < end; l++ ) {
-				pow_quant[l]*=fac;
-			}
-		} 
-
-		bits_used = VBR_quantize_granule(quantInfo, pow_quant, quant);
-
-
-		if (bits_used < minbits) {
-			/* decrease global gain, recompute scale factors */
-//			if (digital_silence) break;  
-			if (vbrmax+210 ==0 ) break;
-			
-
-
-			--vbrmax;
-			memcpy(&vbrsf,&save_sf,sizeof(int)*MAX_SCFAC_BANDS);
-			memcpy(pow_quant, pow_quant_orig, sizeof(pow_quant));
-		}
-
-	} while ((bits_used < minbits));
-
-	
-	while (bits_used > min(maxbits,4095)) {
-		/* increase global gain, keep exisiting scale factors */
-		++quantInfo->common_scalefac;
-		bits_used = VBR_quantize_granule(quantInfo, pow_quant, quant);
-	}
-
-	return bits_used;
-}
-
-int calc_xmin(AACQuantInfo* quantInfo, double p_spectrum[1024], double ratio[MAX_SCFAC_BANDS],
-	       double allowed_dist[MAX_SCFAC_BANDS], double masking_lower)
-{
-	int start, end, bw,l,ath_over=0;
-	int sfb;
-	double en0, ener;
-
-	for ( sfb = 0; sfb < quantInfo->nr_of_sfb; sfb++ ){
-		start = quantInfo->sfb_offset[sfb];
-		end   = quantInfo->sfb_offset[sfb+1];
-		bw = end - start;
-		
-		for (en0 = 0.0, l = start; l < end; l++ ) {
-			ener = p_spectrum[l] * p_spectrum[l];
-			en0 += ener;
-		}
-		en0 /= bw;
-		
-		allowed_dist[sfb] = en0 * ratio[sfb] * masking_lower / en0;
-	}
-	
-	return 0;
-}
-
-int tf_encode_spectrum_aac_VBR(
+int iteration_loop(
 			   double      *p_spectrum[MAX_TIME_CHANNELS],
 			   double      *PsySigMaskRatio[MAX_TIME_CHANNELS],
 			   double      allowed_dist[MAX_TIME_CHANNELS][MAX_SCFAC_BANDS],
@@ -1366,9 +1097,12 @@ int tf_encode_spectrum_aac_VBR(
                )
 {
 	int quant[BLOCK_LEN_LONG];
+	int s_quant[BLOCK_LEN_LONG];
 	int i;
 	int k;
 	double max_dct_line = 0;
+	int store_common_scalefac;
+	int best_scale_factor[MAX_SCFAC_BANDS];
 	double pow_spectrum[BLOCK_LEN_LONG];
 	double requant[BLOCK_LEN_LONG];
 	int sb;
@@ -1378,26 +1112,21 @@ int tf_encode_spectrum_aac_VBR(
 	int *ptr_book_vector;
 
 	/* Set up local pointers to quantInfo elements for convenience */
-	int* sfb_offset = quantInfo->sfb_offset;
-	int* scale_factor = quantInfo->scale_factor;
+	int* sfb_offset = quantInfo -> sfb_offset;
+	int* scale_factor = quantInfo -> scale_factor;
 	int* common_scalefac = &(quantInfo -> common_scalefac);
 
-	int outer_loop_count;
+	int outer_loop_count, notdone;
+	int over, better;
 	int best_over = 100;
+	int best_common_scalefac;
+	double noise_thresh;
 	double sfQuantFac;
 	double over_noise, tot_noise, max_noise;
 	double noise[MAX_SCFAC_BANDS];
 	double best_max_noise = 0;
 	double best_over_noise = 0;
 	double best_tot_noise = 0;
-
-	int max_bits = 3 * average_block_bits;
-	int min_bits = average_block_bits / 1;
-	int totbits, bits_ok;
-	double masking_lower_db = 0;
-	double masking_lower = 0;
-	double qadjust = 0;
-	int used_bits;
 
 	/* Set block type in quantization info */
 	quantInfo -> block_type = block_type[0];
@@ -1486,24 +1215,31 @@ int tf_encode_spectrum_aac_VBR(
     for(sb=0; sb < quantInfo->nr_of_sfb; sb++ )
 		quantInfo->pns_sfb_flag[sb] = 0;
 
-	for(sb = pns_sfb_start; sb < quantInfo->nr_of_sfb; sb++ ) {
-		/* Calc. pseudo scalefactor */
-		if (energy[0][sb] == 0.0) {
-			quantInfo->pns_sfb_flag[sb] = 0;
-			continue;
-		}
+//	if (block_type[0] != ONLY_SHORT_WINDOW) {     /* long blocks only */
+		for(sb = pns_sfb_start; sb < quantInfo->nr_of_sfb; sb++ ) {
+			/* Calc. pseudo scalefactor */
+			if (energy[0][sb] == 0.0) {
+				quantInfo->pns_sfb_flag[sb] = 0;
+				continue;
+			}
 
-		if ((ms_info->is_present)&&(!ms_info->ms_used[sb])) {
-			if ((10*log10(energy[0][sb]*sfb_width_table[0][sb]+1e-60)<70)||(SigMaskRatio[sb] > 1.0)) {
-				quantInfo->pns_sfb_flag[sb] = 1;
-				quantInfo->pns_sfb_nrg[sb] = (int) (2.0 * log(energy[0][sb]*sfb_width_table[0][sb]+1e-60) / log(2.0) + 0.5) + PNS_SF_OFFSET;
+			if ((ms_info->is_present)&&(!ms_info->ms_used[sb])) {
+				if ((10*log10(energy[0][sb]*sfb_width_table[0][sb]+1e-60)<70)||(SigMaskRatio[sb] > 1.0)) {
+					quantInfo->pns_sfb_flag[sb] = 1;
+					quantInfo->pns_sfb_nrg[sb] = (int) (2.0 * log(energy[0][sb]*sfb_width_table[0][sb]+1e-60) / log(2.0) + 0.5) + PNS_SF_OFFSET;
 
-				/* Erase spectral lines */
-				for( i=sfb_offset[sb]; i<sfb_offset[sb+1]; i++ ) {
-					p_spectrum[0][i] = 0.0;
+					/* Erase spectral lines */
+					for( i=sfb_offset[sb]; i<sfb_offset[sb+1]; i++ ) {
+						p_spectrum[0][i] = 0.0;
+					}
 				}
 			}
 		}
+//	}
+
+	/* Compute allowed distortion */
+	for(sb = 0; sb < quantInfo->nr_of_sfb; sb++) {
+		allowed_dist[0][sb] = energy[0][sb] * SigMaskRatio[sb];
 	}
 
 	/** find the maximum spectral coefficient **/
@@ -1526,74 +1262,53 @@ int tf_encode_spectrum_aac_VBR(
 	}
 
 	outer_loop_count = 0;
-	used_bits = max_bits + 1;
 
-	calc_xmin(quantInfo, p_spectrum[0], SigMaskRatio, allowed_dist[0],
-		masking_lower);
+    bit_rate = bitrate_table [gfc->gfp->version] [gfc->bitrate_index];
+    getframebits (gfc, &bitsPerFrame, &mean_bits);
+    ResvFrameBegin (gfc, l3_side, mean_bits, bitsPerFrame );
 
-	do {
+	/*  calculate needed bits
+	*/
+	max_bits = on_pe (gfc, pe, l3_side, targ_bits, mean_bits, gr);
+	
+	cod_info = &l3_side->gr[gr].ch[ch].tt; 
 
-		int shortblock;
-		totbits=0;
-				
-		/* ENCODE this data first pass, and on future passes unless it uses
-		* a very small percentage of the max_frame_bits  */
-		if (used_bits > max_bits) {
-
-			shortblock = (quantInfo->block_type == ONLY_SHORT_WINDOW);
-
-			if (qadjust!=0 /*|| shortblock*/) {
-				/* Adjust allowed masking based on quality setting */
-				masking_lower_db = /*dbQ[0]*/0 + qadjust;
-
-//				if (pe[gr][ch]>750)
-//					masking_lower_db -= 4*(pe[gr][ch]-750.)/750.;
-
-				masking_lower = pow(10.0,masking_lower_db/10);
-				calc_xmin(quantInfo, p_spectrum[0], SigMaskRatio, allowed_dist[0],
-					masking_lower);
-			}
-
-			used_bits = VBR_noise_shaping(quantInfo, p_spectrum[0], pow_spectrum,
-				allowed_dist[0], quant,	min_bits, max_bits, scale_factor);
-		}
-		bits_ok=1;
-		if (used_bits > max_bits) {
-			qadjust += max(.25,(used_bits - max_bits)/300.0);
-			min_bits = max(125,min_bits*0.975);
-			max_bits = max(min_bits,max_bits*0.975);
-			bits_ok=0;
-		}
-		
-	} while (!bits_ok);
-
-	calc_noise(quantInfo, p_spectrum[0], quant, requant, noise, allowed_dist[0],
-			&over_noise, &tot_noise, &max_noise);
-	count_bits(quantInfo, quant);
-	if (quantInfo->block_type!=ONLY_SHORT_WINDOW)
-		PulseDecoder(quantInfo, quant);
-
-	/* offset the differenec of common_scalefac and scalefactors by SF_OFFSET  */
-	for (i=0; i<quantInfo->nr_of_sfb; i++){
-		if ((ptr_book_vector[i]!=INTENSITY_HCB)&&(ptr_book_vector[i]!=INTENSITY_HCB2)) {
-			scale_factor[i] = *common_scalefac - scale_factor[i] + SF_OFFSET;
-		}
+	/*  init_outer_loop sets up cod_info, scalefac and xrpow 
+	*/
+	if (!init_outer_loop (cod_info, &scalefac[gr][ch], xr[gr][ch],
+		xrpow )) {
+		/*  xr contains no energy, l3_enc will be quantized to zero
+		*/
+		memset (l3_enc[gr][ch], 0, sizeof(int)*576);
+	} else {
+		/*  xr contains energy we will have to encode 
+		 *  calculate the masking abilities
+		 *  find some good quantization in outer_loop 
+		 */
+		calc_xmin (gfc, xr[gr][ch], &ratio[gr][ch], cod_info, 
+			&l3_xmin[ch]);
+		outer_loop (gfc, cod_info, xr[gr][ch], &l3_xmin[ch], 
+			&scalefac[gr][ch], xrpow, l3_enc[gr][ch],
+			ch, targ_bits[ch]);
 	}
-	*common_scalefac = scale_factor[0];
+	assert (cod_info->part2_3_length < 4096);
 
-	/* place the codewords and their respective lengths in arrays data[] and len[] respectively */
-	/* there are 'counter' elements in each array, and these are variable length arrays depending on the input */
+	/*  try some better scalefac storage
+	*/
+	best_scalefac_store (gfc, gr, ch, l3_enc, l3_side, scalefac);
 
-	quantInfo -> spectralCount = 0;
-	for(k=0;k< quantInfo -> nr_of_sfb; k++) {
-		output_bits(
-			quantInfo,
-			quantInfo->book_vector[k],
-			quant,
-			quantInfo->sfb_offset[k],
-			quantInfo->sfb_offset[k+1]-quantInfo->sfb_offset[k],
-			1);
+	/*  best huffman_divide may save some bits too
+	*/
+	if (gfc->use_best_huffman == 1) 
+		best_huffman_divide (gfc, gr, ch, cod_info, l3_enc[gr][ch]);
+
+	/*  set the sign of l3_enc from the sign of xr
+	*/
+	for (i = 0; i < 576; i++) {
+		if (xr[gr][ch][i] < 0) l3_enc[gr][ch][i] *= -1; 
 	}
+    
+    ResvFrameEnd (gfc, l3_side, mean_bits);
 
 	/* write the reconstructed spectrum to the output for use with prediction */
 	{
@@ -1613,4 +1328,5 @@ int tf_encode_spectrum_aac_VBR(
 
 	return FNO_ERROR;
 }
+
 #endif

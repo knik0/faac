@@ -21,8 +21,8 @@
 /**************************************************************************
   Version Control Information			Method: CVS
   Identifiers:
-  $Revision: 1.24 $
-  $Date: 2000/10/31 14:48:41 $ (check in)
+  $Revision: 1.25 $
+  $Date: 2000/11/01 14:05:32 $ (check in)
   $Author: menno $
   *************************************************************************/
 
@@ -167,7 +167,6 @@ void Psy_Calculate(
   AACQuantInfo *quantInfo,
   double sampling_rate,
   int    no_of_chan,         /* no of audio channels */
-  Ch_Info* chInfo,
   double *p_time_signal[],
   enum WINDOW_TYPE block_type[],
   int use_MS,

@@ -21,8 +21,8 @@
 /**************************************************************************
   Version Control Information			Method: CVS
   Identifiers:
-  $Revision: 1.71 $
-  $Date: 2000/10/31 14:48:41 $ (check in)
+  $Revision: 1.72 $
+  $Date: 2000/11/01 14:05:32 $ (check in)
   $Author: menno $
   *************************************************************************/
 
@@ -325,7 +325,6 @@ void Psy_Calculate(
 			   AACQuantInfo *quantInfo,
 			   double sampling_rate,
 			   int    no_of_chan,         /* no of audio channels */
-			   Ch_Info* channelInfo,
 			   double *p_time_signal[],
 			   enum WINDOW_TYPE block_type[],
 			   int use_MS,
@@ -353,12 +352,12 @@ void Psy_Calculate(
 	}
 
 	for (chanNum = 0; chanNum < no_of_chan; chanNum++) {
-		if (channelInfo[chanNum].present) {
+		if (quantInfo[chanNum].channelInfo.present) {
 			p_sri = quantInfo[chanNum].sr_info;
 			
-			if ((channelInfo[chanNum].cpe) && (channelInfo[chanNum].ch_is_left)) { /* CPE */
+			if ((quantInfo[chanNum].channelInfo.cpe) && (quantInfo[chanNum].channelInfo.ch_is_left)) { /* CPE */
 				int leftChan = chanNum;
-				int rightChan = channelInfo[chanNum].paired_ch;
+				int rightChan = quantInfo[chanNum].channelInfo.paired_ch;
 				int midChan = chanNum + MAX_TIME_CHANNELS;
 				int sideChan = chanNum + MAX_TIME_CHANNELS;
 
@@ -486,7 +485,7 @@ void Psy_Calculate(
 					memcpy(p_chpo_short[rightChan][i].use_ms, psy_stvar_short[rightChan].use_ms[i], NSFB_SHORT*sizeof(int));
 				}
 
-			} else if (channelInfo[chanNum].lfe) { /* LFE */
+			} else if (quantInfo[chanNum].channelInfo.lfe) { /* LFE */
 
 				// LFE psych ratios are set to -24 dB for low frequencies
 				for (i = 0; i < 10; i++) {

@@ -21,8 +21,8 @@
 /**************************************************************************
   Version Control Information			Method: CVS
   Identifiers:
-  $Revision: 1.13 $
-  $Date: 2000/10/06 14:47:27 $ (check in)
+  $Revision: 1.14 $
+  $Date: 2000/11/01 14:05:32 $ (check in)
   $Author: menno $
   *************************************************************************/
 
@@ -30,6 +30,7 @@
 #include <stdlib.h>
 #include "tns.h"
 #include "aacenc.h"
+#include "quant.h"
 
 /***********************************************/
 /* TNS Profile/Frequency Dependent Parameters  */
@@ -115,12 +116,12 @@ void TnsInit(long samplingRate,enum AAC_PROFILE profile,TNS_INFO* tnsInfo)
 /*****************************************************/
 /* TnsEncode:                                        */
 /*****************************************************/
-int TnsEncode(int numberOfBands,       /* Number of bands per window */
-	       int maxSfb,              /* max_sfb */
-	       enum WINDOW_TYPE blockType,   /* block type */
-	       int* sfbOffsetTable,     /* Scalefactor band offset table */
-	       double* spec,            /* Spectral data array */
-	       TNS_INFO* tnsInfo, int use_tns)       /* TNS info */
+int TnsEncode(AACQuantInfo *quantInfo,
+			  int numberOfBands,       /* Number of bands per window */
+			  enum WINDOW_TYPE blockType,   /* block type */
+			  int* sfbOffsetTable,     /* Scalefactor band offset table */
+			  double* spec,            /* Spectral data array */
+			  int use_tns)
 {
 	int numberOfWindows,windowSize;
 	int startBand,stopBand,order;    /* Bands over which to apply TNS */
@@ -128,6 +129,7 @@ int TnsEncode(int numberOfBands,       /* Number of bands per window */
 	int w, error;
 	int startIndex,length;
 	double gain;
+	TNS_INFO *tnsInfo = &quantInfo->tnsInfo;
 
 	switch( blockType ) {
 	case ONLY_SHORT_WINDOW :
@@ -155,8 +157,8 @@ int TnsEncode(int numberOfBands,       /* Number of bands per window */
 	
 	/* Make sure that start and stop bands < maxSfb */
 	/* Make sure that start and stop bands >= 0 */
-	startBand = min(startBand,maxSfb);
-	stopBand = min(stopBand,maxSfb);
+	startBand = min(startBand,quantInfo->max_sfb);
+	stopBand = min(stopBand,quantInfo->max_sfb);
 	startBand = max(startBand,0);
 	stopBand = max(stopBand,0);
 

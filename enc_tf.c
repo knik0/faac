@@ -21,8 +21,8 @@
 /**************************************************************************
   Version Control Information			Method: CVS
   Identifiers:
-  $Revision: 1.66 $
-  $Date: 2000/10/31 14:48:41 $ (check in)
+  $Revision: 1.67 $
+  $Date: 2000/11/01 14:05:32 $ (check in)
   $Author: menno $
   *************************************************************************/
 
@@ -171,14 +171,7 @@ enum WINDOW_TYPE block_type[MAX_TIME_CHANNELS];
 enum WINDOW_TYPE desired_block_type[MAX_TIME_CHANNELS];
 enum WINDOW_TYPE next_desired_block_type[MAX_TIME_CHANNELS];
 
-/* Additional variables for AAC */
-TNS_INFO tnsInfo[MAX_TIME_CHANNELS];
-LT_PRED_STATUS ltp_status[MAX_TIME_CHANNELS];
-
 AACQuantInfo quantInfo[MAX_TIME_CHANNELS];               /* Info structure for AAC quantization and coding */
-
-/* Channel information */
-Ch_Info channelInfo[MAX_TIME_CHANNELS];
 
 
 /* EncTfFree() */
@@ -194,7 +187,7 @@ void EncTfFree (void)
 
     if (reconstructed_spectrum[chanNum]) free(reconstructed_spectrum[chanNum]);
     if (overlap_buffer[chanNum]) free(overlap_buffer[chanNum]);
-    if (ltp_status[chanNum].delay) free(ltp_status[chanNum].delay);
+    if (quantInfo[chanNum].ltpInfo.delay) free(quantInfo[chanNum].ltpInfo.delay);
     if (tmp_DTimeSigBuf[chanNum]) free(tmp_DTimeSigBuf[chanNum]);
   }
   for (chanNum=0;chanNum<MAX_TIME_CHANNELS*2;chanNum++) {
@@ -254,7 +247,7 @@ void EncTfInit (faacAACStream *as)
     overlap_buffer[chanNum] = (double*)malloc(sizeof(double)*BLOCK_LEN_LONG);
     memset(overlap_buffer[chanNum],0,(BLOCK_LEN_LONG)*sizeof(double));
     block_type[chanNum] = ONLY_LONG_WINDOW;
-    ltp_status[chanNum].delay =  (int*)malloc(MAX_SHORT_WINDOWS*sizeof(int));
+    quantInfo[chanNum].ltpInfo.delay =  (int*)malloc(MAX_SHORT_WINDOWS*sizeof(int));
     tmp_DTimeSigBuf[chanNum]  = (double*)malloc(2*BLOCK_LEN_LONG*sizeof(double));
     memset(tmp_DTimeSigBuf[chanNum],0,(2*BLOCK_LEN_LONG)*sizeof(double));
   }
@@ -272,14 +265,12 @@ void EncTfInit (faacAACStream *as)
 
   /* Init TNS */
   for (chanNum=0;chanNum<MAX_TIME_CHANNELS;chanNum++) {
-    TnsInit(as->out_sampling_rate,as->profile,&tnsInfo[chanNum]);
-    quantInfo[chanNum].tnsInfo = &tnsInfo[chanNum];         /* Set pointer to TNS data */
+    TnsInit(as->out_sampling_rate,as->profile,&quantInfo[chanNum].tnsInfo);
   }
 
   /* Init LTP predictor */
   for (chanNum=0;chanNum<MAX_TIME_CHANNELS;chanNum++) {
-    init_lt_pred (&ltp_status[chanNum]);
-    quantInfo[chanNum].ltpInfo = &ltp_status[chanNum];  /* Set pointer to LTP data */
+    init_lt_pred (&quantInfo[chanNum].ltpInfo);
     quantInfo[chanNum].prev_window_shape = WS_SIN;
   }
 
@@ -356,7 +347,7 @@ int EncTfFrame (faacAACStream *as, BsBitStream  *fixed_stream)
   /***********************************************************************/
   /* Determine channel elements */
   /***********************************************************************/
-  DetermineChInfo(channelInfo, max_ch, as->lfePresent);
+  DetermineChInfo(quantInfo, max_ch, as->lfePresent);
 
 
   /***********************************************************************/
@@ -370,10 +361,10 @@ int EncTfFrame (faacAACStream *as, BsBitStream  *fixed_stream)
 
 	  for (chanNum = 0; chanNum < max_ch; chanNum++) {
 
-		  if (channelInfo[chanNum].present) {
-			  if ((channelInfo[chanNum].cpe) && (channelInfo[chanNum].ch_is_left)) { /* CPE */
+		  if (quantInfo[chanNum].channelInfo.present) {
+			  if ((quantInfo[chanNum].channelInfo.cpe) && (quantInfo[chanNum].channelInfo.ch_is_left)) { /* CPE */
 				  int leftChan = chanNum;
-				  int rightChan = channelInfo[chanNum].paired_ch;
+				  int rightChan = quantInfo[chanNum].channelInfo.paired_ch;
 
 				  if (as->use_MS == 1) {
 					  for(i = 0; i < BLOCK_LEN_LONG; i++){
@@ -413,7 +404,6 @@ int EncTfFrame (faacAACStream *as, BsBitStream  *fixed_stream)
 	  quantInfo,
 	  as->out_sampling_rate,
 	  max_ch,
-	  channelInfo,
 	  DTimeSigLookAheadBuf,
 	  next_desired_block_type,
 	  as->use_MS,
@@ -578,10 +568,10 @@ int EncTfFrame (faacAACStream *as, BsBitStream  *fixed_stream)
   }
 
   MSPreprocess(p_ratio_long[!ps], p_ratio_short[!ps], chpo_long, chpo_short,
-		channelInfo, block_type, quantInfo, as->use_MS, max_ch);
+		block_type, quantInfo, as->use_MS, max_ch);
 
   MSEnergy(spectral_line_vector, energy, chpo_long, chpo_short, sfb_width_table,
-		channelInfo, block_type, quantInfo, as->use_MS, max_ch);
+		block_type, quantInfo, as->use_MS, max_ch);
 
   {
     int chanNum;
@@ -604,7 +594,7 @@ int EncTfFrame (faacAACStream *as, BsBitStream  *fixed_stream)
   {
     int chanNum;
     for (chanNum=0;chanNum<max_ch;chanNum++) {
-      if (channelInfo[chanNum].lfe) {
+      if (quantInfo[chanNum].channelInfo.lfe) {
         int i;
         for (i = sfb_offset_table[chanNum][10];
 			i < sfb_offset_table[chanNum][nr_of_sfb[chanNum]]; i++)
@@ -638,18 +628,17 @@ int EncTfFrame (faacAACStream *as, BsBitStream  *fixed_stream)
     /* Perform TNS analysis and filtering     */
     /******************************************/
     for (chanNum=0;chanNum<max_ch;chanNum++) {
-		if (!channelInfo[chanNum].lfe) {
-			error = TnsEncode(nr_of_sfb[chanNum],            /* Number of bands per window */
-      		        quantInfo[chanNum].max_sfb,              /* max_sfb */
-					block_type[chanNum],
-					sfb_offset_table[chanNum],
-					spectral_line_vector[chanNum],
-					&tnsInfo[chanNum],
-					as->use_TNS);
+		if (!quantInfo[chanNum].channelInfo.lfe) {
+			error = TnsEncode(&quantInfo[chanNum],
+				nr_of_sfb[chanNum],            /* Number of bands per window */
+				block_type[chanNum],
+				sfb_offset_table[chanNum],
+				spectral_line_vector[chanNum],
+				as->use_TNS);
 			if (error == FERROR)
 				return FERROR;
 		} else {
-			tnsInfo[chanNum].tnsDataPresent=0;      /* TNS not used for LFE */
+			quantInfo[chanNum].tnsInfo.tnsDataPresent=0;      /* TNS not used for LFE */
 		}
     }
 
@@ -657,13 +646,13 @@ int EncTfFrame (faacAACStream *as, BsBitStream  *fixed_stream)
     /* If LTP prediction is used, compute LTP predictor info and residual spectrum */
     /*******************************************************************************/
     for(chanNum=0;chanNum<max_ch;chanNum++) {
-      if(as->use_LTP && channelInfo[chanNum].present &&
-		  (!channelInfo[chanNum].lfe) && (block_type[chanNum] != ONLY_SHORT_WINDOW)) {
-        if(channelInfo[chanNum].cpe) {
-    	  if(channelInfo[chanNum].ch_is_left) {
+      if(as->use_LTP && quantInfo[chanNum].channelInfo.present &&
+		  (!quantInfo[chanNum].channelInfo.lfe) && (block_type[chanNum] != ONLY_SHORT_WINDOW)) {
+        if(quantInfo[chanNum].channelInfo.cpe) {
+    	  if(quantInfo[chanNum].channelInfo.ch_is_left) {
 	    int i;
 	    int leftChan=chanNum;
-	    int rightChan=channelInfo[chanNum].paired_ch;
+	    int rightChan=quantInfo[chanNum].channelInfo.paired_ch;
 
   	    ltp_enc(spectral_line_vector[leftChan],
 		        tmp_DTimeSigBuf[leftChan],
@@ -671,24 +660,24 @@ int EncTfFrame (faacAACStream *as, BsBitStream  *fixed_stream)
 		        WS_SIN,
 		        &sfb_offset_table[leftChan][0],
 		        nr_of_sfb[leftChan],
-		        &ltp_status[leftChan]);
+		        &quantInfo[leftChan].ltpInfo);
 
-            ltp_status[rightChan].global_pred_flag = ltp_status[leftChan].global_pred_flag;
+            quantInfo[rightChan].ltpInfo.global_pred_flag = quantInfo[leftChan].ltpInfo.global_pred_flag;
   	    for(i = 0; i < BLOCK_LEN_LONG; i++)
-    	      ltp_status[rightChan].pred_mdct[i] = ltp_status[leftChan].pred_mdct[i];
+    	      quantInfo[rightChan].ltpInfo.pred_mdct[i] = quantInfo[leftChan].ltpInfo.pred_mdct[i];
   	    for(i = 0; i < MAX_SCFAC_BANDS; i++)
-  	      ltp_status[rightChan].sfb_prediction_used[i] = ltp_status[leftChan].sfb_prediction_used[i];
-  	    ltp_status[rightChan].weight = ltp_status[leftChan].weight;
-	    ltp_status[rightChan].delay[0] = ltp_status[leftChan].delay[0];
+  	      quantInfo[rightChan].ltpInfo.sfb_prediction_used[i] = quantInfo[leftChan].ltpInfo.sfb_prediction_used[i];
+  	    quantInfo[rightChan].ltpInfo.weight = quantInfo[leftChan].ltpInfo.weight;
+	    quantInfo[rightChan].ltpInfo.delay[0] = quantInfo[leftChan].ltpInfo.delay[0];
 
-	    if (!channelInfo[leftChan].common_window) {
+	    if (!quantInfo[leftChan].channelInfo.common_window) {
 	      ltp_enc(spectral_line_vector[rightChan],
 			  tmp_DTimeSigBuf[rightChan],
 			  block_type[rightChan],
 			  WS_SIN,
 			  &sfb_offset_table[rightChan][0],
 			  nr_of_sfb[rightChan],
-			  &ltp_status[rightChan]);
+			  &quantInfo[rightChan].ltpInfo);
             }
           } /* if(channelInfo[chanNum].ch_is_left) */
         } /* if(channelInfo[chanNum].cpe) */
@@ -699,10 +688,10 @@ int EncTfFrame (faacAACStream *as, BsBitStream  *fixed_stream)
 		      WS_SIN,
 		      &sfb_offset_table[chanNum][0],
 		      nr_of_sfb[chanNum],
-		      &ltp_status[chanNum]);
+		      &quantInfo[chanNum].ltpInfo);
       } /* if(channelInfo[chanNum].present... */
       else
-        quantInfo[chanNum].ltpInfo->global_pred_flag = 0;
+        quantInfo[chanNum].ltpInfo.global_pred_flag = 0;
     } /* for(chanNum... */
 
     /******************************************/
@@ -710,7 +699,6 @@ int EncTfFrame (faacAACStream *as, BsBitStream  *fixed_stream)
     /******************************************/
     if (as->use_MS == 1) {
       MSEncode(spectral_line_vector,
-	       channelInfo,
 	       sfb_offset_table,
 	       block_type,
 	       quantInfo,
@@ -718,12 +706,10 @@ int EncTfFrame (faacAACStream *as, BsBitStream  *fixed_stream)
     }
     else if (as->use_MS == 0) {
       MSEncodeSwitch(spectral_line_vector,
-		     channelInfo,
 		     sfb_offset_table,
-//		     block_type,
 		     quantInfo,
 		     max_ch
-                     );
+			 );
     }
 
     /************************************************/
@@ -739,7 +725,7 @@ int EncTfFrame (faacAACStream *as, BsBitStream  *fixed_stream)
 		  double lfeBitRatio = 0.14;       /* ratio of LFE bits to bits of one SCE */
 		  int lfeBits = max(200,(int)((average_bits - used_bits) * lfeBitRatio / (max_ch - 1))); /* number of bits for LFE */ 
 		  
-		  if (channelInfo[chanNum].lfe) {
+		  if (quantInfo[chanNum].channelInfo.lfe) {
 			  bitsToUse = lfeBits;
 			  bitsToUse += (int)(0.2*available_bitreservoir_bits 
 				  * lfeBitRatio / (max_ch - 1));
@@ -751,26 +737,16 @@ int EncTfFrame (faacAACStream *as, BsBitStream  *fixed_stream)
 	  }
 
       error = tf_encode_spectrum_aac(&spectral_line_vector[chanNum],
-                                     &p_ratio[chanNum],
-                                     &allowed_distortion[chanNum],
-                                     &energy[chanNum],
-                                     &block_type[chanNum],
-                                     &sfb_width_table[chanNum],
-//				     &nr_of_sfb[chanNum],
-                                     bitsToUse,
-//				     available_bitreservoir_bits,
-//				     padding_limit,
-				     fixed_stream,
-//				     NULL,
-//				     1,             /* nr of audio channels */
-				     &reconstructed_spectrum[chanNum],
-//				     useShortWindows,
-//				     aacAllowScalefacs,
-				     &quantInfo[chanNum],
-				     &(channelInfo[chanNum])
-//				     ,0/*no vbr*/,
-//				     ,bit_rate
-                                     );
+		  &p_ratio[chanNum],
+		  &allowed_distortion[chanNum],
+		  &energy[chanNum],
+		  &block_type[chanNum],
+		  &sfb_width_table[chanNum],
+		  bitsToUse,
+		  fixed_stream,
+		  &reconstructed_spectrum[chanNum],		  
+		  &quantInfo[chanNum]
+		  );
       if (error == FERROR)
         return error;
     }
@@ -780,7 +756,6 @@ int EncTfFrame (faacAACStream *as, BsBitStream  *fixed_stream)
     /**********************************************************/
     if (as->use_MS != -1) {
       MSReconstruct(reconstructed_spectrum,
-		    channelInfo,
 		    sfb_offset_table,
 //		    block_type,
 		    quantInfo,
@@ -792,13 +767,13 @@ int EncTfFrame (faacAACStream *as, BsBitStream  *fixed_stream)
     /**********************************************************/
     if(as->use_LTP)
       for (chanNum=0;chanNum<max_ch;chanNum++) {
-		  if (!channelInfo[chanNum].lfe) {  /* no reconstruction needed for LFE channel*/
+		  if (!quantInfo[chanNum].channelInfo.lfe) {  /* no reconstruction needed for LFE channel*/
 			  ltp_reconstruct(reconstructed_spectrum[chanNum],
 				  block_type[chanNum],
 				  WS_SIN,
 				  &sfb_offset_table[chanNum][0],
 				  nr_of_sfb[chanNum],
-				  &ltp_status[chanNum]);
+				  &quantInfo[chanNum].ltpInfo);
 		  }
       }
 
@@ -811,31 +786,31 @@ int EncTfFrame (faacAACStream *as, BsBitStream  *fixed_stream)
       used_bits += WriteADTSHeader(&quantInfo[0], fixed_stream, used_bits, 0);
 
     for (chanNum=0;chanNum<max_ch;chanNum++) {
-      if (channelInfo[chanNum].present) {
+      if (quantInfo[chanNum].channelInfo.present) {
         /* Write out a single_channel_element */
-        if (!channelInfo[chanNum].cpe) {
-           if (channelInfo[chanNum].lfe) {
+        if (!quantInfo[chanNum].channelInfo.cpe) {
+           if (quantInfo[chanNum].channelInfo.lfe) {
 			   /* Write out lfe */ 
 			   used_bits += WriteLFE(&quantInfo[chanNum],   /* Quantization information */
-				   channelInfo[chanNum].tag,
+				   quantInfo[chanNum].channelInfo.tag,
 				   fixed_stream,           /* Bitstream */
 				   0);                     /* Write flag, 1 means write */
            } else {
 			   /* Write out sce */
 			   used_bits += WriteSCE(&quantInfo[chanNum],   /* Quantization information */
-				   channelInfo[chanNum].tag,
+				   quantInfo[chanNum].channelInfo.tag,
 				   fixed_stream,           /* Bitstream */
 				   0);                     /* Write flag, 1 means write */
 		   }
         }
         else {
-	  if (channelInfo[chanNum].ch_is_left) {
+	  if (quantInfo[chanNum].channelInfo.ch_is_left) {
 	    /* Write out cpe */
 	    used_bits += WriteCPE(&quantInfo[chanNum],   /* Quantization information,left */
-				  &quantInfo[channelInfo[chanNum].paired_ch],   /* Right */
-				  channelInfo[chanNum].tag,
-				  channelInfo[chanNum].common_window,    /* common window */
-				  &(channelInfo[chanNum].ms_info),
+				  &quantInfo[quantInfo[chanNum].channelInfo.paired_ch],   /* Right */
+				  quantInfo[chanNum].channelInfo.tag,
+				  quantInfo[chanNum].channelInfo.common_window,    /* common window */
+				  &(quantInfo[chanNum].channelInfo.ms_info),
 				  fixed_stream,           /* Bitstream */
 				  0);                     /* Write flag, 1 means write */
           }
@@ -870,31 +845,31 @@ int EncTfFrame (faacAACStream *as, BsBitStream  *fixed_stream)
       WriteADTSHeader(&quantInfo[0], fixed_stream, used_bits, 1);
 
     for (chanNum=0;chanNum<max_ch;chanNum++) {
-      if (channelInfo[chanNum].present) {
+      if (quantInfo[chanNum].channelInfo.present) {
         /* Write out a single_channel_element */
-        if (!channelInfo[chanNum].cpe) {
-           if (channelInfo[chanNum].lfe) {
+        if (!quantInfo[chanNum].channelInfo.cpe) {
+           if (quantInfo[chanNum].channelInfo.lfe) {
 			   /* Write out lfe */ 
 			   WriteLFE(&quantInfo[chanNum],   /* Quantization information */
-				   channelInfo[chanNum].tag,
+				   quantInfo[chanNum].channelInfo.tag,
 				   fixed_stream,           /* Bitstream */
 				   1);                     /* Write flag, 1 means write */
            } else {
 			   /* Write out sce */
 			   WriteSCE(&quantInfo[chanNum],   /* Quantization information */
-				   channelInfo[chanNum].tag,
+				   quantInfo[chanNum].channelInfo.tag,
 				   fixed_stream,           /* Bitstream */
 				   1);                     /* Write flag, 1 means write */
 		   }
         }
         else {
-       	  if (channelInfo[chanNum].ch_is_left) {
+       	  if (quantInfo[chanNum].channelInfo.ch_is_left) {
 	    /* Write out cpe */
 	    WriteCPE(&quantInfo[chanNum],   /* Quantization information,left */
-		     &quantInfo[channelInfo[chanNum].paired_ch],   /* Right */
-		     channelInfo[chanNum].tag,
-		     channelInfo[chanNum].common_window,    /* common window */
-		     &(channelInfo[chanNum].ms_info),
+		     &quantInfo[quantInfo[chanNum].channelInfo.paired_ch],   /* Right */
+		     quantInfo[chanNum].channelInfo.tag,
+		     quantInfo[chanNum].channelInfo.common_window,    /* common window */
+		     &(quantInfo[chanNum].channelInfo.ms_info),
 		     fixed_stream,           /* Bitstream */
 		     1);                     /* Write flag, 1 means write */
           }
