@@ -7,4 +7,3 @@ AM_PROG_LIBTOOL
 AC_CHECK_LIB(sndfile, sf_open_read)
 
 AC_OUTPUT(libfaac/Makefile frontend/Makefile Makefile)
-
