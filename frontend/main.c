@@ -16,7 +16,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: main.c,v 1.39 2003/07/21 16:33:49 knik Exp $
+ * $Id: main.c,v 1.40 2003/08/07 11:28:06 knik Exp $
  */
 
 #ifdef HAVE_CONFIG_H
@@ -468,7 +468,7 @@ int main(int argc, char *argv[])
           struct rusage usage;
 #endif
 #ifdef _WIN32
-          char percent[50];
+          char percent[MAX_PATH + 20];
           timeused = (GetTickCount() - begin) * 1e-3;
 #else
 #ifdef __unix__
@@ -544,6 +544,9 @@ int main(int argc, char *argv[])
 
 /*
 $Log: main.c,v $
+Revision 1.40  2003/08/07 11:28:06  knik
+fixed win32 crash with long filenames
+
 Revision 1.39  2003/07/21 16:33:49  knik
 Fixed LFE channel mapping.
 
