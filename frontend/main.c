@@ -16,7 +16,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: main.c,v 1.37 2003/07/10 19:19:32 knik Exp $
+ * $Id: main.c,v 1.38 2003/07/13 08:34:43 knik Exp $
  */
 
 #ifdef HAVE_CONFIG_H
@@ -57,20 +57,6 @@
 /* globals */
 char* progName;
 
-int StringCompI(char const *str1, char const *str2, unsigned long len)
-{
-    signed int c1 = 0, c2 = 0;
-
-    while (len--) {
-        c1 = tolower(*str1++);
-        c2 = tolower(*str2++);
-
-        if (c1 == 0 || c1 != c2)
-            break;
-    }
-
-    return c1 - c2;
-}
 
 static int *mkChanMap(int channels, int center, int lf)
 {
@@ -206,40 +192,35 @@ int main(int argc, char *argv[])
 	  continue;
 
         switch (c) {
-        case 'm': {
-            unsigned int i;
-            if (optarg) {
-                if (sscanf(optarg, "%u", &i) < 1) {
-                    mpegVersion = MPEG2;
-                } else {
-                    if (i == 2)
-                        mpegVersion = MPEG2;
-                    else
-                        mpegVersion = MPEG4;
-                }
-            } else {
-                mpegVersion = MPEG2;
-            }
-            break;
-        }
-        case 'o': {
-            unsigned char i[10];
-            if (optarg) {
-                if (sscanf(optarg, "%s", i) < 1) {
-                    objectType = LOW;
-                } else {
-                    if (StringCompI(i, "MAIN", 4) == 0)
-                        objectType = MAIN;
-                    else if (StringCompI(i, "LTP", 3) == 0)
-                        objectType = LTP;
-                    else
-                        objectType = LOW;
-                }
-            } else {
-                objectType = LOW;
-            }
-            break;
-        }
+	case 'm':
+	  mpegVersion = atoi(optarg);
+	  switch(mpegVersion)
+	  {
+	  case 2:
+	    mpegVersion = MPEG2;
+	    break;
+	  case 4:
+	    mpegVersion = MPEG4;
+	    break;
+	  default:
+	    mpegVersion = MPEG4;
+	  }
+	  break;
+        case 'o':
+	  objectType = atoi(optarg);
+	  switch (objectType)
+	  {
+	  case 1:
+	    objectType = MAIN;
+	    break;
+	  case 2:
+	    objectType = LTP;
+	    break;
+	  default:
+	    objectType = LOW;
+	    break;
+	  }
+	  break;
         case 'r': {
             useAdts = 0;
             break;
@@ -274,17 +255,8 @@ int main(int argc, char *argv[])
             break;
         }
     case 'I':
-      {
-	int i;
-        char *s;
-	if (sscanf(optarg, "%d", &i) > 0)
-	  chanC = i;
-
-        s = strchr(optarg, ',');
-	if (s && (sscanf(s + 1, "%d", &i) > 0))
-	  chanLF = i;
-	break;
-      }
+      sscanf(optarg, "%d,%d", &chanC, &chanLF);
+      break;
    case 'P':
 	  rawChans = 2; // enable raw input
        break;
@@ -339,13 +311,13 @@ int main(int argc, char *argv[])
 	printf("  --notns\tDisable TNS coding.\n");
 	printf("  -n     Don\'t use mid/side coding.\n");
 	printf("  -m X   AAC MPEG version, X can be 2 or 4.\n");
-	printf("  -o X   AAC object type, X can be LC, MAIN or LTP.\n");
+	printf("  -o X   AAC object type. (0=Low Complexity (default), 1=Main, 2=LTP)\n");
 	printf("  -r     RAW AAC output file.\n");
 	printf("  -P     Raw PCM input mode (default 44100Hz 16bit stereo).\n");
 	printf("  -R     Raw PCM input rate.\n");
 	printf("  -B     Raw PCM input sample size (16 default or 8bits).\n");
 	printf("  -C     Raw PCM input channels.\n");
-	printf("  -I <C[,LF]> Input channel config, default is 3,4 (Center third, LF fourth)\n");
+	printf("  -I <C,LF> Input channel config, default is 3,4 (Center third, LF fourth)\n");
 	printf("More details on FAAC usage can be found in the faac.html file.\n");
 
         return 1;
@@ -430,10 +402,25 @@ int main(int argc, char *argv[])
       fprintf(stderr, "Approximate ABR: %d kbps/channel\n", bitRate/1000);
     fprintf(stderr, "Quantization quality: %ld\n", quantqual);
     fprintf(stderr, "Bandwidth: %d Hz\n", cutOff);
-    if (myFormat->useTns | myFormat->allowMidside)
-      fprintf(stderr, "Using:%s%s\n",
-	      myFormat->useTns ? " TNS" : "",
-	      myFormat->allowMidside ? " M/S" : "");
+    fprintf(stderr, "Object type: ");
+    switch(objectType)
+    {
+    case LOW:
+      fprintf(stderr, "Low Complexity");
+      break;
+    case MAIN:
+      fprintf(stderr, "Main");
+      break;
+    case LTP:
+      fprintf(stderr, "LTP");
+      break;
+    }
+    fprintf(stderr, "(MPEG-%d)", (mpegVersion == MPEG4) ? 4 : 2);
+    if (myFormat->useTns)
+      fprintf(stderr, " + TNS");
+    if (myFormat->allowMidside)
+      fprintf(stderr, " + M/S");
+    fprintf(stderr, "\n");
 
     if (outfile)
     {
@@ -447,7 +434,7 @@ int main(int argc, char *argv[])
      frames = 0;
         currentFrame = 0;
 
-    fprintf(stderr, "Encoding %s\n", audioFileName);
+    fprintf(stderr, "Encoding %s to %s\n", audioFileName, aacFileName);
    if (frames != 0)
      fprintf(stderr,
         "   frame          | elapsed/estim | play/CPU | ETA\n");
@@ -557,6 +544,10 @@ int main(int argc, char *argv[])
 
 /*
 $Log: main.c,v $
+Revision 1.38  2003/07/13 08:34:43  knik
+Fixed -o, -m and -I option.
+Print object type setting.
+
 Revision 1.37  2003/07/10 19:19:32  knik
 Input channel remapping and 24-bit support.
 
