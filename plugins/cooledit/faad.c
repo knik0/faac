@@ -354,6 +354,7 @@ DWORD read,
 	  k;
 int   result;
 unsigned char *buffer;
+unsigned long samples;
 
  if(hInput)
  {   
@@ -407,7 +408,7 @@ unsigned char *buffer;
    return 0;
   }
 
-  result=faacDecDecode(mi->hDecoder, buffer, &(mi->bytes_consumed), (short*)bufout);
+  result=faacDecDecode(mi->hDecoder, buffer, &(mi->bytes_consumed), (short*)bufout, &samples);
   if(mi->bytes_into_buffer>mi->bytes_consumed)
    mi->bytes_into_buffer-=mi->bytes_consumed;
   else
