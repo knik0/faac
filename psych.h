@@ -85,6 +85,7 @@ typedef struct {
   double e_qsthr[NPART_LONG]; /* absolute threshold (energy) in each partition */  
   double rnorm[NPART_LONG];
   double bmax[NPART_LONG];
+  double spreading[NPART_LONG][NPART_LONG];
 } PARTITION_TABLE_LONG;
 
 typedef struct {
@@ -98,6 +99,7 @@ typedef struct {
   double e_qsthr[NPART_SHORT]; /* absolute threshold (energy) in each partition */  
   double rnorm[NPART_SHORT];
   double bmax[NPART_SHORT];
+  double spreading[NPART_SHORT][NPART_SHORT];
 } PARTITION_TABLE_SHORT;
 
 typedef struct {
@@ -200,11 +202,6 @@ void EncTf_psycho_acoustic(
 
 
 double psy_get_absthr(double f); /* Jul 8 */
-//double sprdngf(double b1,double b2);
-double sprdngf(PARTITION_TABLE_LONG *part_tbl_long,
-			   PARTITION_TABLE_SHORT *part_tbl_short,
-			   int bb1, int bb2, int short_block);
-double sprdngf2(double b1, double b2);
 
 void psy_fft_table_init(FFT_TABLE_LONG *fft_tbl_long, 
 			FFT_TABLE_SHORT *fft_tbl_short

@@ -52,9 +52,9 @@ Copyright (c) 1997.
 
 Source file: 
 
-$Id: psych.c,v 1.5 1999/12/20 14:28:02 lenox Exp $
-$Id: psych.c,v 1.5 1999/12/20 14:28:02 lenox Exp $
-$Id: psych.c,v 1.5 1999/12/20 14:28:02 lenox Exp $
+$Id: psych.c,v 1.6 1999/12/22 14:35:15 menno Exp $
+$Id: psych.c,v 1.6 1999/12/22 14:35:15 menno Exp $
+$Id: psych.c,v 1.6 1999/12/22 14:35:15 menno Exp $
 
 **********************************************************************/
 
@@ -446,11 +446,50 @@ void psy_part_table_init(
 		}
 	}
 
+	// Calculate the spreading function
+	{
+		double tmpx,tmpy,tmpz,b1,b2;
+		int b, bb;
+
+		for( b = 0; b < (*part_tbl_long)->len; b++) {
+			b2 = (*part_tbl_long)->bval[b];
+			for( bb = 0; bb < (*part_tbl_long)->len; bb++) {
+				b1 = (*part_tbl_long)->bval[bb];
+
+				//tmpx = (b2 >= b1) ? 3.0*(b2-b1) : 1.5*(b2-b1);
+				tmpx = (bb >= b) ? 3.0*(b2-b1) : 1.5*(b2-b1);
+
+				tmpz = 8.0 * psy_min( (tmpx-0.5)*(tmpx-0.5) - 2.0*(tmpx-0.5),0.0 );
+
+				tmpy = 15.811389 + 7.5*(tmpx + 0.474)-17.5 *sqrt(1.0 + (tmpx+0.474)*(tmpx+0.474));
+
+				(*part_tbl_long)->spreading[b][bb] = ( tmpy < -100.0 ? 0.0 : pow(10.0, (tmpz + tmpy)/10.0) );
+			}
+		}
+
+		for( b = 0; b < (*part_tbl_short)->len; b++) {
+			b2 = (*part_tbl_short)->bval[b];
+			for( bb = 0; bb < (*part_tbl_short)->len; bb++) {
+				b1 = (*part_tbl_short)->bval[bb];
+
+				//tmpx = (b2 >= b1) ? 3.0*(b2-b1) : 1.5*(b2-b1);
+				tmpx = (bb >= b) ? 3.0*(b2-b1) : 1.5*(b2-b1);
+				
+				tmpz = 8.0 * psy_min( (tmpx-0.5)*(tmpx-0.5) - 2.0*(tmpx-0.5),0.0 );
+
+				tmpy = 15.811389 + 7.5*(tmpx + 0.474)-17.5 *sqrt(1.0 + (tmpx+0.474)*(tmpx+0.474));
+
+				(*part_tbl_short)->spreading[b][bb] = ( tmpy < -100.0 ? 0.0 : pow(10.0, (tmpz + tmpy)/10.0) );
+			}
+		}
+	}
+
     /* added by T. Okada (1997.07.10) */
     for( b = 0; b < (*part_tbl_long)->len; b++){
 		tmp = 0.0;
 		for( bb = 0; bb < (*part_tbl_long)->len; bb++)
-			tmp += sprdngf( (*part_tbl_long),(*part_tbl_short), bb, b, 0);
+			//tmp += sprdngf( (*part_tbl_long),(*part_tbl_short), bb, b, 0);
+			tmp += (*part_tbl_long)->spreading[bb][b];
 		(*part_tbl_long)->rnorm[b] = 1.0/tmp;
     }
     /* added by T. Okada (1997.07.10) end */
@@ -459,7 +498,8 @@ void psy_part_table_init(
     for( b = 0; b < (*part_tbl_short)->len; b++){
 		tmp = 0.0;
 		for( bb = 0; bb < (*part_tbl_short)->len; bb++)
-			tmp += sprdngf( (*part_tbl_long), (*part_tbl_short), bb, b, 1);
+			//tmp += sprdngf( (*part_tbl_long), (*part_tbl_short), bb, b, 1);
+			tmp += (*part_tbl_short)->spreading[bb][b];
 		(*part_tbl_short)->rnorm[b] = 1.0/tmp;
     }
     /* added by T. Araki (1997.10.16) end */
@@ -666,61 +706,6 @@ void EncTf_psycho_acoustic(
 				memcpy(p_chpo_short[no_of_chan][i].use_ms, use_ms_s[i], NSFB_SHORT*sizeof(int));
 		}
 
-	}
-}
-
-/* added by T. Okada (1997.7.10) */
-double sprdngf(PARTITION_TABLE_LONG *part_tbl_long,
-			   PARTITION_TABLE_SHORT *part_tbl_short,
-			   int bb1, int bb2, int short_block)
-{
-	static double sprd_l[70][70];
-	static double sprd_s[46][46];
-	static int init = 1;
-
-	if (init) {
-		double tmpx,tmpy,tmpz,b1,b2;
-		int b, bb;
-
-		for( b = 0; b < part_tbl_long->len; b++) {
-			b2 = part_tbl_long->bval[b];
-			for( bb = 0; bb < part_tbl_long->len; bb++) {
-				b1 = part_tbl_long->bval[bb];
-
-				//tmpx = (b2 >= b1) ? 3.0*(b2-b1) : 1.5*(b2-b1);
-				tmpx = (bb >= b) ? 3.0*(b2-b1) : 1.5*(b2-b1);
-
-				tmpz = 8.0 * psy_min( (tmpx-0.5)*(tmpx-0.5) - 2.0*(tmpx-0.5),0.0 );
-
-				tmpy = 15.811389 + 7.5*(tmpx + 0.474)-17.5 *sqrt(1.0 + (tmpx+0.474)*(tmpx+0.474));
-
-				sprd_l[b][bb] = ( tmpy < -100.0 ? 0.0 : pow(10.0, (tmpz + tmpy)/10.0) );
-			}
-		}
-
-		for( b = 0; b < part_tbl_short->len; b++) {
-			b2 = part_tbl_short->bval[b];
-			for( bb = 0; bb < part_tbl_short->len; bb++) {
-				b1 = part_tbl_short->bval[bb];
-
-				//tmpx = (b2 >= b1) ? 3.0*(b2-b1) : 1.5*(b2-b1);
-				tmpx = (bb >= b) ? 3.0*(b2-b1) : 1.5*(b2-b1);
-				
-				tmpz = 8.0 * psy_min( (tmpx-0.5)*(tmpx-0.5) - 2.0*(tmpx-0.5),0.0 );
-
-				tmpy = 15.811389 + 7.5*(tmpx + 0.474)-17.5 *sqrt(1.0 + (tmpx+0.474)*(tmpx+0.474));
-
-				sprd_s[b][bb] = ( tmpy < -100.0 ? 0.0 : pow(10.0, (tmpz + tmpy)/10.0) );
-			}
-		}
-
-		init = 0;
-	}
-
-	if (short_block)
-		return sprd_s[bb1][bb2];
-	else {
-		return sprd_l[bb1][bb2];
 	}
 }
 
@@ -1026,7 +1011,8 @@ void psy_step6(PARTITION_TABLE_LONG *part_tbl_long,
 		ecb = 0.0;
 		ct = 0.0;
 		for(bb = 0; bb < part_tbl_long->len; bb++){
-			sprd = sprdngf(part_tbl_long, part_tbl_short, bb, b, 0);
+			//sprd = sprdngf(part_tbl_long, part_tbl_short, bb, b, 0);
+			sprd = part_tbl_long->spreading[bb][b];
 			ecb += psy_var_long->e[bb] * sprd;
 			ct += psy_var_long->c[bb] * sprd;
 		}
@@ -1044,7 +1030,8 @@ void psy_step6(PARTITION_TABLE_LONG *part_tbl_long,
 			ecb = 0.0;
 			ct = 0.0;
 			for(bb = 0; bb < part_tbl_short->len; bb++){
-				sprd = sprdngf(part_tbl_long, part_tbl_short, bb, b, 1);
+				//sprd = sprdngf(part_tbl_long, part_tbl_short, bb, b, 1);
+				sprd = part_tbl_short->spreading[bb][b];
 				ecb += psy_var_short->e[i][bb] * sprd;
 				ct += psy_var_short->c[i][bb] * sprd;
 			}
