@@ -51,12 +51,15 @@ int faacEncodeInit(faacAACStream *as, int *samplesToRead, int *bitBufferSize, in
 		as->rc_needed = 1;
 	else
 		as->rc_needed = 0;
-
+#if 0
 	if (as->header_type==ADIF_HEADER) {
 		*headerSize = 17;
 	} else {
+#endif
 		*headerSize = 0;
+#if 0
 	}
+#endif
 
 	EncTfInit(as, 0);
 
@@ -248,6 +251,7 @@ int faacEncodeFree(faacAACStream *as, unsigned char *headerBuf)
 	if (as->rc_needed)
 		RateConvFree (as->rc_buf);
 
+#if 0
 	if (as->header_type==ADIF_HEADER)
 	{
 		int i;
@@ -299,7 +303,7 @@ int faacEncodeFree(faacAACStream *as, unsigned char *headerBuf)
 		BsPutBit(bitHeader,(as->channels == 2),1);
 		BsPutBit(bitHeader,0,4);
 
-		ByteAlign(bitHeader);
+		ByteAlign(bitHeader, 1);
 		// Comment
 		BsPutBit(bitHeader,0,8);
 
@@ -311,6 +315,7 @@ int faacEncodeFree(faacAACStream *as, unsigned char *headerBuf)
 			headerBuf[i] = bitHeader->data[i];
 		BsClose(bitHeader);
 	}
+#endif
 
 	for (ch=0; ch < as->channels; ch++)
 		if(as->inputBuffer[ch]) free(as->inputBuffer[ch]);

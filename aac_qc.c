@@ -609,7 +609,7 @@ int tf_encode_spectrum_aac(
 	/* initialize the scale_factors that aren't intensity stereo bands */
 	is_info=&(ch_info->is_info);
 	for(k=0; k< quantInfo -> nr_of_sfb ;k++) {
-		scale_factor[k]=((is_info->is_present)&&(is_info->is_used[k])) ? scale_factor[k] : 0/*min(15,(int)(1.0/SigMaskRatio[k]+0.5))*/;
+		scale_factor[k]=((is_info->is_present)&&(is_info->is_used[k])) ? scale_factor[k] : 0/*min(5,(int)(1.0/SigMaskRatio[k]+0.5))*/;
 	}
 
 	/* Mark IS bands by setting book_vector to INTENSITY_HCB */
@@ -756,9 +756,6 @@ int tf_encode_spectrum_aac(
 					notdone = 1;
 				}
 			}
-		}
-
-		if (notdone) {
 			for (sb = 0; sb < quantInfo->nr_of_sfb; sb++) {
 				if (scale_factor[sb] > 59)
 					notdone = 0;

@@ -67,6 +67,8 @@ typedef struct {
   NOK_LT_PRED_STATUS *ltpInfo;          /* Prt to LTP data */
   int pns_sfb_nrg[SFB_NUM_MAX];
   int pns_sfb_flag[SFB_NUM_MAX];
+  int profile;
+  int srate_idx;
 } AACQuantInfo;
 
 

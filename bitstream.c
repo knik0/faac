@@ -8,11 +8,6 @@
 #include "bitstream.h"		/* bit stream module */
 
 
-#define BYTE_NUMBIT 8		/* bits in byte (char) */
-#define LONG_NUMBIT 32		/* bits in unsigned long */
-#define bit2byte(a) (((a)+BYTE_NUMBIT-1)/BYTE_NUMBIT)
-#define byte2bit(a) ((a)*BYTE_NUMBIT)
-
 
 BsBitStream *BsOpenWrite(int size)
 {
@@ -83,7 +78,7 @@ int BsPutBit (BsBitStream *stream,
 	return 0;
 }
 
-int ByteAlign(BsBitStream* ptrBs)
+int ByteAlign(BsBitStream* ptrBs, int writeFlag)
 {
 	int len, i,j;
 	len = BsBufferNumBit( ptrBs );
@@ -91,8 +86,10 @@ int ByteAlign(BsBitStream* ptrBs)
 	j = (8 - (len%8))%8;
 
 	if ((len % 8) == 0) j = 0;
-	for( i=0; i<j; i++ ) {
-		BsPutBit( ptrBs, 0, 1 ); 
+	if (writeFlag) {
+		for( i=0; i<j; i++ ) {
+			BsPutBit( ptrBs, 0, 1 ); 
+		}
 	}
 	return j;
 }

@@ -30,101 +30,141 @@ int max_pred_sfb;
 /* Return number of bits left over (less than 7 ).                           */
 /*****************************************************************************/
 int WriteAACFillBits(BsBitStream* ptrBs,  /* Pointer to bitstream */
-		     int numBits)         /* Number of bits needed to fill */
+		     int numBits,         /* Number of bits needed to fill */
+			 int writeFlag)
 {
-  int numberOfBitsLeft=numBits;
+	int numberOfBitsLeft=numBits;
 
-  /* Need at least (LEN_SE_ID + LEN_F_CNT) bits for a fill_element */
-  int minNumberOfBits = LEN_SE_ID + LEN_F_CNT;
-  while (numberOfBitsLeft>=minNumberOfBits) {
-    int numberOfBytes;
-    int maxCount;
+	/* Need at least (LEN_SE_ID + LEN_F_CNT) bits for a fill_element */
+	int minNumberOfBits = LEN_SE_ID + LEN_F_CNT;
+	while (numberOfBitsLeft>=minNumberOfBits) {
+		int numberOfBytes;
+		int maxCount;
 
-    BsPutBit(ptrBs,ID_FIL,LEN_SE_ID);	/* Write fill_element ID */
-    numberOfBitsLeft-=minNumberOfBits;	/* Subtract for ID,count */
+		if (writeFlag) {
+			BsPutBit(ptrBs,ID_FIL,LEN_SE_ID);	/* Write fill_element ID */
+		}
+		numberOfBitsLeft-=minNumberOfBits;	/* Subtract for ID,count */
 
-    numberOfBytes=(int)(numberOfBitsLeft/LEN_BYTE);
-    maxCount = (1<<LEN_F_CNT) - 1;  /* Max count without escaping */
+		numberOfBytes=(int)(numberOfBitsLeft/LEN_BYTE);
+		maxCount = (1<<LEN_F_CNT) - 1;  /* Max count without escaping */
 
-    /* if we have less than maxCount bytes, write them now */
-    if (numberOfBytes<maxCount) {
-      int i;
-      BsPutBit(ptrBs,numberOfBytes,LEN_F_CNT);
-      for (i=0;i<numberOfBytes;i++) {
-	BsPutBit(ptrBs,0,LEN_BYTE);
-      }
-    /* otherwise, we need to write an escape count */
-    } else {
-      int maxEscapeCount,maxNumberOfBytes,escCount;
-      int i;
-      BsPutBit(ptrBs,maxCount,LEN_F_CNT);
-      maxEscapeCount = (1<<LEN_BYTE) - 1;  /* Max escape count */
-      maxNumberOfBytes = maxCount + maxEscapeCount;
-      numberOfBytes = (numberOfBytes > maxNumberOfBytes ) ?
-	(maxNumberOfBytes) : (numberOfBytes);
-      escCount = numberOfBytes - maxCount;
-      BsPutBit(ptrBs,escCount,LEN_BYTE);
-      for (i=0;i<numberOfBytes-1;i++) {
-	BsPutBit(ptrBs,0,LEN_BYTE);
-      }
-    }
-    numberOfBitsLeft -= LEN_BYTE*numberOfBytes;
-  }
-  return numberOfBitsLeft;
+		/* if we have less than maxCount bytes, write them now */
+		if (numberOfBytes<maxCount) {
+			int i;
+			if (writeFlag) {
+				BsPutBit(ptrBs,numberOfBytes,LEN_F_CNT);
+				for (i=0;i<numberOfBytes;i++) {
+					BsPutBit(ptrBs,0,LEN_BYTE);
+				}
+			}
+			/* otherwise, we need to write an escape count */
+		} else {
+			int maxEscapeCount,maxNumberOfBytes,escCount;
+			int i;
+			if (writeFlag) {
+				BsPutBit(ptrBs,maxCount,LEN_F_CNT);
+			}
+			maxEscapeCount = (1<<LEN_BYTE) - 1;  /* Max escape count */
+			maxNumberOfBytes = maxCount + maxEscapeCount;
+			numberOfBytes = (numberOfBytes > maxNumberOfBytes ) ?
+				(maxNumberOfBytes) : (numberOfBytes);
+			escCount = numberOfBytes - maxCount;
+			if (writeFlag) {
+				BsPutBit(ptrBs,escCount,LEN_BYTE);
+				for (i=0;i<numberOfBytes-1;i++) {
+					BsPutBit(ptrBs,0,LEN_BYTE);
+				}
+			}
+		}
+		numberOfBitsLeft -= LEN_BYTE*numberOfBytes;
+	}
+	return numberOfBitsLeft;
 }
+
+int WriteADTSHeader(AACQuantInfo* quantInfo,   /* AACQuantInfo structure */
+					BsBitStream* fixedStream,  /* Pointer to bitstream */
+					int used_bits,
+					int writeFlag)             /* 1 means write, 0 means count only */
+{
+	if (writeFlag) {
+		/* Fixed ADTS header */
+		BsPutBit(fixedStream, 0xFFFF, 12); // 12 bit Syncword
+		BsPutBit(fixedStream, 1, 1); // ID
+		BsPutBit(fixedStream, 0, 2); // layer
+		BsPutBit(fixedStream, 1, 1); // protection absent
+		BsPutBit(fixedStream, quantInfo->profile, 2); // profile
+		BsPutBit(fixedStream, quantInfo->srate_idx, 4); // sampling rate
+		BsPutBit(fixedStream, 0, 1); // private bit
+		BsPutBit(fixedStream, 1, 3); // ch. config (must be > 0)
+		BsPutBit(fixedStream, 0, 1); // original/copy
+		BsPutBit(fixedStream, 0, 1); // home
+		BsPutBit(fixedStream, 0, 2); // emphasis
+
+		/* Variable ADTS header */
+		BsPutBit(fixedStream, 0, 1); // copyr. id. bit
+		BsPutBit(fixedStream, 0, 1); // copyr. id. start
+		BsPutBit(fixedStream, bit2byte(used_bits), 13); // number of bits
+		BsPutBit(fixedStream, 0x7FF, 11); // buffer fullness (0x7FF for VBR)
+		BsPutBit(fixedStream, 0, 2); // raw data blocks (0+1=1)
+	}
+
+	return 58;
+}
+
 
 /*****************************************************************************/
 /* WriteSCE(...), write a single-channel element to the bitstream.           */
 /*****************************************************************************/
 int WriteSCE(AACQuantInfo* quantInfo,   /* AACQuantInfo structure */
-	     int tag,
-	     BsBitStream* fixedStream,  /* Pointer to bitstream */
-	     int writeFlag)             /* 1 means write, 0 means count only */
+			 int tag,
+			 BsBitStream* fixedStream,  /* Pointer to bitstream */
+			 int writeFlag)             /* 1 means write, 0 means count only */
 {
-  int bit_count=0;
+	int bit_count=0;
 
-  if (writeFlag) {
-    /* write ID_SCE, single_element_channel() identifier */
-    BsPutBit(fixedStream,ID_SCE,LEN_SE_ID);  
+	if (writeFlag) {
+		/* write ID_SCE, single_element_channel() identifier */
+		BsPutBit(fixedStream,ID_SCE,LEN_SE_ID);  
 
-    /* write the element_identifier_tag */
-    BsPutBit(fixedStream,tag,LEN_TAG);  
-  }
- 
-  bit_count += LEN_SE_ID;
-  bit_count += LEN_TAG;
-  
-  /* Write an individual_channel_stream element */
-  bit_count += WriteICS(quantInfo,0,fixedStream,writeFlag);
- 
-  return bit_count;
+		/* write the element_identifier_tag */
+		BsPutBit(fixedStream,tag,LEN_TAG);  
+	}
+	
+	bit_count += LEN_SE_ID;
+	bit_count += LEN_TAG;
+	
+	/* Write an individual_channel_stream element */
+	bit_count += WriteICS(quantInfo,0,fixedStream,writeFlag);
+	
+	return bit_count;
 }
 
 /*****************************************************************************/
 /* WriteLFE(...), write a lfe-channel element to the bitstream.              */
 /*****************************************************************************/
 int WriteLFE(AACQuantInfo* quantInfo,   /* AACQuantInfo structure */
-	     int tag,
-	     BsBitStream* fixedStream,  /* Pointer to bitstream */
-	     int writeFlag)             /* 1 means write, 0 means count only */
+			 int tag,
+			 BsBitStream* fixedStream,  /* Pointer to bitstream */
+			 int writeFlag)             /* 1 means write, 0 means count only */
 {
-  int bit_count=0;
-  
-  if (writeFlag) {
-    /* write ID_LFE, lfe_element_channel() identifier */
-    BsPutBit(fixedStream,ID_LFE,LEN_SE_ID);  
+	int bit_count=0;
+	
+	if (writeFlag) {
+		/* write ID_LFE, lfe_element_channel() identifier */
+		BsPutBit(fixedStream,ID_LFE,LEN_SE_ID);  
 
-    /* write the element_identifier_tag */
-    BsPutBit(fixedStream,tag,LEN_TAG);  
-  }
- 
-  bit_count += LEN_SE_ID;
-  bit_count += LEN_TAG;
-  
-  /* Write an individual_channel_stream element */
-  bit_count += WriteICS(quantInfo,0,fixedStream,writeFlag);
- 
-  return bit_count;
+		/* write the element_identifier_tag */
+		BsPutBit(fixedStream,tag,LEN_TAG);  
+	}
+	
+	bit_count += LEN_SE_ID;
+	bit_count += LEN_TAG;
+	
+	/* Write an individual_channel_stream element */
+	bit_count += WriteICS(quantInfo,0,fixedStream,writeFlag);
+	
+	return bit_count;
 }
 
 
@@ -133,56 +173,56 @@ int WriteLFE(AACQuantInfo* quantInfo,   /* AACQuantInfo structure */
 /*****************************************************************************/
 int WriteCPE(AACQuantInfo* quantInfoL,   /* AACQuantInfo structure, left */
              AACQuantInfo* quantInfoR,   /* AACQuantInfo structure, right */
-	     int tag,
-	     int commonWindow,          /* common_window flag */
-	     MS_Info* ms_info,          /* MS stereo information */
-	     BsBitStream* fixedStream,  /* Pointer to bitstream */
-	     int writeFlag)             /* 1 means write, 0 means count only */
+			 int tag,
+			 int commonWindow,          /* common_window flag */
+			 MS_Info* ms_info,          /* MS stereo information */
+			 BsBitStream* fixedStream,  /* Pointer to bitstream */
+			 int writeFlag)             /* 1 means write, 0 means count only */
 {
-  int bit_count=0;
+	int bit_count=0;
 
-  if (writeFlag) {
-    /* write ID_CPE, single_element_channel() identifier */
-    BsPutBit(fixedStream,ID_CPE,LEN_SE_ID);  
+	if (writeFlag) {
+		/* write ID_CPE, single_element_channel() identifier */
+		BsPutBit(fixedStream,ID_CPE,LEN_SE_ID);  
 
-    /* write the element_identifier_tag */
-    BsPutBit(fixedStream,tag,LEN_TAG);  /* Currently, this is zero */
+		/* write the element_identifier_tag */
+		BsPutBit(fixedStream,tag,LEN_TAG);  /* Currently, this is zero */
 
-    /* common_window? */
-    BsPutBit(fixedStream,commonWindow,LEN_COM_WIN);
-  }
- 
-  bit_count += LEN_SE_ID;
-  bit_count += LEN_TAG;
-  bit_count += LEN_COM_WIN;
-
-  /* if common_window, write ics_info */
-  if (commonWindow) {
-    int numWindows,maxSfb;
-    bit_count = WriteICSInfo(quantInfoL,fixedStream,writeFlag);
-    numWindows=quantInfoL->num_window_groups;
-    maxSfb = quantInfoL->max_sfb;
-    if (writeFlag) {
-      BsPutBit(fixedStream,ms_info->is_present,LEN_MASK_PRES);
-      if (ms_info->is_present==1) {
-	int g;
-	int b;
-	for (g=0;g<numWindows;g++) {
-	  for (b=0;b<maxSfb;b++) {
-	    BsPutBit(fixedStream,ms_info->ms_used[g*maxSfb+b],LEN_MASK);
-	  }
+		/* common_window? */
+		BsPutBit(fixedStream,commonWindow,LEN_COM_WIN);
 	}
-      }
-    }
-    bit_count += LEN_MASK_PRES;
-    bit_count += (ms_info->is_present==1)*numWindows*maxSfb*LEN_MASK;
-  }
-  
-  /* Write individual_channel_stream elements */
-  bit_count += WriteICS(quantInfoL,commonWindow,fixedStream,writeFlag);
-  bit_count += WriteICS(quantInfoR,commonWindow,fixedStream,writeFlag);
- 
-  return bit_count;
+	
+	bit_count += LEN_SE_ID;
+	bit_count += LEN_TAG;
+	bit_count += LEN_COM_WIN;
+
+	/* if common_window, write ics_info */
+	if (commonWindow) {
+		int numWindows,maxSfb;
+		bit_count = WriteICSInfo(quantInfoL,fixedStream,writeFlag);
+		numWindows=quantInfoL->num_window_groups;
+		maxSfb = quantInfoL->max_sfb;
+		if (writeFlag) {
+			BsPutBit(fixedStream,ms_info->is_present,LEN_MASK_PRES);
+			if (ms_info->is_present==1) {
+				int g;
+				int b;
+				for (g=0;g<numWindows;g++) {
+					for (b=0;b<maxSfb;b++) {
+						BsPutBit(fixedStream,ms_info->ms_used[g*maxSfb+b],LEN_MASK);
+					}
+				}
+			}
+		}
+		bit_count += LEN_MASK_PRES;
+		bit_count += (ms_info->is_present==1)*numWindows*maxSfb*LEN_MASK;
+	}
+	
+	/* Write individual_channel_stream elements */
+	bit_count += WriteICS(quantInfoL,commonWindow,fixedStream,writeFlag);
+	bit_count += WriteICS(quantInfoR,commonWindow,fixedStream,writeFlag);
+	
+	return bit_count;
 }
 
 
@@ -190,45 +230,45 @@ int WriteCPE(AACQuantInfo* quantInfoL,   /* AACQuantInfo structure, left */
 /* WriteICS(...), write an individual_channel_stream element to the bitstream.*/
 /*****************************************************************************/
 int WriteICS(AACQuantInfo* quantInfo,    /* AACQuantInfo structure */
-	     int commonWindow,           /* Common window flag */
-	     BsBitStream* fixed_stream,  /* Pointer to bitstream */
-	     int writeFlag)              /* 1 means write, 0 means count only */
+			 int commonWindow,           /* Common window flag */
+			 BsBitStream* fixed_stream,  /* Pointer to bitstream */
+			 int writeFlag)              /* 1 means write, 0 means count only */
 {
-  /* this function writes out an individual_channel_stream to the bitstream and */
-  /* returns the number of bits written to the bitstream */
-  int bit_count = 0;
-  int output_book_vector[SFB_NUM_MAX*2];
-  writeFlag = ( writeFlag != 0 );
+	/* this function writes out an individual_channel_stream to the bitstream and */
+	/* returns the number of bits written to the bitstream */
+	int bit_count = 0;
+	int output_book_vector[SFB_NUM_MAX*2];
+	writeFlag = ( writeFlag != 0 );
 
-  /* Write the 8-bit global_gain */
-  BsPutBit(fixed_stream,quantInfo->common_scalefac,writeFlag*LEN_GLOB_GAIN);  
-  bit_count += LEN_GLOB_GAIN;
+	/* Write the 8-bit global_gain */
+	BsPutBit(fixed_stream,quantInfo->common_scalefac,writeFlag*LEN_GLOB_GAIN);  
+	bit_count += LEN_GLOB_GAIN;
 
-  /* Write ics information */
-  if (!commonWindow) {
-    bit_count += WriteICSInfo(quantInfo,fixed_stream,writeFlag);
-  }
+	/* Write ics information */
+	if (!commonWindow) {
+		bit_count += WriteICSInfo(quantInfo,fixed_stream,writeFlag);
+	}
 
-  /* Write section_data() information to the bitstream */
-  bit_count += sort_book_numbers(quantInfo,output_book_vector,fixed_stream,writeFlag);
+	/* Write section_data() information to the bitstream */
+	bit_count += sort_book_numbers(quantInfo,output_book_vector,fixed_stream,writeFlag);
 
-  /* Write scale_factor_data() information */
-  bit_count += write_scalefactor_bitstream(fixed_stream,writeFlag,quantInfo);
+	/* Write scale_factor_data() information */
+	bit_count += write_scalefactor_bitstream(fixed_stream,writeFlag,quantInfo);
 
-  /* Write pulse_data() */
-  bit_count += WritePulseData(quantInfo,fixed_stream,writeFlag);
+	/* Write pulse_data() */
+	bit_count += WritePulseData(quantInfo,fixed_stream,writeFlag);
 
-  /* Write TNS data */
-  bit_count += WriteTNSData(quantInfo,fixed_stream,writeFlag);
+	/* Write TNS data */
+	bit_count += WriteTNSData(quantInfo,fixed_stream,writeFlag);
 	
-  /* Write gain control data */
-  bit_count += WriteGainControlData(quantInfo,fixed_stream,writeFlag);
+	/* Write gain control data */
+	bit_count += WriteGainControlData(quantInfo,fixed_stream,writeFlag);
 
-  /* Write out spectral_data() */
-  bit_count += WriteSpectralData(quantInfo,fixed_stream,writeFlag);
+	/* Write out spectral_data() */
+	bit_count += WriteSpectralData(quantInfo,fixed_stream,writeFlag);
 
-  /* Return number of bits */
-  return(bit_count);
+	/* Return number of bits */
+	return(bit_count);
 }
 
 

@@ -54,7 +54,13 @@ extern int max_pred_sfb;
 /* Write AAC fill bits to the bitStream                                      */
 /*****************************************************************************/
 int WriteAACFillBits(BsBitStream* ptrBs,  /* Pointer to bit stream */
-		     int numBits);        /* Number of bits neede to fill */
+		     int numBits,        /* Number of bits neede to fill */
+				int writeFlag);
+
+int WriteADTSHeader(AACQuantInfo* quantInfo,   /* AACQuantInfo structure */
+					BsBitStream* fixedStream,  /* Pointer to bitstream */
+					int used_bits,
+					int writeFlag);            /* 1 means write, 0 means count only */
 
 /*****************************************************************************/
 /* WriteSCE(...), write a single-channel element to the bitstream.           */

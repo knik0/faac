@@ -191,9 +191,14 @@ void EncTfInit (faacAACStream *as, int VBR_setting)
 		quantInfo[chanNum].prev_window_shape = WS_SIN;
 	}
 
+	for (chanNum=0;chanNum<MAX_TIME_CHANNELS;chanNum++) {
+		quantInfo[chanNum].srate_idx = srate_idx;
+		quantInfo[chanNum].profile = as->profile;
+	}
+
 	make_MDCT_windows();
 	make_FFT_order();
-        initrft();
+	initrft();
 }
 
 /*****************************************************************************************
@@ -554,6 +559,7 @@ int EncTfFrame (faacAACStream *as, BsBitStream  *fixed_stream)
 		int chanNum;   
 		int numFillBits;
 		int bitsLeftAfterFill;
+		int orig_used_bits;
 
 		/* bit budget */
 		num_bits_available = (long)(average_bits + available_bitreservoir_bits - used_bits);
@@ -754,19 +760,69 @@ int EncTfFrame (faacAACStream *as, BsBitStream  *fixed_stream)
 		/**********************************/
 		/* Write out all encoded channels */
 		/**********************************/
+		used_bits = WriteADTSHeader(&quantInfo[0], fixed_stream, used_bits, 0);
+
 		for (chanNum=0;chanNum<max_ch;chanNum++) {
 			if (channelInfo[chanNum].present) {
 				/* Write out a single_channel_element */
 				if (!channelInfo[chanNum].cpe) {
 					/* Write out sce */ /* BugFix by YT  '+=' sould be '=' */
-					used_bits = WriteSCE(&quantInfo[chanNum],   /* Quantization information */
+					used_bits += WriteSCE(&quantInfo[chanNum],   /* Quantization information */
+						channelInfo[chanNum].tag,
+						fixed_stream,           /* Bitstream */
+						0);                     /* Write flag, 1 means write */
+				} else {
+					if (channelInfo[chanNum].ch_is_left) {
+						/* Write out cpe */
+						used_bits += WriteCPE(&quantInfo[chanNum],   /* Quantization information,left */
+							&quantInfo[channelInfo[chanNum].paired_ch],   /* Right */
+							channelInfo[chanNum].tag,
+							channelInfo[chanNum].common_window,    /* common window */
+							&(channelInfo[chanNum].ms_info),
+							fixed_stream,           /* Bitstream */
+							0);                     /* Write flag, 1 means write */
+					}
+				}  /* if (!channelInfo[chanNum].cpe)  else */
+			} /* if (chann...*/
+		} /* for (chanNum...*/
+
+		orig_used_bits = used_bits;
+
+		/* Compute how many fill bits are needed to avoid overflowing bit reservoir */
+		/* Save room for ID_END terminator */
+		if (used_bits < (8 - LEN_SE_ID) ) {
+			numFillBits = 8 - LEN_SE_ID - used_bits;
+		} else {
+			numFillBits = 0;
+		}
+		
+		/* Write AAC fill_elements, smallest fill element is 7 bits. */
+		/* Function may leave up to 6 bits left after fill, so tell it to fill a few extra */
+		numFillBits += 6;
+		bitsLeftAfterFill=WriteAACFillBits(fixed_stream,numFillBits, 0);
+		used_bits += (numFillBits - bitsLeftAfterFill);
+
+		/* Write ID_END terminator */
+		used_bits += LEN_SE_ID;
+		
+		/* Now byte align the bitstream */
+		used_bits += ByteAlign(fixed_stream, 0);
+
+		WriteADTSHeader(&quantInfo[0], fixed_stream, used_bits, 1);
+
+		for (chanNum=0;chanNum<max_ch;chanNum++) {
+			if (channelInfo[chanNum].present) {
+				/* Write out a single_channel_element */
+				if (!channelInfo[chanNum].cpe) {
+					/* Write out sce */ /* BugFix by YT  '+=' sould be '=' */
+					WriteSCE(&quantInfo[chanNum],   /* Quantization information */
 						channelInfo[chanNum].tag,
 						fixed_stream,           /* Bitstream */
 						1);                     /* Write flag, 1 means write */
 				} else {
 					if (channelInfo[chanNum].ch_is_left) {
 						/* Write out cpe */
-						used_bits = WriteCPE(&quantInfo[chanNum],   /* Quantization information,left */
+						WriteCPE(&quantInfo[chanNum],   /* Quantization information,left */
 							&quantInfo[channelInfo[chanNum].paired_ch],   /* Right */
 							channelInfo[chanNum].tag,
 							channelInfo[chanNum].common_window,    /* common window */
@@ -780,24 +836,22 @@ int EncTfFrame (faacAACStream *as, BsBitStream  *fixed_stream)
 
 		/* Compute how many fill bits are needed to avoid overflowing bit reservoir */
 		/* Save room for ID_END terminator */
-		if (used_bits < (8 - LEN_SE_ID) ) {
+		if (orig_used_bits < (8 - LEN_SE_ID) ) {
 			numFillBits = 8 - LEN_SE_ID - used_bits;
 		} else {
 			numFillBits = 0;
 		}
-		
+
 		/* Write AAC fill_elements, smallest fill element is 7 bits. */
 		/* Function may leave up to 6 bits left after fill, so tell it to fill a few extra */
 		numFillBits += 6;
-		bitsLeftAfterFill=WriteAACFillBits(fixed_stream,numFillBits);
-		used_bits += (numFillBits - bitsLeftAfterFill);
+		bitsLeftAfterFill=WriteAACFillBits(fixed_stream,numFillBits, 1);
 
 		/* Write ID_END terminator */
 		BsPutBit(fixed_stream,ID_END,LEN_SE_ID);
-		used_bits += LEN_SE_ID;
 		
 		/* Now byte align the bitstream */
-		used_bits += ByteAlign(fixed_stream);
+		ByteAlign(fixed_stream, 1);
 
 	} /* Quantization and coding block */
 	return FNO_ERROR;

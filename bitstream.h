@@ -9,6 +9,12 @@
 #define max(a,b) ( (a) > (b) ? (a) : (b) )
 #endif
 
+#define BYTE_NUMBIT 8		/* bits in byte (char) */
+#define LONG_NUMBIT 32		/* bits in unsigned long */
+#define bit2byte(a) (((a)+BYTE_NUMBIT-1)/BYTE_NUMBIT)
+#define byte2bit(a) ((a)*BYTE_NUMBIT)
+
+
 typedef struct _bitstream
 {
   unsigned char *data;		/* data bits */
@@ -34,7 +40,7 @@ int BsPutBit (BsBitStream *stream,
 			  int numBit);
 
 /* ByteAlign(...), used to byte align bitstream */
-int ByteAlign(BsBitStream* ptrBs);
+int ByteAlign(BsBitStream* ptrBs, int writeFlag);
 
 #endif
 
