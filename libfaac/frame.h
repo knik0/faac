@@ -16,7 +16,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: frame.h,v 1.14 2001/09/09 16:03:16 menno Exp $
+ * $Id: frame.h,v 1.15 2001/09/21 12:40:02 eraser Exp $
  */
 
 #ifndef FRAME_H
@@ -66,6 +66,14 @@ typedef struct faacEncConfiguration
 
     /* AAC file frequency bandwidth */
     unsigned int bandWidth;
+
+	/*
+		Bitstream output format, meaning:
+		0 - Raw
+		1 - ADTS
+		/AV
+	*/
+	unsigned int outputFormat;
 
 } faacEncConfiguration, *faacEncConfigurationPtr;
 

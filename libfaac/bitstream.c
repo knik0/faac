@@ -24,7 +24,7 @@ copyright notice must be included in all copies or derivative works.
 Copyright (c) 1997.
 **********************************************************************/
 /*
- * $Id: bitstream.c,v 1.20 2001/09/04 18:39:35 menno Exp $
+ * $Id: bitstream.c,v 1.21 2001/09/21 12:40:02 eraser Exp $
  */
 
 #include <stdlib.h>
@@ -48,7 +48,11 @@ int WriteBitstream(faacEncHandle hEncoder,
 
     CountBitstream(hEncoder, coderInfo, channelInfo, bitStream, numChannel);
 
-    bits += WriteADTSHeader(hEncoder, bitStream, 1);
+	if(hEncoder->config.outputFormat == 1){
+		bits += WriteADTSHeader(hEncoder, bitStream, 1);
+	}else{
+		bits = 0; // compilier will remove it, byt anyone will see that current size of bitstream is 0
+	}
 
     for (channel = 0; channel < numChannel; channel++) {
 
@@ -127,7 +131,13 @@ static int CountBitstream(faacEncHandle hEncoder,
     int bits = 0;
     int bitsLeftAfterFill, numFillBits;
 
-    bits += WriteADTSHeader(hEncoder, bitStream, 0);
+
+	if(hEncoder->config.outputFormat == 1){
+		bits += WriteADTSHeader(hEncoder, bitStream, 0);
+	}else{
+		bits = 0; // compilier will remove it, byt anyone will see that current size of bitstream is 0
+	}
+
 
     for (channel = 0; channel < numChannel; channel++) {
 

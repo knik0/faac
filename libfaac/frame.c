@@ -16,7 +16,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: frame.c,v 1.25 2001/09/09 16:03:16 menno Exp $
+ * $Id: frame.c,v 1.26 2001/09/21 12:40:02 eraser Exp $
  */
 
 /*
@@ -30,6 +30,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <assert.h>
 
 #include "frame.h"
 #include "coder.h"
@@ -102,6 +103,9 @@ int FAACAPI faacEncSetConfiguration(faacEncHandle hEncoder,
     hEncoder->config.aacObjectType = config->aacObjectType;
     hEncoder->config.mpegVersion = config->mpegVersion;
     hEncoder->config.bandWidth = config->bandWidth;
+	hEncoder->config.outputFormat = config->outputFormat;
+
+	assert((hEncoder->config.outputFormat == 0) || (hEncoder->config.outputFormat == 1));
 
     /* No SSR supported for now */
     if (hEncoder->config.aacObjectType == SSR)
@@ -157,6 +161,13 @@ faacEncHandle FAACAPI faacEncOpen(unsigned long sampleRate,
     hEncoder->config.useTns = 0;
     hEncoder->config.bitRate = 64000; /* default bitrate / channel */
     hEncoder->config.bandWidth = 18000; /* default bandwidth */
+
+	/*
+		by default we have to be compatible with all previous software
+		which assumes that we will generate ADTS
+		/AV
+	*/
+	hEncoder->config.outputFormat = 1;
 
     /* find correct sampling rate depending parameters */
     hEncoder->srInfo = &srInfo[hEncoder->sampleRateIdx];

@@ -16,7 +16,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: faac.h,v 1.16 2001/09/07 11:26:04 menno Exp $
+ * $Id: faac.h,v 1.17 2001/09/21 12:39:01 eraser Exp $
  */
 
 #ifndef FAACLIB_H
@@ -37,8 +37,8 @@ extern "C" {
   #endif
 #endif
 
-#define FAACENC_VERSION 1.9
-#define FAACENC_VERSIONB 1 /* If 1 this version is still in beta */
+#define FAACENC_VERSION 1.5
+#define FAACENC_VERSIONB 0 /* If 1 this version is still in beta */
 
 /* MPEG ID's */
 #define MPEG2 1
@@ -52,50 +52,58 @@ extern "C" {
 
 typedef struct faacEncConfiguration
 {
-    /* MPEG version, 2 or 4 */
-    unsigned int mpegVersion;
+	/* MPEG version, 2 or 4 */
+	unsigned int mpegVersion;
 
-    /* AAC object type */
-    unsigned int aacObjectType;
+	/* AAC object type */
+	unsigned int aacObjectType;
 
-    /* Allow mid/side coding */
-    unsigned int allowMidside;
+	/* Allow mid/side coding */
+	unsigned int allowMidside;
 
-    /* Use one of the channels as LFE channel */
-    unsigned int useLfe;
+	/* Use one of the channels as LFE channel */
+	unsigned int useLfe;
 
-    /* Use Temporal Noise Shaping */
-    unsigned int useTns;
+	/* Use Temporal Noise Shaping */
+	unsigned int useTns;
 
-    /* bitrate / channel of AAC file */
-    unsigned long bitRate;
+	/* bitrate / channel of AAC file */
+	unsigned long bitRate;
 
-    /* AAC file frequency bandwidth */
-    unsigned int bandWidth;
+	/* AAC file frequency bandwidth */
+	unsigned int bandWidth;
+
+	/*
+		Bitstream output format, meaning:
+		0 - Raw
+		1 - ADTS
+		/AV
+	*/
+	unsigned int outputFormat;
 
 } faacEncConfiguration, *faacEncConfigurationPtr;
 
 typedef void *faacEncHandle;
 
 
-int FAACAPI faacEncGetDecoderSpecificInfo(faacEncHandle hEncoder,
-                                          unsigned char** ppBuffer,
-                                          unsigned long* pSizeOfDecoderSpecificInfo);
-
 faacEncConfigurationPtr FAACAPI faacEncGetCurrentConfiguration(faacEncHandle hEncoder);
 int FAACAPI faacEncSetConfiguration (faacEncHandle hEncoder, faacEncConfigurationPtr config);
 
 faacEncHandle FAACAPI faacEncOpen(unsigned long sampleRate,
-                                  unsigned int numChannels,
-                                  unsigned long *inputSamples,
-                                  unsigned long *maxOutputBytes);
+								  unsigned int numChannels,
+								  unsigned long *inputSamples,
+								  unsigned long *maxOutputBytes);
+
+int FAACAPI faacEncGetDecoderSpecificInfo(faacEncHandle hEncoder,
+										  unsigned char** ppBuffer,
+										  unsigned long* pSizeOfDecoderSpecificInfo);
 
 int FAACAPI faacEncEncode(faacEncHandle hEncoder,
-                          short *inputBuffer,
-                          unsigned int samplesInput,
-                          void *outputBuffer,
-                          unsigned int bufferSize
-                          );
+						  short *inputBuffer,
+						  unsigned int samplesInput,
+						  void *outputBuffer,
+						  unsigned int bufferSize
+						  );
 
 int FAACAPI faacEncClose(faacEncHandle hEncoder);
 
