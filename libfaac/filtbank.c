@@ -22,7 +22,7 @@ Copyright(c)1996.
  *                                                                           *
  ****************************************************************************/
 /*
- * $Id: filtbank.c,v 1.12 2003/11/24 18:06:57 knik Exp $
+ * $Id: filtbank.c,v 1.13 2005/02/02 07:51:12 sur Exp $
  */
 
 /*
@@ -464,10 +464,10 @@ static void MDCT( FFT_Tables *fft_tables, double *data, int N )
 
     /* Perform in-place complex FFT of length N/4 */
     switch (N) {
-    case 256:
+    case BLOCK_LEN_SHORT * 2:
         fft( fft_tables, xr, xi, 6);
         break;
-    case 2048:
+    case BLOCK_LEN_LONG * 2:
         fft( fft_tables, xr, xi, 9);
     }
 
@@ -536,10 +536,10 @@ static void IMDCT( FFT_Tables *fft_tables, double *data, int N)
 
     /* Perform in-place complex IFFT of length N/4 */
     switch (N) {
-    case 256:
+    case BLOCK_LEN_SHORT * 2:
         ffti( fft_tables, xr, xi, 6);
         break;
-    case 2048:
+    case BLOCK_LEN_LONG * 2:
         ffti( fft_tables, xr, xi, 9);
     }
 
