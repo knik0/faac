@@ -41,8 +41,6 @@ void rdft( double *fr, unsigned lg2n )
 {
 rfftw_plan rdft_plan;
 double fo[lg2n];
-fftw_init();
-// FIXME: has to be placed elsewhere
 switch(lg2n) {
     case 11: rfftw_one(rdft_plan11,fr,fo);
 	break;
@@ -55,8 +53,6 @@ switch(lg2n) {
 	printf("ERROR: rdft with size %i",lg2n);
 }
 	memcpy(fr,fo,sizeof(fr));
-fftw_destroy();
-/*FIXME: has to be placed elsewhere*/
 }
 
 void spectrum( double *f, unsigned lg2n )

@@ -16,7 +16,7 @@
 #include "aac_se_enc.h"
 #include "nok_ltp_enc.h"
 #include "winswitch.h"
-#include "transfo.h"
+#include "rdft.h"
 
 #define SQRT2 C_SQRT2
 
@@ -91,6 +91,7 @@ void EncTfFree (void)
 	for (chanNum=0;chanNum<MAX_TIME_CHANNELS+2;chanNum++) {
 		if (DTimeSigLookAheadBuf[chanNum]) free(DTimeSigLookAheadBuf[chanNum]);
 	}
+	fftw_destroy();
 }
 
 
@@ -193,6 +194,7 @@ void EncTfInit (faacAACConfig *ac, int VBR_setting)
 
 	make_MDCT_windows();
 	make_FFT_order();
+	fftw_init();
 }
 
 /*****************************************************************************************
