@@ -105,7 +105,7 @@ enum WIN_SWITCH_MODE {
 
 #define MAX_SHORT_WINDOWS 8
 
-/* if static memory allocation is used, this value tells the max. nr of 
+/* if static memory allocation is used, this value tells the max. nr of
    audio channels to be supported */
 /*#define MAX_TIME_CHANNELS (MAX_CHANNELS)*/
 #define MAX_TIME_CHANNELS 2 //6
@@ -114,14 +114,11 @@ enum WIN_SWITCH_MODE {
 #define MAX_SCFAC_BANDS ((NSFB_SHORT+1)*MAX_SHORT_IN_LONG_BLOCK)
 
 void freq2buffer(
-  double           p_in_data[], 
+  double           p_in_data[],
   double           p_out_data[],
   double           p_overlap[],
   enum WINDOW_TYPE block_type,
-  int              nlong,            /* shift length for long windows   */
-  int              nmed,             /* shift length for medium windows */
-  int              nshort,           /* shift length for short windows  */
-  Window_shape     wfun_select,      /* offers the possibility to select different window functions */
+//  int              nlong,            /* shift length for long windows   */
   Mdct_in	   overlap_select);    /* select imdct output *TK*	*/
 
 void buffer2freq(                    /* Input: Time signal              */
@@ -129,14 +126,11 @@ void buffer2freq(                    /* Input: Time signal              */
   double           p_out_mdct[],
   double           p_overlap[],
   enum WINDOW_TYPE block_type,
-  Window_shape     wfun_select,      /* offers the possibility to select different window functions */
-  int              nlong,            /* shift length for long windows   */
-  int              nmed,             /* shift length for medium windows */
-  int              nshort,            /* shift length for short windows  */
+//  Window_shape     wfun_select,      /* offers the possibility to select different window functions */
   Mdct_in        overlap_select      /* YT 970615 for Son_PP */
 );
 
-void imdct(double in_data[], double out_data[], int len);
+void make_MDCT_windows(void);
 
 void specFilter (double p_in[],
 				 double p_out[],

@@ -118,9 +118,9 @@ void EncTfInit (faacAACConfig *ac, int VBR_setting)
 	int SampleRates[] = {
 		96000,88200,64000,48000,44100,32000,24000,22050,16000,12000,11025,8000,0
 	};
-	int BitRates[] = {
-		64000,80000,96000,112000,128000,160000,192000,224000,256000,0
-	};
+//	int BitRates[] = {
+//		64000,80000,96000,112000,128000,160000,192000,224000,256000,0
+//	};
 
 	sampling_rate = ac->out_sampling_rate;
 	bit_rate = ac->bit_rate;
@@ -188,6 +188,7 @@ void EncTfInit (faacAACConfig *ac, int VBR_setting)
 		nok_init_lt_pred (&nok_lt_status[chanNum]);
 		quantInfo[chanNum].ltpInfo = &nok_lt_status[chanNum];  /* Set pointer to LTP data */
 	}
+        make_MDCT_windows();
 }
 
 /*****************************************************************************************
@@ -236,7 +237,7 @@ int EncTfFrame (faacAACStream *as, BsBitStream  *fixed_stream)
 	int    nr_of_sfb[MAX_TIME_CHANNELS], sfb_width_table[MAX_TIME_CHANNELS][MAX_SCFAC_BANDS];
 	int sfb_offset_table[MAX_TIME_CHANNELS][MAX_SCFAC_BANDS+1];
 
-	int no_sub_win, sub_win_size;
+//	int no_sub_win, sub_win_size;
 
 	/* structures holding the output of the psychoacoustic model */
 	CH_PSYCH_OUTPUT_LONG chpo_long[MAX_TIME_CHANNELS+2];
@@ -388,8 +389,8 @@ int EncTfFrame (faacAACStream *as, BsBitStream  *fixed_stream)
 
 			switch( block_type[chanNum] ) {
 			case ONLY_SHORT_WINDOW  :
-				no_sub_win   = short_win_in_long;
-				sub_win_size = block_size_samples/short_win_in_long;
+//				no_sub_win   = short_win_in_long;
+//				sub_win_size = block_size_samples/short_win_in_long;
 				quantInfo[chanNum].max_sfb = max_sfb_s[srate_idx];
 #if 0
 				quantInfo[chanNum].num_window_groups = 4;
@@ -411,8 +412,8 @@ int EncTfFrame (faacAACStream *as, BsBitStream  *fixed_stream)
 				break;
 
 			default:
-				no_sub_win   = 1;
-				sub_win_size = block_size_samples;
+//				no_sub_win   = 1;
+//				sub_win_size = block_size_samples;
 				quantInfo[chanNum].max_sfb = max_sfb_l[srate_idx];
 				quantInfo[chanNum].num_window_groups = 1;
 				quantInfo[chanNum].window_group_length[0]=1;
@@ -448,10 +449,10 @@ int EncTfFrame (faacAACStream *as, BsBitStream  *fixed_stream)
 				spectral_line_vector[chanNum],
 				overlap_buffer[chanNum],
 				block_type[chanNum],
-				quantInfo[chanNum].window_shape,
-				block_size_samples,
-				block_size_samples/2,
-				block_size_samples/short_win_in_long,
+//				quantInfo[chanNum].window_shape,
+//				block_size_samples,
+//				block_size_samples/2,
+//				block_size_samples/short_win_in_long,
 				MOVERLAPPED
 				);
 

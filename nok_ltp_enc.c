@@ -34,8 +34,8 @@ Copyright (c)1997.
 /**************************************************************************
   Version Control Information			Method: CVS
   Identifiers:
-  $Revision: 1.3 $
-  $Date: 2000/01/08 13:31:28 $ (check in)
+  $Revision: 1.4 $
+  $Date: 2000/01/29 17:11:25 $ (check in)
   $Author: lenox $
   *************************************************************************/
 
@@ -202,9 +202,10 @@ nok_ltp_enc(double *p_spectrum, double *p_time_signal, enum WINDOW_TYPE win_type
 			&lt_status->weight_idx, lt_status->delay[0], 2 * block_size_long);
 
 		/* Transform prediction to frequency domain and save it for subsequent use. */
-		buffer2freq (predicted_samples, lt_status->pred_mdct, NULL, win_type,
-			win_shape, block_size_long, block_size_medium,
-			block_size_short, MNON_OVERLAPPED);
+//		buffer2freq (predicted_samples, lt_status->pred_mdct, NULL, win_type,
+//			win_shape, block_size_long, block_size_medium,
+//			block_size_short, MNON_OVERLAPPED);
+		buffer2freq (predicted_samples, lt_status->pred_mdct, NULL, win_type, MNON_OVERLAPPED);
 
 		lt_status->side_info = LEN_LTP_DATA_PRESENT + last_band + LEN_LTP_LAG + LEN_LTP_COEF;
     
@@ -286,10 +287,11 @@ nok_ltp_reconstruct(double *p_spectrum, enum WINDOW_TYPE win_type,
 				p_spectrum[i] += lt_status->pred_mdct[i];
 
 		/* Finally update the time domain history buffer. */
-		freq2buffer (p_spectrum, predicted_samples, overlap_buffer, win_type,
-			block_size_long, block_size_medium, block_size_short,
-			win_shape, MNON_OVERLAPPED);
-		
+//		freq2buffer (p_spectrum, predicted_samples, overlap_buffer, win_type,
+//			block_size_long, block_size_medium, block_size_short,
+//			win_shape, MNON_OVERLAPPED);
+		freq2buffer (p_spectrum, predicted_samples, overlap_buffer, win_type, MNON_OVERLAPPED);
+
 		for (i = 0; i < NOK_LT_BLEN - block_size_long; i++)
 			lt_status->buffer[i] = lt_status->buffer[i + block_size_long];
 
