@@ -16,7 +16,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: faac.h,v 1.30 2003/09/24 16:29:31 knik Exp $
+ * $Id: faac.h,v 1.31 2003/11/15 08:13:41 stux Exp $
  */
 
 #ifndef _FAAC_H_
@@ -47,26 +47,48 @@ typedef struct {
 
 typedef void *faacEncHandle;
 
-faacEncConfigurationPtr FAACAPI faacEncGetCurrentConfiguration(faacEncHandle hEncoder);
-int FAACAPI faacEncSetConfiguration (faacEncHandle hEncoder, faacEncConfigurationPtr config);
+/*
+	Allows an application to get FAAC version info. This is intended
+	purely for informative purposes. 
+	
+	faac_version_string		:	if not NULL, will be "X.YY.Z"
+	faac_name_string		:	if not NULL, will be "X.YY.Z (DD/MM/YYYY)"
+	faac_copyright_string	:	if not NULL, will be the copyright string
 
-faacEncHandle FAACAPI faacEncOpen(unsigned long sampleRate,
-								  unsigned int numChannels,
-								  unsigned long *inputSamples,
-								  unsigned long *maxOutputBytes);
+	RETURNS					:	Current FAAC_CFG_VERSION  (104)
+*/
+int						FAACAPI faacEncGetVersion( char *faac_version_string, 
+										char *faac_name_string, 
+										char *faac_copyright_string );
 
-int FAACAPI faacEncGetDecoderSpecificInfo(faacEncHandle hEncoder,
-										  unsigned char** ppBuffer,
-										  unsigned long* pSizeOfDecoderSpecificInfo);
 
-int FAACAPI faacEncEncode(faacEncHandle hEncoder,
-			  int32_t *inputBuffer,
-			  unsigned int samplesInput,
-			  unsigned char *outputBuffer,
-			  unsigned int bufferSize
-			 );
+faacEncConfigurationPtr	FAACAPI	faacEncGetCurrentConfiguration( faacEncHandle hEncoder );
 
-int FAACAPI faacEncClose(faacEncHandle hEncoder);
+
+int						FAACAPI	faacEncSetConfiguration( faacEncHandle hEncoder, 
+										faacEncConfigurationPtr config );
+
+
+faacEncHandle			FAACAPI faacEncOpen( unsigned long sampleRate,
+										unsigned int numChannels,
+										unsigned long *inputSamples,
+										unsigned long *maxOutputBytes );
+
+
+int						FAACAPI faacEncGetDecoderSpecificInfo( faacEncHandle hEncoder,
+										unsigned char** ppBuffer,
+										unsigned long* pSizeOfDecoderSpecificInfo );
+
+
+int						FAACAPI faacEncEncode(faacEncHandle hEncoder,
+										int32_t *inputBuffer,
+										unsigned int samplesInput,
+										unsigned char *outputBuffer,
+										unsigned int bufferSize );
+
+
+int						FAACAPI faacEncClose( faacEncHandle hEncoder );
+
 
 
 #pragma pack(pop)

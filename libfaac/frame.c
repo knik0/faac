@@ -16,7 +16,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: frame.c,v 1.51 2003/11/10 17:48:00 knik Exp $
+ * $Id: frame.c,v 1.52 2003/11/15 08:13:42 stux Exp $
  */
 
 /*
@@ -53,6 +53,7 @@ static char *libCopyright =
   "FAAC - Freeware Advanced Audio Coder (http://www.audiocoding.com/)\n"
   " Portions Copyright (C) 2001 Menno Bakker\n"
   " Portions Copyright (C) 2002,2003 Krzysztof Nikiel\n"
+  " Portions Copyright (C) 2003 Stuart Espey\n"
   "This software is based on the ISO MPEG-4 reference source code.\n";
 
 static const psymodellist_t psymodellist[] = {
@@ -63,6 +64,31 @@ static const psymodellist_t psymodellist[] = {
 static SR_INFO srInfo[12+1];
 static const int bwmax = 15000;
 static const double bwfac = 0.45;
+
+/*
+ *	Allows an application to get FAAC version info. This is intended
+ *	purely for informative purposes. 
+ *	
+ *	faac_version_string		:	if not NULL, will be "1.23.2"
+ *	faac_name_string		:	if not NULL, will be "1.23.2 (Nov 15 2003)"
+ *	faac_copyright_string	:	if not NULL, will be the copyright string
+ *
+ *	RETURNS					:	FAAC_CFG_VERSION
+ */
+int FAACAPI faacEncGetVersion( char *faac_version_string, char *faac_name_string, char *faac_copyright_string )
+{
+	if( faac_version_string )
+		strcpy( faac_version_string, FAAC_VERSION );
+
+	if( faac_name_string )
+		strcpy( faac_name_string, libfaacName );
+
+	if( faac_copyright_string )
+		strcpy( faac_copyright_string, libCopyright );
+
+	return FAAC_CFG_VERSION;
+}
+
 
 int FAACAPI faacEncGetDecoderSpecificInfo(faacEncHandle hEncoder,unsigned char** ppBuffer,unsigned long* pSizeOfDecoderSpecificInfo)
 {
@@ -917,6 +943,9 @@ static SR_INFO srInfo[12+1] =
 
 /*
 $Log: frame.c,v $
+Revision 1.52  2003/11/15 08:13:42  stux
+added FaacEncGetVersion(), version 1.23.2, added myself to faacCopyright :-P, does vanity know no bound ;)
+
 Revision 1.51  2003/11/10 17:48:00  knik
 Allowed independent bitRate and bandWidth setting.
 Small fixes.

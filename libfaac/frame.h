@@ -16,7 +16,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: frame.h,v 1.24 2003/10/12 14:29:54 knik Exp $
+ * $Id: frame.h,v 1.25 2003/11/15 08:13:42 stux Exp $
  */
 
 #ifndef FRAME_H
@@ -121,6 +121,20 @@ typedef struct {
     /* output bits difference in average bitrate mode */
     int bitDiff;
 } faacEncStruct, *faacEncHandle;
+
+
+/*
+	Allows an application to get FAAC version info. This is intended
+	purely for informative purposes. 
+	
+	faac_version_string		:	if not NULL, will be "X.YY.Z"
+	faac_name_string		:	if not NULL, will be "X.YY.Z (DD/MM/YYYY)"
+	faac_copyright_string	:	if not NULL, will be the copyright string
+
+	RETURNS					:	Current FAAC_CFG_VERSION  (104)
+*/
+
+int FAACAPI faacEncGetVersion( char *faac_version_string, char *faac_name_string, char *faac_copyright_string );
 
 int FAACAPI faacEncGetDecoderSpecificInfo(faacEncHandle hEncoder,
                                           unsigned char** ppBuffer,
