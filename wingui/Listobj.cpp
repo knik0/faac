@@ -17,7 +17,8 @@ CBListReader::CBListReader(CBList &oList)
 	*m_piUsageStack=1;
 }
 
-CBListReader::CBListReader(const CBListReader &oSource)
+CBListReader::CBListReader(const CBListReader &oSource):
+	m_piUsageStack(0)
 {
 	*this=oSource;
 }
