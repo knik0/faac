@@ -1,34 +1,10 @@
-/*******************************************************************************
-*                                                                              *
-* Interface between the MPEG-4 Audio VM and the ITU-T G.729 8 kbit/s decoder   *
-*                                                                              *
-********************************************************************************
+#ifndef _SHAPE_WIN_H_
+#define _SHAPE_WIN_H_
 
-This software module was originally developed by
-Bernhard Grill (University of Erlangen) 
-in the course of development of the MPEG-4 Audio (ISO/IEC 14496-3).
-This software module is an implementation of a part of one or more MPEG-4 Audio
-(ISO/IEC 14496-3) tools as specified by the MPEG-4 Audio (ISO/IEC 14496-3).
-ISO/IEC gives users of the MPEG-4 Audio (ISO/IEC 14496-3) free license to this
-software module or modifications thereof for use in hardware or software
-products claiming conformance to the MPEG-4 Audio (ISO/IEC 14496-3).
-Those intending to use this software module in hardware or software products are
-advised that its use may infringe existing patents.
-The original developer of this software module and his/her company, the
-subsequent editors and their companies, and ISO/IEC have no liability for use of
-this software module or modifications thereof in an implementation.
-Copyright is not released for non MPEG-4 Audio (ISO/IEC 14496-3) conforming
-products.
-The original developers retain full right to use the code for his/her own
-purpose, assign or donate the code to a third party and to inhibit third parties
-from using the code for non MPEG-4 Audio (ISO/IEC 14496-3) conforming products.
-This copyright notice must be included in all copies or derivative works.
-Copyright (C) 1997.
-*/
-#ifndef _DOLBY_WIN_H_
-#define _DOLBY_WIN_H_
+double sin_window_long[BLOCK_LEN_LONG];
+double sin_window_short[BLOCK_LEN_SHORT];
 
-double kbd_window_long[1024] = {  /* IBLEN = 1024 */
+double kbd_window_long[1024] = {
   0.00029256153896361,
   0.00042998567353047,
   0.00054674074589540,
@@ -1059,7 +1035,7 @@ double kbd_window_long[1024] = {  /* IBLEN = 1024 */
 double kbd_window_short[128] = {
 4.3795702929468881e-005,
 0.00011867384265436617,
-0.0002307165763996192, 
+0.0002307165763996192,
 0.00038947282760568383,
 0.00060581272288302553,
 0.00089199695169487453,

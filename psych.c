@@ -52,9 +52,9 @@ Copyright (c) 1997.
 
 Source file:
 
-$Id: psych.c,v 1.43 2000/02/07 19:52:47 menno Exp $
-$Id: psych.c,v 1.43 2000/02/07 19:52:47 menno Exp $
-$Id: psych.c,v 1.43 2000/02/07 19:52:47 menno Exp $
+$Id: psych.c,v 1.44 2000/02/08 07:37:01 lenox Exp $
+$Id: psych.c,v 1.44 2000/02/08 07:37:01 lenox Exp $
+$Id: psych.c,v 1.44 2000/02/08 07:37:01 lenox Exp $
 
 **********************************************************************/
 
@@ -64,7 +64,6 @@ $Id: psych.c,v 1.43 2000/02/07 19:52:47 menno Exp $
 #include <memory.h>
 #include "tf_main.h"
 #include "psych.h"
-#include "transfo.h"
 
 void complspectrum( double *f, unsigned lg2n );
 
@@ -215,7 +214,6 @@ void psy_fft_table_init(FFT_TABLE_LONG *fft_tbl_long,
 	for(i = 0; i < BLOCK_LEN_SHORT*2; i++)
 		fft_tbl_short->hw[i] = 0.5 * (1-cos(2.0*M_PI*(i+0.5)/(BLOCK_LEN_SHORT*2)));
 
-	MakeFFTOrder();
 }
 /* added by T. Okada (1997.07.10) end */
 

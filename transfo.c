@@ -2,7 +2,7 @@
 #include <string.h>
 #include "all.h"
 #include "transfo.h"
-#include "kbd_win.h"
+#include "shape_win.h"
 
 #ifndef M_PI
 #define M_PI        3.14159265358979323846
@@ -14,18 +14,16 @@
 
 #define NFLAT_LS 448  // (BLOCK_LEN_LONG - BLOCK_LEN_SHORT) / 2
 
-double       sin_window_long[BLOCK_LEN_LONG];
-double       sin_window_short[BLOCK_LEN_SHORT];
 int sizedouble; // temp value
 
 /*******************************************************************************
                                Fast MDCT & IMDCT Code
 *******************************************************************************/
-void MDCT (fftw_real *data, int N)
+void MDCT (double *data, int N)
 {
-    fftw_real tempr, tempi, c, s, cold, cfreq, sfreq; /* temps for pre and post twiddle */
-    fftw_real freq = 2.0 * M_PI / N;
-    fftw_real fac,cosfreq8,sinfreq8;
+    double tempr, tempi, c, s, cold, cfreq, sfreq; /* temps for pre and post twiddle */
+    double freq = 2.0 * M_PI / N;
+    double fac,cosfreq8,sinfreq8;
     int i, n;
     int b = N >> 1;
     int N4 = N >> 2;
@@ -113,11 +111,11 @@ void MDCT (fftw_real *data, int N)
     }
 }
 
-void IMDCT(fftw_real *data, int N)
+void IMDCT(double *data, int N)
 {
-	fftw_real tempr, tempi, c, s, cold, cfreq, sfreq; /* temps for pre and post twiddle */
-    	fftw_real freq = 2.0 * M_PI / N;
-	fftw_real fac, cosfreq8, sinfreq8;
+	double tempr, tempi, c, s, cold, cfreq, sfreq; /* temps for pre and post twiddle */
+    	double freq = 2.0 * M_PI / N;
+	double fac, cosfreq8, sinfreq8;
 	int i;
 	int Nd2 = N >> 1;
 	int Nd4 = N >> 2;

@@ -1,4 +1,3 @@
-
 #include <math.h>
 #include <stdlib.h>
 #include <memory.h>
@@ -17,6 +16,7 @@
 #include "aac_se_enc.h"
 #include "nok_ltp_enc.h"
 #include "winswitch.h"
+#include "transfo.h"
 
 #define SQRT2 sqrt(2)
 
@@ -192,6 +192,7 @@ void EncTfInit (faacAACConfig *ac, int VBR_setting)
 	}
 
 	make_MDCT_windows();
+	make_FFT_order();
 }
 
 /*****************************************************************************************

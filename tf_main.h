@@ -133,8 +133,6 @@ void buffer2freq(
   Mdct_in          overlap_select      
 );
 
-void make_MDCT_windows(void);
-
 void specFilter (double p_in[],
 		 double p_out[],
 		 int  samp_rate,
