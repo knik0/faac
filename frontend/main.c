@@ -16,7 +16,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: main.c,v 1.36 2003/06/26 19:40:53 knik Exp $
+ * $Id: main.c,v 1.37 2003/07/10 19:19:32 knik Exp $
  */
 
 #ifdef HAVE_CONFIG_H
@@ -46,9 +46,9 @@
 # include "getopt.c"
 #endif
 
-#include <faac.h>
-
 #include "input.h"
+
+#include <faac.h>
 
 #ifndef min
 #define min(a,b) ( (a) < (b) ? (a) : (b) )
@@ -72,13 +72,62 @@ int StringCompI(char const *str1, char const *str2, unsigned long len)
     return c1 - c2;
 }
 
+static int *mkChanMap(int channels, int center, int lf)
+{
+  int *map;
+  int inpos;
+  int outpos;
+
+  if (!center && !lf)
+    return NULL;
+
+  if (channels < 3)
+    return NULL;
+
+  if (lf > 0)
+    lf--;
+  else
+    lf = channels - 1; // default AAC position
+
+  if (center > 0)
+    center--;
+  else
+    center = 0; // default AAC position
+
+  map = malloc(channels * sizeof(map[0]));
+  memset(map, 0, channels * sizeof(map[0]));
+
+  outpos = 0;
+  if ((center >= 0) && (center < channels))
+    map[outpos++] = center;
+
+  inpos = 0;
+  for (; outpos < (channels & 0xfe); inpos++)
+  {
+    if (inpos == center)
+      continue;
+    if (inpos == lf)
+      continue;
+
+    map[outpos++] = inpos;
+  }
+  if (outpos < channels)
+  {
+    if ((lf >= 0) && (lf < channels))
+      map[outpos] = lf;
+    else
+      map[outpos] = inpos;
+  }
+
+  return map;
+}
+
 int main(int argc, char *argv[])
 {
     int frames, currentFrame;
     faacEncHandle hEncoder;
     pcmfile_t *infile = NULL;
 
-    unsigned int sr, chan;
     unsigned long samplesInput, maxBytesOutput;
 
     faacEncConfigurationPtr myFormat;
@@ -90,14 +139,17 @@ int main(int argc, char *argv[])
     int cutOff = -1;
     int bitRate = 0;
     unsigned long quantqual = 0;
+    int chanC = 3;
+    int chanLF = 4;
 
     char *audioFileName;
     char *aacFileName;
 
-    short *pcmbuf;
+    int32_t *pcmbuf;
+    int *chanmap = NULL;
 
     unsigned char *bitbuf;
-    int bytesInput = 0;
+    int samplesRead = 0;
     int dieUsage = 0;
 
     int rawChans = 0; // disabled by default
@@ -126,8 +178,6 @@ int main(int argc, char *argv[])
     /* begin process command line */
     progName = argv[0];
     while (1) {
-        int c = -1;
-        int option_index = 0;
         static struct option long_options[] = {
             { "mpeg", 0, 0, 'm' },
             { "objecttype", 0, 0, 'o' },
@@ -143,8 +193,10 @@ int main(int argc, char *argv[])
             { "pcmchannels", 1, 0, 'C'},
             { 0, 0, 0, 0}
         };
+      int c = -1;
+      int option_index = 0;
 
-    c = getopt_long(argc, argv, "a:m:o:rnc:q:PR:B:C:",
+      c = getopt_long(argc, argv, "a:m:o:rnc:q:PR:B:C:I:",
             long_options, &option_index);
 
         if (c == -1)
@@ -221,6 +273,18 @@ int main(int argc, char *argv[])
             }
             break;
         }
+    case 'I':
+      {
+	int i;
+        char *s;
+	if (sscanf(optarg, "%d", &i) > 0)
+	  chanC = i;
+
+        s = strchr(optarg, ',');
+	if (s && (sscanf(s + 1, "%d", &i) > 0))
+	  chanLF = i;
+	break;
+      }
    case 'P':
 	  rawChans = 2; // enable raw input
        break;
@@ -239,6 +303,10 @@ int main(int argc, char *argv[])
        unsigned int i;
        if (sscanf(optarg, "%u", &i) > 0)
 	    {
+	      if (i > 32)
+                i = 32;
+	      if (i < 8)
+		i = 8;
 	      rawBits = i;
 	      rawChans = (rawChans > 0) ? rawChans : 2;
 	    }
@@ -277,6 +345,7 @@ int main(int argc, char *argv[])
 	printf("  -R     Raw PCM input rate.\n");
 	printf("  -B     Raw PCM input sample size (16 default or 8bits).\n");
 	printf("  -C     Raw PCM input channels.\n");
+	printf("  -I <C[,LF]> Input channel config, default is 3,4 (Center third, LF fourth)\n");
 	printf("More details on FAAC usage can be found in the faac.html file.\n");
 
         return 1;
@@ -288,9 +357,17 @@ int main(int argc, char *argv[])
 
     /* open the audio input file */
     if (rawChans > 0) // use raw input
-      infile = wav_open_read(audioFileName, rawChans, rawBits, rawRate);
+    {
+      infile = wav_open_read(audioFileName, 1);
+      if (infile)
+      {
+	infile->channels = rawChans;
+	infile->samplebytes = rawBits / 8;
+	infile->samplerate = rawRate;
+      }
+    }
     else // header input
-      infile = wav_open_read(audioFileName, 0, 0, 0);
+      infile = wav_open_read(audioFileName, 0);
 
     if (infile == NULL)
     {
@@ -306,25 +383,28 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    /* determine input file parameters */
-    sr = infile->samplerate;
-    chan = infile->channels;
-
     /* open the encoder library */
-    hEncoder = faacEncOpen(sr, chan, &samplesInput, &maxBytesOutput);
+    hEncoder = faacEncOpen(infile->samplerate, infile->channels,
+			   &samplesInput, &maxBytesOutput);
 
-    pcmbuf = (short*)malloc(samplesInput*sizeof(short));
+    pcmbuf = (int32_t *)malloc(samplesInput*sizeof(int32_t));
     bitbuf = (unsigned char*)malloc(maxBytesOutput*sizeof(unsigned char));
+    chanmap = mkChanMap(infile->channels, chanC, chanLF);
+    if (chanmap)
+    {
+      fprintf(stderr, "Remapping input channels: Center=%d, LFE=%d\n",
+	      chanC, chanLF);
+    }
 
     if (cutOff <= 0)
     {
       if (cutOff < 0) // default
 	cutOff = 0;
       else // disabled
-    cutOff = sr / 2;
+    cutOff = infile->samplerate / 2;
     }
-    if (cutOff > (sr / 2))
-      cutOff = sr / 2;
+    if (cutOff > (infile->samplerate / 2))
+      cutOff = infile->samplerate / 2;
 
     /* put the options in the configuration struct */
     myFormat = faacEncGetCurrentConfiguration(hEncoder);
@@ -379,12 +459,12 @@ int main(int argc, char *argv[])
         {
             int bytesWritten;
 
-            bytesInput = wav_read_short(infile, pcmbuf, samplesInput) * sizeof(short);
+	    samplesRead = wav_read_int24(infile, pcmbuf, samplesInput, chanmap);
 
             /* call the actual encoding routine */
             bytesWritten = faacEncEncode(hEncoder,
                 pcmbuf,
-                bytesInput/2,
+                samplesRead,
                 bitbuf,
                 maxBytesOutput);
 
@@ -426,14 +506,14 @@ int main(int argc, char *argv[])
             currentFrame, frames, currentFrame*100/frames,
             timeused,
             timeused * frames / currentFrame,
-            (1024.0 * currentFrame / sr) / timeused,
+            (1024.0 * currentFrame / infile->samplerate) / timeused,
             timeused  * (frames - currentFrame) / currentFrame);
        else
          fprintf(stderr,
            "\r %5d |  %6.1f | %8.3f ",
            currentFrame,
            timeused,
-           (1024.0 * currentFrame / sr) / timeused);
+           (1024.0 * currentFrame / infile->samplerate) / timeused);
         fflush(stderr);
 #ifdef _WIN32
        if (frames != 0)
@@ -447,7 +527,7 @@ int main(int argc, char *argv[])
       }
 
             /* all done, bail out */
-            if (!bytesInput && !bytesWritten)
+            if (!samplesRead && !bytesWritten)
                 break ;
 
             if (bytesWritten < 0)
@@ -477,6 +557,9 @@ int main(int argc, char *argv[])
 
 /*
 $Log: main.c,v $
+Revision 1.37  2003/07/10 19:19:32  knik
+Input channel remapping and 24-bit support.
+
 Revision 1.36  2003/06/26 19:40:53  knik
 TNS disabled by default.
 Copyright info moved to library.
