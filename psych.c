@@ -52,9 +52,9 @@ Copyright (c) 1997.
 
 Source file:
 
-$Id: psych.c,v 1.23 2000/01/10 15:14:21 menno Exp $
-$Id: psych.c,v 1.23 2000/01/10 15:14:21 menno Exp $
-$Id: psych.c,v 1.23 2000/01/10 15:14:21 menno Exp $
+$Id: psych.c,v 1.24 2000/01/10 19:50:24 menno Exp $
+$Id: psych.c,v 1.24 2000/01/10 19:50:24 menno Exp $
+$Id: psych.c,v 1.24 2000/01/10 19:50:24 menno Exp $
 
 **********************************************************************/
 
@@ -171,234 +171,13 @@ SR_INFO sr_info_aac[MAX_SAMPLING_RATES+1] =
 	{ -1 }
 };
 
-/* added by T. Araki (1997.07.10) */
-PARTITION_TABLE_LONG  part_tbl_long_all[MAX_SAMPLING_RATES+1] =
-{
-  { 8000  },
-  { 11025 },
-  { 12000 },
-  { 16000 },
- 
-/* added by T. Araki (1997.10.16) */
-  { 22050, 63,
-     { /* w_low */
-      0, 4, 8, 12, 16, 20, 24, 28, 32, 36, 40, 44, 48, 52, 56, 60, 64, 68,
-      72, 77, 82, 87, 92, 97, 102, 108, 114, 120, 126, 133, 140, 147, 155,
-      163, 172, 181, 191, 201, 212, 224, 237, 251, 266, 282, 299, 318, 338,
-      360, 383, 408, 435, 464, 495, 528, 564, 602, 643, 687, 734, 785, 840,
-      899, 963
-     },
-     {/* w_high */
-      3, 7, 11, 15, 19, 23, 27, 31, 35, 39, 43, 47, 51, 55, 59, 63, 67, 71,
-      76, 81, 86, 91, 96, 101, 107, 113, 119, 125, 132, 139, 146, 154, 162,
-      171, 180, 190, 200, 211, 223, 236, 250, 265, 281, 298, 317, 337, 359,
-      382, 407, 434, 463, 494, 527, 563, 601, 642, 686, 733, 784, 839, 898,
-      962, 1023
-     },
-     { /* width */
-      4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 5, 5, 5, 5, 5, 5,
-      6, 6, 6, 6, 7, 7, 7, 8, 8, 9, 9, 10, 10, 11, 12, 13, 14, 15, 16, 17,
-      19, 20, 22, 23, 25, 27, 29, 31, 33, 36, 38, 41, 44, 47, 51, 55, 59,
-      64, 61
-     }
-  },
-/* added by T. Araki (1997.10.16) end */
-
-  { 24000, 70,
-     { /* w_low */
-      0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30, 32, 34, 36,
-      39, 42, 45, 48, 51, 54, 57, 60, 63, 67, 71, 75, 79, 83, 88, 93, 98,
-      104, 110, 117, 124, 132, 140, 149, 158, 168, 179, 191, 204, 218, 233,
-      249, 266, 284, 304, 325, 348, 372, 398, 426, 456, 489, 525, 564, 607,
-      654, 707, 766, 833, 909, 997
-     },
-     { /* w_high */
-      1, 3, 5, 7, 9, 11, 13, 15, 17, 19, 21, 23, 25, 27, 29, 31, 33, 35, 38, 
-      41, 44, 47, 50, 53, 56, 59, 62, 66, 70, 74, 78, 82, 87, 92, 97, 103,
-      109, 116, 123, 131, 139, 148, 157, 167, 178, 190, 203, 217, 232, 248,
-      265, 283, 303, 324, 347, 371, 397, 425, 455, 488, 524, 563, 606, 653,
-      706, 765, 832, 908, 996, 1023
-     },
-     { /* width */
-      2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 
-      3, 3, 3, 3, 4, 4, 4, 4, 4, 5, 5, 5, 6, 6, 7, 7, 8, 8, 9, 9, 10, 11,
-      12, 13, 14, 15, 16, 17, 18, 20, 21, 23, 24, 26, 28, 30, 33, 36, 39,
-      43, 47, 53, 59, 67, 76, 88, 27
-     }
-  },
-  { 32000, 70,
-     { /* w_low */
-      0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30, 32, 34, 36,
-      39, 42, 45, 48, 51, 54, 57, 60, 63, 67, 71, 75, 79, 83, 88, 93, 98,
-      104, 110, 117, 124, 132, 140, 149, 158, 168, 179, 191, 204, 218, 233,
-      249, 266, 284, 304, 325, 348, 372, 398, 426, 456, 489, 525, 564, 607,
-      654, 707, 766, 833, 909, 997
-     },
-     { /* w_high */
-      1, 3, 5, 7, 9, 11, 13, 15, 17, 19, 21, 23, 25, 27, 29, 31, 33, 35, 38, 
-      41, 44, 47, 50, 53, 56, 59, 62, 66, 70, 74, 78, 82, 87, 92, 97, 103,
-      109, 116, 123, 131, 139, 148, 157, 167, 178, 190, 203, 217, 232, 248,
-      265, 283, 303, 324, 347, 371, 397, 425, 455, 488, 524, 563, 606, 653,
-      706, 765, 832, 908, 996, 1023
-     },
-     { /* width */
-      2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 
-      3, 3, 3, 3, 4, 4, 4, 4, 4, 5, 5, 5, 6, 6, 7, 7, 8, 8, 9, 9, 10, 11,
-      12, 13, 14, 15, 16, 17, 18, 20, 21, 23, 24, 26, 28, 30, 33, 36, 39,
-      43, 47, 53, 59, 67, 76, 88, 27
-     }
-  },
-  { 44100, 70,
-     { /* w_low */
-      0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30, 32, 34, 36,
-      39, 42, 45, 48, 51, 54, 57, 60, 63, 67, 71, 75, 79, 83, 88, 93, 98,
-      104, 110, 117, 124, 132, 140, 149, 158, 168, 179, 191, 204, 218, 233,
-      249, 266, 284, 304, 325, 348, 372, 398, 426, 456, 489, 525, 564, 607,
-      654, 707, 766, 833, 909, 997
-     },
-     { /* w_high */
-      1, 3, 5, 7, 9, 11, 13, 15, 17, 19, 21, 23, 25, 27, 29, 31, 33, 35, 38, 
-      41, 44, 47, 50, 53, 56, 59, 62, 66, 70, 74, 78, 82, 87, 92, 97, 103,
-      109, 116, 123, 131, 139, 148, 157, 167, 178, 190, 203, 217, 232, 248,
-      265, 283, 303, 324, 347, 371, 397, 425, 455, 488, 524, 563, 606, 653,
-      706, 765, 832, 908, 996, 1023
-     },
-     { /* width */
-      2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 
-      3, 3, 3, 3, 4, 4, 4, 4, 4, 5, 5, 5, 6, 6, 7, 7, 8, 8, 9, 9, 10, 11,
-      12, 13, 14, 15, 16, 17, 18, 20, 21, 23, 24, 26, 28, 30, 33, 36, 39,
-      43, 47, 53, 59, 67, 76, 88, 27
-     }
-  },
-  { 48000, 69,
-     { /* w_low */
-      0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30, 32, 34, 36,
-      38, 41, 44, 47, 50, 53, 56, 59, 62, 66, 70, 74, 78, 82, 87, 92, 97,
-      103, 109, 116, 123, 131, 139, 148, 158, 168, 179, 191, 204, 218, 233,
-      249, 266, 284, 304, 325, 348, 372, 398, 426, 457, 491, 528, 568, 613,
-      663, 719, 782, 854, 938
-     },
-     { /* w_high */
-      1, 3, 5, 7, 9, 11, 13, 15, 17, 19, 21, 23, 25, 27, 29, 31, 33, 35, 37,
-      40, 43, 46, 49, 52, 55, 58, 61, 65, 69, 73, 77, 81, 86, 91, 96, 102,
-      108, 115, 122, 130, 138, 147, 157, 167, 178, 190, 203, 217, 232, 248,
-      265, 283, 303, 324, 347, 371, 397, 425, 456, 490, 527, 567, 612, 662,
-      718, 781, 853, 937, 1023
-     }, 
-     { /* width */
-      2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3,
-      3, 3, 3, 4, 4, 4, 4, 4, 5, 5, 5, 6, 6, 7, 7, 8, 8, 9, 10, 10, 11, 12,
-      13, 14, 15, 16, 17, 18, 20, 21, 23, 24, 26, 28, 31, 34, 37, 40, 45, 50,
-      56, 63, 72, 84, 86
-     }
-  },
-  { 96000 },
-  { -1 }
-};
-
-PARTITION_TABLE_SHORT  part_tbl_short_all[MAX_SAMPLING_RATES+1] =
-{
-  { 8000  },
-  { 11025 },
-  { 12000 },
-  { 16000 },
-
-/* added by T. Araki (1997.10.16) */
-  { 22050, 46,
-     { /* w_low */
-      0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19,
-      20, 22, 24, 26, 28, 30, 32, 34, 36, 39, 42, 45, 48, 52, 56, 60, 64, 69,
-      74, 79, 85, 91, 98, 105, 113, 121
-     },
-     { /* w_high */
-      0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19,
-      21, 23, 25, 27, 29, 31, 33, 35, 38, 41, 44, 47, 51, 55, 59, 63, 68, 73,
-      78, 84, 90, 97, 104, 112, 120, 127
-     },
-     { /* width */
-      1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2,
-      2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4, 5, 5, 5, 6, 6, 7, 7, 8, 8, 7
-     }
-  },
-/* added by T. Araki (1997.10.16) end */
-
-  { 24000, 42, 
-     { /* w_low */
-      0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 20,
-      22, 24, 26, 28, 30, 32, 35, 38, 41, 44, 48, 52, 56, 60, 65, 70, 76,
-      82, 89, 97, 106, 116
-     },
-     { /* w_high */
-      0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 19, 21,
-      23, 25, 27, 29, 31, 34, 37, 40, 43, 47, 51, 55, 59, 64, 69, 75, 81,
-      88, 96, 105, 115, 127
-     },
-     { /* width */
-      1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2,
-      2, 2, 3, 3, 3, 3, 4, 4, 4, 4, 5, 5, 6, 6, 7, 8, 9, 10, 12
-     }
-  },
-  { 32000, 42, 
-     { /* w_low */
-      0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 20,
-      22, 24, 26, 28, 30, 32, 35, 38, 41, 44, 48, 52, 56, 60, 65, 70, 76,
-      82, 89, 97, 106, 116
-     },
-     { /* w_high */
-      0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 19, 21,
-      23, 25, 27, 29, 31, 34, 37, 40, 43, 47, 51, 55, 59, 64, 69, 75, 81,
-      88, 96, 105, 115, 127
-     },
-     { /* width */
-      1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2,
-      2, 2, 3, 3, 3, 3, 4, 4, 4, 4, 5, 5, 6, 6, 7, 8, 9, 10, 12
-     }
-  },
-  { 44100, 42, 
-     { /* w_low */
-      0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 20,
-      22, 24, 26, 28, 30, 32, 35, 38, 41, 44, 48, 52, 56, 60, 65, 70, 76,
-      82, 89, 97, 106, 116
-     },
-     { /* w_high */
-      0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 19, 21,
-      23, 25, 27, 29, 31, 34, 37, 40, 43, 47, 51, 55, 59, 64, 69, 75, 81,
-      88, 96, 105, 115, 127
-     },
-     { /* width */
-      1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2,
-      2, 2, 3, 3, 3, 3, 4, 4, 4, 4, 5, 5, 6, 6, 7, 8, 9, 10, 12
-     }
-  },
-  { 48000, 42,
-     { /* w_low */
-      0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 19, 21,
-      23, 25, 27, 29, 31, 34, 37, 40, 43, 46, 50, 54, 58, 63, 68, 74, 80,
-      87, 95, 104, 114, 126
-     },
-     { /* w_high */
-      0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 18, 20, 22,
-      24, 26, 28, 30, 33, 36, 39, 42, 45, 49, 53, 57, 62, 67, 73, 79, 86,
-      94, 103, 113, 125, 127
-     }, 
-     { /* width */
-      1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2,
-      2, 3, 3, 3, 3, 3, 4, 4, 4, 5, 5, 6, 6, 7, 8, 9, 10, 12, 1
-     }
-  },
-  { 96000 },
-  { -1 }
-};
-/* added by T. Araki (1997.07.10) end */
-
-/* added by T. Araki (1997.10.16) */
 double          sample[MAX_TIME_CHANNELS+2][BLOCK_LEN_LONG*2];
                                /* sample value */
 
 FFT_TABLE_LONG    fft_tbl_long;  /* table for long fft */
 FFT_TABLE_SHORT    fft_tbl_short;  /* table for short fft */
-PARTITION_TABLE_LONG    *part_tbl_long;  
-PARTITION_TABLE_SHORT    *part_tbl_short;
+PARTITION_TABLE_LONG    part_tbl_long;  
+PARTITION_TABLE_SHORT    part_tbl_short;
 DYN_PART_TABLE_LONG     dyn_long;  
 DYN_PART_TABLE_SHORT    dyn_short;
 PSY_STATVARIABLE_LONG    psy_stvar_long[MAX_TIME_CHANNELS+2];
@@ -438,57 +217,128 @@ void psy_fft_table_init(FFT_TABLE_LONG *fft_tbl_long,
 }
 /* added by T. Okada (1997.07.10) end */
 
+/*
+ * This Function calculates the Frequency in Hertz given a 
+ * Bark-value. It uses the Traunmueller-formula for bark>2
+ * and a linear inerpolation below. 
+ * KAF
+ */
+double bark2hz (double bark)
+{
+    double hz;
+
+    if(bark>2.0)
+	hz = 1960 * (bark + 0.53) / (26.28 - bark);
+    else
+	hz = bark * 102.9;
+
+    return (hz);
+}
+
+/*
+ * This Function calculates the Frequency in Bark given a 
+ * Frequency-value in Hertz. It uses the Traunmueller-formula 
+ * for frequency>200Hz and a linear inerpolation below. 
+ * KAF
+ */
+double hz2bark (double hz)
+{
+    double bark;
+
+    if(hz>200.0)
+	bark = 26.81 * hz / (1960 + hz) - 0.53; 
+    else
+	bark = hz / 102.9;
+
+    return (bark);
+}
+
 /* added by T. Araki (1997.07.10) */
 void psy_part_table_init(double sampling_rate,
-						 PARTITION_TABLE_LONG **part_tbl_long,
-						 PARTITION_TABLE_SHORT **part_tbl_short
+						 PARTITION_TABLE_LONG *part_tbl_long,
+						 PARTITION_TABLE_SHORT *part_tbl_short
 						 )
 {
     int b,bb; /* Jul 10 */
     double tmp;
 	int partition[1024], j, w;
+	int cbands, prev_cbound, crit_bands, cbound;
 
-	*part_tbl_long = &part_tbl_long_all[0];
-
-	/* find correct sampling rate depending parameters */
-	while( (*part_tbl_long)->sampling_rate != (int)sampling_rate ) {
-		(*part_tbl_long)++;
+	cbands = (int)hz2bark(sampling_rate/2.0) + 1;
+	cbands *= 3;
+	part_tbl_long->sampling_rate = (int)sampling_rate;
+	part_tbl_long->w_low[0] = 0;
+	part_tbl_long->w_high[0] = 0;
+	part_tbl_long->width[0] = 1;
+    prev_cbound = 0;
+	crit_bands = 0;
+	for(j = 1; j <= cbands; j++)
+	{
+		cbound = (int)(bark2hz((double)j/3) * (double)BLOCK_LEN_LONG * 2.0 / sampling_rate + 0.5);
+		if(cbound > prev_cbound) {
+			crit_bands++;
+			part_tbl_long->w_low[crit_bands] = min(prev_cbound,BLOCK_LEN_LONG-1);
+			part_tbl_long->w_high[crit_bands] = min(cbound-1,BLOCK_LEN_LONG-1);
+			part_tbl_long->width[crit_bands] = 
+				part_tbl_long->w_high[crit_bands] - part_tbl_long->w_low[crit_bands] + 1;
+			prev_cbound = cbound;
+			if (part_tbl_long->w_high[crit_bands] == (BLOCK_LEN_LONG-1))
+				break;
+		}
 	}
+	part_tbl_long->len = crit_bands+1;
+//	printf("%d %d\t",part_tbl_long->len, part_tbl_long->w_high[crit_bands]);
 
-	*part_tbl_short = &part_tbl_short_all[0];
-
-	/* find correct sampling rate depending parameters */
-	while( (*part_tbl_short)->sampling_rate != (int)sampling_rate ) {
-		(*part_tbl_short)++;
+	part_tbl_short->sampling_rate = (int)sampling_rate;
+	part_tbl_short->w_low[0] = 0;
+	part_tbl_short->w_high[0] = 0;
+	part_tbl_short->width[0] = 1;
+    prev_cbound = 0;
+	crit_bands = 0;
+	for(j = 1; j <= cbands; j++)
+	{
+		cbound = (int)(bark2hz((double)j/3) * (double)BLOCK_LEN_SHORT * 2.0 / sampling_rate +0.5);
+		if(cbound > prev_cbound) {
+			crit_bands++;
+			part_tbl_short->w_low[crit_bands] = min(prev_cbound,BLOCK_LEN_SHORT-1);
+			part_tbl_short->w_high[crit_bands] = min(cbound-1,BLOCK_LEN_SHORT-1);
+			part_tbl_short->width[crit_bands] = 
+				part_tbl_short->w_high[crit_bands] - part_tbl_short->w_low[crit_bands] + 1;
+			prev_cbound = cbound;
+			if (part_tbl_short->w_high[crit_bands] == (BLOCK_LEN_SHORT-1))
+				break;
+		}
 	}
+	part_tbl_short->len = crit_bands+1;
+//	printf("%d %d\n",part_tbl_short->len, part_tbl_short->w_high[crit_bands]);
 
-	for (b = 0; b < (*part_tbl_long)->len; b++) {
-		for(w = (*part_tbl_long)->w_low[b]; w <= (*part_tbl_long)->w_high[b]; ++w){
+	for (b = 0; b < part_tbl_long->len; b++) {
+		for(w = part_tbl_long->w_low[b]; w <= part_tbl_long->w_high[b]; ++w){
 			partition[w] = b;
 		}
 	}
 
-	for(b = 0; b < (*part_tbl_long)->len ; b++) {
+	for(b = 0; b < part_tbl_long->len ; b++) {
 		for (j=0;(b != partition[j]);j++);
 		{
-			double ji = j + ((*part_tbl_long)->width[b]-1)/2.0;
-			double freq = (*part_tbl_long)->sampling_rate*ji/2048;
+			double ji = j + (part_tbl_long->width[b]-1)/2.0;
+			double freq = part_tbl_long->sampling_rate*ji/2048;
 			double bark = 13*atan(0.00076*freq)+3.5*atan((freq/7500)*(freq/7500));
 			dyn_long.bval[b] = bark;
 		}
 	}
 
-	for (b = 0; b < (*part_tbl_short)->len; b++) {
-		for(w = (*part_tbl_short)->w_low[b]; w <= (*part_tbl_short)->w_high[b]; ++w){
+	for (b = 0; b < part_tbl_short->len; b++) {
+		for(w = part_tbl_short->w_low[b]; w <= part_tbl_short->w_high[b]; ++w){
 			partition[w] = b;
 		}
 	}
 
-	for(b = 0; b < (*part_tbl_short)->len ; b++) {
+	for(b = 0; b < part_tbl_short->len ; b++) {
 		for (j=0;(b != partition[j]);j++);
 		{
-			double ji = j + ((*part_tbl_short)->width[b]-1)/2.0;
-			double freq = (*part_tbl_short)->sampling_rate*ji/256;
+			double ji = j + (part_tbl_short->width[b]-1)/2.0;
+			double freq = part_tbl_short->sampling_rate*ji/256;
 			double bark = 13*atan(0.00076*freq) + 3.5*atan((freq/7500)*(freq/7500));
 			dyn_short.bval[b]=bark;
 		}
@@ -499,9 +349,9 @@ void psy_part_table_init(double sampling_rate,
 		double tmpx,tmpy,tmpz,b1,b2;
 		int b, bb;
 
-		for( b = 0; b < (*part_tbl_long)->len; b++) {
+		for( b = 0; b < part_tbl_long->len; b++) {
 			b2 = dyn_long.bval[b];
-			for( bb = 0; bb < (*part_tbl_long)->len; bb++) {
+			for( bb = 0; bb < part_tbl_long->len; bb++) {
 				b1 = dyn_long.bval[bb];
 
 				//tmpx = (b2 >= b1) ? 3.0*(b2-b1) : 1.5*(b2-b1);
@@ -515,9 +365,9 @@ void psy_part_table_init(double sampling_rate,
 			}
 		}
 
-		for( b = 0; b < (*part_tbl_short)->len; b++) {
+		for( b = 0; b < part_tbl_short->len; b++) {
 			b2 = dyn_short.bval[b];
-			for( bb = 0; bb < (*part_tbl_short)->len; bb++) {
+			for( bb = 0; bb < part_tbl_short->len; bb++) {
 				b1 = dyn_short.bval[bb];
 
 				//tmpx = (b2 >= b1) ? 3.0*(b2-b1) : 1.5*(b2-b1);
@@ -533,9 +383,9 @@ void psy_part_table_init(double sampling_rate,
 	}
 
     /* added by T. Okada (1997.07.10) */
-    for( b = 0; b < (*part_tbl_long)->len; b++){
+    for( b = 0; b < part_tbl_long->len; b++){
 		tmp = 0.0;
-		for( bb = 0; bb < (*part_tbl_long)->len; bb++)
+		for( bb = 0; bb < part_tbl_long->len; bb++)
 			//tmp += sprdngf( (*part_tbl_long),(*part_tbl_short), bb, b, 0);
 			tmp += dyn_long.spreading[bb][b];
 		dyn_long.rnorm[b] = 1.0/tmp;
@@ -543,24 +393,24 @@ void psy_part_table_init(double sampling_rate,
     /* added by T. Okada (1997.07.10) end */
 
     /* added by T. Araki (1997.10.16) */
-    for( b = 0; b < (*part_tbl_short)->len; b++){
+    for( b = 0; b < part_tbl_short->len; b++){
 		tmp = 0.0;
-		for( bb = 0; bb < (*part_tbl_short)->len; bb++)
+		for( bb = 0; bb < part_tbl_short->len; bb++)
 			//tmp += sprdngf( (*part_tbl_long), (*part_tbl_short), bb, b, 1);
 			tmp += dyn_short.spreading[bb][b];
 		dyn_short.rnorm[b] = 1.0/tmp;
     }
     /* added by T. Araki (1997.10.16) end */
 
-	for(b = 0; b < (*part_tbl_long)->len; b++) {
+	for(b = 0; b < part_tbl_long->len; b++) {
 		dyn_long.bmax[b] = pow(10, -3*(0.5+0.5*(M_PI*(min(dyn_long.bval[b], 15.5)/15.5))));
 	}
-	for(b = 0; b < (*part_tbl_short)->len; b++) {
+	for(b = 0; b < part_tbl_short->len; b++) {
 		dyn_short.bmax[b] = pow(10, -3*(0.5+0.5*(M_PI*(min(dyn_short.bval[b], 15.5)/15.5))));
 	}
 
-	(*part_tbl_long)->dyn = &dyn_long;
-	(*part_tbl_short)->dyn = &dyn_short;
+	part_tbl_long->dyn = &dyn_long;
+	part_tbl_short->dyn = &dyn_short;
 }
 
 
@@ -688,11 +538,11 @@ void EncTf_psycho_acoustic(
 					psy_var_short.cw[i][b] = psy_stvar_short[1].save_cw[i][b];
 		}
 
-		psy_step5(part_tbl_long, part_tbl_short, &psy_stvar_long[no_of_chan], &psy_stvar_short[no_of_chan], 
+		psy_step5(&part_tbl_long, &part_tbl_short, &psy_stvar_long[no_of_chan], &psy_stvar_short[no_of_chan], 
 			&psy_var_long, &psy_var_short, ch);
-		psy_step6(part_tbl_long, part_tbl_short, &psy_stvar_long[no_of_chan], &psy_stvar_short[no_of_chan],
+		psy_step6(&part_tbl_long, &part_tbl_short, &psy_stvar_long[no_of_chan], &psy_stvar_short[no_of_chan],
 			&psy_var_long, &psy_var_short);
-		psy_step7(part_tbl_long, part_tbl_short, &psy_var_long, &psy_var_short);
+		psy_step7(&part_tbl_long, &part_tbl_short, &psy_var_long, &psy_var_short);
 
 		if (no_of_chan < 2) {
 			for (b = 0; b < NPART_LONG; b++)
@@ -708,17 +558,17 @@ void EncTf_psycho_acoustic(
 					psy_var_short.tb[i][b] = psy_stvar_short[no_of_chan-2].save_tb[i][b];
 		}
 
-		psy_step8(part_tbl_long, part_tbl_short, &psy_var_long, &psy_var_short);
-		psy_step9(part_tbl_long, part_tbl_short, &psy_var_long, &psy_var_short);
-		psy_step10(part_tbl_long, part_tbl_short, &psy_stvar_long[no_of_chan], &psy_stvar_short[no_of_chan], 
+		psy_step8(&part_tbl_long, &part_tbl_short, &psy_var_long, &psy_var_short);
+		psy_step9(&part_tbl_long, &part_tbl_short, &psy_var_long, &psy_var_short);
+		psy_step10(&part_tbl_long, &part_tbl_short, &psy_stvar_long[no_of_chan], &psy_stvar_short[no_of_chan], 
 			&psy_var_long, &psy_var_short, ch);
-		psy_step11andahalf(part_tbl_long, part_tbl_short, psy_stvar_long, psy_stvar_short, no_of_chan);
-		psy_step11(part_tbl_long, part_tbl_short, &psy_stvar_long[no_of_chan], &psy_stvar_short[no_of_chan], ch);
-		psy_step12(part_tbl_long, part_tbl_short, &psy_stvar_long[no_of_chan], &psy_stvar_short[no_of_chan],
+		psy_step11andahalf(&part_tbl_long, &part_tbl_short, psy_stvar_long, psy_stvar_short, no_of_chan);
+		psy_step11(&part_tbl_long, &part_tbl_short, &psy_stvar_long[no_of_chan], &psy_stvar_short[no_of_chan], ch);
+		psy_step12(&part_tbl_long, &part_tbl_short, &psy_stvar_long[no_of_chan], &psy_stvar_short[no_of_chan],
 			&psy_var_long, &psy_var_short, ch);
 //		psy_step13(&psy_var_long, block_type, no_of_chan);
 		psy_step13(&psy_var_long, block_type, ch);
-		psy_step14(p_sri, part_tbl_long, part_tbl_short, &psy_stvar_long[no_of_chan],
+		psy_step14(p_sri, &part_tbl_long, &part_tbl_short, &psy_stvar_long[no_of_chan],
 			&psy_stvar_short[no_of_chan], &psy_var_long, &psy_var_short, ch);
 		psy_step15(psy_stvar_long[no_of_chan].use_ms, psy_stvar_short[no_of_chan].use_ms, p_sri, &psy_stvar_long[0], &psy_stvar_short[0], &psy_var_long, &psy_var_short, no_of_chan);
 	}	

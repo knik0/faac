@@ -50,15 +50,13 @@ typedef struct {
   int    num_cb_long;
   int    num_cb_short;
   int    cb_width_long[NSFB_LONG];
-  int    cb_width_short[NSFB_SHORT+2];
-  double fixed_ratio_long[NSFB_LONG];
-  double fixed_ratio_short[NSFB_SHORT+2];
+  int    cb_width_short[NSFB_SHORT];
 } SR_INFO;
 
 /* added by T. Araki (1997.10.17) */
 #define OFFSET_FOR_SHORT 448
-#define NPART_LONG 72
-#define NPART_SHORT 48
+#define NPART_LONG 100
+#define NPART_SHORT 100
 /* added by T. Araki (1997.10.17) end */
 
 /* added by T. Araki (1997.07.10) */
@@ -216,8 +214,8 @@ void psy_fft_table_init(FFT_TABLE_LONG *fft_tbl_long,
 			);
 
 void psy_part_table_init(double sampling_rate,
-			 PARTITION_TABLE_LONG **part_tbl_long, 
-			 PARTITION_TABLE_SHORT **part_tbl_short
+			 PARTITION_TABLE_LONG *part_tbl_long, 
+			 PARTITION_TABLE_SHORT *part_tbl_short
 			 );
 
 void psy_calc_init(double sample[][BLOCK_LEN_LONG*2],
