@@ -459,6 +459,9 @@ int EncTfFrame (faacAACStream *as, BsBitStream  *fixed_stream)
 		}
 	}
 
+		MSEnergy(spectral_line_vector, energy, chpo_long, chpo_short,
+			  sfb_width_table, channelInfo, block_type, quantInfo, max_ch);
+
 	{
 		int chanNum;   
 		for (chanNum=0;chanNum<max_ch;chanNum++) {
@@ -483,10 +486,6 @@ int EncTfFrame (faacAACStream *as, BsBitStream  *fixed_stream)
 		int padding_limit = max_bitreservoir_bits;
 		int maxNumBitsByteAligned;
 		int chanNum;   
-		int numWindows;
-		int windowLength;
-		int j,w;
-		int bandNumber;
 		int numFillBits;
 		int bitsLeftAfterFill;
 
@@ -560,36 +559,6 @@ int EncTfFrame (faacAACStream *as, BsBitStream  *fixed_stream)
 				quantInfo,
 				max_ch);
 //		}
-
-		for (chanNum=0;chanNum<max_ch;chanNum++) {
-			double dtmp;
-
-			/* Compute energy in each scalefactor band of each window */
-			numWindows = (block_type[chanNum]==ONLY_SHORT_WINDOW) ?	short_win_in_long : 1;
-			windowLength = block_size_samples/numWindows;
-			bandNumber=0;
-			for (w=0;w<numWindows;w++) {
-				int offset=0;
-				int sfb;
-				j = w*windowLength;
-
-
-				/* Only compute energy up to max_sfb */
-				for(sfb=0; sfb< quantInfo[chanNum].max_sfb; sfb++ ) {
-					/* calculate scale factor band energy */
-					int width,i;
-					energy[chanNum][bandNumber] = 0.0;
-					width=sfb_width_table[chanNum][sfb];
-					for(i=offset; i<(offset+width); i++ ) {
-						dtmp = spectral_line_vector[chanNum][j++];   
-						energy[chanNum][bandNumber] += dtmp*dtmp;
-					}
-					energy[chanNum][bandNumber] = energy[chanNum][bandNumber] / width;
-					bandNumber++;
-					offset+=width;
-				}  
-			}
-		}  /* for (chanNum... */
 
 		/************************************************/
 		/* Call the AAC quantization and coding module. */
