@@ -17,7 +17,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: aacquant.c,v 1.17 2003/04/13 08:37:47 knik Exp $
+ * $Id: aacquant.c,v 1.18 2003/05/01 10:29:06 knik Exp $
  */
 
 #include <math.h>
@@ -75,9 +75,6 @@ void AACQuantizeInit(CoderInfo *coderInfo, unsigned int numChannels)
     adj43[i] = 0.5;
 
     for (channel = 0; channel < numChannels; channel++) {
-        coderInfo[channel].old_value = 0;
-        coderInfo[channel].CurrentStep = 4;
-
         coderInfo[channel].requantFreq = (double*)AllocMemory(BLOCK_LEN_LONG*sizeof(double));
     }
 }
@@ -171,7 +168,7 @@ int AACQuantize(CoderInfo *coderInfo,
                 int quality)
 {
     int sb, i, do_q = 0;
-    int bits, sign;
+    int bits = 0, sign;
     double xr_pow[FRAME_LEN];
     double xmin[MAX_SCFAC_BANDS];
     int xi[FRAME_LEN];
@@ -239,6 +236,7 @@ int AACQuantize(CoderInfo *coderInfo,
     /* place the codewords and their respective lengths in arrays data[] and len[] respectively */
     /* there are 'counter' elements in each array, and these are variable length arrays depending on the input */
     coderInfo->spectral_count = 0;
+    sb = 0;
     for(i = 0; i < coderInfo->nr_of_sfb; i++) {
         OutputBits(
             coderInfo,
@@ -246,15 +244,18 @@ int AACQuantize(CoderInfo *coderInfo,
             xi,
             coderInfo->sfb_offset[i],
             coderInfo->sfb_offset[i+1]-coderInfo->sfb_offset[i]);
+
+	if (coderInfo->book_vector[i])
+          sb = i;
     }
+    // FIXME: Check those max_sfb/nr_of_sfb. Isn't it the same?
+    coderInfo->max_sfb = coderInfo->nr_of_sfb = sb + 1;
 
     return bits;
 }
 
 
 #if 1 /* TAKEHIRO_IEEE754_HACK */
-
-#pragma warning( disable : 4244 4307 )
 
 typedef union {
     float f;
@@ -264,6 +265,7 @@ typedef union {
 #define MAGIC_FLOAT (65536*(128))
 #define MAGIC_INT 0x4b000000
 
+#if 0
 static void Quantize(const double *xp, int *pi, double istep)
 {
     int j;
@@ -294,7 +296,7 @@ static void Quantize(const double *xp, int *pi, double istep)
         xp += 4;
     }
 }
-
+#endif
 static void QuantizeBand(const double *xp, int *pi, double istep,
 			   int offset, int end)
 {
@@ -360,9 +362,8 @@ static void CalcAllowedDist(PsyInfo *psyInfo, int *cb_offset, int num_cb,
                             double *xr, double *xmin, int quality)
 {
   int sfb, start, end, l;
-  const double globalthr = 38.0 / (double)quality;
+  const double globalthr = 37.0 / (double)quality;
   int last = cb_offset[num_cb];
-  double mid = 0.5 * 5.0 / cb_offset[num_cb];
   double totnrg = 0.0;
   static const double minfix = 1.5;
 
@@ -506,7 +507,6 @@ static int SortForGrouping(CoderInfo* coderInfo,
     double xr_tmp[1024];
     double thr_tmp[150];
     double en_tmp[150];
-    int book=1;
     int group_offset=0;
     int k=0;
     int windowOffset = 0;
