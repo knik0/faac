@@ -421,6 +421,11 @@ int count_bits(AACQuantInfo* quantInfo,
 {
 	int i, bits = 0;
 
+	if (quantInfo->block_type==ONLY_SHORT_WINDOW)
+		quantInfo->pulseInfo.pulse_data_present = 0;
+	else
+		PulseCoder(quantInfo, quant);
+
 	/* find a good method to section the scalefactor bands into huffman codebook sections */
 	bit_search(quant,              /* Quantized spectral values */
 		quantInfo);         /* Quantization information */
@@ -788,11 +793,9 @@ int tf_encode_spectrum_aac(
 
 	calc_noise(quantInfo, p_spectrum[0], quant, requant, noise, allowed_dist[0],
 			&over_noise, &tot_noise, &max_noise);
-	if (quantInfo->block_type==ONLY_SHORT_WINDOW)
-		quantInfo->pulseInfo.pulse_data_present = 0;
-	else
-		PulseCoder(quantInfo, quant);
 	count_bits(quantInfo, quant, output_book_vector);
+	if (quantInfo->block_type!=ONLY_SHORT_WINDOW)
+		PulseDecoder(quantInfo, quant);
 
 //	for( sb=0; sb< quantInfo -> nr_of_sfb; sb++ ) {
 //		printf("%d error: %.4f all.dist.: %.4f energy: %.4f\n", sb,

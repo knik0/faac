@@ -52,9 +52,9 @@ Copyright (c) 1997.
 
 Source file:
 
-$Id: psych.c,v 1.34 2000/02/05 15:09:33 menno Exp $
-$Id: psych.c,v 1.34 2000/02/05 15:09:33 menno Exp $
-$Id: psych.c,v 1.34 2000/02/05 15:09:33 menno Exp $
+$Id: psych.c,v 1.35 2000/02/05 20:00:23 menno Exp $
+$Id: psych.c,v 1.35 2000/02/05 20:00:23 menno Exp $
+$Id: psych.c,v 1.35 2000/02/05 20:00:23 menno Exp $
 
 **********************************************************************/
 
@@ -985,14 +985,14 @@ void psy_step11(PARTITION_TABLE_LONG *part_tbl_long,
     else if( p1 == NPART_LONG ) p2 = 0;
 
     for(b = 0; b < part_tbl_long->len; b++) {
-		temp = psy_min( psy_stvar_long->nb[p1+b],2.0*psy_stvar_long->nb[p2+b]);
+		temp = psy_min( psy_stvar_long->nb[p1+b], 2.0*psy_stvar_long->nb[p2+b]);
 		if (temp > 0.01)
 			psy_stvar_long->nb[p1+b] = temp;
     }
 
 	/* added by T. Araki (1997.10.16) */
     for(b = 0; b < part_tbl_short->len; b++){
-		temp = psy_min( psy_stvar_short->nb[0][b], 2.0*psy_stvar_short->last7_nb[b]);
+		temp = psy_min( psy_stvar_short->nb[0][b], 1.0*psy_stvar_short->last7_nb[b]);
 		if (temp > 0.01)
 			psy_stvar_short->nb[0][b] = temp;
     }
@@ -1003,7 +1003,7 @@ void psy_step11(PARTITION_TABLE_LONG *part_tbl_long,
 
 	for(i = 1;  i < MAX_SHORT_WINDOWS; i++){
 		for(b = 0; b < part_tbl_short->len; b++){
-			temp = psy_min( psy_stvar_short->nb[i][b],2.0*psy_stvar_short->nb[i - 1][b]);
+			temp = psy_min( psy_stvar_short->nb[i][b], 1.0*psy_stvar_short->nb[i - 1][b]);
 			if (temp > 0.01)
 				psy_stvar_short->nb[i][b] = temp;
 		}
