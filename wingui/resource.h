@@ -52,8 +52,25 @@
 #define IDS_FilterDidntFindFiles        137
 #define IDS_ErrorCreatingNestedEncoderJob 138
 #define IDS_ErrorWhileLoadingJobList    139
+#define IDD_ASKCREATEDIRECTORYDIALOG    139
 #define IDS_JobNofM                     140
 #define IDS_SubJobNofM                  141
+#define IDS_ErrorCreatingDirectory      142
+#define IDS_FilterJobSupplementaryInfo  143
+#define IDS_UserRefusedToCreateTargetDirectory 144
+#define IDS_FaacEncSetConfigurationFailed 145
+#define IDS_CouldntOpenInputFile        146
+#define IDS_FaacEncEncodeFrameFailed    147
+#define IDS_JobProcessInfoColumn        148
+#define IDS_OutcomeUnprocessed          149
+#define IDS_OutcomeSuccessfullyProcessed 150
+#define IDS_OutcomePartiallyProcessed   151
+#define IDS_OutcomeUserAbort            152
+#define IDS_OutcomeError                153
+#define IDS_FollowUp                    154
+#define IDS_ErrorCreatingTargetDiretory 155
+#define IDS_InvalidTargetDirectory      156
+#define IDS_HadUnsuccessfulJobs         157
 #define IDC_LISTJOBS                    1000
 #define IDC_BUTTONADDENCODERJOB         1001
 #define IDC_TAB1                        1002
@@ -106,6 +123,13 @@
 #define IDC_BUTTONOPENPROPERTIES        1054
 #define IDC_BUTTONMINIMIZEAPP           1055
 #define IDC_BUTTONEXPANDFILTERJOB       1056
+#define IDC_LABELTARGETDIR              1057
+#define IDC_BUTTONNO                    1058
+#define IDC_BUTTONALWAYS                1059
+#define IDC_BUTTONYES                   1060
+#define IDC_BUTTONNEVER                 1061
+#define IDC_BUTTONADDFILTERENCODERJOB   1062
+#define IDC_BUTTONADDEMPTYENCODERJOB    1063
 #define ID_BUTTON32771                  32771
 #define ID_BUTTON32772                  32772
 #define ID_BUTTON32773                  32773
@@ -115,9 +139,9 @@
 // 
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
-#define _APS_NEXT_RESOURCE_VALUE        139
+#define _APS_NEXT_RESOURCE_VALUE        140
 #define _APS_NEXT_COMMAND_VALUE         32775
-#define _APS_NEXT_CONTROL_VALUE         1057
+#define _APS_NEXT_CONTROL_VALUE         1064
 #define _APS_NEXT_SYMED_VALUE           101
 #endif
 #endif

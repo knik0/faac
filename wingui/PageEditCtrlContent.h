@@ -29,8 +29,9 @@ public:
 	const CString& GetContent() const;
 	CString& GetContent();
 
-	void ApplyToJob(CString &oNativeJobPropertyString) const;
-	void ApplyToJob(long &lNativeJobPropertyLong) const;
+	// return if the previous setting was modified
+	bool ApplyToJob(CString &oNativeJobPropertyString) const;
+	bool ApplyToJob(long &lNativeJobPropertyLong) const;
 
 	// implementation of CAbstractPageCtrlContent method
 	virtual CString GetHashString() const;

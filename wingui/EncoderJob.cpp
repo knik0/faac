@@ -117,14 +117,19 @@ CSupportedPropertyPagesData CEncoderJob::GetSupportedPropertyPages() const
 	return toReturn;
 }
 
-bool CEncoderJob::ProcessJob() const
+bool CEncoderJob::ProcessJob(CJobProcessingDynamicUserInputInfo &oUserInputInfo)
 {
 	if (!CFilePathCalc::IsValidFileMask(GetFiles().GetSourceFileName()))
 	{
 		// it's a regular single file encoder job
 
 		// create the manager that manages and performs the processing
-		CEncoderJobProcessingManager oManager(this);
+		CEncoderJobProcessingManager oManager(this, oUserInputInfo);
+		if (!oManager.MayStartProcessingWithStatusDialog())
+		{
+			// the manager advises that we do not even create the status dialog
+			return false;
+		}
 
 		// create the status dialog
 		CProcessJobStatusDialog oDlg(&oManager);
@@ -134,34 +139,88 @@ bool CEncoderJob::ProcessJob() const
 	{
 		// it's a filter encoder job
 
+		// count which jobs we found
+		long lNumberOfSuccessJobs=0;
+		long lNumberOfAbortJobs=0;
+		long lNumberOfErrorJobs=0;
+		long lStartTime=::GetTickCount();
+
 		CJobList oExpandedJobList;
-		if (!ExpandFilterJob(oExpandedJobList)) return false;
+		if (!ExpandFilterJob(oExpandedJobList, lNumberOfErrorJobs)) return false;
 
 		CBListReader oReader(oExpandedJobList);
 		CJob *poCurrentJob;
+		bool bContinue=true;
 		while ((poCurrentJob=oExpandedJobList.GetNextJob(oReader))!=0)
 		{
-			// make sure the target directory for the current job exists
-			CString oTargetDir(poCurrentJob->GetEncoderJob()->GetFiles().GetTargetFileDirectory());
-			if (!CRecursiveDirectoryTraverser::MakeSureDirectoryExists(oTargetDir))
+			if (bContinue)
 			{
-				CString oError;
-				oError.Format(IDS_ErrorCreatingNestedEncoderJob, poCurrentJob->GetEncoderJob()->GetFiles().GetCompleteSourceFilePath(), GetFiles().GetCompleteSourceFilePath());
-				AfxMessageBox("Error creating target directory", MB_OK | MB_ICONSTOP);		// XXX insert resource string and ask user what to do
-				return false;
-			}
-
-			// process the job
-			if (!poCurrentJob->GetEncoderJob()->ProcessJob())
-			{
-				CString oError;
-				oError.Format(IDS_ErrorCreatingNestedEncoderJob, poCurrentJob->GetEncoderJob()->GetFiles().GetCompleteSourceFilePath(), GetFiles().GetCompleteSourceFilePath());
-				if (AfxMessageBox(oError, MB_YESNO)!=IDYES)
+				// process the job
+				if (poCurrentJob->ProcessJob(oUserInputInfo))
 				{
-					return false;
+					// job has been successfully processed
+					lNumberOfSuccessJobs++;
+				}
+				else
+				{
+					// error or user abort during processing
+					switch (poCurrentJob->GetProcessingOutcomeSimple())
+					{
+					case CAbstractJob::eUserAbort:
+						{
+							lNumberOfAbortJobs++;
+
+							// ask if to continue with remaining jobs
+							CString oError;
+							oError.Format(IDS_ErrorCreatingNestedEncoderJob, poCurrentJob->GetEncoderJob()->GetFiles().GetCompleteSourceFilePath(), GetFiles().GetCompleteSourceFilePath());
+							if (AfxMessageBox(oError, MB_YESNO)!=IDYES)
+							{
+								bContinue=false;
+							}
+							break;
+						}
+					case CAbstractJob::eError:
+						{
+							lNumberOfErrorJobs++;
+							break;
+						}
+					default:
+						{
+							// unknown return type of job processing
+							ASSERT(false);
+							lNumberOfErrorJobs++;
+							break;
+						}
+					}
 				}
 			}
+			else
+			{
+				// one of the remaining jobs after a "permanently aborted" one
+				lNumberOfAbortJobs++;
+			}
 		}
+
+		// save how well we processed the filter job
+		EJobProcessingOutcome eJobProcessingOutcome;
+		CString oSupplementaryInfo;
+		oSupplementaryInfo.Format(IDS_FilterJobSupplementaryInfo, lNumberOfSuccessJobs+lNumberOfAbortJobs+lNumberOfErrorJobs, lNumberOfSuccessJobs, lNumberOfErrorJobs, lNumberOfAbortJobs);
+		if (lNumberOfSuccessJobs==0)
+		{
+			eJobProcessingOutcome=eError;
+		}
+		else
+		{
+			if (lNumberOfAbortJobs>0 || lNumberOfErrorJobs>0)
+			{
+				eJobProcessingOutcome=ePartiallyProcessed;
+			}
+			else
+			{
+				eJobProcessingOutcome=eSuccessfullyProcessed;
+			}
+		}
+		SetProcessingOutcome(eJobProcessingOutcome, ::GetTickCount()-lStartTime, oSupplementaryInfo);
 
 		/*// first find out all files that actually belong to the job
 		TItemList<CString> oFiles=
@@ -384,11 +443,12 @@ CString CEncoderJob::TranslateAacProfileToShortString(EAacProfile eAacProfile)
 	return oToReturn;
 }
 
-bool CEncoderJob::ExpandFilterJob(CJobList &oTarget, bool bCreateDirectories) const
+bool CEncoderJob::ExpandFilterJob(CJobList &oTarget, long &lNumberOfErrorJobs, bool bCreateDirectories) const
 {
 	if (!CFilePathCalc::IsValidFileMask(GetFiles().GetSourceFileName()))
 	{
 		ASSERT(false);		// not a filter job
+		lNumberOfErrorJobs+=oTarget.GetNumber();
 		return false;
 	}
 	else
@@ -406,10 +466,8 @@ bool CEncoderJob::ExpandFilterJob(CJobList &oTarget, bool bCreateDirectories) co
 
 		if (oFiles.GetNumber()==0)
 		{
-			CString oError;
-			oError.Format(IDS_FilterDidntFindFiles, GetFiles().GetCompleteSourceFilePath());
-			AfxMessageBox(oError);
-			return false;
+			// no files there that match the filter
+			return true;
 		}
 
 		long lTotalNumberOfSubJobsToProcess=oFiles.GetNumber();
@@ -419,75 +477,87 @@ bool CEncoderJob::ExpandFilterJob(CJobList &oTarget, bool bCreateDirectories) co
 		CString oCurrentFilePath;
 		while (oFiles.GetNextElemContent(oReader, oCurrentFilePath))
 		{
+			bool bCurSubJobSuccess=true;
 			CEncoderJob oNewJob(*this);
+			oNewJob.ResetProcessingOutcome();
 			oNewJob.SetSubJobNumberInfo(lCurSubJobCount++, lTotalNumberOfSubJobsToProcess);
 			if (!oNewJob.GetFiles().SetCompleteSourceFilePath(oCurrentFilePath))
 			{
-				CString oError;
-				oError.Format(IDS_ErrorCreatingNestedEncoderJob, oCurrentFilePath, GetFiles().GetCompleteSourceFilePath());
-				if (AfxMessageBox(oError, MB_YESNO)!=IDYES)
-				{
-					return false;
-				}
+				bCurSubJobSuccess=false;
 			}
-			// assemble the target file name and apply it to the new job
+			else
 			{
-				// find out the long name of the source file directory
-				CString oSourceFileDir;
+				// assemble the target file name and apply it to the new job
 				{
-					oSourceFileDir=GetFiles().GetSourceFileDirectory();
-					CString oTemp;
-					LPTSTR pDummy;
-					::GetFullPathName(oSourceFileDir,
-						MAX_PATH, oTemp.GetBuffer(MAX_PATH),
-						&pDummy);
-					oTemp.ReleaseBuffer();
-					if (oTemp[oTemp.GetLength()-1]=='\\')
+					// find out the long name of the source file directory
+					CString oSourceFileDir;
 					{
-						oTemp.Delete(oTemp.GetLength()-1);
+						oSourceFileDir=GetFiles().GetSourceFileDirectory();
+						CString oTemp;
+						LPTSTR pDummy;
+						::GetFullPathName(oSourceFileDir,
+							MAX_PATH, oTemp.GetBuffer(MAX_PATH),
+							&pDummy);
+						oTemp.ReleaseBuffer();
+						if (oTemp[oTemp.GetLength()-1]=='\\')
+						{
+							oTemp.Delete(oTemp.GetLength()-1);
+						}
+
+						oSourceFileDir=oTemp;
 					}
 
-					oSourceFileDir=oTemp;
-				}
-
-				// find out the suffix to append to the target directory
-				// for our particular file
-				CString oDirSuffix;
-				{
-					CString oFileDir(oCurrentFilePath);
-					CFilePathCalc::MakePath(oFileDir);
-					int iLength=oFileDir.GetLength();
-					oDirSuffix=oFileDir.Right(iLength-oSourceFileDir.GetLength());
-					oDirSuffix.Delete(0);
-				}
-
-				// determine the target directory for that particular file
-				CString oTargetDir(GetFiles().GetTargetFileDirectory());
-				CFilePathCalc::MakePath(oTargetDir, true);
-				oTargetDir+=oDirSuffix;
-				if (bCreateDirectories)
-				{
-					if (!CRecursiveDirectoryTraverser::MakeSureDirectoryExists(oTargetDir))
+					// find out the suffix to append to the target directory
+					// for our particular file
+					CString oDirSuffix;
 					{
-						CString oError;
-						oError.Format(IDS_ErrorCreatingNestedEncoderJob, oCurrentFilePath, GetFiles().GetCompleteSourceFilePath());
-						AfxMessageBox("Error creating target directory", MB_OK | MB_ICONSTOP);		// XXX insert resource string and ask user what to do
-						return false;
+						CString oFileDir(oCurrentFilePath);
+						CFilePathCalc::MakePath(oFileDir);
+						int iLength=oFileDir.GetLength();
+						oDirSuffix=oFileDir.Right(iLength-oSourceFileDir.GetLength());
+						oDirSuffix.Delete(0);
 					}
-				}
 
-				CString oSourceFileName;
-				CFilePathCalc::ExtractFileName(oCurrentFilePath, oSourceFileName);
-				CString oSourceFileNameRaw;
-				CString oSourceFileExtension;
-				CFilePathCalc::SplitFileAndExtension(oSourceFileName, oSourceFileNameRaw, oSourceFileExtension);
-				oNewJob.GetFiles().SetTargetFileDirectory(oTargetDir);
-				CString oDefaultExtension;
-				oDefaultExtension.LoadString(IDS_EndTargetFileStandardExtension);
-				oNewJob.GetFiles().SetTargetFileName(oSourceFileNameRaw+"."+oDefaultExtension);
+					// determine the target directory for that particular file
+					CString oTargetDir(GetFiles().GetTargetFileDirectory());
+					CFilePathCalc::MakePath(oTargetDir, true);
+					oTargetDir+=oDirSuffix;
+					if (bCreateDirectories)
+					{
+						// must display an error message at ASSERT(false) a few lines below
+						// and oprionally ask the user what to do if the functionality
+						// auto create directories should ever be used (i.e. we can reach
+						// here)
+						ASSERT(false);
+						if (!CRecursiveDirectoryTraverser::MakeSureDirectoryExists(oTargetDir))
+						{
+							// must display an error message and oprionally ask the user what to do
+							// if this functionality (auto create directories) should ever be used
+							ASSERT(false);
+						}
+					}
+
+					CString oSourceFileName;
+					CFilePathCalc::ExtractFileName(oCurrentFilePath, oSourceFileName);
+					CString oSourceFileNameRaw;
+					CString oSourceFileExtension;
+					CFilePathCalc::SplitFileAndExtension(oSourceFileName, oSourceFileNameRaw, oSourceFileExtension);
+					oNewJob.GetFiles().SetTargetFileDirectory(oTargetDir);
+					CString oDefaultExtension;
+					oDefaultExtension.LoadString(IDS_EndTargetFileStandardExtension);
+					oNewJob.GetFiles().SetTargetFileName(oSourceFileNameRaw+"."+oDefaultExtension);
+				}
 			}
 
-			oTarget.AddJob(oNewJob);
+			// add the job or increment the errorneous jobs counter
+			if (bCurSubJobSuccess)
+			{
+				oTarget.AddJob(oNewJob);
+			}
+			else
+			{
+				lNumberOfErrorJobs++;
+			}
 		}
 
 		return true;
@@ -511,14 +581,22 @@ CEncoderGeneralPropertyPageContents CEncoderJob::GetGeneralPageContents() const
 
 void CEncoderJob::ApplyGeneralPageContents(const CEncoderGeneralPropertyPageContents &oPageContents)
 {
+	bool bModified=false;
+
 	// note: the use of getters on the righthand side is correct since they return references
-	oPageContents.m_oSourceDirectory.ApplyToJob(GetFiles().GetSourceFileDirectory());
-	oPageContents.m_oSourceFile.ApplyToJob(GetFiles().GetSourceFileName());
-	oPageContents.m_oTargetDirectory.ApplyToJob(GetFiles().GetTargetFileDirectory());
-	oPageContents.m_oTargetFile.ApplyToJob(GetFiles().GetTargetFileName());
-	oPageContents.m_oSourceFileFilterIsRecursive.ApplyToJob(m_bSourceFileFilterIsRecursive);
+	bModified=bModified || oPageContents.m_oSourceDirectory.ApplyToJob(GetFiles().GetSourceFileDirectory());
+	bModified=bModified || oPageContents.m_oSourceFile.ApplyToJob(GetFiles().GetSourceFileName());
+	bModified=bModified || oPageContents.m_oTargetDirectory.ApplyToJob(GetFiles().GetTargetFileDirectory());
+	bModified=bModified || oPageContents.m_oTargetFile.ApplyToJob(GetFiles().GetTargetFileName());
+	bModified=bModified || oPageContents.m_oSourceFileFilterIsRecursive.ApplyToJob(m_bSourceFileFilterIsRecursive);
 
 	// ignore oPageContents.m_oSourceFilterRecursiveCheckboxVisible
+
+	// when the job has been modified reset it to "unprocessed" state
+	if (bModified)
+	{
+		ResetProcessingOutcome();
+	}
 }
 
 CEncoderQualityPropertyPageContents CEncoderJob::GetQualityPageContents() const
@@ -537,16 +615,24 @@ CEncoderQualityPropertyPageContents CEncoderJob::GetQualityPageContents() const
 
 void CEncoderJob::ApplyQualityPageContents(const CEncoderQualityPropertyPageContents &oPageContents)
 {
+	bool bModified=false;
+
 	// note: the use of getters on the righthand side is correct since they return references
-	oPageContents.m_oBitRate.ApplyToJob((long&)m_ulBitRate);
-	oPageContents.m_oBandwidth.ApplyToJob((long&)m_ulBandwidth);
-	oPageContents.m_oAllowMidSide.ApplyToJob(m_bAllowMidSide);
-	oPageContents.m_oUseTns.ApplyToJob(m_bUseTns);
-	oPageContents.m_oUseLtp.ApplyToJob(m_bUseLtp);
-	oPageContents.m_oUseLfe.ApplyToJob(m_bUseLfe);
-	long lTemp=-1;
-	oPageContents.m_oAacProfile.ApplyToJob(lTemp);
-	if (lTemp>=0) SetAacProfile(lTemp);
+	bModified=bModified || oPageContents.m_oBitRate.ApplyToJob((long&)m_ulBitRate);
+	bModified=bModified || oPageContents.m_oBandwidth.ApplyToJob((long&)m_ulBandwidth);
+	bModified=bModified || oPageContents.m_oAllowMidSide.ApplyToJob(m_bAllowMidSide);
+	bModified=bModified || oPageContents.m_oUseTns.ApplyToJob(m_bUseTns);
+	bModified=bModified || oPageContents.m_oUseLtp.ApplyToJob(m_bUseLtp);
+	bModified=bModified || oPageContents.m_oUseLfe.ApplyToJob(m_bUseLfe);
+	long lTemp=GetAacProfileL();
+	bModified=bModified || oPageContents.m_oAacProfile.ApplyToJob(lTemp);
+	SetAacProfile(lTemp);
+
+	// when the job has been modified reset it to "unprocessed" state
+	if (bModified)
+	{
+		ResetProcessingOutcome();
+	}
 }
 
 CEncoderId3PropertyPageContents CEncoderJob::GetId3PageContents() const
@@ -570,17 +656,25 @@ CEncoderId3PropertyPageContents CEncoderJob::GetId3PageContents() const
 
 void CEncoderJob::ApplyId3PageContents(const CEncoderId3PropertyPageContents &oPageContents)
 {
+	bool bModified=false;
+
 	// note: the use of getters on the righthand side is correct since they return references
-	oPageContents.m_oArtist.ApplyToJob(GetTargetFileId3Info().GetArtist());
-	oPageContents.m_oTrackNo.ApplyToJob(GetTargetFileId3Info().GetTrackNoRef());
-	oPageContents.m_oAlbum.ApplyToJob(GetTargetFileId3Info().GetAlbum());
-	oPageContents.m_oYear.ApplyToJob(GetTargetFileId3Info().GetYearRef());
-	oPageContents.m_oTitle.ApplyToJob(GetTargetFileId3Info().GetSongTitle());
-	oPageContents.m_oCopyright.ApplyToJob(GetTargetFileId3Info().GetCopyrightRef());
-	oPageContents.m_oOriginalArtist.ApplyToJob(GetTargetFileId3Info().GetOriginalArtist());
-	oPageContents.m_oComposer.ApplyToJob(GetTargetFileId3Info().GetComposer());
-	oPageContents.m_oUrl.ApplyToJob(GetTargetFileId3Info().GetUrl());
-	oPageContents.m_oGenre.ApplyToJob(GetTargetFileId3Info().GetGenre());
-	oPageContents.m_oEncodedBy.ApplyToJob(GetTargetFileId3Info().GetEncodedBy());
-	oPageContents.m_oComment.ApplyToJob(GetTargetFileId3Info().GetComment());
+	bModified=bModified || oPageContents.m_oArtist.ApplyToJob(GetTargetFileId3Info().GetArtist());
+	bModified=bModified || oPageContents.m_oTrackNo.ApplyToJob(GetTargetFileId3Info().GetTrackNoRef());
+	bModified=bModified || oPageContents.m_oAlbum.ApplyToJob(GetTargetFileId3Info().GetAlbum());
+	bModified=bModified || oPageContents.m_oYear.ApplyToJob(GetTargetFileId3Info().GetYearRef());
+	bModified=bModified || oPageContents.m_oTitle.ApplyToJob(GetTargetFileId3Info().GetSongTitle());
+	bModified=bModified || oPageContents.m_oCopyright.ApplyToJob(GetTargetFileId3Info().GetCopyrightRef());
+	bModified=bModified || oPageContents.m_oOriginalArtist.ApplyToJob(GetTargetFileId3Info().GetOriginalArtist());
+	bModified=bModified || oPageContents.m_oComposer.ApplyToJob(GetTargetFileId3Info().GetComposer());
+	bModified=bModified || oPageContents.m_oUrl.ApplyToJob(GetTargetFileId3Info().GetUrl());
+	bModified=bModified || oPageContents.m_oGenre.ApplyToJob(GetTargetFileId3Info().GetGenre());
+	bModified=bModified || oPageContents.m_oEncodedBy.ApplyToJob(GetTargetFileId3Info().GetEncodedBy());
+	bModified=bModified || oPageContents.m_oComment.ApplyToJob(GetTargetFileId3Info().GetComment());
+
+	// when the job has been modified reset it to "unprocessed" state
+	if (bModified)
+	{
+		ResetProcessingOutcome();
+	}
 }

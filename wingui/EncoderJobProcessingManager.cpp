@@ -6,6 +6,7 @@
 #include "faac_wingui.h"
 #include "EncoderJobProcessingManager.h"
 #include "WindowUtil.h"
+#include "RecursiveDirectoryTraverser.h"
 
 #include <sndfile.h>
 #include "faac.h"
@@ -22,15 +23,72 @@ static char THIS_FILE[]=__FILE__;
 // Construction/Destruction
 //////////////////////////////////////////////////////////////////////
 
-CEncoderJobProcessingManager::CEncoderJobProcessingManager(const CEncoderJob *poJobToProcess):
+CEncoderJobProcessingManager::CEncoderJobProcessingManager(
+	CEncoderJob *poJobToProcess, CJobProcessingDynamicUserInputInfo &oUserInputInfo):
+
 	m_poJobToProcess(poJobToProcess),
 	m_poInfoTarget(0),
-	m_eCurrentWorkingState(eInitial)
+	m_eCurrentWorkingState(eInitial),
+	m_oUserInputInfo(oUserInputInfo)
 {
 }
 
 CEncoderJobProcessingManager::~CEncoderJobProcessingManager()
 {
+}
+
+bool CEncoderJobProcessingManager::MayStartProcessingWithStatusDialog()
+{
+	long lStartTimeMillis=::GetTickCount();
+	CEncoderJob *poJob=m_poJobToProcess;
+	// make sure the target directory exists at all
+	{
+		CString oTargetFileDir(poJob->GetFiles().GetTargetFileDirectory());
+		if (oTargetFileDir.GetLength()<1)
+		{
+			CString oError;
+			oError.LoadString(IDS_InvalidTargetDirectory);
+			poJob->SetProcessingOutcomeCurTime(CAbstractJob::eError, lStartTimeMillis, oError);
+			return false;
+		}
+		
+		while (oTargetFileDir.GetAt(oTargetFileDir.GetLength()-1)=='\\')
+		{
+			oTargetFileDir.Delete(oTargetFileDir.GetLength()-1);
+		}
+		if (CRecursiveDirectoryTraverser::CountMatchingFiles(oTargetFileDir)<1)
+		{
+			// the target directory doesn't exist;
+			// there are two possibilities: create it
+			// or
+			// abort with an error
+			CString oTargetDir(poJob->GetFiles().GetTargetFileDirectory());
+			if (m_oUserInputInfo.GetAutoCreateDirectoryBool(oTargetDir))
+			{
+				if (!CRecursiveDirectoryTraverser::MakeSureDirectoryExists(oTargetDir))
+				{
+					// directory couldn't be created;
+					// log the error
+					CString oError;
+					oError.Format(IDS_ErrorCreatingDirectory, poJob->GetFiles().GetTargetFileDirectory());
+					poJob->SetProcessingOutcomeCurTime(CAbstractJob::eError, lStartTimeMillis, oError);
+					return false;
+				}
+			}
+			else
+			{
+				// the directory doesn't exist and the user refused to create it
+				poJob->SetProcessingOutcomeCurTime(CAbstractJob::eError, lStartTimeMillis, IDS_UserRefusedToCreateTargetDirectory);
+				return false;
+			}
+		}
+		else
+		{
+			// the directory already exists so everything is ok up to here
+		}
+	}
+
+	return true;
 }
 
 void CEncoderJobProcessingManager::Start(
@@ -117,7 +175,9 @@ bool CEncoderJobProcessingManager::DoProcessing()
 {
 	long lStartTimeMillis=::GetTickCount();
 
-	long lMaxCount=250*64000/(5+m_poJobToProcess->GetBitRate());
+	const CEncoderJob *poJob=m_poJobToProcess;
+
+	long lMaxCount=250*64000/(5+poJob->GetBitRate());
 	for (long lPos=0; lPos<lMaxCount; lPos++)
 	{
 		long lMultiplicationDummy;
@@ -151,12 +211,15 @@ bool CEncoderJobProcessingManager::DoProcessing()
 		case eStopped:
 			{
 				// must interrupt
+				poJob->SetProcessingOutcomeCurTime(CAbstractJob::eUserAbort, lStartTimeMillis, "");
 				return false;
 			}
 		}
 	}
 
 	m_eCurrentWorkingState=eCleanup;
+
+	poJob->SetProcessingOutcomeCurTime(CAbstractJob::eSuccessfullyProcessed, lStartTimeMillis, "");
 
 	return true;
 }
@@ -166,8 +229,18 @@ bool CEncoderJobProcessingManager::DoProcessing()
 bool CEncoderJobProcessingManager::DoProcessing()
 {
 	long lStartTimeMillis=::GetTickCount();
-	const CEncoderJob *poJob=m_poJobToProcess;
+	CEncoderJob *poJob=m_poJobToProcess;
 	bool bInterrupted=false;
+
+#ifdef _DEBUG
+	// make sure preprocessing has been done properly to warn the programmer if not
+	if (!MayStartProcessingWithStatusDialog())
+	{
+		// you should call MayStartProcessingWithStatusDialog() before starting
+		// a status dialog driven processing of the job
+		ASSERT(false);
+	}
+#endif
 
 	SNDFILE *phInFile;
 	SF_INFO sctSfInfo;
@@ -201,7 +274,7 @@ bool CEncoderJobProcessingManager::DoProcessing()
 				faacEncClose(hEncoder);
 				sf_close(phInFile);
 
-				AfxMessageBox("faacEncSetConfiguration failed!", MB_OK | MB_ICONSTOP);
+				poJob->SetProcessingOutcomeCurTime(CAbstractJob::eError, lStartTimeMillis, IDS_FaacEncSetConfigurationFailed);
 
 				return false;
 			}
@@ -270,18 +343,20 @@ bool CEncoderJobProcessingManager::DoProcessing()
 					if (bInterrupted) 
 					{
 						// Stop Pressed
+						poJob->SetProcessingOutcomeCurTime(CAbstractJob::eUserAbort, lStartTimeMillis, "");
 						break;
 					}
 
 					if (lSamplesInput==0 && lBytesWritten==0)
 					{
 						// all done, bail out
+						poJob->SetProcessingOutcomeCurTime(CAbstractJob::eSuccessfullyProcessed, lStartTimeMillis, "");
 						break;
 					}
 
 					if (lBytesWritten < 0)
 					{
-						AfxMessageBox("faacEncEncodeFrame failed!", MB_OK | MB_ICONSTOP);
+						poJob->SetProcessingOutcomeCurTime(CAbstractJob::eError, lStartTimeMillis, IDS_FaacEncEncodeFrameFailed);
 						bInterrupted=true;
 						break;
 					}
@@ -304,7 +379,7 @@ bool CEncoderJobProcessingManager::DoProcessing()
 	}
 	else
 	{
-		AfxMessageBox("Couldn't open input file!", MB_OK | MB_ICONSTOP);
+		poJob->SetProcessingOutcomeCurTime(CAbstractJob::eError, lStartTimeMillis, IDS_CouldntOpenInputFile);
 		bInterrupted=true;
 	}
 
@@ -321,7 +396,7 @@ void CEncoderJobProcessingManager::WriteProgress(long lOperationStartTickCount, 
 	CString oTopStatusText=m_poJobToProcess->GetDetailedDescriptionForStatusDialog();
 
 	long lElapsedTime=lCurTime-lOperationStartTickCount;
-	long lEstimateEntireTime=(long)((double)(lElapsedTime)/(dProgress/100));
+	long lEstimateEntireTime=(long)((100.*lElapsedTime)/dProgress);
 	long lETA=lEstimateEntireTime-lElapsedTime;
 	CString oElapsedTime(CWindowUtil::GetTimeDescription(lElapsedTime));
 	CString oEntireTime(CWindowUtil::GetTimeDescription(lEstimateEntireTime));

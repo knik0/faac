@@ -20,8 +20,14 @@
 class CEncoderJobProcessingManager : public CProcessingStartStopPauseInteractable  
 {
 public:
-	CEncoderJobProcessingManager(const CEncoderJob *poJobToProcess);
+	CEncoderJobProcessingManager(CEncoderJob *poJobToProcess, CJobProcessingDynamicUserInputInfo &oUserInputInfo);
 	virtual ~CEncoderJobProcessingManager();
+
+	// encoder jobs should call this dialog before creating and starting the status dialog
+	// for this processing manager; if this member returns false you can stop processing
+	// of this job; this case is identical with that the the DoModal() function of the
+	// status returns something different from IDOK
+	bool MayStartProcessingWithStatusDialog();
 
 	virtual void Start(CProcessingStatusDialogInfoFeedbackCallbackInterface *poInfoTarget);
 
@@ -38,8 +44,9 @@ public:
 	} m_eCurrentWorkingState;
 
 private:
-	const CEncoderJob *m_poJobToProcess;
+	CEncoderJob *m_poJobToProcess;
 	CProcessingStatusDialogInfoFeedbackCallbackInterface *m_poInfoTarget;
+	CJobProcessingDynamicUserInputInfo &m_oUserInputInfo;
 
 	// returns true if the job has been completely processed
 	bool DoProcessing();

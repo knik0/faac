@@ -130,8 +130,89 @@ CSupportedPropertyPagesData CJob::GetSupportedPropertyPages() const
 
 CString CJob::GetDetailedDescriptionForStatusDialog() const
 {
-	// doesn't need an implementation here
+	// doesn't need an implementation here; reaching here might
+	// be a mistake
+	ASSERT(false);
 	return "";
+}
+
+void CJob::SetJobNumberInfo(long lThisJobCountNumber, long lTotalNumberOfJobs)
+{
+	if (m_poJob!=0)
+	{
+		m_poJob->SetJobNumberInfo(lThisJobCountNumber, lTotalNumberOfJobs);
+	}
+	else
+	{
+		// must not call this method on uninitialized CJobs
+		ASSERT(false);
+	}
+}
+
+void CJob::SetSubJobNumberInfo(long lThisSubJobCountNumber, long lTotalNumberOfSubJobs)
+{
+	if (m_poJob!=0)
+	{
+		m_poJob->SetSubJobNumberInfo(lThisSubJobCountNumber, lTotalNumberOfSubJobs);
+	}
+	else
+	{
+		// must not call this method on uninitialized CJobs
+		ASSERT(false);
+	}
+}
+
+void CJob::GetProcessingNumberInformation(long &lThisJobCountNumber, long &lTotalNumberOfJobs, long &lThisSubJobCountNumber, long &lTotalNumberOfSubJobs) const
+{
+	if (m_poJob!=0)
+	{
+		m_poJob->GetProcessingNumberInformation(lThisJobCountNumber, lTotalNumberOfJobs, lThisSubJobCountNumber, lTotalNumberOfSubJobs);
+	}
+	else
+	{
+		// must not call this method on uninitialized CJobs
+		ASSERT(false);
+	}
+}
+
+void CJob::SetProcessingOutcome(EJobProcessingOutcome eJobProcessingOutcome, long lProcessingTime, const CString &oSupplementaryInfo)
+{
+	if (m_poJob!=0)
+	{
+		m_poJob->SetProcessingOutcome(eJobProcessingOutcome, lProcessingTime, oSupplementaryInfo);
+	}
+	else
+	{
+		// must not call this method on uninitialized CJobs
+		ASSERT(false);
+	}
+}
+
+void CJob::GetProcessingOutcome(EJobProcessingOutcome &eJobProcessingOutcome, long &lProcessingTime, CString &oSupplementaryInfo) const
+{
+	if (m_poJob!=0)
+	{
+		m_poJob->GetProcessingOutcome(eJobProcessingOutcome, lProcessingTime, oSupplementaryInfo);
+	}
+	else
+	{
+		// must not call this method on uninitialized CJobs
+		ASSERT(false);
+	}
+}
+
+void CJob::ResetProcessingOutcome()
+{
+	if (m_poJob!=0)
+	{
+		m_poJob->ResetProcessingOutcome();
+	}
+	else
+	{
+		// it's not an error when you reach here but it might be undesired so
+		// there's a little alarm here
+		ASSERT(false);
+	}
 }
 
 bool CJob::PutToArchive(CArchive &oArchive) const
@@ -205,12 +286,11 @@ bool CJob::GetFromArchive(CArchive &oArchive)
 	}
 }
 
-bool CJob::ProcessJob() const
+bool CJob::ProcessJob(CJobProcessingDynamicUserInputInfo &oUserInputInfo)
 {
 	if (m_poJob!=0)
 	{
-		m_poJob->CopyAllJobNumberInfoFromJob(*this);
-		return m_poJob->ProcessJob();
+		return m_poJob->ProcessJob(oUserInputInfo);
 	}
 	else
 	{

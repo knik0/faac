@@ -83,16 +83,19 @@ CString& CPageEditCtrlContent::GetContent()
 	}
 }
 
-void CPageEditCtrlContent::ApplyToJob(CString &oNativeJobPropertyString) const
+bool CPageEditCtrlContent::ApplyToJob(CString &oNativeJobPropertyString) const
 {
+	CString oOld(oNativeJobPropertyString);
 	if (!Is3rdState())
 	{
 		oNativeJobPropertyString=GetContent();
 	}
+	return oOld!=oNativeJobPropertyString;
 }
 
-void CPageEditCtrlContent::ApplyToJob(long &lNativeJobPropertyLong) const
+bool CPageEditCtrlContent::ApplyToJob(long &lNativeJobPropertyLong) const
 {
+	long lOld(lNativeJobPropertyLong);
 	if (!Is3rdState())
 	{
 		CString oContent(GetContent());
@@ -103,6 +106,7 @@ void CPageEditCtrlContent::ApplyToJob(long &lNativeJobPropertyLong) const
 			lNativeJobPropertyLong=lNumber;
 		}
 	}
+	return lOld!=lNativeJobPropertyLong;
 }
 
 CString CPageEditCtrlContent::GetHashString() const

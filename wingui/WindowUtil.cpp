@@ -136,6 +136,42 @@ int CWindowUtil::GetListCtrlItemIdByLParam(CListCtrl *poListCtrl, long lParam, i
 	return poListCtrl->FindItem(&sctFindInfo, iStartAt);
 }
 
+void CWindowUtil::SetListCtrlFullRowSelectStyle(CListCtrl *poListCtrl, bool bFullRowSelectStyle)
+{
+	if (poListCtrl==0)
+	{
+		ASSERT(false);
+		return;
+	}
+
+	if (bFullRowSelectStyle)
+	{
+		ListView_SetExtendedListViewStyleEx(*poListCtrl, LVS_EX_FULLROWSELECT, LVS_EX_FULLROWSELECT);
+	}
+	else
+	{
+		ListView_SetExtendedListViewStyleEx(*poListCtrl, LVS_EX_FULLROWSELECT, 0);
+	}
+}
+
+void CWindowUtil::SetListCtrlCheckBoxStyle(CListCtrl *poListCtrl, bool bCheckboxStyle)
+{
+	if (poListCtrl==0)
+	{
+		ASSERT(false);
+		return;
+	}
+
+	if (bCheckboxStyle)
+	{
+		ListView_SetExtendedListViewStyleEx(*poListCtrl, LVS_EX_CHECKBOXES, LVS_EX_CHECKBOXES);
+	}
+	else
+	{
+		ListView_SetExtendedListViewStyleEx(*poListCtrl, LVS_EX_CHECKBOXES, 0);
+	}
+}
+
 
 void CWindowUtil::ForceNumericContent(CEdit *poEdit, bool bAllowNegative)
 {

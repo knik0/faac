@@ -31,8 +31,9 @@ public:
 	// in this case directory names are NOT matched against the filter;
 	// return value: a list of complete paths of the files found;
 	// this method displays error messages and returns an empty list in case
-	// of errors
-	static TItemList<CString> FindFiles(const CString &oRootDirectory, const CString &oFileNameFilter, bool bRecursive);
+	// of errors; if bAcceptDirectories is true also directories that match
+	// the filter will be returned
+	static TItemList<CString> FindFiles(const CString &oRootDirectory, const CString &oFileNameFilter, bool bRecursive, bool bAcceptDirectories=false);
 
 	// returns if the directory was found or could be created. if false is
 	// returned this mostly means that there is a concurring file to 

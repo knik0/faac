@@ -77,21 +77,25 @@ void CPageComboBoxCtrlContent::SetCurComboBoxSelectionText(CComboBox *poComboBox
 	SetContent(oText);
 }
 
-void CPageComboBoxCtrlContent::ApplyToJob(CString &oNativeJobPropertyTextString) const
+bool CPageComboBoxCtrlContent::ApplyToJob(CString &oNativeJobPropertyTextString) const
 {
+	CString oOld(oNativeJobPropertyTextString);
 	if (!Is3rdState())
 	{
 		oNativeJobPropertyTextString=GetContentText();
 	}
+	return oOld!=oNativeJobPropertyTextString;
 }
 
-void CPageComboBoxCtrlContent::ApplyToJob(long &lNativeJobPropertySelectionLong) const
+bool CPageComboBoxCtrlContent::ApplyToJob(long &lNativeJobPropertySelectionLong) const
 {
+	long lOld(lNativeJobPropertySelectionLong);
 	int iId=GetContentSelection();
 	if (iId>=0)
 	{
 		lNativeJobPropertySelectionLong=GetContentSelection();
 	}
+	return lOld!=lNativeJobPropertySelectionLong;
 }
 
 void CPageComboBoxCtrlContent::ApplyToComboBoxVariable(int &iSelectionVariable) const

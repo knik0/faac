@@ -31,7 +31,8 @@ public:
 	int GetCheckCode() const				{ if (Is3rdState()) return 2; else return m_bCheckMark ? 1 : 0; }
 	void ApplyCheckCodeToButton(CButton *poButton) const;		// this member should prefered over GetCheckCode() because it also enables the 3rd state, if necessary
 
-	void ApplyToJob(bool &bBool) const;
+	// returns if the existing value has been modified
+	bool ApplyToJob(bool &bBool) const;
 
 	// implementation of CAbstractPageCtrlContent method
 	virtual CString GetHashString() const;

@@ -47,10 +47,12 @@ void CPageCheckboxCtrlContent::ApplyCheckCodeToButton(CButton *poButton) const
 	}
 }
 
-void CPageCheckboxCtrlContent::ApplyToJob(bool &bBool) const
+bool CPageCheckboxCtrlContent::ApplyToJob(bool &bBool) const
 {
+	bool bOld=bBool;
 	if (!Is3rdState())
 	{
 		bBool=GetCheckMark();
 	}
+	return bOld!=bBool;
 }

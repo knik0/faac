@@ -87,7 +87,7 @@ public:
 
 	// implementations to CAbstractJob
 	virtual CSupportedPropertyPagesData GetSupportedPropertyPages() const;
-	virtual bool ProcessJob() const;
+	virtual bool ProcessJob(CJobProcessingDynamicUserInputInfo &oUserInputInfo);
 	virtual CString GetDetailedDescriptionForStatusDialog() const;
 
 	// implementations to CFileSerializable
@@ -100,8 +100,11 @@ public:
 	// this job to a list of single jobs to process;
 	// returns false in case of errors but displays error messages on its own;
 	// the bCreateDirectories parameter specifies if the target directory structure
-	// is already to create (otherwise executing the job could fail)
-	bool ExpandFilterJob(CJobList &oTarget, bool bCreateDirectories=false) const;
+	// is already to be created, normally the default value false should be appropriate;
+	// the lNumberOfErrorJobs parameter returns the number of jobs that failed to be created;
+	// note that this method only increments the previous value if errorneous jobs are
+	// encountered, it does not reset it in any kind;
+	bool ExpandFilterJob(CJobList &oTarget, long &lNumberOfErrorJobs, bool bCreateDirectories=false) const;
 
 private:
 	CSourceTargetFilePair m_oFiles;

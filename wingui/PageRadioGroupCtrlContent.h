@@ -22,8 +22,8 @@ public:
 	CPageRadioGroupCtrlContent();
 	virtual ~CPageRadioGroupCtrlContent();
 
-	// callers should only call the SetContent(long) and ApplyToJob(long) methods
-	// what are inherited from CPageEditCtrlContent
+	// jobs should only call the SetContent(long) and ApplyToJob(long) methods,
+	// which are inherited from CPageEditCtrlContent
 
 	void GetFromRadioGroupVariable(int iVariable, long lNumberOfRadiosInGroup)			{ SetContent(iVariable, true); if (iVariable>=lNumberOfRadiosInGroup) SetIs3rdState(true); }
 	void ApplyToRadioGroupVariable(int &iVariable) const								{ long lContent=-1; ApplyToJob(lContent); iVariable=lContent; }

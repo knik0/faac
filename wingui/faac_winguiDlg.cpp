@@ -11,12 +11,15 @@
 #include "FileListQueryManager.h"
 #include "FileMaskAssembler.h"
 #include "FileSerializableJobList.h"
+#include "FolderDialog.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
 #undef THIS_FILE
 static char THIS_FILE[] = __FILE__;
 #endif
+
+//#define EXTENDED_JOB_TRACKING_DURING_PROCESSING		// doesn't work, yet
 
 /////////////////////////////////////////////////////////////////////////////
 // CAboutDlg dialog used for App About
@@ -113,6 +116,8 @@ BEGIN_MESSAGE_MAP(CFaac_winguiDlg, CDialog)
 	ON_BN_CLICKED(IDC_BUTTONOPENPROPERTIES, OnButtonOpenProperties)
 	ON_WM_SHOWWINDOW()
 	ON_BN_CLICKED(IDC_BUTTONEXPANDFILTERJOB, OnButtonExpandFilterJob)
+	ON_BN_CLICKED(IDC_BUTTONADDFILTERENCODERJOB, OnButtonAddFilterEncoderJob)
+	ON_BN_CLICKED(IDC_BUTTONADDEMPTYENCODERJOB, OnButtonAddEmptyEncoderJob)
 	//}}AFX_MSG_MAP
 END_MESSAGE_MAP()
 
@@ -152,9 +157,12 @@ BOOL CFaac_winguiDlg::OnInitDialog()
 		oTypeColumn.LoadString(IDS_JobTypeColumn);
 		CString oInfoColumn;
 		oInfoColumn.LoadString(IDS_JobInfoColumn);
-		CWindowUtil::AddListCtrlColumn(&m_ctrlListJobs, 0, oTypeColumn, 0.1);
-		CWindowUtil::AddListCtrlColumn(&m_ctrlListJobs, 1, oInfoColumn, 0.895);
-		ListView_SetExtendedListViewStyleEx(m_ctrlListJobs, LVS_EX_FULLROWSELECT, LVS_EX_FULLROWSELECT);
+		CString oProcessInfoColumn;
+		oProcessInfoColumn.LoadString(IDS_JobProcessInfoColumn);
+		CWindowUtil::AddListCtrlColumn(&m_ctrlListJobs, 0, oTypeColumn, 0.075);
+		CWindowUtil::AddListCtrlColumn(&m_ctrlListJobs, 1, oInfoColumn, 0.75);
+		CWindowUtil::AddListCtrlColumn(&m_ctrlListJobs, 2, oProcessInfoColumn, 0.9999);
+		CWindowUtil::SetListCtrlFullRowSelectStyle(&m_ctrlListJobs);
 		ReFillInJobListCtrl();
 
 		// create a floating property window
@@ -283,6 +291,7 @@ void CFaac_winguiDlg::ReFillInJobListCtrl(CListCtrlStateSaver *poSelectionStateT
 		{
 			long lCurListItem=CWindowUtil::AddListCtrlItem(&m_ctrlListJobs, poCurrentJob->DescribeJobTypeShort(), lCurrentJobIndex);
 			CWindowUtil::SetListCtrlItem(&m_ctrlListJobs, lCurListItem, 1, poCurrentJob->DescribeJob());
+			CWindowUtil::SetListCtrlItem(&m_ctrlListJobs, lCurListItem, 2, poCurrentJob->GetProcessingOutcomeString());
 		}
 
 		// restore the previous list selection
@@ -304,8 +313,21 @@ void CFaac_winguiDlg::ReFillInJobListCtrl(CListCtrlStateSaver *poSelectionStateT
 			// get the job that belongs to the item
 			CJob *poCurJob=poJobList->GetJob(lItemLParam);
 			CWindowUtil::SetListCtrlItem(&m_ctrlListJobs, iCurItem, 1, poCurJob->DescribeJob());
+			CWindowUtil::SetListCtrlItem(&m_ctrlListJobs, iCurItem, 2, poCurJob->GetProcessingOutcomeString());
 		}
 	}
+}
+
+void CFaac_winguiDlg::EnableExpandFilterJobButton(bool bEnable)
+{
+	// before enabling it make sure only one job is selected
+	if (bEnable && CWindowUtil::GetAllSelectedListCtrlItemLParams(&m_ctrlListJobs, true).GetNumber()!=1)
+	{
+		// ignore or better to say disable
+		m_ctrlButtonExpandFilterJob.EnableWindow(FALSE);
+		return;
+	}
+	m_ctrlButtonExpandFilterJob.EnableWindow(bEnable ? TRUE : FALSE);
 }
 
 void CFaac_winguiDlg::OnJobListCtrlUserAction()
@@ -402,14 +424,14 @@ void CFaac_winguiDlg::OnButtonAddEncoderJob()
 void CFaac_winguiDlg::OnJobListCtrlSelChange(TItemList<long> *poNewSelection)
 {
 	// determine which jobs are selected
-	TItemList<long> m_oSelectedJobsIds;
+	TItemList<long> oSelectedJobsIds;
 	if (poNewSelection!=0)
 	{
-		m_oSelectedJobsIds=*poNewSelection;
+		oSelectedJobsIds=*poNewSelection;
 	}
 	else
 	{
-		m_oSelectedJobsIds=CWindowUtil::GetAllSelectedListCtrlItemLParams(&m_ctrlListJobs, true);
+		oSelectedJobsIds=CWindowUtil::GetAllSelectedListCtrlItemLParams(&m_ctrlListJobs, true);
 	}
 	CJobList &oJobs=((CFaac_winguiApp*)AfxGetApp())->GetGlobalJobList();
 
@@ -421,11 +443,11 @@ void CFaac_winguiDlg::OnJobListCtrlSelChange(TItemList<long> *poNewSelection)
 	}
 
 	// ask them all which pages they support
-	CBListReader oReader(m_oSelectedJobsIds);
+	CBListReader oReader(oSelectedJobsIds);
 	long lCurJobIndex;
 	CSupportedPropertyPagesData* poSupportedPages=0;
 	TItemList<CJob*> oSelectedJobs;
-	while (m_oSelectedJobsIds.GetNextElemContent(oReader, lCurJobIndex))
+	while (oSelectedJobsIds.GetNextElemContent(oReader, lCurJobIndex))
 	{
 		CJob *poCurJob=oJobs.GetJob(lCurJobIndex);
 		if (poSupportedPages==0)
@@ -455,10 +477,10 @@ void CFaac_winguiDlg::OnJobListCtrlSelChange(TItemList<long> *poNewSelection)
 		delete poSupportedPages;
 	}
 
-	// enable/disable the expand button
+	// enable/disable the "expand filter job" button
 	{
 		bool bButtonEnabled=true;
-		if (m_oSelectedJobsIds.GetNumber()!=1)
+		if (oSelectedJobsIds.GetNumber()!=1)
 		{
 			bButtonEnabled=false;
 		}
@@ -466,7 +488,7 @@ void CFaac_winguiDlg::OnJobListCtrlSelChange(TItemList<long> *poNewSelection)
 		{
 			long lSelectedJobId;
 			long lDummy;
-			m_oSelectedJobsIds.GetFirstElemContent(lSelectedJobId, lDummy);
+			oSelectedJobsIds.GetFirstElemContent(lSelectedJobId, lDummy);
 			CJob *poJob=oJobs.GetJob(lSelectedJobId);
 			if (poJob->GetEncoderJob()==0)
 			{
@@ -679,40 +701,101 @@ void CFaac_winguiDlg::ProcessJobs(TItemList<long> oJobIds, bool bRemoveProcessJo
 	if (oJobIds.GetNumber()==0) return;
 	CJobList *poJobList=GetGlobalJobList();
 
+	// disable the properties window; important - otherwise the user
+	// could change selected jobs while they are being processed
+	CPropertiesDummyParentDialog *poPropertiesDialog=((CFaac_winguiApp*)AfxGetApp())->GetGlobalPropertiesDummyParentDialogSingleton();
+	poPropertiesDialog->EnableWindow(FALSE);
+
+	CListCtrlStateSaver oListCtrlState(&m_ctrlListJobs);
+
+#ifdef EXTENDED_JOB_TRACKING_DURING_PROCESSING
+	{
+		TItemList<long> oSelectedItems(oJobIds);
+		CWindowUtil::SetListCtrlCheckBoxStyle(&m_ctrlListJobs, true);
+		CListCtrlStateSaver oTempCheckBoxState;
+		oTempCheckBoxState.SetToChecked(oSelectedItems);
+		oTempCheckBoxState.RestoreState(&m_ctrlListJobs);
+	}
+#endif
+
 	TItemList<long> oItemsToRemove;
 
 	long lTotalNumberOfJobsToProcess=oJobIds.GetNumber();
 	long lCurJobCount=0;
+	long lSuccessfulJobs=0;
+	CJobProcessingDynamicUserInputInfo oUserInputInfo;	// saves dynamic input of the user
 
 	CBListReader oReader(oJobIds);
 	long lCurIndex;
 	bool bContinue=true;
-	while (bContinue && oJobIds.GetNextElemContent(oReader, lCurIndex))
+	while (oJobIds.GetNextElemContent(oReader, lCurIndex))
 	{
+		// only mark the currently processed job in the list control
+		{
+			CListCtrlStateSaver oSelection;
+			oSelection.SetToSelected(lCurIndex);
+			oSelection.RestoreState(&m_ctrlListJobs);
+			int iCurItem=CWindowUtil::GetListCtrlItemIdByLParam(&m_ctrlListJobs, lCurIndex);
+			if (iCurItem>=0)
+			{
+				m_ctrlListJobs.EnsureVisible(iCurItem, FALSE);
+			}
+		}
+
 		// get the current job
 		CJob *poJob=poJobList->GetJob(lCurIndex);
 		poJob->SetJobNumberInfo(lCurJobCount++, lTotalNumberOfJobsToProcess);
 
-		if (!poJob->ProcessJob())
+		if (bContinue)
 		{
-			if (AfxMessageBox(IDS_ErrorProcessingJobSelection, MB_YESNO)!=IDYES)
+			if (!poJob->ProcessJob(oUserInputInfo))
 			{
-				bContinue=false;
+				// show changes in process states
+				ReFillInJobListCtrl(0, true);
+				if (poJob->GetProcessingOutcomeSimple()==CAbstractJob::eUserAbort)
+				{
+					if (AfxMessageBox(IDS_ErrorProcessingJobSelection, MB_YESNO)!=IDYES)
+					{
+						bContinue=false;
+					}
+				}
+			}
+			else
+			{
+				// successfully processed
+				lSuccessfulJobs++;
+				if (bRemoveProcessJobs)
+				{
+					int iListItem=CWindowUtil::GetListCtrlItemIdByLParam(&m_ctrlListJobs, lCurIndex);
+					ASSERT(iListItem>=0);		// must exist (logically)
+					m_ctrlListJobs.DeleteItem(iListItem);
+
+					oItemsToRemove.AddNewElem(lCurIndex);
+				}
+				else
+				{
+					// show changes in process states
+					ReFillInJobListCtrl(0, true);
+				}
 			}
 		}
 		else
 		{
-			// successfully processed
-			if (bRemoveProcessJobs)
-			{
-				int iListItem=CWindowUtil::GetListCtrlItemIdByLParam(&m_ctrlListJobs, lCurIndex);
-				ASSERT(iListItem>=0);		// must exist (logically)
-				m_ctrlListJobs.DeleteItem(iListItem);
+			// mark job as aborted
 
-				oItemsToRemove.AddNewElem(lCurIndex);
-			}
+			// cast is necessary here because CJob masks the required overload
+			// due to overriding another one
+			((CAbstractJob*)poJob)->SetProcessingOutcome(CAbstractJob::eUserAbort, 0, IDS_FollowUp);
 		}
 	}
+
+#ifdef EXTENDED_JOB_TRACKING_DURING_PROCESSING
+	{
+		CWindowUtil::SetListCtrlCheckBoxStyle(&m_ctrlListJobs, false);
+	}
+#endif
+
+	oListCtrlState.RestoreState(&m_ctrlListJobs);
 
 	if (oItemsToRemove.GetNumber()>0)
 	{
@@ -724,9 +807,22 @@ void CFaac_winguiDlg::ProcessJobs(TItemList<long> oJobIds, bool bRemoveProcessJo
 		// dialog is updated
 		OnJobListCtrlUserAction();
 	}
+	else
+	{
+		// show changes in process states
+		ReFillInJobListCtrl(0, true);
+	}
 
 	// wake up the user
 	MessageBeep(MB_OK);
+
+	if (lSuccessfulJobs<lTotalNumberOfJobsToProcess)
+	{
+		AfxMessageBox(IDS_HadUnsuccessfulJobs);
+	}
+
+	// reenable the properties window we disabled at the beginning
+	poPropertiesDialog->EnableWindow(TRUE);
 }
 
 bool CFaac_winguiDlg::LoadJobList(const CString &oCompletePath)
@@ -791,12 +887,13 @@ void CFaac_winguiDlg::OnButtonExpandFilterJob()
 	CJobList *poGlobalJobList=GetGlobalJobList();
 	CJob *poJob=poGlobalJobList->GetJob(lSelectedJobId);
 	CJobList oExpanded;
+	long lExpandErrors=0;
 	if (poJob->GetEncoderJob()==0)
 	{
 		ASSERT(false);
 		return;
 	}
-	else if (poJob->GetEncoderJob()->ExpandFilterJob(oExpanded, false))
+	else if (poJob->GetEncoderJob()->ExpandFilterJob(oExpanded, lExpandErrors, false))
 	{
 		int iListItemToDelete=CWindowUtil::GetListCtrlItemIdByLParam(&m_ctrlListJobs, lSelectedJobId);
 		if (iListItemToDelete>=0)
@@ -810,6 +907,81 @@ void CFaac_winguiDlg::OnButtonExpandFilterJob()
 		CListCtrlStateSaver oListSelection;
 		oListSelection.SetToSelected(oExpanded.GetAllUsedIds());
 		ReFillInJobListCtrl(&oListSelection, false);
-		OnJobListCtrlSelChange();
+		OnJobListCtrlUserAction();		// again: very important call
 	}
+}
+
+void CFaac_winguiDlg::OnButtonAddFilterEncoderJob() 
+{
+	// TODO: Add your control notification handler code here
+	CJobList *poJobList=GetGlobalJobList();
+
+	TItemList<long> m_oIndicesOfAddedItems;
+
+	// select a directory
+	CString oCaption;
+	oCaption.LoadString(IDS_SelectSourceDirDlgCaption);
+	CFolderDialog oFolderDialog(this, oCaption);
+	if (oFolderDialog.DoModal()==IDOK)
+	{
+		CFilePathCalc::MakePath(oFolderDialog.m_oFolderPath);
+	}
+	else
+	{
+		if (oFolderDialog.m_bError)
+		{
+			AfxMessageBox(IDS_ErrorDuringDirectorySelection);
+		}
+		return;
+	}
+	CString oSourceFileExt;
+	oSourceFileExt.LoadString(IDS_EndSourceFileStandardExtension);
+	
+	// create a new job for the current file
+	CEncoderJob oNewJob;
+	GetGlobalProgramSettings()->ApplyToJob(oNewJob);
+
+	oNewJob.GetFiles().SetSourceFileDirectory(oFolderDialog.m_oFolderPath);
+	oNewJob.GetFiles().SetSourceFileName(CString("*.")+oSourceFileExt);
+	//oNewJob.GetFiles().SetTargetFileDirectory(oTargetDir);		// already set by GetGlobalProgramSettings()->ApplyToJob(oNewJob);
+	oNewJob.GetFiles().SetTargetFileName("");
+
+	long lNewIndex=poJobList->AddJob(oNewJob);
+	m_oIndicesOfAddedItems.AddNewElem(lNewIndex);
+	
+	CListCtrlStateSaver oSelection;
+	oSelection.SetToSelected(m_oIndicesOfAddedItems);
+	ReFillInJobListCtrl(&oSelection, false);
+
+	m_ctrlListJobs.SetFocus();
+
+	OnJobListCtrlUserAction();
+}
+
+void CFaac_winguiDlg::OnButtonAddEmptyEncoderJob() 
+{
+	// TODO: Add your control notification handler code here
+	CJobList *poJobList=GetGlobalJobList();
+
+	TItemList<long> m_oIndicesOfAddedItems;
+	
+	// create a new job for the current file
+	CEncoderJob oNewJob;
+	//GetGlobalProgramSettings()->ApplyToJob(oNewJob);
+
+	oNewJob.GetFiles().SetSourceFileDirectory("");
+	oNewJob.GetFiles().SetSourceFileName("");
+	oNewJob.GetFiles().SetTargetFileDirectory("");
+	oNewJob.GetFiles().SetTargetFileName("");
+
+	long lNewIndex=poJobList->AddJob(oNewJob);
+	m_oIndicesOfAddedItems.AddNewElem(lNewIndex);
+	
+	CListCtrlStateSaver oSelection;
+	oSelection.SetToSelected(m_oIndicesOfAddedItems);
+	ReFillInJobListCtrl(&oSelection, false);
+
+	m_ctrlListJobs.SetFocus();
+
+	OnJobListCtrlUserAction();
 }

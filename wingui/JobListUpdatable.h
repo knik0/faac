@@ -24,6 +24,7 @@ public:
 	// if no explicit selection state is specified the current
 	// selection is preserved
 	virtual void ReFillInJobListCtrl(CListCtrlStateSaver *poSelectionStateToUse=0, bool bSimpleUpdate=true)=0;
+	virtual void EnableExpandFilterJobButton(bool bEnable)=0;
 };
 
 #endif // !defined(AFX_JOBLISTUPDATABLE_H__A1444E81_1546_11D5_8402_0080C88C25BD__INCLUDED_)

@@ -26,6 +26,8 @@ public:
 	static void AddListCtrlColumn(CListCtrl *poListCtrl, int iColumnCount, const char *lpszText, double dWidth);	// for dWidth: <1: percent of the width of the list control; >1 width in pixels
 	static TItemList<long> GetAllSelectedListCtrlItemLParams(CListCtrl *poListCtrl, bool bDisableNoSelectionErrorMsg);
 	static int GetListCtrlItemIdByLParam(CListCtrl *poListCtrl, long lParam, int iStartAt=-1);		// returns a negative value if none is found
+	static void SetListCtrlFullRowSelectStyle(CListCtrl *poListCtrl, bool bFullRowSelectStyle=true);
+	static void SetListCtrlCheckBoxStyle(CListCtrl *poListCtrl, bool bCheckboxStyle=true);
 
 	static void ForceNumericContent(CEdit *poEdit, bool bAllowNegative);
 

@@ -51,8 +51,15 @@ public:
 
 	// implementations to CAbstractJob
 	virtual CSupportedPropertyPagesData GetSupportedPropertyPages() const;
-	virtual bool ProcessJob() const;
+	virtual bool ProcessJob(CJobProcessingDynamicUserInputInfo &oUserInputInfo);
 	virtual CString GetDetailedDescriptionForStatusDialog() const;
+	// overrides to CAbstractJob
+	virtual void SetJobNumberInfo(long lThisJobCountNumber, long lTotalNumberOfJobs);
+	virtual void SetSubJobNumberInfo(long lThisSubJobCountNumber, long lTotalNumberOfSubJobs);
+	virtual void GetProcessingNumberInformation(long &lThisJobCountNumber, long &lTotalNumberOfJobs, long &lThisSubJobCountNumber, long &lTotalNumberOfSubJobs) const;
+	virtual void SetProcessingOutcome(EJobProcessingOutcome eJobProcessingOutcome, long lProcessingTime, const CString &oSupplementaryInfo);
+	virtual void GetProcessingOutcome(EJobProcessingOutcome &eJobProcessingOutcome, long &lProcessingTime, CString &oSupplementaryInfo) const;
+	virtual void ResetProcessingOutcome();
 
 	// implementations to CFileSerializable
 	virtual bool PutToArchive(CArchive &oArchive) const;

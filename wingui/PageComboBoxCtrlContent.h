@@ -44,8 +44,9 @@ public:
 	// SetCurrentText(const CString&)
 	void SetCurComboBoxSelectionText(CComboBox *poComboBox);
 
-	void ApplyToJob(CString &oNativeJobPropertyTextString) const;
-	void ApplyToJob(long &lNativeJobPropertySelectionLong) const;
+	// return if the previous setting was modified
+	bool ApplyToJob(CString &oNativeJobPropertyTextString) const;
+	bool ApplyToJob(long &lNativeJobPropertySelectionLong) const;
 
 	// apply to variables that are defined in the class wizard
 	void ApplyToComboBoxVariable(int &iSelectionVariable) const;

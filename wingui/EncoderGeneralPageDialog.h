@@ -66,6 +66,7 @@ protected:
 
 private:
 	bool m_bInitialized;
+	bool m_bLastRecursiveCheckboxVisibility;
 
 	TItemList<CJob*> m_oJobsToConfigure;
 

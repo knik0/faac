@@ -74,6 +74,8 @@ protected:
 	afx_msg void OnButtonOpenProperties();
 	afx_msg void OnShowWindow(BOOL bShow, UINT nStatus);
 	afx_msg void OnButtonExpandFilterJob();
+	afx_msg void OnButtonAddFilterEncoderJob();
+	afx_msg void OnButtonAddEmptyEncoderJob();
 	//}}AFX_MSG
 	DECLARE_MESSAGE_MAP()
 
@@ -85,7 +87,8 @@ protected:
 	// selection is preserved;
 	// bSimpleUpdate may be set to true; if it is, no items are added
 	// or removed and only the info column is updated
-	void ReFillInJobListCtrl(CListCtrlStateSaver *poSelectionStateToUse=0, bool bSimpleUpdate=true);
+	virtual void ReFillInJobListCtrl(CListCtrlStateSaver *poSelectionStateToUse=0, bool bSimpleUpdate=true);
+	virtual void EnableExpandFilterJobButton(bool bEnable);
 
 	TItemList<long> m_lLastJobListSelection;
 	void OnJobListCtrlUserAction();

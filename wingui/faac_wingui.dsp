@@ -25,7 +25,7 @@ CFG=faac_wingui - Win32 Debug
 # PROP AllowPerConfigDependencies 0
 # PROP Scc_ProjName ""
 # PROP Scc_LocalPath ""
-CPP=cl.exe
+CPP=xicl6.exe
 MTL=midl.exe
 RSC=rc.exe
 
@@ -51,9 +51,9 @@ RSC=rc.exe
 BSC32=bscmake.exe
 # ADD BASE BSC32 /nologo
 # ADD BSC32 /nologo
-LINK32=link.exe
+LINK32=xilink6.exe
 # ADD BASE LINK32 /nologo /subsystem:windows /machine:I386
-# ADD LINK32 /nologo /subsystem:windows /machine:I386
+# ADD LINK32 libsndfile.lib /nologo /subsystem:windows /machine:I386
 
 !ELSEIF  "$(CFG)" == "faac_wingui - Win32 Debug"
 
@@ -77,7 +77,7 @@ LINK32=link.exe
 BSC32=bscmake.exe
 # ADD BASE BSC32 /nologo
 # ADD BSC32 /nologo
-LINK32=link.exe
+LINK32=xilink6.exe
 # ADD BASE LINK32 /nologo /subsystem:windows /debug /machine:I386 /pdbtype:sept
 # ADD LINK32 /nologo /subsystem:windows /debug /machine:I386 /pdbtype:sept
 
@@ -101,6 +101,10 @@ SOURCE=.\AbstractPageCtrlContent.cpp
 # Begin Source File
 
 SOURCE=.\AbstractPropertyPageContents.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\AskCreateDirectoryDialog.cpp
 # End Source File
 # Begin Source File
 
@@ -208,6 +212,10 @@ SOURCE=.\JobListUpdatable.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\JobProcessingDynamicUserInputInfo.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\ListCtrlStateSaver.cpp
 # End Source File
 # Begin Source File
@@ -290,6 +298,10 @@ SOURCE=.\AbstractPageCtrlContent.h
 # Begin Source File
 
 SOURCE=.\AbstractPropertyPageContents.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\AskCreateDirectoryDialog.h
 # End Source File
 # Begin Source File
 
@@ -394,6 +406,10 @@ SOURCE=.\JobListsToConfigureSaver.h
 # Begin Source File
 
 SOURCE=.\JobListUpdatable.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\JobProcessingDynamicUserInputInfo.h
 # End Source File
 # Begin Source File
 

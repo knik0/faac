@@ -24,6 +24,7 @@ CEncoderGeneralPageDialog::CEncoderGeneralPageDialog(
 	CJobListUpdatable *poListContainer,
 	CWnd* pParent /*=NULL*/):
 	m_bInitialized(false),
+	m_bLastRecursiveCheckboxVisibility(false),
 	m_oJobsToConfigure(oJobsToConfigure),
 	m_poListContainer(poListContainer),
 	m_eCurCheckBox(eNone),
@@ -406,19 +407,32 @@ void CEncoderGeneralPageDialog::OnChangeEditSourceFile()
 	// TODO: Add your control notification handler code here
 	UpdateData(TRUE);
 
+	bool bPreviousVisiblity=m_bLastRecursiveCheckboxVisibility;
+
 	// check for a filter
 	if (CFilePathCalc::IsValidFileMask(m_oEditSourceFile))
 	{
 		// user entered a filter
 		m_ctrlCheckRecursive.ShowWindow(SW_SHOW);
+		m_bLastRecursiveCheckboxVisibility=true;
 	}
 	else
 	{
 		// user did not enter a filter
 		m_ctrlCheckRecursive.ShowWindow(SW_HIDE);
+		m_bLastRecursiveCheckboxVisibility=false;
 	}
 
 	UpdateData(FALSE);
+
+	// in case the source file changed from a regular file to a filter
+	// or vice versa we have to switch the "Expand Filter Job" button on
+	// the main dialog; the simples way to do is to update the list control
+	// with the below method call
+	if (bPreviousVisiblity^m_bLastRecursiveCheckboxVisibility)
+	{
+		m_poListContainer->EnableExpandFilterJobButton(m_bLastRecursiveCheckboxVisibility);
+	}
 }
 
 

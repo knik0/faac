@@ -164,48 +164,54 @@ LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
 // Dialog
 //
 
-IDD_ABOUTBOX DIALOG DISCARDABLE  0, 0, 244, 55
+IDD_ABOUTBOX DIALOG DISCARDABLE  0, 0, 244, 66
 STYLE DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
 CAPTION "About faac_wingui"
 FONT 8, "MS Sans Serif"
 BEGIN
     ICON            IDR_MAINFRAME,IDC_STATIC,11,17,21,20
-    LTEXT           "faac_wingui Version 1.0",IDC_STATIC,40,10,119,8,
-                    SS_NOPREFIX
-    LTEXT           "Copyright (C) 2001",IDC_STATIC,39,33,119,8
-    DEFPUSHBUTTON   "OK",IDOK,187,34,50,14,WS_GROUP
+    LTEXT           "faac_wingui Version Alpha Release",IDC_STATIC,40,10,119,
+                    8,SS_NOPREFIX
+    LTEXT           "Copyright (C) 2001",IDC_STATIC,40,44,119,8
+    DEFPUSHBUTTON   "OK",IDOK,187,45,50,14,WS_GROUP
     LTEXT           "GUI written by Torsten Landmann as part of the faac Project",
                     IDC_STATIC,40,22,190,8
+    LTEXT           "refer to http://www.audiocoding.com",IDC_STATIC,40,32,
+                    118,8
 END
 
-IDD_FAAC_WINGUI_DIALOG DIALOGEX 0, 0, 422, 202
+IDD_FAAC_WINGUI_DIALOG DIALOGEX 0, 0, 479, 237
 STYLE DS_MODALFRAME | WS_MINIMIZEBOX | WS_POPUP | WS_VISIBLE | WS_CAPTION | 
     WS_SYSMENU
 EXSTYLE WS_EX_APPWINDOW
 CAPTION "winfaac"
-FONT 8, "MS Sans Serif", 0, 0, 0x1
+FONT 8, "MS Sans Serif"
 BEGIN
-    DEFPUSHBUTTON   "Bye",IDOK,365,181,50,14
+    DEFPUSHBUTTON   "Bye",IDOK,422,216,50,14
     CONTROL         "List1",IDC_LISTJOBS,"SysListView32",LVS_REPORT | 
                     LVS_SHOWSELALWAYS | LVS_NOSORTHEADER | WS_BORDER | 
-                    WS_TABSTOP,7,7,408,131
-    PUSHBUTTON      "&Add Encoder Jobs...",IDC_BUTTONADDENCODERJOB,7,143,71,
-                    14
-    PUSHBUTTON      "&Delete Jobs",IDC_BUTTONDELETEJOBS,83,143,50,14
-    PUSHBUTTON      "&Process Selected",IDC_BUTTONPROCESSSELECTED,63,161,66,
-                    14
+                    WS_TABSTOP,7,7,465,167
+    PUSHBUTTON      "&Add File Encoder Jobs...",IDC_BUTTONADDENCODERJOB,7,
+                    180,104,14
+    PUSHBUTTON      "&Delete Selection",IDC_BUTTONDELETEJOBS,117,198,63,14
+    PUSHBUTTON      "&Process Selection",IDC_BUTTONPROCESSSELECTED,249,198,
+                    69,14
     CONTROL         "Remove Processed Jobs From List",
                     IDC_CHECKREMOVEPROCESSEDJOBS,"Button",BS_AUTOCHECKBOX | 
-                    WS_TABSTOP,7,179,125,10
-    PUSHBUTTON      "&Save Joblist...",IDC_BUTTONSAVEJOBLIST,301,143,54,14
-    PUSHBUTTON      "&Load Joblist...",IDC_BUTTONLOADJOBLIST,361,143,54,14
-    PUSHBUTTON      "D&uplicate Selected",IDC_BUTTONDUPLICATESELECTED,139,
-                    143,69,14
-    PUSHBUTTON      "Pro&cess All",IDC_BUTTONPROCESSALL,7,161,50,14
-    PUSHBUTTON      "Open Pr&operties",IDC_BUTTONOPENPROPERTIES,356,161,59,
+                    WS_TABSTOP,249,215,125,10
+    PUSHBUTTON      "&Save Joblist...",IDC_BUTTONSAVEJOBLIST,359,180,54,14
+    PUSHBUTTON      "&Load Joblist...",IDC_BUTTONLOADJOBLIST,418,180,54,14
+    PUSHBUTTON      "D&uplicate Selection",IDC_BUTTONDUPLICATESELECTED,117,
+                    216,69,14
+    PUSHBUTTON      "Pro&cess All",IDC_BUTTONPROCESSALL,249,180,50,14
+    PUSHBUTTON      "Open Pr&operties",IDC_BUTTONOPENPROPERTIES,413,198,59,
                     14
-    PUSHBUTTON      "E&xpand Filter Job",IDC_BUTTONEXPANDFILTERJOB,215,143,
-                    65,14,WS_DISABLED
+    PUSHBUTTON      "E&xpand Directory Job",IDC_BUTTONEXPANDFILTERJOB,32,216,
+                    79,14,WS_DISABLED
+    PUSHBUTTON      "Add D&irectory Encoder Job...",
+                    IDC_BUTTONADDFILTERENCODERJOB,7,198,104,14
+    PUSHBUTTON      "Add E&mpty Encoder Job",IDC_BUTTONADDEMPTYENCODERJOB,
+                    117,180,104,14
 END
 
 IDD_PROPERTIESTABPARENTDIALOG DIALOG DISCARDABLE  0, 0, 186, 95
@@ -299,6 +305,21 @@ BEGIN
                     WS_VISIBLE | WS_DISABLED
 END
 
+IDD_ASKCREATEDIRECTORYDIALOG DIALOG DISCARDABLE  0, 0, 228, 85
+STYLE DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Target Directory not found"
+FONT 8, "MS Sans Serif"
+BEGIN
+    CTEXT           "The target directory",IDC_STATIC,7,7,214,8
+    CTEXT           "has not been found. Do you want to create it now?",
+                    IDC_STATIC,7,38,214,8
+    CTEXT           "Static",IDC_LABELTARGETDIR,7,18,214,19
+    PUSHBUTTON      "&Yes",IDC_BUTTONYES,7,60,50,14
+    PUSHBUTTON      "&No",IDC_BUTTONNO,62,60,50,14
+    PUSHBUTTON      "&Always",IDC_BUTTONALWAYS,117,60,50,14
+    PUSHBUTTON      "Ne&ver",IDC_BUTTONNEVER,171,60,50,14
+END
+
 
 /////////////////////////////////////////////////////////////////////////////
 //
@@ -314,17 +335,20 @@ BEGIN
         RIGHTMARGIN, 237
         VERTGUIDE, 40
         TOPMARGIN, 7
-        BOTTOMMARGIN, 48
+        BOTTOMMARGIN, 59
     END
 
     IDD_FAAC_WINGUI_DIALOG, DIALOG
     BEGIN
         LEFTMARGIN, 7
-        RIGHTMARGIN, 415
+        RIGHTMARGIN, 472
+        VERTGUIDE, 111
+        VERTGUIDE, 117
+        VERTGUIDE, 249
         TOPMARGIN, 7
-        BOTTOMMARGIN, 195
-        HORZGUIDE, 150
-        HORZGUIDE, 168
+        BOTTOMMARGIN, 230
+        HORZGUIDE, 187
+        HORZGUIDE, 205
     END
 
     IDD_PROPERTIESTABPARENTDIALOG, DIALOG
@@ -380,6 +404,15 @@ BEGIN
         RIGHTMARGIN, 347
         TOPMARGIN, 7
         BOTTOMMARGIN, 102
+    END
+
+    IDD_ASKCREATEDIRECTORYDIALOG, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 221
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 78
+        HORZGUIDE, 67
     END
 END
 #endif    // APSTUDIO_INVOKED
@@ -823,6 +856,28 @@ BEGIN
     IDS_ErrorWhileLoadingJobList "Error while loading joblist."
     IDS_JobNofM             "%d of %d"
     IDS_SubJobNofM          "Sub Job %d of %d"
+    IDS_ErrorCreatingDirectory "The Directory ""%s"" could not be created."
+    IDS_FilterJobSupplementaryInfo 
+                            "Total of %d sub jobs: success %d, error %d, user abort %d"
+END
+
+STRINGTABLE DISCARDABLE 
+BEGIN
+    IDS_UserRefusedToCreateTargetDirectory 
+                            "The user refused to create the target directory."
+    IDS_FaacEncSetConfigurationFailed "faacEncSetConfiguration failed!"
+    IDS_CouldntOpenInputFile "Couldn't open input file!"
+    IDS_FaacEncEncodeFrameFailed "faacEncEncodeFrame failed!"
+    IDS_JobProcessInfoColumn "Last Processed"
+    IDS_OutcomeUnprocessed  "Unprocessed"
+    IDS_OutcomeSuccessfullyProcessed "Successfully processed"
+    IDS_OutcomePartiallyProcessed "Partially proccessed"
+    IDS_OutcomeUserAbort    "User abort"
+    IDS_OutcomeError        "Error"
+    IDS_FollowUp            "follow-up"
+    IDS_ErrorCreatingTargetDiretory "Error creating target directory"
+    IDS_InvalidTargetDirectory "Invalid target directory!"
+    IDS_HadUnsuccessfulJobs "There have been problems during job list processing. Refer to list column ""Last Processed"" for further information."
 END
 
 #endif    // English (U.S.) resources

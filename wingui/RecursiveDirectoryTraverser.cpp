@@ -35,12 +35,13 @@ int CRecursiveDirectoryTraverser::CountMatchingFiles(const CString &oFilterStrin
 	CString oSearchMask=oFilterString;
 	
 	if (oFileFind.FindFile(oSearchMask))
-	{		
-		iToReturn++;
-		while (oFileFind.FindNextFile())
+	{
+		BOOL bHaveMoreFiles;
+		do
 		{
+			bHaveMoreFiles=oFileFind.FindNextFile();
 			iToReturn++;
-		}
+		} while (bHaveMoreFiles);
 	}
 
 	oFileFind.Close();
@@ -48,7 +49,7 @@ int CRecursiveDirectoryTraverser::CountMatchingFiles(const CString &oFilterStrin
 	return iToReturn;
 }
 
-TItemList<CString> CRecursiveDirectoryTraverser::FindFiles(const CString &oRootDirectory, const CString &oFileNameFilter, bool bRecursive)
+TItemList<CString> CRecursiveDirectoryTraverser::FindFiles(const CString &oRootDirectory, const CString &oFileNameFilter, bool bRecursive, bool bAcceptDirectories)
 {
 	TItemList<CString> oToReturn;
 	CString oRootDir(oRootDirectory);
@@ -69,11 +70,16 @@ TItemList<CString> CRecursiveDirectoryTraverser::FindFiles(const CString &oRootD
 	if (oFileFind.FindFile(oSearchMask))
 	{	
 		CString oFileName;
-		while (oFileFind.FindNextFile())
+		BOOL bHaveMoreFiles;
+		do
 		{
-			oFileName=oFileFind.GetFilePath();
-			oToReturn.AddNewElem(oFileName);
-		}
+			bHaveMoreFiles=oFileFind.FindNextFile();
+			if (bAcceptDirectories || !oFileFind.IsDirectory())
+			{
+				oFileName=oFileFind.GetFilePath();
+				oToReturn.AddNewElem(oFileName);
+			}
+		} while (bHaveMoreFiles);
 	}
 
 	oFileFind.Close();
@@ -84,10 +90,11 @@ TItemList<CString> CRecursiveDirectoryTraverser::FindFiles(const CString &oRootD
 		oSearchMask=oRootDir+"*";
 		if (oFileFind.FindFile(oSearchMask))
 		{
-		
 			CString oFileName;
-			while (oFileFind.FindNextFile())
+			BOOL bHaveMoreFiles;
+			do
 			{
+				bHaveMoreFiles=oFileFind.FindNextFile();
 				if (oFileFind.IsDirectory())
 				{
 					if (oFileFind.GetFileName()!="." &&
@@ -96,7 +103,7 @@ TItemList<CString> CRecursiveDirectoryTraverser::FindFiles(const CString &oRootD
 						oToReturn+=FindFiles(oFileFind.GetFilePath(), oFileNameFilter, bRecursive);
 					}
 				}
-			}
+			} while (bHaveMoreFiles);
 		}
 	}
 
