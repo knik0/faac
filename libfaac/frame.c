@@ -16,7 +16,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: frame.c,v 1.65 2004/07/18 09:34:24 corrados Exp $
+ * $Id: frame.c,v 1.66 2004/11/04 12:51:09 aforanna Exp $
  */
 
 /*
@@ -51,7 +51,7 @@
 #if FAAC_RELEASE
 static char *libfaacName = FAAC_VERSION;
 #else
-static char *libfaacName = FAAC_VERSION "+ (" __DATE__ ") UNSTABLE";
+static char *libfaacName = FAAC_VERSION ".1 (" __DATE__ ") UNSTABLE";
 #endif
 static char *libCopyright =
   "FAAC - Freeware Advanced Audio Coder (http://www.audiocoding.com/)\n"
@@ -1111,6 +1111,9 @@ static SR_INFO srInfo[12+1] =
 
 /*
 $Log: frame.c,v $
+Revision 1.66  2004/11/04 12:51:09  aforanna
+version number updated to 1.24.1 due to changes in Winamp and CoolEdit plugins
+
 Revision 1.65  2004/07/18 09:34:24  corrados
 New bandwidth settings for DRM, improved quantization quality adaptation (almost constant bit-rate now)
 
