@@ -21,6 +21,15 @@ int pns_sfb_start = 1000;         /* lower border for Perceptual Noise Substitut
 
 double ATH[SFB_NUM_MAX];
 
+__inline int output_bits(AACQuantInfo* quantInfo,
+	/*int huff[13][MAXINDEX][NUMINTAB],*/
+		int book,
+		int quant[NUM_COEFF],
+		int offset,
+		int length,
+		int write_flag);
+
+
 double ATHformula(double f)
 {
 	double ath;
@@ -1302,7 +1311,7 @@ int calculate_esc_sequence(int input,
 
 
 
-int output_bits(AACQuantInfo* quantInfo,
+__inline int output_bits(AACQuantInfo* quantInfo,
 				/*int huff[13][MAXINDEX][NUMINTAB],*/
                 int book,
 				int quant[NUM_COEFF],

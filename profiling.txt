@@ -48,3 +48,34 @@ Each sample counts as 0.01 seconds.
   1.40    547.73     9.20    41104   223.82   223.98  calc_noise
   1.17    555.37     7.64    41048   186.12   186.12  psy_step9
   1.09    562.53     7.16 42029056     0.17     0.17  double_to_int
+
+------------------------------------------------------------------------------
+thebard
+CVS Tue Feb 22 13:00:03 CST 2000
+-O6 -march=i686 -funroll-loops -finline-functions -fomit-frame-pointer
+10 min, 44.19 sec.
+The Outfield Bangin': track 2: Bangin' On My Heart
+New fully Optimized non profile with a macroized double_to_int.
+
+------------------------------------------------------------------------------
+thebard
+CVS Tue Feb 22 13:00:03 CST 2000
+-O6 -march=i686 -funroll-loops -finline-functions -g -pg -a
+11 min, 5.36 sec.
+The Outfield Bangin': track 2: Bangin' On My Heart
+Fully optimized, Profiled with macroized double_to_int. Notice no double_to_int in the top 1% of the flat profile.
+Each sample counts as 0.01 seconds.
+  %   cumulative   self              self     total           
+ time   seconds   seconds    calls  us/call  us/call  name    
+ 58.99    385.02   385.02    41048  9379.75  9379.75  psy_step6
+  3.94    410.71    25.69    41048   625.85   625.85  psy_step11andahalf
+  3.91    436.24    25.53    20524  1243.91  1822.18  psy_step2
+  3.83    461.23    24.99    41048   608.80   608.80  psy_step14
+  3.06    481.23    20.00    20524   974.47  2941.86  tf_encode_spectrum_aac
+  2.47    497.37    16.14    41048   393.20 13116.31  EncTf_psycho_acoustic
+  2.19    511.64    14.27    20524   695.28   695.28  psy_step4
+  2.10    525.36    13.72    19506   703.37   703.37  estimate_delay
+  2.06    538.82    13.46 22839582     0.59     0.62  output_bits
+  1.35    547.63     8.81    41104   214.33   215.15  calc_noise
+  1.19    555.37     7.74    41048   188.56   188.56  psy_step9
+  1.04    562.15     6.78    20524   330.34   597.84  nok_ltp_reconstruct
