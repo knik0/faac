@@ -279,8 +279,8 @@ faacVersion *faacEncodeVersion(void)
 {
 	faacVersion *faacv = malloc(sizeof(faacVersion));
 
-	faacv->DLLMajorVersion = 1;
-	faacv->DLLMinorVersion = 1;
+	faacv->DLLMajorVersion = 2;
+	faacv->DLLMinorVersion = 0;
 	faacv->MajorVersion = 0;
 	faacv->MinorVersion = 55;
 	strcpy(faacv->HomePage, "http://www.slimline.net/aac/");
