@@ -16,7 +16,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: main.c,v 1.32 2003/03/27 17:11:06 knik Exp $
+ * $Id: main.c,v 1.33 2003/04/13 08:39:28 knik Exp $
  */
 
 #ifdef HAVE_CONFIG_H
@@ -89,7 +89,6 @@ int main(int argc, char *argv[])
     unsigned int useAdts = 1;
     int cutOff = -1;
     unsigned long quantqual = 0;
-    int psymodelidx = -1;
 
     char *audioFileName;
     char *aacFileName;
@@ -132,7 +131,6 @@ int main(int argc, char *argv[])
             { "notns", 0, &useTns, 0 },
             { "cutoff", 1, 0, 'c' },
             { "quality", 1, 0, 'q' },
-            { "acousticmodel", 1, 0, 'p'},
             { "pcmraw", 0, 0, 'P'},
             { "pcmsamplerate", 1, 0, 'R'},
             { "pcmsamplebits", 1, 0, 'B'},
@@ -140,7 +138,7 @@ int main(int argc, char *argv[])
             { 0, 0, 0, 0}
         };
 
-    c = getopt_long(argc, argv, "m:o:rnc:q:p:PR:B:C:",
+    c = getopt_long(argc, argv, "m:o:rnc:q:PR:B:C:",
             long_options, &option_index);
 
         if (c == -1)
@@ -209,13 +207,6 @@ int main(int argc, char *argv[])
             }
             break;
         }
-    case 'p':
-      {
-        unsigned int i;
-        if (sscanf(optarg, "%u", &i) > 0)
-          psymodelidx = i;
-      break;
-      }
    case 'P':
      {
        rawInput = 1;
@@ -281,22 +272,10 @@ int main(int argc, char *argv[])
     /* check that we have at least two non-option arguments */
     if ((argc - optind) < 2 || dieUsage == 1)
     {
-      int i;
-
-      // get available psymodels
-      hEncoder = faacEncOpen(44100, 2, &samplesInput, &maxBytesOutput);
-      myFormat = faacEncGetCurrentConfiguration(hEncoder);
-
         fprintf(stderr, "\nUsage: %s -options infile outfile\n", progName);
         fprintf(stderr, "Options:\n");
         fprintf(stderr, "  -m X   AAC MPEG version, X can be 2 or 4.\n");
         fprintf(stderr, "  -o X   AAC object type, X can be LC, MAIN or LTP.\n");
-    for (i = 0; myFormat->psymodellist[i].ptr; i++)
-    {
-      fprintf(stderr, "  -p %d   Use %s.%s\n", i,
-          myFormat->psymodellist[i].name,
-          (i == myFormat->psymodelidx) ? " (default)" : "");
-    }
         fprintf(stderr, "  -n     Don\'t use mid/side coding.\n");
         fprintf(stderr, "  -r     RAW AAC output file.\n");
         fprintf(stderr, "  --notns\tDisable TNS coding.\n");
@@ -308,8 +287,6 @@ int main(int argc, char *argv[])
         fprintf(stderr, "  -B     Raw PCM input sample size (16 default or 8bits).\n");
         fprintf(stderr, "  -C     Raw PCM input channels.\n");
 	fprintf(stderr, "\n Note: output bitrate depends on -c and -q.\n");
-
-        faacEncClose(hEncoder);
 
         return 1;
     }
@@ -387,8 +364,6 @@ int main(int argc, char *argv[])
     if (quantqual > 0)
       myFormat->quantqual = quantqual;
     myFormat->outputFormat = useAdts;
-    if (psymodelidx >= 0)
-      myFormat->psymodelidx = psymodelidx;
     if (!faacEncSetConfiguration(hEncoder, myFormat)) {
         fprintf(stderr, "Unsupported output format!\n");
         return 1;
@@ -525,6 +500,9 @@ int main(int argc, char *argv[])
 
 /*
 $Log: main.c,v $
+Revision 1.33  2003/04/13 08:39:28  knik
+removed psymodel setting
+
 Revision 1.32  2003/03/27 17:11:06  knik
 updated library interface
 -b bitrate option replaced with -q quality option
