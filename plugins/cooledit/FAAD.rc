@@ -7,7 +7,8 @@
 //
 // Generated from the TEXTINCLUDE 2 resource.
 //
-#include "afxres.h"
+//#include "afxres.h"
+
 
 /////////////////////////////////////////////////////////////////////////////
 #undef APSTUDIO_READONLY_SYMBOLS
@@ -51,18 +52,20 @@ BEGIN
                     WS_TABSTOP,59,33,45,10
     CONTROL         "Use LFE channel",IDC_USELFE,"Button",BS_AUTOCHECKBOX | 
                     WS_DISABLED | WS_TABSTOP,59,46,67,10
-    COMBOBOX        IDC_CB_BITRATE,124,68,48,30,CBS_DROPDOWNLIST | 
-                    WS_VSCROLL | WS_TABSTOP
-    COMBOBOX        IDC_CB_BANDWIDTH,124,85,48,30,CBS_DROPDOWN | WS_VSCROLL | 
-                    WS_TABSTOP
+    EDITTEXT        IDC_CB_BITRATE,124,68,40,14,ES_AUTOHSCROLL
+    EDITTEXT        IDC_CB_BANDWIDTH,124,85,40,14,ES_AUTOHSCROLL
+//    COMBOBOX        IDC_CB_BITRATE,124,68,40,59,CBS_DROPDOWNLIST | 
+//                    WS_VSCROLL | WS_TABSTOP
+//    COMBOBOX        IDC_CB_BANDWIDTH,124,85,40,59,CBS_DROPDOWN | WS_VSCROLL | 
+//                    WS_TABSTOP
     DEFPUSHBUTTON   "OK",IDOK,64,108,36,14
     PUSHBUTTON      "Cancel",IDCANCEL,100,108,36,14
     PUSHBUTTON      "About",IDC_BTN_ABOUT,136,108,36,14
     GROUPBOX        "AAC type",IDC_STATIC,4,18,48,38
     GROUPBOX        "Profile",IDC_STATIC,4,63,48,59
     LTEXT           "Bitrate per channel",IDC_STATIC,59,73,60,8
-    LTEXT           "Bandwidth (0=full)",IDC_STATIC,59,89,57,8
-    CONTROL         104,IDC_IMG_LOGO,"Static",SS_BITMAP,136,4,36,23
+    LTEXT           "Bandwidth",IDC_STATIC,59,89,57,8
+    CONTROL         IDC_IMG_LOGO,"Static",SS_BITMAP,136,4,36,23
 END
 
 
@@ -127,7 +130,6 @@ LANGUAGE LANG_ITALIAN, SUBLANG_ITALIAN
 //
 // Bitmap
 //
-
 IDB_LOGO                BITMAP  DISCARDABLE     "Logo.bmp"
 #endif    // Italian (Italy) resources
 /////////////////////////////////////////////////////////////////////////////
