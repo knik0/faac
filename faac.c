@@ -5,6 +5,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #endif
+#ifdef LINUX
+#include <sys/time.h>
+#include <sys/resource.h>
+#include <unistd.h>
+#endif
 
 #include "aacenc.h"
 #include "bitstream.h"
@@ -257,6 +262,9 @@ void printConf(faacAACStream *as)
 
 int main(int argc, char *argv[])
 {
+#ifdef LINUX
+    struct rusage *usage;
+#endif
   int i, frames, currentFrame, result, FileCount;
   char *InFileNames[100], *OutFileNames[100];
   faacAACStream *as;
@@ -317,9 +325,18 @@ int main(int argc, char *argv[])
     nSecs = nTotSecs - (60*nMins);
     printf("Encoding %s took:\t%d:%.2d\t\n", InFileNames[i], nMins, nSecs);
 #else
+#ifdef LINUX
+    usage=malloc(sizeof(struct rusage*));
+    getrusage(RUSAGE_SELF,usage);
+    totalSecs=usage->ru_utime.tv_sec;
+    free(usage);
+    mins = totalSecs/60;
+    printf("Encoding %s took: %i min, %.2f sec. of cpu-time\n", InFileNames[i], mins, totalSecs - (60 * mins));
+#else
     totalSecs = (float)(clock())/(float)CLOCKS_PER_SEC;
     mins = totalSecs/60;
     printf("Encoding %s took: %i min, %.2f sec.\n", InFileNames[i], mins, totalSecs - (60 * mins));
+#endif
 #endif
     if(InFileNames[i]) free(InFileNames[i]);
     if(OutFileNames[i]) free(OutFileNames[i]);
