@@ -30,7 +30,7 @@ void ISEncode(double *spectrum[MAX_TIME_CHANNELS],   /* array of pointers to spe
 void ISReconstruct(double *spectrum[MAX_TIME_CHANNELS],   /* array of pointers to spectral data */
 		   Ch_Info *channelInfo,                  /* Pointer to Ch_Info */
 		   int sfb_offset_table[][MAX_SCFAC_BANDS+1],
-		   enum WINDOW_TYPE block_type[MAX_TIME_CHANNELS], /* Block type */
+//		   enum WINDOW_TYPE block_type[MAX_TIME_CHANNELS], /* Block type */
 		   AACQuantInfo* quantInfo,
 		   int numberOfChannels);                 /* Number of channels */
 

@@ -34,8 +34,8 @@ Copyright (c)1997.
 /**************************************************************************
   Version Control Information			Method: CVS
   Identifiers:
-  $Revision: 1.9 $
-  $Date: 2000/02/28 08:19:03 $ (check in)
+  $Revision: 1.10 $
+  $Date: 2000/02/28 12:18:36 $ (check in)
   $Author: lenox $
   *************************************************************************/
 
@@ -198,7 +198,8 @@ nok_ltp_enc(double *p_spectrum, double *p_time_signal, enum WINDOW_TYPE win_type
 	case SHORT_LONG_WINDOW:
 		last_band = (num_of_sfb < NOK_MAX_LT_PRED_LONG_SFB) ? num_of_sfb : NOK_MAX_LT_PRED_LONG_SFB;
 
-		lt_status->delay[0] = estimate_delay (p_time_signal, lt_status->buffer, 2 * BLOCK_LEN_LONG);
+//		lt_status->delay[0] = estimate_delay (p_time_signal, lt_status->buffer, 2 * BLOCK_LEN_LONG);
+		lt_status->delay[0] = estimate_delay (p_time_signal, lt_status->buffer);
 
 //		fprintf(stderr, "(LTP) lag : %i ", lt_status->delay[0]);
 

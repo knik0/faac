@@ -233,7 +233,7 @@ int EncTfFrame (faacAACStream *as, BsBitStream  *fixed_stream)
 	/* it is the job of this module to determine 
 	the no of bits to use in addition to average_block_bits
 	max. available: average_block_bits + available_bitreservoir_bits */
-	int max_bitreservoir_bits = 8184;
+//	int max_bitreservoir_bits = 8184;
 
 	/* max. allowed amount of bits in the reservoir  (used to avoid padding bits) */
 	long num_bits_available;
@@ -324,8 +324,8 @@ int EncTfFrame (faacAACStream *as, BsBitStream  *fixed_stream)
 				chanNum,
 				&DTimeSigLookAheadBuf[chanNum],
 				&next_desired_block_type[chanNum],
-				(int)qc_select,
-				block_size_samples,
+//				(int)qc_select,
+//				block_size_samples,
 				chpo_long,
 				chpo_short
 				);
@@ -423,8 +423,8 @@ int EncTfFrame (faacAACStream *as, BsBitStream  *fixed_stream)
 		for (chanNum=0;chanNum<max_ch;chanNum++) {
 
 			/* Count number of bits used for gain_control_data */
-			used_bits += WriteGainControlData(&quantInfo[chanNum],     /* quantInfo contains packed gain control data */
-				NULL,           /* NULL BsBitStream.  Only counting bits, no need to write yet */
+//			used_bits += WriteGainControlData(&quantInfo[chanNum],     /* quantInfo contains packed gain control data */
+			used_bits += WriteGainControlData(NULL,           /* NULL BsBitStream.  Only counting bits, no need to write yet */
 				0);             /* Zero write flag means don't write */
 		}
 	}
@@ -498,7 +498,8 @@ int EncTfFrame (faacAACStream *as, BsBitStream  *fixed_stream)
 		channelInfo, block_type, quantInfo, as->use_MS, as->use_IS, max_ch);
 
 	MSEnergy(spectral_line_vector, energy, chpo_long, chpo_short, sfb_width_table,
-		channelInfo, block_type, quantInfo, as->use_MS, max_ch);
+//		channelInfo, block_type, quantInfo, as->use_MS, max_ch);
+		block_type, quantInfo, as->use_MS, max_ch);
 
 	{
 		int chanNum;   
@@ -521,7 +522,7 @@ int EncTfFrame (faacAACStream *as, BsBitStream  *fixed_stream)
 	*
 	******************************************************************************************************************************/
 	{ 
-		int padding_limit = max_bitreservoir_bits;
+//		int padding_limit = max_bitreservoir_bits;
 		int maxNumBitsByteAligned;
 		int chanNum;   
 		int numFillBits;
@@ -638,9 +639,10 @@ int EncTfFrame (faacAACStream *as, BsBitStream  *fixed_stream)
 			MSEncodeSwitch(spectral_line_vector,
 				channelInfo,
 				sfb_offset_table,
-				block_type,
-				quantInfo,
-				max_ch);
+//				block_type,
+				quantInfo
+//				,max_ch
+                                );
 		}
 
 		/************************************************/
@@ -658,20 +660,21 @@ int EncTfFrame (faacAACStream *as, BsBitStream  *fixed_stream)
 				&energy[chanNum],
 				&block_type[chanNum],
 				&sfb_width_table[chanNum],
-				&nr_of_sfb[chanNum],
+//				&nr_of_sfb[chanNum],
 				bitsToUse,
-				available_bitreservoir_bits,
-				padding_limit,
+//				available_bitreservoir_bits,
+//				padding_limit,
 				fixed_stream,
-				NULL,
-				1,                        /* nr of audio channels */
+//				NULL,
+//				1,                        /* nr of audio channels */
 				&reconstructed_spectrum[chanNum],
-				useShortWindows,
-				aacAllowScalefacs,
+//				useShortWindows,
+//				aacAllowScalefacs,
 				&quantInfo[chanNum],
-				&(channelInfo[chanNum]),
-				0/*no vbr*/,
-				bit_rate);
+				&(channelInfo[chanNum])
+//				,0/*no vbr*/,
+//				,bit_rate
+                                );
 			if (error == FERROR)
 				return error;
 		}
@@ -683,7 +686,7 @@ int EncTfFrame (faacAACStream *as, BsBitStream  *fixed_stream)
 			MSReconstruct(reconstructed_spectrum,
 				channelInfo,
 				sfb_offset_table,
-				block_type,
+//				block_type,
 				quantInfo,
 				max_ch);
 		}
@@ -695,7 +698,7 @@ int EncTfFrame (faacAACStream *as, BsBitStream  *fixed_stream)
 			ISReconstruct(reconstructed_spectrum,
 				channelInfo,
 				sfb_offset_table,
-				block_type,
+//				block_type,
 				quantInfo,
 				max_ch);
 		}

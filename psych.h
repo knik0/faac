@@ -192,8 +192,8 @@ void EncTf_psycho_acoustic(
   int    no_of_chan,         /* no of audio channels */
   double *p_time_signal[],
   enum WINDOW_TYPE block_type[],
-  int qcSelect,
-  int frameLength,
+//  int qcSelect,
+//  int frameLength,
   /* output */
   CH_PSYCH_OUTPUT_LONG p_chpo_long[],
   CH_PSYCH_OUTPUT_SHORT p_chpo_short[][MAX_SHORT_WINDOWS]
@@ -238,107 +238,109 @@ void psy_step2(double sample[][BLOCK_LEN_LONG*2],
 void psy_step3(PSY_STATVARIABLE_LONG *psy_stvar_long, 
                PSY_STATVARIABLE_SHORT *psy_stvar_short, 
                PSY_VARIABLE_LONG *psy_var_long, 
-               PSY_VARIABLE_SHORT *psy_var_short, 
-               int ch
+               PSY_VARIABLE_SHORT *psy_var_short
+//               ,int ch
 	       );
 
 void psy_step4(PSY_STATVARIABLE_LONG *psy_stvar_long,
                PSY_STATVARIABLE_SHORT *psy_stvar_short,
-	       PSY_VARIABLE_LONG *psy_var_long, 
-	       PSY_VARIABLE_SHORT *psy_var_short,
-	       int ch
+	       PSY_VARIABLE_LONG *psy_var_long,
+	       PSY_VARIABLE_SHORT *psy_var_short
+//	       ,int ch
 	       );
 
-void psy_step5(PARTITION_TABLE_LONG *part_tbl_long, 
-			   PARTITION_TABLE_SHORT *part_tbl_short, 
+void psy_step5(PARTITION_TABLE_LONG *part_tbl_long,
+			   PARTITION_TABLE_SHORT *part_tbl_short,
 			   PSY_STATVARIABLE_LONG *psy_stvar_long,
-               PSY_STATVARIABLE_SHORT *psy_stvar_short,
-			   PSY_VARIABLE_LONG *psy_var_long, 
-			   PSY_VARIABLE_SHORT *psy_var_short,
-			   int ch
+                           PSY_STATVARIABLE_SHORT *psy_stvar_short,
+			   PSY_VARIABLE_LONG *psy_var_long,
+			   PSY_VARIABLE_SHORT *psy_var_short
+//			   ,int ch
 			   );
 
-void psy_step6_step1(void *inData);
+//void psy_step6_step1(void *inData);
 
-void psy_step6_step1(void *inData);
+//void psy_step6_step1(void *inData);
 
-void psy_step6(PARTITION_TABLE_LONG *part_tbl_long, 
-			   PARTITION_TABLE_SHORT *part_tbl_short, 
+void psy_step6(PARTITION_TABLE_LONG *part_tbl_long,
+			   PARTITION_TABLE_SHORT *part_tbl_short,
 			   PSY_STATVARIABLE_LONG *psy_stvar_long,
-               PSY_STATVARIABLE_SHORT *psy_stvar_short,
-			   PSY_VARIABLE_LONG *psy_var_long, 
+                           PSY_STATVARIABLE_SHORT *psy_stvar_short,
+			   PSY_VARIABLE_LONG *psy_var_long,
 			   PSY_VARIABLE_SHORT *psy_var_short
 			   );
 
-void psy_step7(PARTITION_TABLE_LONG *part_tbl_long, 
-	       PARTITION_TABLE_SHORT *part_tbl_short, 
-	       PSY_VARIABLE_LONG *psy_var_long, 
+void psy_step7(PARTITION_TABLE_LONG *part_tbl_long,
+	       PARTITION_TABLE_SHORT *part_tbl_short,
+	       PSY_VARIABLE_LONG *psy_var_long,
 	       PSY_VARIABLE_SHORT *psy_var_short
 	       );
 
 void psy_step8(PARTITION_TABLE_LONG *part_tbl_long,
 	       PARTITION_TABLE_SHORT *part_tbl_short,
-	       PSY_VARIABLE_LONG *psy_var_long, 
+	       PSY_VARIABLE_LONG *psy_var_long,
 	       PSY_VARIABLE_SHORT *psy_var_short
 	       );
 
 void psy_step9(PARTITION_TABLE_LONG *part_tbl_long,
 	       PARTITION_TABLE_SHORT *part_tbl_short,
-	       PSY_VARIABLE_LONG *psy_var_long, 
+	       PSY_VARIABLE_LONG *psy_var_long,
 	       PSY_VARIABLE_SHORT *psy_var_short
 	       );
 
 void psy_step10(PARTITION_TABLE_LONG *part_tbl_long,
 		PARTITION_TABLE_SHORT *part_tbl_short,
-		PSY_STATVARIABLE_LONG *psy_stvar_long, 
-		PSY_STATVARIABLE_SHORT *psy_stvar_short, 
-		PSY_VARIABLE_LONG *psy_var_long, 
-		PSY_VARIABLE_SHORT *psy_var_short,
-		int ch /* ch */
+		PSY_STATVARIABLE_LONG *psy_stvar_long,
+		PSY_STATVARIABLE_SHORT *psy_stvar_short,
+		PSY_VARIABLE_LONG *psy_var_long,
+		PSY_VARIABLE_SHORT *psy_var_short
+//		,int ch
 		);
 
-void psy_step11(PARTITION_TABLE_LONG *part_tbl_long, 
-		PARTITION_TABLE_SHORT *part_tbl_short, 
-		PSY_STATVARIABLE_LONG *psy_stvar_long, 
-		PSY_STATVARIABLE_SHORT *psy_stvar_short, 
-		int ch
+void psy_step11(PARTITION_TABLE_LONG *part_tbl_long,
+		PARTITION_TABLE_SHORT *part_tbl_short,
+		PSY_STATVARIABLE_LONG *psy_stvar_long,
+		PSY_STATVARIABLE_SHORT *psy_stvar_short
+//		,int ch
 		);
 
-void psy_step11andahalf(PARTITION_TABLE_LONG *part_tbl_long, 
-						PARTITION_TABLE_SHORT *part_tbl_short, 
-						PSY_STATVARIABLE_LONG *psy_stvar_long, 
-						PSY_STATVARIABLE_SHORT *psy_stvar_short, 
+void psy_step11andahalf(PARTITION_TABLE_LONG *part_tbl_long,
+						PARTITION_TABLE_SHORT *part_tbl_short,
+						PSY_STATVARIABLE_LONG *psy_stvar_long,
+						PSY_STATVARIABLE_SHORT *psy_stvar_short,
 						int ch);
 
-void psy_step12(PARTITION_TABLE_LONG *part_tbl_long, 
-		PARTITION_TABLE_SHORT *part_tbl_short, 
-		PSY_STATVARIABLE_LONG *psy_stvar_long, 
-		PSY_STATVARIABLE_SHORT *psy_stvar_short, 
-		PSY_VARIABLE_LONG *psy_var_long, 
-		PSY_VARIABLE_SHORT *psy_var_short,
-		int ch
+void psy_step12(
+                PARTITION_TABLE_LONG *part_tbl_long,
+//		PARTITION_TABLE_SHORT *part_tbl_short,
+		PSY_STATVARIABLE_LONG *psy_stvar_long,
+//		PSY_STATVARIABLE_SHORT *psy_stvar_short,
+		PSY_VARIABLE_LONG *psy_var_long
+//		,PSY_VARIABLE_SHORT *psy_var_short
+//		,int ch
 		);
 
-void psy_step13(PSY_VARIABLE_LONG *psy_var_long, 
-		enum WINDOW_TYPE *block_type,
-		int ch
+void psy_step13(PSY_VARIABLE_LONG *psy_var_long,
+		enum WINDOW_TYPE *block_type
+//		,int ch
 		);
 
 void psy_step14(SR_INFO *p_sri,
-		PARTITION_TABLE_LONG *part_tbl_long, 
-		PARTITION_TABLE_SHORT *part_tbl_short, 
-		PSY_STATVARIABLE_LONG *psy_stvar_long, 
-		PSY_STATVARIABLE_SHORT *psy_stvar_short, 
-		PSY_VARIABLE_LONG *psy_var_long, 
-		PSY_VARIABLE_SHORT *psy_var_short,
-		int ch);
+		PARTITION_TABLE_LONG *part_tbl_long,
+		PARTITION_TABLE_SHORT *part_tbl_short,
+		PSY_STATVARIABLE_LONG *psy_stvar_long,
+		PSY_STATVARIABLE_SHORT *psy_stvar_short,
+		PSY_VARIABLE_LONG *psy_var_long,
+		PSY_VARIABLE_SHORT *psy_var_short
+//		,int ch
+                );
 
 void psy_step15(int use_ms_l[NSFB_LONG],
 				int use_ms_s[MAX_SHORT_WINDOWS][NSFB_SHORT],
 				SR_INFO *p_sri,
-				PSY_STATVARIABLE_LONG *psy_stvar_long, 
-				PSY_STATVARIABLE_SHORT *psy_stvar_short, 
-				PSY_VARIABLE_LONG *psy_var_long, 
+				PSY_STATVARIABLE_LONG *psy_stvar_long,
+				PSY_STATVARIABLE_SHORT *psy_stvar_short,
+				PSY_VARIABLE_LONG *psy_var_long,
 				PSY_VARIABLE_SHORT *psy_var_short,
 				int ch
 				);

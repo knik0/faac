@@ -34,9 +34,9 @@ Copyright (c)1997.
 /**************************************************************************
   Version Control Information			Method: CVS
   Identifiers:
-  $Revision: 1.6 $
-  $Date: 2000/02/08 07:47:59 $ (check in)
-  $Author: menno $
+  $Revision: 1.7 $
+  $Date: 2000/02/28 12:18:36 $ (check in)
+  $Author: lenox $
   *************************************************************************/
 
 
@@ -266,9 +266,9 @@ prediction (short *buffer,
   *************************************************************************/
 
 int estimate_delay (double *sb_samples,
-					short *x_buffer,
-					int flen
-					)
+		    short *x_buffer
+//		    ,int flen
+		    )
 {
 	int i, j;
 	int delay;
@@ -304,7 +304,7 @@ int estimate_delay (double *sb_samples,
 	for (i = 1; i < DELAY; i++)
 	{
 //NOK_LT_BLEN=4096
-		energy -= x_buffer[NOK_LT_BLEN - i] * x_buffer[NOK_LT_BLEN - i]; 
+		energy -= x_buffer[NOK_LT_BLEN - i] * x_buffer[NOK_LT_BLEN - i];
 		energy += x_buffer[NOK_LT_BLEN - i - 2048] * x_buffer[NOK_LT_BLEN - i - 2048]; //2048=j_max
 		corr[i] = corrtmp;
 		corr[i] -= x_buffer[NOK_LT_BLEN - i] * sb_samples[2047];
@@ -516,7 +516,7 @@ w_quantize (double *freq, int *ltp_idx)
 	low = 1.0e+10;
 	for (i = 0; i < LPC; i++)
     {
-		dist = 0.0;
+//		dist = 0.0;
 		for (j = 0; j < CODESIZE; j++)
 		{
 			dist = (freq[i] - codebook[j]) * (freq[i] - codebook[j]);

@@ -235,7 +235,7 @@ loop1:
 }
 
 int inner_loop(AACQuantInfo *quantInfo,
-			   double *p_spectrum,
+//			   double *p_spectrum,
 			   double *pow_spectrum,
 			   int quant[NUM_COEFF],
 			   int max_bits)
@@ -247,14 +247,15 @@ int inner_loop(AACQuantInfo *quantInfo,
 	{
 		quantInfo->common_scalefac += 1;
 		quantize(quantInfo, pow_spectrum, quant);
-		bits = count_bits(quantInfo, quant, quantInfo->book_vector); 
+//		bits = count_bits(quantInfo, quant, quantInfo->book_vector);
+		bits = count_bits(quantInfo, quant);
 	} while ( bits > max_bits );
 
 	return bits;
 }
 
 int search_common_scalefac(AACQuantInfo *quantInfo,
-						   double *p_spectrum,
+//						   double *p_spectrum,
 						   double *pow_spectrum,
 						   int quant[NUM_COEFF],
 						   int desired_rate)
@@ -268,7 +269,8 @@ int search_common_scalefac(AACQuantInfo *quantInfo,
 	{
 		quantInfo->common_scalefac = StepSize;
 		quantize(quantInfo, pow_spectrum, quant);
-		nBits = count_bits(quantInfo, quant, quantInfo->book_vector);  
+//		nBits = count_bits(quantInfo, quant, quantInfo->book_vector);
+		nBits = count_bits(quantInfo, quant);
 
 		if (CurrentStep == 1 ) {
 			break; /* nothing to adjust anymore */
@@ -364,19 +366,21 @@ int calc_noise(AACQuantInfo *quantInfo,
 	return over;
 }
 
-int quant_compare(int best_over, double best_tot_noise, double best_over_noise,
-				  double best_max_noise, int over, double tot_noise, double over_noise,
-				  double max_noise)
+//int quant_compare(int best_over, double best_tot_noise, double best_over_noise,
+//				  double best_max_noise, int over, double tot_noise, double over_noise,
+//				  double max_noise)
+int quant_compare(double best_tot_noise, double best_over_noise,
+		  double tot_noise, double over_noise)
 {
 	/*
 	noise is given in decibals (db) relative to masking thesholds.
 
 	over_noise:  sum of quantization noise > masking
 	tot_noise:   sum of all quantization noise
-	max_noise:   max quantization noise 
+	max_noise:   max quantization noise
 
 	*/
-	int better=0;
+	int better;
 
 #if 0
 	better = ((over < best_over) ||
@@ -409,7 +413,7 @@ int quant_compare(int best_over, double best_tot_noise, double best_over_noise,
 		||( (max_noise == best_max_noise)
 		&&(tot_noise <= best_tot_noise)
 		)
-		) 
+		)
 		);
 #endif
 #endif
@@ -424,8 +428,9 @@ int quant_compare(int best_over, double best_tot_noise, double best_over_noise,
 
 
 int count_bits(AACQuantInfo* quantInfo,
-			   int quant[NUM_COEFF],
-			   int output_book_vector[SFB_NUM_MAX*2])
+			   int quant[NUM_COEFF]
+//			   ,int output_book_vector[SFB_NUM_MAX*2]
+                        )
 {
 	int i, bits = 0;
 
@@ -449,7 +454,7 @@ int count_bits(AACQuantInfo* quantInfo,
 
 	/* calculate the amount of bits needed for encoding the huffman codebook numbers */
 	bits += sort_book_numbers(quantInfo,             /* Quantization information */
-		output_book_vector,    /* Output codebook vector, formatted for bitstream */
+//		output_book_vector,    /* Output codebook vector, formatted for bitstream */
 		NULL,          /* Bitstream */
 		0);                    /* Write flag: 0 count, 1 write */
 
@@ -483,36 +488,37 @@ int tf_encode_spectrum_aac(
 			   double      energy[MAX_TIME_CHANNELS][MAX_SCFAC_BANDS],
 			   enum WINDOW_TYPE block_type[MAX_TIME_CHANNELS],
 			   int         sfb_width_table[MAX_TIME_CHANNELS][MAX_SCFAC_BANDS],
-			   int         nr_of_sfb[MAX_TIME_CHANNELS],
+//			   int         nr_of_sfb[MAX_TIME_CHANNELS],
 			   int         average_block_bits,
-			   int         available_bitreservoir_bits,
-			   int         padding_limit,
+//			   int         available_bitreservoir_bits,
+//			   int         padding_limit,
 			   BsBitStream *fixed_stream,
-			   BsBitStream *var_stream,
-			   int         nr_of_chan,
+//			   BsBitStream *var_stream,
+//			   int         nr_of_chan,
 			   double      *p_reconstructed_spectrum[MAX_TIME_CHANNELS],
-			   int         useShortWindows,
-			   int aacAllowScalefacs,
+//			   int         useShortWindows,
+//			   int aacAllowScalefacs,
 			   AACQuantInfo* quantInfo,      /* AAC quantization information */ 
-			   Ch_Info* ch_info,
-			   int varBitRate,
-			   int bitRate)
+			   Ch_Info* ch_info
+//			   ,int varBitRate
+//			   ,int bitRate
+                           )
 {
 	int quant[NUM_COEFF];
 	int s_quant[NUM_COEFF];
-	int i=0;
-	int j=0;
+	int i;
+//	int j=0;
 	int k;
 	double max_dct_line = 0;
-	int global_gain;
+//	int global_gain;
 	int store_common_scalefac;
 	int best_scale_factor[SFB_NUM_MAX];
 	double pow_spectrum[NUM_COEFF];
 	double requant[NUM_COEFF];
 	int sb;
 	int extra_bits;
-	int max_bits;
-	int output_book_vector[SFB_NUM_MAX*2];
+//	int max_bits;
+//	int output_book_vector[SFB_NUM_MAX*2];
 	double SigMaskRatio[SFB_NUM_MAX];
 	IS_Info *is_info;
 	MS_Info *ms_info;
@@ -524,17 +530,18 @@ int tf_encode_spectrum_aac(
 	int* common_scalefac = &(quantInfo -> common_scalefac);
 
 	int outer_loop_count, notdone;
-	int over = 0, best_over = 100, better;
-	int sfb_overflow;
+	int over, better;
+//      int best_over = 100;
+//	int sfb_overflow;
 	int best_common_scalefac;
 	double noise_thresh;
 	double sfQuantFac;
 	double over_noise, tot_noise, max_noise;
 	double noise[SFB_NUM_MAX];
-	double best_max_noise = 0;
+//	double best_max_noise = 0;
 	double best_over_noise = 0;
 	double best_tot_noise = 0;
-	static int init = -1;
+//	static int init = -1;
 
 	/* Set block type in quantization info */
 	quantInfo -> block_type = block_type[MONO_CHAN];
@@ -564,7 +571,7 @@ int tf_encode_spectrum_aac(
 	} else{
 		/* For long windows, band are not actually interleaved */
 		if ((quantInfo -> block_type == ONLY_LONG_WINDOW) ||  
-			(quantInfo -> block_type == LONG_SHORT_WINDOW) || 
+			(quantInfo -> block_type == LONG_SHORT_WINDOW) ||
 			(quantInfo -> block_type == SHORT_LONG_WINDOW)) {
 			quantInfo->nr_of_sfb = quantInfo->max_sfb;
 
@@ -648,7 +655,7 @@ int tf_encode_spectrum_aac(
 					if ((10*log10(energy[MONO_CHAN][sb]*sfb_width_table[0][sb]+1e-60)<70)||(SigMaskRatio[sb] > 1.0)) {
 						quantInfo->pns_sfb_flag[sb] = 1;
 						quantInfo->pns_sfb_nrg[sb] = (int) (2.0 * log(energy[0][sb]*sfb_width_table[0][sb]+1e-60) / log(2.0) + 0.5) + PNS_SF_OFFSET;
-						
+
 						/* Erase spectral lines */
 						for( i=sfb_offset[sb]; i<sfb_offset[sb+1]; i++ ) {
 							p_spectrum[0][i] = 0.0;
@@ -672,7 +679,7 @@ int tf_encode_spectrum_aac(
 	/** find the maximum spectral coefficient **/
 	/* Bug fix, 3/10/98 CL */
 	/* for(i=0; i<NUM_COEFF; i++){ */
-	for(i=0; i < sfb_offset[quantInfo->nr_of_sfb]; i++){ 
+	for(i=0; i < sfb_offset[quantInfo->nr_of_sfb]; i++){
 		pow_spectrum[i] = (pow(ABS(p_spectrum[0][i]), 0.75));
 		sign[i] = sgn(p_spectrum[0][i]);
 		if ((ABS(p_spectrum[0][i])) > max_dct_line){
@@ -698,18 +705,20 @@ int tf_encode_spectrum_aac(
 
 		outer_loop_count++;
 		over = 0;
-		sfb_overflow = 0;
+//		sfb_overflow = 0;
 
-		if (max_dct_line == 0.0)
-			sfb_overflow = 1;
+//		if (max_dct_line == 0.0)
+//			sfb_overflow = 1;
 
 		if (outer_loop_count == 1) {
-			max_bits = search_common_scalefac(quantInfo, p_spectrum[0], pow_spectrum,
-				quant, average_block_bits);
+//			max_bits = search_common_scalefac(quantInfo, p_spectrum[0], pow_spectrum,
+//				quant, average_block_bits);
+			search_common_scalefac(quantInfo, pow_spectrum, quant, average_block_bits);
 		}
 
-		max_bits = inner_loop(quantInfo, p_spectrum[0], pow_spectrum,
-			quant, average_block_bits) + extra_bits;
+//		max_bits = inner_loop(quantInfo, p_spectrum[0], pow_spectrum,
+//			quant, average_block_bits) + extra_bits;
+		inner_loop(quantInfo, pow_spectrum, quant, average_block_bits);
 
 		store_common_scalefac = quantInfo->common_scalefac;
 
@@ -717,12 +726,14 @@ int tf_encode_spectrum_aac(
 			over = calc_noise(quantInfo, p_spectrum[0], quant, requant, noise, allowed_dist[0],
 				&over_noise, &tot_noise, &max_noise);
 
-			better = quant_compare(best_over, best_tot_noise, best_over_noise,
-				best_max_noise, over, tot_noise, over_noise, max_noise);
+//			better = quant_compare(best_over, best_tot_noise, best_over_noise,
+//				best_max_noise, over, tot_noise, over_noise, max_noise);
+			better = quant_compare(best_tot_noise, best_over_noise,
+				               tot_noise, over_noise);
 
 			for (sb = 0; sb < quantInfo->nr_of_sfb; sb++) {
 				if (scale_factor[sb] > 59) {
-					sfb_overflow = 1;
+//					sfb_overflow = 1;
 					better = 0;
 				}
 			}
@@ -731,8 +742,8 @@ int tf_encode_spectrum_aac(
 				better = 1;
 
 			if (better) {
-				best_over = over;
-				best_max_noise = max_noise;
+//				best_over = over;
+//				best_max_noise = max_noise;
 				best_over_noise = over_noise;
 				best_tot_noise = tot_noise;
 				best_common_scalefac = store_common_scalefac;
@@ -798,7 +809,8 @@ int tf_encode_spectrum_aac(
 
 	calc_noise(quantInfo, p_spectrum[0], quant, requant, noise, allowed_dist[0],
 			&over_noise, &tot_noise, &max_noise);
-	count_bits(quantInfo, quant, output_book_vector);
+//	count_bits(quantInfo, quant, output_book_vector);
+	count_bits(quantInfo, quant);
 	if (quantInfo->block_type!=ONLY_SHORT_WINDOW)
 		PulseDecoder(quantInfo, quant);
 
@@ -813,19 +825,20 @@ int tf_encode_spectrum_aac(
 			scale_factor[i] = *common_scalefac - scale_factor[i] + SF_OFFSET;
 		}
 	}
-	*common_scalefac = global_gain = scale_factor[0];
+//	*common_scalefac = global_gain = scale_factor[0];
+	*common_scalefac = scale_factor[0];
 
 	/* place the codewords and their respective lengths in arrays data[] and len[] respectively */
 	/* there are 'counter' elements in each array, and these are variable length arrays depending on the input */
 
 	quantInfo -> spectralCount = 0;
-	for(k=0;k< quantInfo -> nr_of_sfb; k++) {  
+	for(k=0;k< quantInfo -> nr_of_sfb; k++) {
 		output_bits(
 			quantInfo,
 			quantInfo->book_vector[k],
 			quant,
 			quantInfo->sfb_offset[k],
-			quantInfo->sfb_offset[k+1]-quantInfo->sfb_offset[k], 
+			quantInfo->sfb_offset[k+1]-quantInfo->sfb_offset[k],
 			1);
 //		printf("%d\t%d\n",k,quantInfo->book_vector[k]);
 	}
@@ -840,7 +853,7 @@ int tf_encode_spectrum_aac(
 				}
 			} else {
 				for (i=sfb_offset[sb]; i<sfb_offset[sb+1]; i++){
-					p_reconstructed_spectrum[0][i] = sgn(p_spectrum[0][i]) * requant[i]; 
+					p_reconstructed_spectrum[0][i] = sgn(p_spectrum[0][i]) * requant[i];
 				}
 			}
 		}
@@ -856,12 +869,12 @@ int sort_for_grouping(AACQuantInfo* quantInfo,        /* ptr to quantization inf
 		      double *PsySigMaskRatio)
 {
 	int i,j,ii;
-	int index = 0;
+	int index;
 	double tmp[1024];
-	int book=1;
-	int group_offset=0;
+//	int book=1;
+	int group_offset;
 	int k=0;
-	int windowOffset = 0;
+	int windowOffset;
 
 	/* set up local variables for used quantInfo elements */
 	int* sfb_offset = quantInfo -> sfb_offset;
@@ -871,7 +884,7 @@ int sort_for_grouping(AACQuantInfo* quantInfo,        /* ptr to quantization inf
 	*nr_of_sfb = quantInfo->max_sfb;              /* Init to max_sfb */
 	window_group_length = quantInfo -> window_group_length;
 	num_window_groups = quantInfo -> num_window_groups;
-	
+
 	/* calc org sfb_offset just for shortblock */
 	sfb_offset[k]=0;
 	for (k=0; k < 1024; k++) {
@@ -891,7 +904,7 @@ int sort_for_grouping(AACQuantInfo* quantInfo,        /* ptr to quantization inf
 					tmp[index++] = p_spectrum[MONO_CHAN][ii+ sfb_offset[k] + 128*j +group_offset];
 			}
 		}
-		group_offset +=  128*window_group_length[i];     
+		group_offset +=  128*window_group_length[i];
 	}
 
 	for (k=0; k<1024; k++){
@@ -908,7 +921,7 @@ int sort_for_grouping(AACQuantInfo* quantInfo,        /* ptr to quantization inf
 			/* for this window group and this band, find worst case inverse sig-mask-ratio */
 			int bandNum=windowOffset*NSFB_SHORT + k;
 			double worstISMR = PsySigMaskRatio[bandNum];
-			int w=0;
+			int w;
 			for (w=1;w<window_group_length[i];w++) {
 				bandNum=(w+windowOffset)*NSFB_SHORT + k;
 				if (PsySigMaskRatio[bandNum]<worstISMR) {
@@ -929,7 +942,7 @@ int sort_for_grouping(AACQuantInfo* quantInfo,        /* ptr to quantization inf
 }
 
 sort_book_numbers(AACQuantInfo* quantInfo,     /* Quantization information */
-		  int output_book_vector[],    /* Output codebook vector, formatted for bitstream */
+//		  int output_book_vector[],    /* Output codebook vector, formatted for bitstream */
 		  BsBitStream* fixed_stream,   /* Bitstream */
 		  int write_flag)              /* Write flag: 0 count, 1 write */
 {
@@ -937,20 +950,20 @@ sort_book_numbers(AACQuantInfo* quantInfo,     /* Quantization information */
     This function inputs the vector, 'book_vector[]', which is of length SFB_NUM_MAX,
     and contains the optimal huffman tables of each sfb.  It returns the vector, 'output_book_vector[]', which
     has it's elements formatted for the encoded bit stream.  It's syntax is:
-   
+
     {sect_cb[0], length_segment[0], ... ,sect_cb[num_of_sections], length_segment[num_of_sections]}
 
     The above syntax is true, unless there is an escape sequence.  An
     escape sequence occurs when a section is longer than 2 ^ (bit_len)
     long in units of scalefactor bands.  Also, the integer returned from
-    this function is the number of bits written in the bitstream, 
-    'bit_count'.  
+    this function is the number of bits written in the bitstream,
+    'bit_count'.
 
     This function supports both long and short blocks.
     */
 
 	int i;
-	int repeat_counter = 1;
+	int repeat_counter;
 	int bit_count = 0;
 	int previous;
 	int max, bit_len/*,sfbs*/;
@@ -958,7 +971,7 @@ sort_book_numbers(AACQuantInfo* quantInfo,     /* Quantization information */
 
 	/* Set local pointers to quantInfo elements */
 	int* book_vector = quantInfo -> book_vector;
-	int nr_of_sfb = quantInfo -> nr_of_sfb;
+//	int nr_of_sfb = quantInfo -> nr_of_sfb;
 
 	if (quantInfo->block_type == ONLY_SHORT_WINDOW){
 		max = 7;
@@ -978,34 +991,34 @@ sort_book_numbers(AACQuantInfo* quantInfo,     /* Quantization information */
 		repeat_counter=1;
 
 		previous = book_vector[band];
-		if (write_flag) {   
-			BsPutBit(fixed_stream,book_vector[band],4);  
+		if (write_flag) {
+			BsPutBit(fixed_stream,book_vector[band],4);
 		}
 		bit_count += 4;
 
 		for (i=band+1;i<band+max_sfb;i++) {
 			if( (book_vector[i] != previous)) {
 				if (write_flag) {
-					BsPutBit(fixed_stream,repeat_counter,bit_len);  
+					BsPutBit(fixed_stream,repeat_counter,bit_len);
 				}
 				bit_count += bit_len;
 
 				if (repeat_counter == max){  /* in case you need to terminate an escape sequence */
-					if (write_flag) BsPutBit(fixed_stream,0,bit_len);  
+					if (write_flag) BsPutBit(fixed_stream,0,bit_len);
 					bit_count += bit_len;
 				}
-				
-				if (write_flag) BsPutBit(fixed_stream,book_vector[i],4);  
+
+				if (write_flag) BsPutBit(fixed_stream,book_vector[i],4);
 				bit_count += 4;
 				previous = book_vector[i];
 				repeat_counter=1;
-				
+
 			}
 			/* if the length of the section is longer than the amount of bits available in */
 			/* the bitsream, "max", then start up an escape sequence */
-			else if ((book_vector[i] == previous) && (repeat_counter == max)) { 
+			else if ((book_vector[i] == previous) && (repeat_counter == max)) {
 				if (write_flag) {
-					BsPutBit(fixed_stream,repeat_counter,bit_len);  
+					BsPutBit(fixed_stream,repeat_counter,bit_len);
 				}
 				bit_count += bit_len;
 				repeat_counter = 1;
@@ -1014,17 +1027,17 @@ sort_book_numbers(AACQuantInfo* quantInfo,     /* Quantization information */
 				repeat_counter++;
 			}
 		}
-		
+
 		if (write_flag) {
-			BsPutBit(fixed_stream,repeat_counter,bit_len);  
+			BsPutBit(fixed_stream,repeat_counter,bit_len);
 		}
 		bit_count += bit_len;
 		if (repeat_counter == max) {  /* special case if the last section length is an */
 			/* escape sequence */
-			if (write_flag) BsPutBit(fixed_stream,0,bit_len);  
+			if (write_flag) BsPutBit(fixed_stream,0,bit_len);
 			bit_count += bit_len;
 		}
-		
+
 
 	}  /* Bottom of group iteration */
 
@@ -1063,11 +1076,11 @@ int bit_search(int quant[NUM_COEFF],  /* Quantized spectral values */
 */
 
 {
-	int i,j,k,m,n;
+	int i,j,k,n;
 	int hop;
 	int min_book_choice[112][3];
 	int bit_stats[240][3];
-	int total_bits;
+//	int total_bits;
 	int total_bit_count;
 	int levels;
 	double fraction;
@@ -1076,7 +1089,7 @@ int bit_search(int quant[NUM_COEFF],  /* Quantized spectral values */
 	int* book_vector = quantInfo -> book_vector;
 
 	levels = (int) ((log((double)quantInfo->nr_of_sfb)/log((double)2.0))+1);
-	fraction = (pow(2,levels)+quantInfo->nr_of_sfb)/(double)(pow(2,levels)); 
+	fraction = (pow(2,levels)+quantInfo->nr_of_sfb)/(double)(pow(2,levels));
 
 //#define SLOW
 #ifdef SLOW
@@ -1086,14 +1099,12 @@ int bit_search(int quant[NUM_COEFF],  /* Quantized spectral values */
 		hop = 1;
 		i = 0;
 #endif
-		total_bits = noiseless_bit_count(quant,
-			hop,
-			min_book_choice,
-			quantInfo);         /* Quantization information */
+//		total_bits = noiseless_bit_count(quant, hop, min_book_choice, quantInfo);
+		noiseless_bit_count(quant, hop, min_book_choice, quantInfo);
 
 		/* load up the (not-full) binary search tree with the min_book_choice values */
 		k=0;
-		m=0;
+//		m=0;
 		total_bit_count = 0;
 
 		for (j=(int)(pow(2,levels-i)); j<(int)(fraction*pow(2,levels-i)); j++)
@@ -1120,7 +1131,7 @@ int bit_search(int quant[NUM_COEFF],  /* Quantized spectral values */
 			}
 			total_bit_count = total_bit_count +  bit_stats[j][0];
 			k=k+hop;
-			m++;
+//			m++;
 		}
 #ifdef SLOW
 	}
@@ -1138,19 +1149,19 @@ int noiseless_bit_count(int quant[NUM_COEFF],
 {
   int i,j,k;
 
-  /* 
+  /*
      This function inputs:
      - the quantized spectral data, 'quant[][]';
      - all of the huffman codebooks, 'huff[][]';
      - the size of the sections, in scalefactor bands (SFB's), 'hop';
-     - an empty matrix, min_book_choice[][] passed to it; 
+     - an empty matrix, min_book_choice[][] passed to it;
 
      This function outputs:
      - the matrix, min_book_choice.  It is a two dimensional matrix, with its
-     rows corresponding to spectral sections.  The 0th column corresponds to 
-     the bits needed to code a section with 'hop' scalefactors bands wide, all using 
-     the same huffman codebook.  The 1st column contains the huffman codebook number 
-     that allows the minimum number of bits to be used.   
+     rows corresponding to spectral sections.  The 0th column corresponds to
+     the bits needed to code a section with 'hop' scalefactors bands wide, all using
+     the same huffman codebook.  The 1st column contains the huffman codebook number
+     that allows the minimum number of bits to be used.
 
      Other notes:
      - Initally, the dynamic range is calculated for each spectral section.  The section
@@ -1159,7 +1170,7 @@ int noiseless_bit_count(int quant[NUM_COEFF],
      If the dynamic range is larger than 16, then an escape code is appended after the
      table 11 codeword which encodes the larger value explicity in a pseudo-non-uniform
      quantization method.
-     
+
      */
 
 	int max_sb_coeff;
@@ -1646,16 +1657,16 @@ int write_scalefactor_bitstream(BsBitStream* fixed_stream,             /* Bitstr
 	int previous_scale_factor;
 	int previous_is_factor;       /* Intensity stereo */
 	int index = 0;
-	int count = 0;
-	int group_offset = 0;
-	int nr_of_sfb_per_group=0;
+//	int count = 0;
+//	int group_offset = 0;
+	int nr_of_sfb_per_group;
 
 	int pns_pcm_flag = 1;
 	int previous_noise_nrg = quantInfo->common_scalefac ;
 
 	/* set local pointer to quantInfo elements */
 	int* scale_factors = quantInfo->scale_factor;
-	
+
 	if (quantInfo->block_type == ONLY_SHORT_WINDOW) { /* short windows */
 		nr_of_sfb_per_group = quantInfo->nr_of_sfb/quantInfo->num_window_groups;
 	}
@@ -1695,7 +1706,7 @@ int write_scalefactor_bitstream(BsBitStream* fixed_stream,             /* Bitstr
 						length = 0;
 						codeword = 0;
 					} else {
-						length = huff12[diff+60][FIRSTINTAB];    
+						length = huff12[diff+60][FIRSTINTAB];
 						codeword = huff12[diff+60][LASTINTAB];
 					}
 				}

@@ -85,8 +85,9 @@ void dequantize(AACQuantInfo *quantInfo,
 				double error_energy[SFB_NUM_MAX]
 				);
 int count_bits(AACQuantInfo* quantInfo,
-			   int quant[NUM_COEFF],
-			   int output_book_vector[SFB_NUM_MAX*2]);
+			   int quant[NUM_COEFF]
+//			   ,int output_book_vector[SFB_NUM_MAX*2]
+                           );
 
 
 /*********************************************************/
@@ -105,27 +106,28 @@ int tf_encode_spectrum_aac(
 			   double      energy[MAX_TIME_CHANNELS][MAX_SCFAC_BANDS],
 			   enum WINDOW_TYPE block_type[MAX_TIME_CHANNELS],
 			   int         sfb_width_table[MAX_TIME_CHANNELS][MAX_SCFAC_BANDS],
-			   int         nr_of_sfb[MAX_TIME_CHANNELS],
+//			   int         nr_of_sfb[MAX_TIME_CHANNELS],
 			   int         average_block_bits,
-			   int         available_bitreservoir_bits,
-			   int         padding_limit,
+//			   int         available_bitreservoir_bits,
+//			   int         padding_limit,
 			   BsBitStream *fixed_stream,
-			   BsBitStream *var_stream,
-			   int         nr_of_chan,
+//			   BsBitStream *var_stream,
+//			   int         nr_of_chan,
 			   double      *p_reconstructed_spectrum[MAX_TIME_CHANNELS],
-			   int         useShortWindows,
-			   int         aacAllowScalefacs,
-			   AACQuantInfo* quantInfo,      /* AAC quantization information */ 
-			   Ch_Info *ch_info,
-			   int varBitRate,
-			   int bitRate);
+//			   int         useShortWindows,
+//			   int         aacAllowScalefacs,
+			   AACQuantInfo* quantInfo,      /* AAC quantization information */
+			   Ch_Info *ch_info
+//			   ,int varBitRate
+//			   ,int bitRate
+                           );
 
 
 /*********************************************************/
 /* sort_book_numbers                                     */
 /*********************************************************/
 int sort_book_numbers(AACQuantInfo* quantInfo,     /* Quantization information */
-		  int output_book_vector[],    /* Output codebook vector, formatted for bitstream */
+//		  int output_book_vector[],    /* Output codebook vector, formatted for bitstream */
 		  BsBitStream* fixed_stream,   /* Bitstream */
 		  int write_flag);             /* Write flag: 0 count, 1 write */
 

@@ -383,8 +383,8 @@ double LevinsonDurbin(int fOrder,          /* Filter order */
 
 	/* Set up pointers to current and last iteration */ 
 	/* predictor coefficients.						 */
-	aPtr = aArray1;
-	aLastPtr = aArray2;
+//	aPtr = aArray1;
+//	aLastPtr = aArray2;
 	/* If there is no signal energy, return */
 	if (!signal) {
 		kArray[0]=1.0;

@@ -34,7 +34,8 @@ extern double snr_pred (double *mdct_in, double *mdct_pred, int *sfb_flag,
 extern void prediction (short *buffer, double *predicted_samples, double *weight,
                         int delay, int flen);
 
-extern int estimate_delay (double *sb_samples, short *x_buffer, int flen);
+//extern int estimate_delay (double *sb_samples, short *x_buffer, int flen);
+extern int estimate_delay (double *sb_samples, short *x_buffer);
 
 extern void pitch (double *sb_samples, double *sb_samples_pred, short *x_buffer,
                    int *ltp_coef, int delay, int flen);

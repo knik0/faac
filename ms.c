@@ -50,7 +50,7 @@ void MSPreprocess(double p_ratio_long[][MAX_SCFAC_BANDS],
 	int chanNum;
 	int sfbNum;
 
-	static int block = 0;
+//	static int block = 0;
 	int used = 0, notused = 0;
 	int realyused = 0;
 
@@ -150,7 +150,7 @@ void MSPreprocess(double p_ratio_long[][MAX_SCFAC_BANDS],
 				} else if ((block_type[leftChan]==block_type[rightChan])&&(use_ms == 1)) {
 					int chan;
 					int numGroups;
-					int groupIndex = 0;
+					int groupIndex;
 					int maxSfb;
 					int g,b,j;
 					MS_Info *msInfo;
@@ -186,13 +186,13 @@ void MSPreprocess(double p_ratio_long[][MAX_SCFAC_BANDS],
 									
 								}
 							}
-							groupIndex+=quantInfo[chan].window_group_length[g];
+//							groupIndex+=quantInfo[chan].window_group_length[g];
 						}
 					}
 				} else {
 					int chan;
 					int numGroups;
-					int groupIndex = 0;
+					int groupIndex;
 					int maxSfb;
 					int g,b,j;
 					MS_Info *msInfo;
@@ -225,7 +225,7 @@ void MSPreprocess(double p_ratio_long[][MAX_SCFAC_BANDS],
 									
 								}
 							}
-							groupIndex+=quantInfo[chan].window_group_length[g];
+//							groupIndex+=quantInfo[chan].window_group_length[g];
 						}
 					}
 				}
@@ -241,7 +241,7 @@ void MSEnergy(double *spectral_line_vector[MAX_TIME_CHANNELS],
 			  CH_PSYCH_OUTPUT_LONG p_chpo_long[],
 			  CH_PSYCH_OUTPUT_SHORT p_chpo_short[][MAX_SHORT_WINDOWS],
 			  int sfb_width_table[MAX_TIME_CHANNELS][MAX_SCFAC_BANDS],
-			  Ch_Info *channelInfo,                  /* Pointer to Ch_Info */
+//			  Ch_Info *channelInfo,                  /* Pointer to Ch_Info */
 			  enum WINDOW_TYPE block_type[MAX_TIME_CHANNELS], /* Block type */
 			  AACQuantInfo* quantInfo,               /* Quant info */
 			  int use_ms,
@@ -318,7 +318,7 @@ void MSEncode(double *spectrum[MAX_TIME_CHANNELS],   /* array of pointers to spe
 				channelInfo[leftChan].ms_info.is_present=0;
 
 				/* Perform MS if block_types are the same */
-				if (block_type[leftChan]==block_type[rightChan]) { 
+				if (block_type[leftChan]==block_type[rightChan]) {
 
 					int numGroups;
 					int maxSfb;
@@ -329,7 +329,7 @@ void MSEncode(double *spectrum[MAX_TIME_CHANNELS],   /* array of pointers to spe
 
 					channelInfo[leftChan].common_window = 1;  /* Use common window */
 					channelInfo[leftChan].ms_info.is_present=1;
-                                        w = 0;
+//                                        w = 0;
 
 					numGroups = quantInfo[leftChan].num_window_groups;
 					maxSfb = quantInfo[leftChan].max_sfb;
@@ -344,10 +344,10 @@ void MSEncode(double *spectrum[MAX_TIME_CHANNELS],   /* array of pointers to spe
 							msInfo->ms_used[b] = ( (!isInfo->is_used[b])||(!isInfo->is_present) );
 						}
 					}
-					
+
 					/* Perform sum and differencing on bands in which ms_used flag */
 					/* has been set. */
-					line_offset=0;
+//					line_offset=0;
 					startWindow = 0;
 					for (g=0;g<numGroups;g++) {
 						int numWindows = quantInfo[leftChan].window_group_length[g];
@@ -381,9 +381,10 @@ void MSEncode(double *spectrum[MAX_TIME_CHANNELS],   /* array of pointers to spe
 void MSEncodeSwitch(double *spectrum[MAX_TIME_CHANNELS],   /* array of pointers to spectral data */
 	      Ch_Info *channelInfo,                  /* Pointer to Ch_Info */
 	      int sfb_offset_table[][MAX_SCFAC_BANDS+1],
-	      enum WINDOW_TYPE block_type[MAX_TIME_CHANNELS], /* Block type */
-	      AACQuantInfo* quantInfo,               /* Quant info */
-	      int numberOfChannels)                  /* Number of channels */
+//	      enum WINDOW_TYPE block_type[MAX_TIME_CHANNELS], /* Block type */
+	      AACQuantInfo* quantInfo               /* Quant info */
+//	      ,int numberOfChannels                 /* Number of channels */
+              )
 {
 	int chanNum;
 	int sfbNum;
@@ -410,7 +411,7 @@ void MSEncodeSwitch(double *spectrum[MAX_TIME_CHANNELS],   /* array of pointers 
 
 					numGroups = quantInfo[leftChan].num_window_groups;
 					maxSfb = quantInfo[leftChan].max_sfb;
-					w=0;
+//					w=0;
 
 					/* Determine which bands should be enabled */
 					/* Right now, simply enable bands which do not use intensity stereo */
@@ -426,7 +427,7 @@ void MSEncodeSwitch(double *spectrum[MAX_TIME_CHANNELS],   /* array of pointers 
 #endif
 					/* Perform sum and differencing on bands in which ms_used flag */
 					/* has been set. */
-					line_offset=0;
+//					line_offset=0;
 					startWindow = 0;
 					for (g=0;g<numGroups;g++) {
 						int numWindows = quantInfo[leftChan].window_group_length[g];
@@ -457,7 +458,7 @@ void MSEncodeSwitch(double *spectrum[MAX_TIME_CHANNELS],   /* array of pointers 
 void MSReconstruct(double *spectrum[MAX_TIME_CHANNELS],   /* array of pointers to spectral data */
 		   Ch_Info *channelInfo,                  /* Pointer to Ch_Info */
 		   int sfb_offset_table[][MAX_SCFAC_BANDS+1],
-		   enum WINDOW_TYPE block_type[MAX_TIME_CHANNELS], /* Block type */
+//		   enum WINDOW_TYPE block_type[MAX_TIME_CHANNELS], /* Block type */
 		   AACQuantInfo* quantInfo,               /* Quant info */
 		   int numberOfChannels)                 /* Number of channels */
 {
@@ -480,11 +481,11 @@ void MSReconstruct(double *spectrum[MAX_TIME_CHANNELS],   /* array of pointers t
 					int maxSfb = quantInfo[leftChan].max_sfb;
 					int g,w,line_offset;
 					int startWindow,stopWindow;
-					w=0;
+//					w=0;
 
 					/* Perform sum and differencing on bands in which ms_used flag */
 					/* has been set. */
-					line_offset=0;
+//					line_offset=0;
 					startWindow = 0;
 					for (g=0;g<numGroups;g++) {
 						int numWindows = quantInfo[leftChan].window_group_length[g];

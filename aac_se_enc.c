@@ -238,7 +238,7 @@ int WriteICS(AACQuantInfo* quantInfo,    /* AACQuantInfo structure */
 	/* this function writes out an individual_channel_stream to the bitstream and */
 	/* returns the number of bits written to the bitstream */
 	int bit_count = 0;
-	int output_book_vector[SFB_NUM_MAX*2];
+//	int output_book_vector[SFB_NUM_MAX*2];
 	writeFlag = ( writeFlag != 0 );
 
 	/* Write the 8-bit global_gain */
@@ -251,7 +251,8 @@ int WriteICS(AACQuantInfo* quantInfo,    /* AACQuantInfo structure */
 	}
 
 	/* Write section_data() information to the bitstream */
-	bit_count += sort_book_numbers(quantInfo,output_book_vector,fixed_stream,writeFlag);
+//	bit_count += sort_book_numbers(quantInfo,output_book_vector,fixed_stream,writeFlag);
+	bit_count += sort_book_numbers(quantInfo,fixed_stream,writeFlag);
 
 	/* Write scale_factor_data() information */
 	bit_count += write_scalefactor_bitstream(fixed_stream,writeFlag,quantInfo);
@@ -263,7 +264,8 @@ int WriteICS(AACQuantInfo* quantInfo,    /* AACQuantInfo structure */
 	bit_count += WriteTNSData(quantInfo,fixed_stream,writeFlag);
 	
 	/* Write gain control data */
-	bit_count += WriteGainControlData(quantInfo,fixed_stream,writeFlag);
+//	bit_count += WriteGainControlData(quantInfo,fixed_stream,writeFlag);
+        bit_count += WriteGainControlData(fixed_stream,writeFlag);
 
 	/* Write out spectral_data() */
 	bit_count += WriteSpectralData(quantInfo,fixed_stream,writeFlag);
@@ -381,10 +383,10 @@ int WritePulseData(AACQuantInfo* quantInfo,    /* AACQuantInfo structure */
 /*****************************************************************************/
 int WriteTNSData(AACQuantInfo* quantInfo,    /* AACQuantInfo structure */
 		 BsBitStream* fixed_stream,  /* Pointer to bitstream */
-		 int writeFlag)              /* 1 means write, 0 means count only */ 
+		 int writeFlag)              /* 1 means write, 0 means count only */
 {
   int bit_count = 0;
-  int numWindows = 1;
+  int numWindows;
   int len_tns_nfilt;
   int len_tns_length;
   int len_tns_order;
@@ -468,7 +470,8 @@ int WriteTNSData(AACQuantInfo* quantInfo,    /* AACQuantInfo structure */
 /*****************************************************************************/
 /* WriteGainControlData(...), write gain control data.                       */
 /*****************************************************************************/
-int WriteGainControlData(AACQuantInfo* quantInfo,    /* AACQuantInfo structure */
+int WriteGainControlData(
+//                         AACQuantInfo* quantInfo,    /* AACQuantInfo structure */
 			 BsBitStream* fixed_stream,  /* Pointer to bitstream */
 			 int writeFlag)              /* 1 means write, 0 means count only */  
 {
