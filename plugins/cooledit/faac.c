@@ -5,8 +5,7 @@
 #include "faac.h"
 
 
-#define PI_VER "v1.0beta"
-
+#define PI_VER "v1.0 beta2"
 
 extern void config_init();
 extern void config_read(DWORD *dwOptions);
@@ -28,10 +27,20 @@ typedef struct output_tag  // any special vars associated with output file
  unsigned char *bitbuf;
  DWORD maxBytesOutput;
  long  samplesInput;
- BOOL  bStopEnc;
+ BYTE  bStopEnc;
 } MYOUTPUT;
 
 
+#define DISABLE_LTP \
+{ \
+	if(IsDlgButtonChecked(hWndDlg,IDC_RADIO_MPEG2) && \
+	   IsDlgButtonChecked(hWndDlg,IDC_RADIO_LTP)) \
+	{ \
+		CheckDlgButton(hWndDlg,IDC_RADIO_LTP,FALSE); \
+		CheckDlgButton(hWndDlg,IDC_RADIO_MAIN,TRUE); \
+	} \
+    EnableWindow(GetDlgItem(hWndDlg, IDC_RADIO_LTP), FALSE); \
+}
 
 __declspec(dllexport) BOOL FAR PASCAL DIALOGMsgProc(HWND hWndDlg, UINT Message, WPARAM wParam, LPARAM lParam)
 {
@@ -82,7 +91,7 @@ DWORD dwOptions=(DWORD)lParam;
         EnableWindow(GetDlgItem(hWndDlg, IDC_RADIO_MPEG2), Enabled);
         EnableWindow(GetDlgItem(hWndDlg, IDC_RADIO_MAIN), Enabled);
         EnableWindow(GetDlgItem(hWndDlg, IDC_RADIO_LOW), Enabled);
-        EnableWindow(GetDlgItem(hWndDlg, IDC_RADIO_SSR), Enabled);
+//        EnableWindow(GetDlgItem(hWndDlg, IDC_RADIO_SSR), Enabled);
         EnableWindow(GetDlgItem(hWndDlg, IDC_RADIO_LTP), Enabled);
         EnableWindow(GetDlgItem(hWndDlg, IDC_ALLOWMIDSIDE), Enabled);
         EnableWindow(GetDlgItem(hWndDlg, IDC_USETNS), Enabled);
@@ -107,7 +116,8 @@ DWORD dwOptions=(DWORD)lParam;
               CheckDlgButton(hWndDlg,IDC_RADIO_SSR,TRUE);
 		      break;
 		  case 3:
-               CheckDlgButton(hWndDlg,IDC_RADIO_LTP,TRUE);
+			   CheckDlgButton(hWndDlg,IDC_RADIO_LTP,TRUE);
+			   DISABLE_LTP
 		       break;
 		}
 
@@ -130,9 +140,11 @@ DWORD dwOptions=(DWORD)lParam;
 	   {
 	    case IDC_RADIO_MPEG4:
 			 CheckDlgButton(hWndDlg,IDC_RADIO_MPEG4,TRUE);
+	         EnableWindow(GetDlgItem(hWndDlg, IDC_RADIO_LTP), !IsDlgButtonChecked(hWndDlg,IDC_CHK_AUTOCFG));
 			 break;
 		case IDC_RADIO_MPEG2:
 			 CheckDlgButton(hWndDlg,IDC_RADIO_MPEG2,TRUE);
+	         DISABLE_LTP
 			 break;
 		case IDC_RADIO_MAIN:
 			 CheckDlgButton(hWndDlg,IDC_RADIO_MAIN,TRUE);
@@ -155,7 +167,7 @@ DWORD dwOptions=(DWORD)lParam;
 			 break;
 	   }         
 	  }
-       break; // End of WM_INITDIALOG                                 
+      break; // End of WM_INITDIALOG                                 
 
   case WM_CLOSE:
        // Closing the Dialog behaves the same as Cancel               
@@ -172,13 +184,18 @@ DWORD dwOptions=(DWORD)lParam;
       		EnableWindow(GetDlgItem(hWndDlg, IDC_RADIO_MPEG2), Enabled);
       		EnableWindow(GetDlgItem(hWndDlg, IDC_RADIO_MAIN), Enabled);
       		EnableWindow(GetDlgItem(hWndDlg, IDC_RADIO_LOW), Enabled);
-      		EnableWindow(GetDlgItem(hWndDlg, IDC_RADIO_SSR), Enabled);
+//      		EnableWindow(GetDlgItem(hWndDlg, IDC_RADIO_SSR), Enabled);
       		EnableWindow(GetDlgItem(hWndDlg, IDC_RADIO_LTP), Enabled);
       		EnableWindow(GetDlgItem(hWndDlg, IDC_ALLOWMIDSIDE), Enabled);
       		EnableWindow(GetDlgItem(hWndDlg, IDC_USETNS), Enabled);
 //      		EnableWindow(GetDlgItem(hWndDlg, IDC_USELFE), Enabled);
       		EnableWindow(GetDlgItem(hWndDlg, IDC_CB_BITRATE), Enabled);
       		EnableWindow(GetDlgItem(hWndDlg, IDC_CB_BANDWIDTH), Enabled);
+			if(IsDlgButtonChecked(hWndDlg,IDC_RADIO_MPEG4))
+				EnableWindow(GetDlgItem(hWndDlg, IDC_RADIO_LTP), Enabled);
+			else
+				DISABLE_LTP
+			break;
 		   }
            break;
 
@@ -186,6 +203,7 @@ DWORD dwOptions=(DWORD)lParam;
 		   {
 		   DWORD retVal=0;
            faacEncConfiguration faacEncCfg;
+
               if(IsDlgButtonChecked(hWndDlg,IDC_RADIO_MPEG4))
 			  {
                faacEncCfg.mpegVersion=MPEG4;
@@ -259,12 +277,23 @@ DWORD dwOptions=(DWORD)lParam;
 		      MessageBox(hWndDlg, buf, "About", MB_OK);
              }
              break;
+
+		case IDC_RADIO_MPEG4:
+	         EnableWindow(GetDlgItem(hWndDlg, IDC_RADIO_LTP), !IsDlgButtonChecked(hWndDlg,IDC_CHK_AUTOCFG));
+			 break;
+
+		case IDC_RADIO_MPEG2:
+	         EnableWindow(GetDlgItem(hWndDlg, IDC_RADIO_LTP), FALSE);
+			 DISABLE_LTP
+			 break;
        }
        break; // End of WM_COMMAND                                 
   default: return FALSE;
  }
  return TRUE;
 } // End of DIALOGSMsgProc                                      
+
+
 
 __declspec(dllexport) DWORD FAR PASCAL FilterGetOptions(HWND hWnd, HINSTANCE hInst, long lSamprate, WORD wChannels, WORD wBitsPerSample, DWORD dwOptions) // return 0 if no options box
 {
@@ -406,7 +435,7 @@ int           bytesEncoded;
 	 myFormat->allowMidside=(dwOptions>>26)&1;
 	 myFormat->useTns=(dwOptions>>25)&1;
 	 myFormat->useLfe=(dwOptions>>24)&1;
-	 switch((dwOptions>>1)&31)
+	 switch((dwOptions>>19)&31)
 	 {
 	  case 0:
            myFormat->bitRate=8000;
@@ -494,10 +523,13 @@ int bytesEncoded;
    if(bytesEncoded<1) // end of flushing process
    {
     if(bytesEncoded<0)
+	{
      MessageBox(0, "faacEncEncode() failed", "FAAC interface", MB_OK);
-    mo->bStopEnc=1;
+     mo->bStopEnc=1;
+	}
+	bytesWritten=lBytes ? 1 : 0; // bytesWritten==0 stops CoolEdit...
     GlobalUnlock(hOutput);
-    return 0;
+    return bytesWritten;
    }
 // write bitstream to aac file 
    bytesWritten=fwrite(mo->bitbuf, 1, bytesEncoded, mo->fFile);

@@ -16,7 +16,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: aacinfo.h,v 1.1 2001/10/11 09:53:44 menno Exp $
+ * $Id: aacinfo.h,v 1.7 2002/08/22 22:58:57 menno Exp $
  */
 
 typedef struct {

@@ -2,17 +2,30 @@
 #include <shlobj.h>
 #include <stdio.h>  // FILE *
 #include "resource.h"
-#include <faac.h>
+#include "faac.h"
 #include "out.h"
 
 
-#define PI_VER "v1.0beta"
-
+#define PI_VER "v1.0 beta2"
 
 extern void config_read();
 extern void config_write();
 
-int getwrittentime();
+void Config(HWND);
+void About(HWND);
+void Init();
+void Quit();
+int Open(int, int, int, int, int);
+void Close();
+int Write(char*, int);
+int CanWrite();
+int IsPlaying();
+int Pause(int);
+void SetVolume(int);
+void SetPan(int);
+void Flush(int);
+int GetOutputTime();
+int GetWrittenTime();
 
 
 typedef struct output_tag  // any special vars associated with output file
@@ -30,7 +43,7 @@ typedef struct output_tag  // any special vars associated with output file
  unsigned char *bitbuf;
  DWORD maxBytesOutput;
  long  samplesInput;
- BOOL  bStopEnc;
+ BYTE  bStopEnc;
 
  unsigned char *inbuf;
  DWORD full_size; // size of decoded file needed to set the length of progress bar
@@ -41,15 +54,43 @@ typedef struct output_tag  // any special vars associated with output file
  DWORD bytes_Enc;
 } MYOUTPUT;
 
-Out_Module out;
 char config_AACoutdir[MAX_PATH]="";
 DWORD dwOptions;
 static MYOUTPUT mo0,
-                *mo=&mo0; // this is done to drag'n'drop code from CoolEdit plugin
+                *mo=&mo0; // this is done to copy'n'paste code from CoolEdit plugin
 static HBITMAP hBmBrowse=NULL;
 static int srate, numchan, bps;
 volatile int writtentime, w_offset;
 static int last_pause=0;
+
+
+Out_Module out = {
+	OUT_VER,
+	"Freeware AAC encoder " PI_VER,
+	34,
+    NULL, // hmainwindow
+    NULL, // hdllinstance
+    Config,
+    About,
+    Init,
+    Quit,
+    Open,
+    Close,
+    Write,
+    CanWrite,
+    IsPlaying,
+    Pause,
+    SetVolume,
+    SetPan,
+    Flush,
+    GetWrittenTime,
+    GetWrittenTime
+};
+
+__declspec( dllexport ) Out_Module * winampGetOutModule()
+{
+	return &out;
+}
 
 
 
@@ -117,6 +158,8 @@ BOOL WINAPI _DllMainCRTStartup(HANDLE hInst, ULONG ulReason, LPVOID lpReserved)
    return TRUE;   // successful DLL_PROCESS_ATTACH
 }
 
+
+
 static int CALLBACK WINAPI BrowseCallbackProc( HWND hwnd, UINT uMsg, LPARAM lParam, LPARAM lpData)
 {
 	if (uMsg == BFFM_INITIALIZED)
@@ -127,6 +170,16 @@ static int CALLBACK WINAPI BrowseCallbackProc( HWND hwnd, UINT uMsg, LPARAM lPar
 	return 0;
 }
 
+#define DISABLE_LTP \
+{ \
+	if(IsDlgButtonChecked(hWndDlg,IDC_RADIO_MPEG2) && \
+	   IsDlgButtonChecked(hWndDlg,IDC_RADIO_LTP)) \
+	{ \
+		CheckDlgButton(hWndDlg,IDC_RADIO_LTP,FALSE); \
+		CheckDlgButton(hWndDlg,IDC_RADIO_MAIN,TRUE); \
+	} \
+    EnableWindow(GetDlgItem(hWndDlg, IDC_RADIO_LTP), FALSE); \
+}
 
 static BOOL CALLBACK DIALOGMsgProc(HWND hWndDlg, UINT Message, WPARAM wParam, LPARAM lParam)
 {
@@ -171,7 +224,7 @@ static BOOL CALLBACK DIALOGMsgProc(HWND hWndDlg, UINT Message, WPARAM wParam, LP
         EnableWindow(GetDlgItem(hWndDlg, IDC_RADIO_MPEG2), Enabled);
         EnableWindow(GetDlgItem(hWndDlg, IDC_RADIO_MAIN), Enabled);
         EnableWindow(GetDlgItem(hWndDlg, IDC_RADIO_LOW), Enabled);
-        EnableWindow(GetDlgItem(hWndDlg, IDC_RADIO_SSR), Enabled);
+//        EnableWindow(GetDlgItem(hWndDlg, IDC_RADIO_SSR), Enabled);
         EnableWindow(GetDlgItem(hWndDlg, IDC_RADIO_LTP), Enabled);
         EnableWindow(GetDlgItem(hWndDlg, IDC_ALLOWMIDSIDE), Enabled);
         EnableWindow(GetDlgItem(hWndDlg, IDC_USETNS), Enabled);
@@ -197,6 +250,7 @@ static BOOL CALLBACK DIALOGMsgProc(HWND hWndDlg, UINT Message, WPARAM wParam, LP
 		      break;
 		  case 3:
                CheckDlgButton(hWndDlg,IDC_RADIO_LTP,TRUE);
+			   DISABLE_LTP
 		       break;
 		}
 
@@ -219,9 +273,11 @@ static BOOL CALLBACK DIALOGMsgProc(HWND hWndDlg, UINT Message, WPARAM wParam, LP
 	   {
 	    case IDC_RADIO_MPEG4:
 			 CheckDlgButton(hWndDlg,IDC_RADIO_MPEG4,TRUE);
+	         EnableWindow(GetDlgItem(hWndDlg, IDC_RADIO_LTP), !IsDlgButtonChecked(hWndDlg,IDC_CHK_AUTOCFG));
 			 break;
 		case IDC_RADIO_MPEG2:
 			 CheckDlgButton(hWndDlg,IDC_RADIO_MPEG2,TRUE);
+	         DISABLE_LTP
 			 break;
 		case IDC_RADIO_MAIN:
 			 CheckDlgButton(hWndDlg,IDC_RADIO_MAIN,TRUE);
@@ -261,13 +317,17 @@ static BOOL CALLBACK DIALOGMsgProc(HWND hWndDlg, UINT Message, WPARAM wParam, LP
       		 EnableWindow(GetDlgItem(hWndDlg, IDC_RADIO_MPEG2), Enabled);
       		 EnableWindow(GetDlgItem(hWndDlg, IDC_RADIO_MAIN), Enabled);
       		 EnableWindow(GetDlgItem(hWndDlg, IDC_RADIO_LOW), Enabled);
-      		 EnableWindow(GetDlgItem(hWndDlg, IDC_RADIO_SSR), Enabled);
+//      		 EnableWindow(GetDlgItem(hWndDlg, IDC_RADIO_SSR), Enabled);
       		 EnableWindow(GetDlgItem(hWndDlg, IDC_RADIO_LTP), Enabled);
       		 EnableWindow(GetDlgItem(hWndDlg, IDC_ALLOWMIDSIDE), Enabled);
       		 EnableWindow(GetDlgItem(hWndDlg, IDC_USETNS), Enabled);
 //      		 EnableWindow(GetDlgItem(hWndDlg, IDC_USELFE), Enabled);
       		 EnableWindow(GetDlgItem(hWndDlg, IDC_CB_BITRATE), Enabled);
       		 EnableWindow(GetDlgItem(hWndDlg, IDC_CB_BANDWIDTH), Enabled);
+			 if(IsDlgButtonChecked(hWndDlg,IDC_RADIO_MPEG4))
+				EnableWindow(GetDlgItem(hWndDlg, IDC_RADIO_LTP), Enabled);
+			 else
+				DISABLE_LTP
 			}
             break;
 
@@ -311,21 +371,24 @@ static BOOL CALLBACK DIALOGMsgProc(HWND hWndDlg, UINT Message, WPARAM wParam, LP
 			   retVal|=MPEG2<<29;
 			  }
               if(IsDlgButtonChecked(hWndDlg,IDC_RADIO_MAIN))
-               faacEncCfg.aacObjectType=0;
+			  {
+               faacEncCfg.aacObjectType=MAIN;
+			   retVal|=MAIN<<27;
+			  }
               if(IsDlgButtonChecked(hWndDlg,IDC_RADIO_LOW))
 			  {
                faacEncCfg.aacObjectType=LOW;
-			   retVal|=1<<27;
+			   retVal|=LOW<<27;
 			  }
               if(IsDlgButtonChecked(hWndDlg,IDC_RADIO_SSR))
 			  {
-               faacEncCfg.aacObjectType=2;
-			   retVal|=2<<27;
+               faacEncCfg.aacObjectType=SSR;
+			   retVal|=SSR<<27;
 			  }
               if(IsDlgButtonChecked(hWndDlg,IDC_RADIO_LTP))
 			  {
-               faacEncCfg.aacObjectType=3;
-			   retVal|=3<<27;
+               faacEncCfg.aacObjectType=LTP;
+			   retVal|=LTP<<27;
 			  }
 
               faacEncCfg.allowMidside=IsDlgButtonChecked(hWndDlg, IDC_ALLOWMIDSIDE) == BST_CHECKED ? 1 : 0;
@@ -366,6 +429,15 @@ static BOOL CALLBACK DIALOGMsgProc(HWND hWndDlg, UINT Message, WPARAM wParam, LP
 		      MessageBox(hWndDlg, buf, "About", MB_OK);
              }
              break;
+
+		case IDC_RADIO_MPEG4:
+	         EnableWindow(GetDlgItem(hWndDlg, IDC_RADIO_LTP), !IsDlgButtonChecked(hWndDlg,IDC_CHK_AUTOCFG));
+			 break;
+
+		case IDC_RADIO_MPEG2:
+	         EnableWindow(GetDlgItem(hWndDlg, IDC_RADIO_LTP), FALSE);
+			 DISABLE_LTP
+			 break;
        }
        break; // End of WM_COMMAND                                 
   default: return FALSE;
@@ -375,14 +447,14 @@ static BOOL CALLBACK DIALOGMsgProc(HWND hWndDlg, UINT Message, WPARAM wParam, LP
 
 
 
-void config(HWND hWnd)
+void Config(HWND hWnd)
 {
  dwOptions=DialogBox(out.hDllInstance, MAKEINTRESOURCE(IDD_COMPRESSION), hWnd, DIALOGMsgProc);
 // dwOptions=DialogBoxParam((HINSTANCE)out.hDllInstance,(LPCSTR)MAKEINTRESOURCE(IDD_COMPRESSION), (HWND)hWnd, (DLGPROC)DIALOGMsgProc, dwOptions);
  config_write();
 }
 
-void about(HWND hwnd)
+void About(HWND hwnd)
 {
 char buf[256];
  sprintf(buf,"AAC-MPEG4 encoder plug-in %s\nThis plugin uses FAAC encoder engine v%g\n\nCompiled on %s\n",
@@ -390,17 +462,14 @@ char buf[256];
              FAACENC_VERSION,
 			 __DATE__);
  MessageBox(hwnd, buf, "About", MB_OK);
-/*	MessageBox(hwnd,"AAC-MPEG4 encoder plug-in " PI_VER "\n"
-					"This plugin uses FAAC encoder engine v1.5\n\n"
-					"Compiled on " __DATE__ "\n","About",MB_OK);*/
 }
 
-void init()
+void Init()
 {
  config_read();
 }
 
-void quit()
+void Quit()
 {
 }
 
@@ -420,7 +489,7 @@ static char *scanstr_back(char *str, char *toscan, char *defval)
 	}
 }
 
-int open(int lSamprate, int wChannels, int wBitsPerSample, int bufferlenms, int prebufferms)
+int Open(int lSamprate, int wChannels, int wBitsPerSample, int bufferlenms, int prebufferms)
 {
 //HANDLE        hOutput;
 faacEncHandle hEncoder;
@@ -474,7 +543,7 @@ int           bytesEncoded;
 	if (p[0]) while (p[1]) p++;
 
 	if (!config_AACoutdir[0] || config_AACoutdir[0] == ' ')
-		config(out.hMainWindow);
+		Config(out.hMainWindow);
 	if (!config_AACoutdir[0])
 		wsprintf(lpstrFilename,"%s.aac",temp2);
 	else if (p[0]=='\\')
@@ -512,7 +581,7 @@ int           bytesEncoded;
 	 return -1;
 	}
 
-	if(!(mo->inbuf=(unsigned char*)malloc(sizeof(short)*1024*wChannels)))
+	if(!(mo->inbuf=(unsigned char*)malloc(samplesInput*sizeof(short))))
 	{
 	 MessageBox(0, "Memory allocation error: output buffer", "FAAC interface", MB_OK);
      faacEncClose(hEncoder);
@@ -521,43 +590,23 @@ int           bytesEncoded;
 	 return -1;
 	}
 
-//	*lpChunkSize=samplesInput*2;
-
-/*    hOutput=GlobalAlloc(GMEM_MOVEABLE|GMEM_SHARE,sizeof(MYOUTPUT));
-    if(hOutput)
-    {
-	MYOUTPUT *mo;*/
-	 //mo=(MYOUTPUT *)GlobalLock(hOutput);
 	 mo->fFile=outfile;
 //	 mo->lSize=lSize;
 	 mo->lSamprate=lSamprate;
 	 mo->wBitsPerSample=wBitsPerSample;
 	 mo->wChannels=wChannels;
-//	 mo->dwDataOffset=0; // ???
-//	 mo->bWrittenHeader=0;
 	 strcpy(mo->szNAME,lpstrFilename);
 
 	 mo->hEncoder=hEncoder;
      mo->bitbuf=bitbuf;
 	 mo->maxBytesOutput=maxBytesOutput;
-	 mo->samplesInput=samplesInput*(sizeof(short));
+	 mo->samplesInput=samplesInput;
 	 mo->bStopEnc=0;
 
-//	 GlobalUnlock(hOutput);
-/*    }
-	else
-	{
-	 MessageBox(0, "hOutput=NULL", "FAAC interface", MB_OK);
-     faacEncClose(hEncoder);
-	 fclose(outfile);
-	 free(bitbuf);
-	 free(mo->inbuf);
-	 return -1;
-	}*/
 
 	if(dwOptions && !(dwOptions&1))
 	{
-     faacEncConfigurationPtr myFormat;
+    faacEncConfigurationPtr myFormat;
      myFormat=faacEncGetCurrentConfiguration(hEncoder);
 
 	 myFormat->mpegVersion=(dwOptions>>29)&7;
@@ -565,7 +614,6 @@ int           bytesEncoded;
 	 myFormat->allowMidside=(dwOptions>>26)&1;
 	 myFormat->useTns=(dwOptions>>25)&1;
 	 myFormat->useLfe=(dwOptions>>24)&1;
-
 	 switch((dwOptions>>19)&31)
 	 {
 	  case 0:
@@ -659,9 +707,11 @@ faacEncConfigurationPtr myFormat;
 	return 0;
 }
 
-void close()
+void Close()
 {
- if(mo->bytes_into_buffer)
+// Following code crashes winamp. why???
+
+if(mo->bytes_into_buffer)
  {
 int bytesEncoded;
   bytesEncoded=faacEncEncode(mo->hEncoder, (short *)mo->inbuf, mo->bytes_into_buffer/sizeof(short), mo->bitbuf, mo->maxBytesOutput);
@@ -681,132 +731,122 @@ int bytesEncoded;
 // CloseHandle(outfile);
 }
 
-int write(char *buf, int len)
+int Write(char *buf, int len)
 {
 int bytesWritten;
 int bytesEncoded;
 int k,i,shift=0;
 
-//	int t;
-	writtentime += len;
-
-//	WriteFile(outfile,buf,len,&t,NULL);
-
-
-/* if(hOutput)
- { 
- MYOUTPUT far *mo;
-  mo=(MYOUTPUT far *)GlobalLock(hOutput);*/
-
+  writtentime += len;
+  
   if(!mo->bStopEnc)
   {
-//   if(writtentime>mo->lSize)
-//	return 0;
 
-   if(mo->bytes_into_buffer+len<mo->samplesInput)
+   if(mo->bytes_into_buffer+len<mo->samplesInput*sizeof(short))
    {
     memcpy(mo->inbuf+mo->bytes_into_buffer, buf, len);
 	mo->bytes_into_buffer+=len;
 	return 0;
    }
    else
-   {
-    memcpy(mo->inbuf+mo->bytes_into_buffer, buf, mo->samplesInput-mo->bytes_into_buffer);
-    shift=mo->samplesInput-mo->bytes_into_buffer;
-    mo->bytes_into_buffer+=shift;
-	len-=shift;
-    buf+=shift;
+    if(mo->bytes_into_buffer)
+    {
+     shift=mo->samplesInput*sizeof(short)-mo->bytes_into_buffer;
+     memcpy(mo->inbuf+mo->bytes_into_buffer, buf, shift);
+     mo->bytes_into_buffer+=shift;
+     buf+=shift;
+	 len-=shift;
 
-    bytesEncoded=faacEncEncode(mo->hEncoder, (short *)mo->inbuf, mo->samplesInput/sizeof(short), mo->bitbuf, mo->maxBytesOutput);
-	mo->bytes_into_buffer=0;
+     bytesEncoded=faacEncEncode(mo->hEncoder, (short *)mo->inbuf, mo->samplesInput, mo->bitbuf, mo->maxBytesOutput);
+	 mo->bytes_into_buffer=0;
+     if(bytesEncoded<1) // end of flushing process
+     {
+      if(bytesEncoded<0)
+	  {
+       MessageBox(0, "faacEncEncode() failed", "FAAC interface", MB_OK);
+       mo->bStopEnc=1;
+	  }
+	  bytesWritten=len ? 0 : -1;
+      return bytesWritten;
+     }
+// write bitstream to aac file 
+     bytesWritten=fwrite(mo->bitbuf, 1, bytesEncoded, mo->fFile);
+     if(bytesWritten!=bytesEncoded)
+     {
+      MessageBox(0, "bytesWritten and bytesEncoded are different", "FAAC interface", MB_OK);
+      mo->bStopEnc=1;
+      return -1;
+     }
+	}
+
+// call the actual encoding routine
+   k=len/(mo->samplesInput*sizeof(short));
+   for(i=0; i<k; i++)
+   {
+    bytesEncoded+=faacEncEncode(mo->hEncoder, ((short *)buf)+i*mo->samplesInput, mo->samplesInput, mo->bitbuf, mo->maxBytesOutput);
     if(bytesEncoded<1) // end of flushing process
     {
      if(bytesEncoded<0)
+	 {
       MessageBox(0, "faacEncEncode() failed", "FAAC interface", MB_OK);
+      mo->bStopEnc=1;
+	 }
+	 bytesWritten=len ? 0 : -1;
+     return bytesWritten;
+    }
+// write bitstream to aac file 
+    bytesWritten=fwrite(mo->bitbuf, 1, bytesEncoded, mo->fFile);
+    if(bytesWritten!=bytesEncoded)
+    {
+     MessageBox(0, "bytesWritten and bytesEncoded are different", "FAAC interface", MB_OK);
      mo->bStopEnc=1;
-//     GlobalUnlock(hOutput);
      return -1;
     }
    }
 
-   if(mo->bytes_into_buffer)
-   {
-    if(bytesEncoded<0)
-     MessageBox(0, "bytes_into_buffer>0", "FAAC interface", MB_OK);
-    mo->bStopEnc=1;
-//    GlobalUnlock(hOutput);
-    return -1;
-   }
-
-// call the actual encoding routine
-   k=len/mo->samplesInput;
-   for(i=0; i<k; i++)
-    bytesEncoded+=faacEncEncode(mo->hEncoder, (short *)(buf+i*mo->samplesInput), mo->samplesInput/sizeof(short), mo->bitbuf, mo->maxBytesOutput);
-   memcpy(mo->inbuf+mo->bytes_into_buffer, buf, len%mo->samplesInput);
-   mo->bytes_into_buffer+=len%mo->samplesInput;
-   if(bytesEncoded<1) // end of flushing process
-   {
-    if(bytesEncoded<0)
-     MessageBox(0, "faacEncEncode() failed", "FAAC interface", MB_OK);
-    mo->bStopEnc=1;
-//    GlobalUnlock(hOutput);
-    return -1;
-   }
-// write bitstream to aac file 
-   bytesWritten=fwrite(mo->bitbuf, 1, bytesEncoded, mo->fFile);
-   if(bytesWritten!=bytesEncoded)
-   {
-    MessageBox(0, "bytesWritten and bytesEncoded are different", "FAAC interface", MB_OK);
-    mo->bStopEnc=1;
-//    GlobalUnlock(hOutput);
-    return -1;
-   }
-
-//   GlobalUnlock(hOutput);
+   mo->bytes_into_buffer=len%(mo->samplesInput*sizeof(short));
+   memcpy(mo->inbuf, buf+k*mo->samplesInput*sizeof(short), mo->bytes_into_buffer);
   }
-// }
 
-
-	Sleep(0);
-	return 0;
+  Sleep(0);
+  return 0;
 }
 
-int canwrite()
+int CanWrite()
 {
 	return last_pause ? 0 : 16*1024*1024;
 //	return last_pause ? 0 : mo->samplesInput;
-//	return mo->samplesInput;
 }
 
-int isplaying()
+int IsPlaying()
 {
 	return 0;
 }
 
-int pause(int pause)
+int Pause(int pause)
 {
 	int t=last_pause;
 	last_pause=pause;
 	return t;
 }
 
-void setvolume(int volume)
+void SetVolume(int volume)
 {
 }
 
-void setpan(int pan)
+void SetPan(int pan)
 {
 }
 
-void flush(int t)
+void Flush(int t)
 {
   int a;
   w_offset=0;
-  a = t - getwrittentime();
+  a = t - GetWrittenTime();
   w_offset=a;
 }
 	
-int getwrittentime()
+int GetWrittenTime()
 {
 	int t=srate*numchan,l;
 	int ms=writtentime;
@@ -819,32 +859,4 @@ int getwrittentime()
 	if (bps == 16) ms/=2;
 
 	return ms + w_offset;
-}
-
-Out_Module out = {
-	OUT_VER,
-	"Freeware AAC encoder " PI_VER,
-	33,
-	0, // hmainwindow
-	0, // hdllinstance
-	config,
-	about,
-	init,
-	quit,
-	open,
-	close,
-	write,
-	canwrite,
-	isplaying,
-	pause,
-	setvolume,
-	setpan,
-	flush,
-	getwrittentime,
-	getwrittentime
-};
-
-__declspec( dllexport ) Out_Module * winampGetOutModule()
-{
-	return &out;
 }
