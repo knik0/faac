@@ -38,15 +38,6 @@ int sort_book_numbers(AACQuantInfo* quantInfo,     /* Quantization information *
 
 
 /*********************************************************/
-/* sort_book_numbers                                     */
-/*********************************************************/
-int sort_for_grouping(AACQuantInfo* quantInfo,        /* ptr to quantization information */
-		      int sfb_width_table[],          /* Widths of single window */
-		      double *p_spectrum[],           /* Spectral values, noninterleaved */
-		      double *SigMaskRatio,
-		      double *PsySigMaskRatio);
-
-/*********************************************************/
 /* bit_search                                            */
 /*********************************************************/
 int bit_search(int quant[NUM_COEFF],  /* Quantized spectral values */

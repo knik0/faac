@@ -79,6 +79,15 @@ int count_bits(AACQuantInfo* quantInfo,
 
 
 /*********************************************************/
+/* sort_for_grouping                                     */
+/*********************************************************/
+int sort_for_grouping(AACQuantInfo* quantInfo,        /* ptr to quantization information */
+		      int sfb_width_table[],          /* Widths of single window */
+		      double *p_spectrum[],           /* Spectral values, noninterleaved */
+		      double *SigMaskRatio,
+		      double *PsySigMaskRatio);
+
+/*********************************************************/
 /* tf_init_encode_spectrum_aac                           */
 /*********************************************************/
 void tf_init_encode_spectrum_aac( int quality );
