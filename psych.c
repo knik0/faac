@@ -21,8 +21,8 @@
 /**************************************************************************
   Version Control Information			Method: CVS
   Identifiers:
-  $Revision: 1.70 $
-  $Date: 2000/10/08 20:32:33 $ (check in)
+  $Revision: 1.71 $
+  $Date: 2000/10/31 14:48:41 $ (check in)
   $Author: menno $
   *************************************************************************/
 
@@ -31,112 +31,10 @@
 
 #include "psych.h"
 #include "transfo.h"
+#include "quant.h"
 
 double sqrt2048, sqrt256;
 
-SR_INFO sr_info_aac[MAX_SAMPLING_RATES+1] =
-{
-	{ 8000, 40, 15,
-		{
-			12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 16, 
-			16, 16, 16, 16, 16, 16, 20, 20, 20, 20, 24, 24, 24, 28, 
-			28, 32, 32, 36, 40, 44, 48, 52, 56, 60, 64, 80
-		}, {
-			4, 4, 4, 4, 4, 4, 4, 8, 8, 8, 8, 12, 16, 20, 20
-		}
-	}, { 11025, 43, 15,
-		{
-			8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 12, 12, 12, 
-			12, 12, 12, 12, 12, 12, 16, 16, 16, 16, 20, 20, 20, 24,
-			24, 28, 28, 32, 36, 40, 40, 44, 48, 52, 56, 60, 64, 64, 64
-		}, {
-			4, 4, 4, 4, 4, 4, 4, 4, 8, 8, 12, 12, 16, 20, 20
-		}
-	}, { 12000, 43, 15,
-		{
-			8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 12, 12, 12, 
-			12, 12, 12, 12, 12, 12, 16, 16, 16, 16, 20, 20, 20, 24, 
-			24, 28, 28, 32, 36, 40, 40, 44, 48, 52, 56, 60, 64, 64, 64
-		}, {
-			4, 4, 4, 4, 4, 4, 4, 4, 8, 8, 12, 12, 16, 20, 20
-		}
-	}, { 16000, 43, 15,
-		{
-			8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 12, 12, 12, 
-			12, 12, 12, 12, 12, 12, 16, 16, 16, 16, 20, 20, 20, 24, 
-			24, 28, 28, 32, 36, 40, 40, 44, 48, 52, 56, 60, 64, 64, 64
-		}, {
-			4, 4, 4, 4, 4, 4, 4, 4, 8, 8, 12, 12, 16, 20, 20
-		}
-	}, { 22050, 47, 15,
-		{
-			4,  4,  4,  4,  4,  4,  4,  4,  4,  4,  4,  8,  8,  8,  8,  8,  8,  8,
-			8,  8,  8,  12, 12, 12, 12, 16, 16, 16, 20, 20, 24, 24, 28, 28, 32,
-			36, 36, 40, 44, 48, 52, 52, 64, 64, 64, 64, 64
-		}, {
-			4,  4,  4,  4,  4,  4,  4,  8,  8,  8,  8, 12, 16, 16, 20
-		}
-	},{ 24000, 47, 15,
-		{
-			4,  4,  4,  4,  4,  4,  4,  4,  4,  4,  4,  8,  8,  8,  8,  8,  8,  8,
-			8,  8,  8,  12, 12, 12, 12, 16, 16, 16, 20, 20, 24, 24, 28, 28, 32,
-			36, 36, 40, 44, 48, 52, 52, 64, 64, 64, 64, 64
-		}, {
-			4,  4,  4,  4,  4,  4,  4,  8,  8,  8,  8, 12, 16, 16, 20
-		}
-	}, { 32000, 51, 14,
-		{
-			4,	4,	4,	4,	4,	4,	4,	4,	4,	4,	8,	8,	8,	8,	
-			8,	8,	8,	12,	12,	12,	12,	16,	16,	20,	20,	24,	24,	28,	
-			28,	32,	32,	32,	32,	32,	32,	32,	32,	32,	32,	32,	32,	32,
-			32,	32,	32,	32,	32,	32,	32,	32,	32
-		},{
-			4,	4,	4,	4,	4,	8,	8,	8,	12,	12,	12,	16,	16,	16
-		}
-	}, { 44100, 49, 14,
-		{
-			4,  4,  4,  4,  4,  4,  4,  4,  4,  4,  8,  8,  8,  8,  8,  8,  8, 
-			12, 12, 12, 12, 16, 16, 20, 20, 24, 24, 28, 28, 32, 32, 32, 32, 32, 32,
-			32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 96
-		}, {
-			4,  4,  4,  4,  4,  8,  8,  8, 12, 12, 12, 16, 16, 16 
-		}
-	}, { 48000, 49, 14,
-		{
-			4,  4,  4,  4,  4,  4,  4,  4,  4,  4,  8,  8,  8,  8,  8,  8,  8, 
-			12, 12, 12, 12, 16, 16, 20, 20, 24, 24, 28, 28, 32, 32, 32, 32, 32, 32,
-			32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 96
-		}, {
-			4,  4,  4,  4,  4,  8,  8,  8, 12, 12, 12, 16, 16, 16 
-		}
-	}, {64000, 47, 12,
-		{
-			4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
-			8, 8, 8, 8, 12, 12, 12, 16, 16, 16, 20, 24, 24, 28,
-			36, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40,
-			40, 40, 40, 40, 40
-		},{
-			4, 4, 4, 4, 4, 4, 8, 8, 8, 16, 28, 32
-		}
-	}, { 88200, 41, 12,
-		{
-			4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 
-			8, 8, 8, 8, 8, 12, 12, 12, 12, 12, 16, 16, 24, 28, 
-			36, 44, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64
-		},{
-			4, 4, 4, 4, 4, 4, 8, 8, 8, 16, 28, 36
-		}
-	}, { 96000, 41, 12,
-		{
-			4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 
-			8, 8, 8, 8, 8, 12, 12, 12, 12, 12, 16, 16, 24, 28, 
-			36, 44, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64
-		},{
-			4, 4, 4, 4, 4, 4, 8, 8, 8, 16, 28, 36
-		}
-	},
-	{ -1 }
-};
 
 double          sample[MAX_TIME_CHANNELS*2][BLOCK_LEN_LONG*2];
                                /* sample value */
@@ -424,6 +322,7 @@ void Psy_FillBuffer(double *p_time_signal[], int no_of_chan)
 /* main */
 void Psy_Calculate( 
 			   /* input */
+			   AACQuantInfo *quantInfo,
 			   double sampling_rate,
 			   int    no_of_chan,         /* no of audio channels */
 			   Ch_Info* channelInfo,
@@ -447,13 +346,6 @@ void Psy_Calculate(
 	memset(&psy_var_long, 0, sizeof(psy_var_long));
 	memset(&psy_var_short, 0, sizeof(psy_var_short));
 
-    p_sri = &sr_info_aac[0];
-	
-	/* find correct sampling rate depending parameters */
-	while( p_sri->sampling_rate != (long)sampling_rate ) {
-		p_sri++;
-	}
-
 	if( flag==0 ) {
 		psy_part_table_init(sampling_rate, &part_tbl_long, &part_tbl_short);
 		/* initializing Table B 2.1.*.a, B 2.1.*.b in N1650 */
@@ -462,6 +354,8 @@ void Psy_Calculate(
 
 	for (chanNum = 0; chanNum < no_of_chan; chanNum++) {
 		if (channelInfo[chanNum].present) {
+			p_sri = quantInfo[chanNum].sr_info;
+			
 			if ((channelInfo[chanNum].cpe) && (channelInfo[chanNum].ch_is_left)) { /* CPE */
 				int leftChan = chanNum;
 				int rightChan = channelInfo[chanNum].paired_ch;
@@ -582,20 +476,12 @@ void Psy_Calculate(
 
 				p_chpo_long[leftChan].p_ratio   = psy_stvar_long[leftChan].ismr;
 				p_chpo_long[rightChan].p_ratio   = psy_stvar_long[rightChan].ismr;
-				p_chpo_long[leftChan].cb_width  = p_sri->cb_width_long;
-				p_chpo_long[rightChan].cb_width  = p_sri->cb_width_long;
-				p_chpo_long[leftChan].no_of_cb = p_sri->num_cb_long;
-				p_chpo_long[rightChan].no_of_cb = p_sri->num_cb_long;
 
 				memcpy(p_chpo_long[rightChan].use_ms, psy_stvar_long[rightChan].use_ms, NSFB_LONG*sizeof(int));
 
 				for( i=0; i<MAX_SHORT_WINDOWS; i++ ) {
 					p_chpo_short[leftChan][i].p_ratio  = psy_stvar_short[leftChan].ismr[i];
 					p_chpo_short[rightChan][i].p_ratio  = psy_stvar_short[rightChan].ismr[i];
-					p_chpo_short[leftChan][i].cb_width = p_sri->cb_width_short;
-					p_chpo_short[rightChan][i].cb_width = p_sri->cb_width_short;
-					p_chpo_short[leftChan][i].no_of_cb = p_sri->num_cb_short;
-					p_chpo_short[rightChan][i].no_of_cb = p_sri->num_cb_short;
 
 					memcpy(p_chpo_short[rightChan][i].use_ms, psy_stvar_short[rightChan].use_ms[i], NSFB_SHORT*sizeof(int));
 				}
@@ -614,12 +500,8 @@ void Psy_Calculate(
 				block_type[chanNum] = ONLY_LONG_WINDOW;
 
 				// set the scalefactor band values
-				p_chpo_long[chanNum].cb_width  = p_sri->cb_width_long;
-				p_chpo_long[chanNum].no_of_cb = p_sri->num_cb_long;
 				for( i=0; i<MAX_SHORT_WINDOWS; i++ ) {
 					p_chpo_short[chanNum][i].p_ratio  = psy_stvar_short[chanNum].ismr[i];
-					p_chpo_short[chanNum][i].cb_width = p_sri->cb_width_short;
-					p_chpo_short[chanNum][i].no_of_cb = p_sri->num_cb_short;
 				}
 
 			} else { /* SCE */
@@ -645,13 +527,9 @@ void Psy_Calculate(
 					&psy_stvar_short[chanNum], &psy_var_long[0], &psy_var_short[0]);
 
 				p_chpo_long[chanNum].p_ratio   = psy_stvar_long[chanNum].ismr;
-				p_chpo_long[chanNum].cb_width  = p_sri->cb_width_long;
-				p_chpo_long[chanNum].no_of_cb = p_sri->num_cb_long;
 
 				for( i=0; i<MAX_SHORT_WINDOWS; i++ ) {
 					p_chpo_short[chanNum][i].p_ratio  = psy_stvar_short[chanNum].ismr[i];
-					p_chpo_short[chanNum][i].cb_width = p_sri->cb_width_short;
-					p_chpo_short[chanNum][i].no_of_cb = p_sri->num_cb_short;
 				}
 			}
 		}

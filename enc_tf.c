@@ -21,8 +21,8 @@
 /**************************************************************************
   Version Control Information			Method: CVS
   Identifiers:
-  $Revision: 1.65 $
-  $Date: 2000/10/08 20:32:33 $ (check in)
+  $Revision: 1.66 $
+  $Date: 2000/10/31 14:48:41 $ (check in)
   $Author: menno $
   *************************************************************************/
 
@@ -43,6 +43,110 @@
 
 
 /* AAC tables */
+
+SR_INFO sr_info_aac[MAX_SAMPLING_RATES+1] =
+{
+	{ 8000, 40, 15,
+		{
+			12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 16, 
+			16, 16, 16, 16, 16, 16, 20, 20, 20, 20, 24, 24, 24, 28, 
+			28, 32, 32, 36, 40, 44, 48, 52, 56, 60, 64, 80
+		}, {
+			4, 4, 4, 4, 4, 4, 4, 8, 8, 8, 8, 12, 16, 20, 20
+		}
+	}, { 11025, 43, 15,
+		{
+			8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 12, 12, 12, 
+			12, 12, 12, 12, 12, 12, 16, 16, 16, 16, 20, 20, 20, 24,
+			24, 28, 28, 32, 36, 40, 40, 44, 48, 52, 56, 60, 64, 64, 64
+		}, {
+			4, 4, 4, 4, 4, 4, 4, 4, 8, 8, 12, 12, 16, 20, 20
+		}
+	}, { 12000, 43, 15,
+		{
+			8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 12, 12, 12, 
+			12, 12, 12, 12, 12, 12, 16, 16, 16, 16, 20, 20, 20, 24, 
+			24, 28, 28, 32, 36, 40, 40, 44, 48, 52, 56, 60, 64, 64, 64
+		}, {
+			4, 4, 4, 4, 4, 4, 4, 4, 8, 8, 12, 12, 16, 20, 20
+		}
+	}, { 16000, 43, 15,
+		{
+			8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 12, 12, 12, 
+			12, 12, 12, 12, 12, 12, 16, 16, 16, 16, 20, 20, 20, 24, 
+			24, 28, 28, 32, 36, 40, 40, 44, 48, 52, 56, 60, 64, 64, 64
+		}, {
+			4, 4, 4, 4, 4, 4, 4, 4, 8, 8, 12, 12, 16, 20, 20
+		}
+	}, { 22050, 47, 15,
+		{
+			4,  4,  4,  4,  4,  4,  4,  4,  4,  4,  4,  8,  8,  8,  8,  8,  8,  8,
+			8,  8,  8,  12, 12, 12, 12, 16, 16, 16, 20, 20, 24, 24, 28, 28, 32,
+			36, 36, 40, 44, 48, 52, 52, 64, 64, 64, 64, 64
+		}, {
+			4,  4,  4,  4,  4,  4,  4,  8,  8,  8,  8, 12, 16, 16, 20
+		}
+	},{ 24000, 47, 15,
+		{
+			4,  4,  4,  4,  4,  4,  4,  4,  4,  4,  4,  8,  8,  8,  8,  8,  8,  8,
+			8,  8,  8,  12, 12, 12, 12, 16, 16, 16, 20, 20, 24, 24, 28, 28, 32,
+			36, 36, 40, 44, 48, 52, 52, 64, 64, 64, 64, 64
+		}, {
+			4,  4,  4,  4,  4,  4,  4,  8,  8,  8,  8, 12, 16, 16, 20
+		}
+	}, { 32000, 51, 14,
+		{
+			4,	4,	4,	4,	4,	4,	4,	4,	4,	4,	8,	8,	8,	8,	
+			8,	8,	8,	12,	12,	12,	12,	16,	16,	20,	20,	24,	24,	28,	
+			28,	32,	32,	32,	32,	32,	32,	32,	32,	32,	32,	32,	32,	32,
+			32,	32,	32,	32,	32,	32,	32,	32,	32
+		},{
+			4,	4,	4,	4,	4,	8,	8,	8,	12,	12,	12,	16,	16,	16
+		}
+	}, { 44100, 49, 14,
+		{
+			4,  4,  4,  4,  4,  4,  4,  4,  4,  4,  8,  8,  8,  8,  8,  8,  8, 
+			12, 12, 12, 12, 16, 16, 20, 20, 24, 24, 28, 28, 32, 32, 32, 32, 32, 32,
+			32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 96
+		}, {
+			4,  4,  4,  4,  4,  8,  8,  8, 12, 12, 12, 16, 16, 16 
+		}
+	}, { 48000, 49, 14,
+		{
+			4,  4,  4,  4,  4,  4,  4,  4,  4,  4,  8,  8,  8,  8,  8,  8,  8, 
+			12, 12, 12, 12, 16, 16, 20, 20, 24, 24, 28, 28, 32, 32, 32, 32, 32, 32,
+			32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 96
+		}, {
+			4,  4,  4,  4,  4,  8,  8,  8, 12, 12, 12, 16, 16, 16 
+		}
+	}, {64000, 47, 12,
+		{
+			4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
+			8, 8, 8, 8, 12, 12, 12, 16, 16, 16, 20, 24, 24, 28,
+			36, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40,
+			40, 40, 40, 40, 40
+		},{
+			4, 4, 4, 4, 4, 4, 8, 8, 8, 16, 28, 32
+		}
+	}, { 88200, 41, 12,
+		{
+			4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 
+			8, 8, 8, 8, 8, 12, 12, 12, 12, 12, 16, 16, 24, 28, 
+			36, 44, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64
+		},{
+			4, 4, 4, 4, 4, 4, 8, 8, 8, 16, 28, 36
+		}
+	}, { 96000, 41, 12,
+		{
+			4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 
+			8, 8, 8, 8, 8, 12, 12, 12, 12, 12, 16, 16, 24, 28, 
+			36, 44, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64
+		},{
+			4, 4, 4, 4, 4, 4, 8, 8, 8, 16, 28, 36
+		}
+	},
+	{ -1 }
+};
 
 /* First attempt at supporting multiple sampling rates   *
  * and bitrates correctly.                               */
@@ -180,6 +284,13 @@ void EncTfInit (faacAACStream *as)
   }
 
   for (chanNum=0;chanNum<MAX_TIME_CHANNELS;chanNum++) {
+		quantInfo[chanNum].sr_info = &sr_info_aac[0];
+			
+		/* find correct sampling rate depending parameters */
+		while( quantInfo[chanNum].sr_info->sampling_rate != as->out_sampling_rate ) {
+			quantInfo[chanNum].sr_info++;
+		}
+
     quantInfo[chanNum].srate_idx = srate_idx;
     quantInfo[chanNum].profile = as->profile;
   }
@@ -299,6 +410,7 @@ int EncTfFrame (faacAACStream *as, BsBitStream  *fixed_stream)
   /* psychoacoustics */
   /*****************************************************************************/
   Psy_Calculate(
+	  quantInfo,
 	  as->out_sampling_rate,
 	  max_ch,
 	  channelInfo,
@@ -442,23 +554,23 @@ int EncTfFrame (faacAACStream *as, BsBitStream  *fixed_stream)
     for (chanNum=0;chanNum<max_ch;chanNum++) {
       switch( block_type[chanNum] ) {
 	case ONLY_LONG_WINDOW:
-	  memcpy( (char*)sfb_width_table[chanNum], (char*)chpo_long[chanNum].cb_width, (NSFB_LONG+1)*sizeof(int) );
-	  nr_of_sfb[chanNum] = chpo_long[chanNum].no_of_cb;
+	  memcpy( (char*)sfb_width_table[chanNum], (char*)quantInfo[chanNum].sr_info->cb_width_long, (NSFB_LONG+1)*sizeof(int) );
+	  nr_of_sfb[chanNum] = quantInfo[chanNum].sr_info->num_cb_long;
 	  p_ratio[chanNum]   = p_ratio_long[ps][chanNum];
 	  break;
         case LONG_SHORT_WINDOW:
-	  memcpy( (char*)sfb_width_table[chanNum], (char*)chpo_long[chanNum].cb_width, (NSFB_LONG+1)*sizeof(int) );
-	  nr_of_sfb[chanNum] = chpo_long[chanNum].no_of_cb;
+	  memcpy( (char*)sfb_width_table[chanNum], (char*)quantInfo[chanNum].sr_info->cb_width_long, (NSFB_LONG+1)*sizeof(int) );
+	  nr_of_sfb[chanNum] = quantInfo[chanNum].sr_info->num_cb_long;
 	  p_ratio[chanNum]   = p_ratio_long[ps][chanNum];
 	  break;
         case ONLY_SHORT_WINDOW:
-	  memcpy( (char*)sfb_width_table[chanNum], (char*)chpo_short[chanNum][0].cb_width, (NSFB_SHORT+1)*sizeof(int) );
-	  nr_of_sfb[chanNum] = chpo_short[chanNum][0].no_of_cb;
+	  memcpy( (char*)sfb_width_table[chanNum], (char*)quantInfo[chanNum].sr_info->cb_width_short, (NSFB_SHORT+1)*sizeof(int) );
+	  nr_of_sfb[chanNum] = quantInfo[chanNum].sr_info->num_cb_short;
 	  p_ratio[chanNum]   = p_ratio_short[ps][chanNum];
           break;
         case SHORT_LONG_WINDOW:
-	  memcpy( (char*)sfb_width_table[chanNum], (char*)chpo_long[chanNum].cb_width, (NSFB_LONG+1)*sizeof(int) );
-	  nr_of_sfb[chanNum] = chpo_long[chanNum].no_of_cb;
+	  memcpy( (char*)sfb_width_table[chanNum], (char*)quantInfo[chanNum].sr_info->cb_width_long, (NSFB_LONG+1)*sizeof(int) );
+	  nr_of_sfb[chanNum] = quantInfo[chanNum].sr_info->num_cb_long;
 	  p_ratio[chanNum]   = p_ratio_long[ps][chanNum];
           break;
       }

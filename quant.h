@@ -21,8 +21,8 @@
 /**************************************************************************
   Version Control Information			Method: CVS
   Identifiers:
-  $Revision: 1.5 $
-  $Date: 2000/10/06 14:47:27 $ (check in)
+  $Revision: 1.6 $
+  $Date: 2000/10/31 14:48:41 $ (check in)
   $Author: menno $
   *************************************************************************/
 
@@ -85,7 +85,8 @@ typedef struct {
   int reset_group_number;               /* Prediction reset group number */
   TNS_INFO* tnsInfo;                    /* Ptr to tns data */
   AACPulseInfo pulseInfo;
-  LT_PRED_STATUS *ltpInfo;              /* Prt to LTP data */
+  LT_PRED_STATUS *ltpInfo;              /* Ptr to LTP data */
+  SR_INFO *sr_info;
   int pns_sfb_nrg[MAX_SCFAC_BANDS];
   int pns_sfb_flag[MAX_SCFAC_BANDS];
   int profile;

@@ -21,8 +21,8 @@
 /**************************************************************************
   Version Control Information			Method: CVS
   Identifiers:
-  $Revision: 1.4 $
-  $Date: 2000/10/06 14:47:27 $ (check in)
+  $Revision: 1.5 $
+  $Date: 2000/10/31 14:48:41 $ (check in)
   $Author: menno $
   *************************************************************************/
 
@@ -161,6 +161,14 @@ typedef enum {
 #define LEN_BIT_RATE 23
 #define LEN_NUM_PCE 4
 #define LEN_ADIF_BF 20
+
+typedef struct { 
+  long   sampling_rate;  /* the following entries are for this sampling rate */
+  int    num_cb_long;
+  int    num_cb_short;
+  int    cb_width_long[NSFB_LONG];
+  int    cb_width_short[NSFB_SHORT];
+} SR_INFO;
 
 typedef struct
 {

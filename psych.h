@@ -21,12 +21,13 @@
 /**************************************************************************
   Version Control Information			Method: CVS
   Identifiers:
-  $Revision: 1.23 $
-  $Date: 2000/10/08 20:32:33 $ (check in)
+  $Revision: 1.24 $
+  $Date: 2000/10/31 14:48:41 $ (check in)
   $Author: menno $
   *************************************************************************/
 
 #include "interface.h"
+#include "quant.h"
 
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
@@ -39,13 +40,6 @@
 #define max(a,b) ( (a) > (b) ? (a) : (b) )
 #endif
 
-typedef struct { 
-  long   sampling_rate;  /* the following entries are for this sampling rate */
-  int    num_cb_long;
-  int    num_cb_short;
-  int    cb_width_long[NSFB_LONG];
-  int    cb_width_short[NSFB_SHORT];
-} SR_INFO;
 
 #define OFFSET_FOR_SHORT 448
 #define NPART_LONG 100
@@ -154,16 +148,12 @@ typedef struct {
 
 typedef struct {
   double *p_ratio;
-  int    *cb_width;
   int    use_ms[NSFB_LONG];
-  int    no_of_cb;
 } CH_PSYCH_OUTPUT_LONG;
 
 typedef struct {
   double *p_ratio;
-  int    *cb_width;
   int    use_ms[NSFB_SHORT];
-  int    no_of_cb;
 } CH_PSYCH_OUTPUT_SHORT;
 
 #ifdef __cplusplus
@@ -174,6 +164,7 @@ void Psy_Init( void );
 void Psy_FillBuffer(double *p_time_signal[], int no_of_chan);
 void Psy_Calculate( 
   /* input */
+  AACQuantInfo *quantInfo,
   double sampling_rate,
   int    no_of_chan,         /* no of audio channels */
   Ch_Info* chInfo,
