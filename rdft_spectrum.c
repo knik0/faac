@@ -224,7 +224,9 @@ void complspectrum( double *f, unsigned lg2n )
         f[i] = sqrt(a*a + b*b); /* magnitude -- please note that the
                                          scaling depends on size n */
         /* complex part: phase */
-		f[j] = atan2(b, a); /* magnitude f[i] has phase f[n-i] */
+
+		if (a != 0.0) f[j] = atan2(b, a); /* magnitude f[i] has phase f[n-i] */
+                   else f[j] = 0.0;
     }
 
     f[0]=sqrt(f[0]*f[0]+f[n/2]*f[n/2]);  /* ill-defined bin */
