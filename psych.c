@@ -52,9 +52,9 @@ Copyright (c) 1997.
 
 Source file:
 
-$Id: psych.c,v 1.40 2000/02/07 18:17:30 menno Exp $
-$Id: psych.c,v 1.40 2000/02/07 18:17:30 menno Exp $
-$Id: psych.c,v 1.40 2000/02/07 18:17:30 menno Exp $
+$Id: psych.c,v 1.41 2000/02/07 18:57:47 menno Exp $
+$Id: psych.c,v 1.41 2000/02/07 18:57:47 menno Exp $
+$Id: psych.c,v 1.41 2000/02/07 18:57:47 menno Exp $
 
 **********************************************************************/
 
@@ -761,8 +761,11 @@ void psy_step4(PSY_STATVARIABLE_LONG *psy_stvar_long,
 			fp = psy_var_short->f_pred[i][w];
 
 			if( fabs(r) + fabs(rp) != 0.0 )
+/* Replacing with something faster
 				psy_var_short->c[i][w] = sqrt( psy_sqr(r*cos(f) - rp*cos(fp))
 					+psy_sqr(r*sin(f) - rp*sin(fp)) )/ ( r + fabs(rp) ) ;
+*/
+				psy_var_short->c[i][w] = sqrt( r*r+rp*rp-2*r*rp*cos(f+fp) )/ ( r + fabs(rp) );
 			else
 				psy_var_short->c[i][w] = 0.0; /* tmp */
 		}
