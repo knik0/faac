@@ -2,6 +2,7 @@
 #include <stdio.h>  // FILE *
 #include "filters.h" //CoolEdit
 #include "faad.h"
+#include "faac.h"
 #include "aacinfo.h"
 
 
@@ -10,24 +11,22 @@
 
 typedef struct input_tag // any special vars associated with input file
 {
- FILE  *fFile;
- DWORD lSize;    
- DWORD len_ms;
- WORD  wChannels;
- DWORD dwSamprate;
- WORD  wBitsPerSample;
- char  szName[256];
+ FILE	*fFile;
+ DWORD	lSize;    
+ DWORD	len_ms;
+ WORD	wChannels;
+ DWORD	dwSamprate;
+ WORD	wBitsPerSample;
+ char	szName[256];
 
- faacDecHandle hDecoder;
- faadAACInfo   file_info;
- unsigned char *buffer;
- DWORD full_size; // size of decoded file needed to set the length of progress bar
- DWORD tagsize;
- DWORD bytes_read; // from file
- DWORD bytes_consumed; // by faadDecDecode
- DWORD bytes_into_buffer;
- DWORD bytes_Enc;
-//	   bytesDec; // Not used because I prefer decode until possible and not until file_info.lenght
+ faacDecHandle	hDecoder;
+ faadAACInfo	file_info;
+ unsigned char	*buffer;
+ DWORD	full_size;		// size of decoded file needed to set the length of progress bar
+ DWORD	tagsize;
+ DWORD	bytes_read;		// from file
+ DWORD	bytes_consumed;	// by faadDecDecode
+ long	bytes_into_buffer;
 } MYINPUT;
 
 
@@ -37,7 +36,7 @@ int id3v2_tag(unsigned char *buffer)
  {
 unsigned long tagsize;
 
-/* high bit is not used */
+// high bit is not used 
   tagsize=(buffer[6] << 21) | (buffer[7] << 14) |
           (buffer[8] <<  7) | (buffer[9] <<  0);
   tagsize += 10;
@@ -73,10 +72,6 @@ DWORD full_size;
  return full_size;
 }
 
-__declspec(dllexport) DWORD FAR PASCAL FilterOptions(HANDLE hInput)
-{
- return 0L;
-}	    
 
 __declspec(dllexport) DWORD FAR PASCAL FilterOptionsString(HANDLE hInput, LPSTR szString)
 {
@@ -101,7 +96,7 @@ char buf[20];
   {
   case 0:
        lstrcat(szString,"RAW\n");
-       return 0;
+       return 0L;
   case 1:
        lstrcat(szString,"ADIF\n");
        break;
@@ -112,16 +107,16 @@ char buf[20];
 
   switch(mi->file_info.object_type)
   {
-  case 0:
+  case MAIN:
        lstrcat(szString,"Main");
        break;
-  case 1:
+  case LOW:
        lstrcat(szString,"Low Complexity");
        break;
-  case 2:
+  case SSR:
        lstrcat(szString,"SSR (unsupported)");
        break;
-  case 3:
+  case LTP:
        lstrcat(szString,"Main LTP");
        break;
   }
@@ -174,7 +169,7 @@ __declspec(dllexport) HANDLE FAR PASCAL OpenFilterInput( LPSTR lpstrFilename,
 {
 HANDLE hInput;
 faacDecHandle hDecoder;
-DWORD  k,tmp;
+DWORD  tmp;
 //int    shift;
 FILE   *infile;
 DWORD  samplerate, channels;
@@ -184,6 +179,7 @@ int    *seek_table;
 //faadAACInfo file_info;
 unsigned char *buffer;
 long tagsize;
+faacDecConfigurationPtr config;
 
  if(!(infile=fopen(lpstrFilename,"rb")))
   return 0;
@@ -204,7 +200,7 @@ long tagsize;
   fseek(infile, 0, SEEK_END);
   mi->lSize=ftell(infile);
   fseek(infile, pos, SEEK_SET);
-  if(!(buffer=(unsigned char*)malloc(768*MAX_CHANNELS)))
+  if(!(buffer=(BYTE *)malloc(768*MAX_CHANNELS)))
   {
    MessageBox(0, "Memory allocation error: buffer", "FAAD interface", MB_OK);
    fclose(infile);
@@ -236,8 +232,7 @@ long tagsize;
   tagsize=id3v2_tag(buffer);
   if(tagsize)
   {
-   for (k=0; k<(768*MAX_CHANNELS - tagsize); k++)
-   buffer[k]=buffer[k + tagsize];
+   memcpy(buffer,buffer+tagsize,768*MAX_CHANNELS - tagsize);
 
    if(mi->bytes_read+tagsize<mi->lSize)
 	tmp=tagsize;
@@ -259,8 +254,6 @@ long tagsize;
    }
   }
   mi->tagsize=tagsize;
-  mi->bytes_Enc=tagsize;
-//  mi->bytesDec=0;
 
   hDecoder = faacDecOpen();
   if(!hDecoder)
@@ -272,6 +265,11 @@ long tagsize;
    return 0;
   }
   mi->hDecoder=hDecoder;
+
+  config = faacDecGetCurrentConfiguration(hDecoder);
+//  config->defObjectType = MAIN;
+  config->defSampleRate = 44100;
+  faacDecSetConfiguration(hDecoder, config);
 
   if((mi->bytes_consumed=faacDecInit(hDecoder, buffer, &samplerate, &channels)) < 0)
   {
@@ -289,18 +287,18 @@ long tagsize;
 
   *lSamprate=samplerate;
   *wBitsPerSample=16;
-  *wChannels=channels;
+  *wChannels=(WORD)channels;
   *lChunkSize=sizeof(short)*1024*channels;
 
-  mi->wChannels=channels;
+  mi->wChannels=(WORD)channels;
   mi->dwSamprate=samplerate;
   mi->wBitsPerSample=*wBitsPerSample;
   strcpy(mi->szName,lpstrFilename);
 
-  if(seek_table=(int*)LocalAlloc(LPTR, 10800*sizeof(int)))
+  if(seek_table=(int *)malloc(sizeof(int)*10800))
   {
    get_AAC_format(mi->szName, &(mi->file_info), seek_table);
-   LocalFree(seek_table);
+   free(seek_table);
   }
   else
    if(!mi->file_info.version)
@@ -312,26 +310,11 @@ long tagsize;
     return 0;
    }
 
-  if(mi->file_info.object_type==2) // Unupported type SSR profile
-   {
-    fclose(mi->fFile);
-    free(mi->buffer);
-    faacDecClose(hDecoder);
-    GlobalUnlock(hInput);
-    return 0;
-   }
-
-  mi->len_ms=1000*(mi->lSize*8)/mi->file_info.bitrate;
+   mi->len_ms=1000*(mi->lSize*8)/mi->file_info.bitrate;
   if(mi->len_ms)
    mi->full_size=(DWORD)(mi->len_ms*((float)mi->dwSamprate/1000)*mi->wChannels*(16/8));
   else
    mi->full_size=mi->lSize; // corrupted stream?
-/*
-  if(mi->file_info.length)
-   mi->full_size=(DWORD)(mi->file_info.length*((float)samplerate/1000)*channels*(16/8));
-  else
-   mi->full_size=mi->lSize; // corrupted stream?
-*/
 /*  {
    fclose(mi->fFile);
    free(mi->buffer);
@@ -348,84 +331,63 @@ long tagsize;
 
 __declspec(dllexport) DWORD FAR PASCAL ReadFilterInput(HANDLE hInput, unsigned char far *bufout, long lBytes)
 {
-DWORD read,
-      tmp,
-	  bytesDec,
-	  k;
-int   result;
+DWORD	read,
+		tmp,
+		shorts_decoded=0;
+long	result=0;
 unsigned char *buffer;
-unsigned long samples;
 
- if(hInput)
- {   
- MYINPUT *mi;
-  mi=(MYINPUT *)GlobalLock(hInput);
+	if(hInput)
+	{   
+	MYINPUT *mi;
+		mi=(MYINPUT *)GlobalLock(hInput);
 
-  buffer=mi->buffer;
+		buffer=mi->buffer;
 
-  mi->bytes_Enc+=mi->bytes_consumed;
-  if(mi->bytes_Enc>=mi->lSize)
-  {
-//   MessageBox(0, "ReadFilterInput: mi->bytesEnc>mi->lSize", "FAAD interface", MB_OK);
-   GlobalUnlock(hInput);
-   return 0;
-  }
+		do
+		{
+			if(mi->bytes_consumed>0 && mi->bytes_into_buffer>=0)
+			{
+				memcpy(buffer,buffer+mi->bytes_consumed,mi->bytes_into_buffer);
 
-  if(mi->bytes_consumed)
-  {
-/*   mi->bytesDec+=sizeof(short)*1024*mi->wChannels;
-   if(mi->bytesDec>mi->full_size+sizeof(short)*1024*mi->wChannels)
-   {
-//    MessageBox(0, "ReadFilterInput: mi->bytesDec>mi->full_size", "FAAD interface", MB_OK);
-    GlobalUnlock(hInput);
-    return 0;
-   }*/
+				if(mi->bytes_read<mi->lSize)
+				{
+					if(mi->bytes_read+mi->bytes_consumed<mi->lSize)
+						tmp=mi->bytes_consumed;
+					else
+						tmp=mi->lSize-mi->bytes_read;
+					read=fread(buffer+mi->bytes_into_buffer, 1, tmp, mi->fFile);
+					if(read==tmp)
+					{
+						mi->bytes_read+=read;
+						mi->bytes_into_buffer+=read;
+					}	
+				}
+				else
+					memset(buffer+mi->bytes_into_buffer, 0, mi->bytes_consumed);
+			}
 
-   for(k=0; k<mi->bytes_into_buffer; k++)
-    buffer[k]=buffer[k + mi->bytes_consumed];
+			if(mi->bytes_into_buffer<1)
+			{
+//				MessageBox(0, "ReadFilterInput: buffer empty", "FAAD interface", MB_OK);
+				GlobalUnlock(hInput);
+				return 0;
+			}
 
-   if(mi->bytes_read<mi->lSize)
-   {
-    if(mi->bytes_read+mi->bytes_consumed<mi->lSize)
-	 tmp=mi->bytes_consumed;
-	else
-	 tmp=mi->lSize-mi->bytes_read;
-    read=fread(buffer+mi->bytes_into_buffer, 1, tmp, mi->fFile);
-    if(read==tmp)
-	{
-	 mi->bytes_read+=read;
-     mi->bytes_into_buffer+=read;
+			result=faacDecDecode(mi->hDecoder, buffer, &(mi->bytes_consumed), (short*)bufout, &shorts_decoded);
+			mi->bytes_into_buffer-=mi->bytes_consumed;
+		}while(!shorts_decoded || result==FAAD_OK_CHUPDATE);
+
+		GlobalUnlock(hInput);
 	}
-   }
-   else
-    memset(buffer+mi->bytes_into_buffer, 0, mi->bytes_consumed);
-  }
 
-  if(!mi->bytes_into_buffer)
-  {
-//   MessageBox(0, "ReadFilterInput: buffer empty", "FAAD interface", MB_OK);
-   GlobalUnlock(hInput);
-   return 0;
-  }
-
-  result=faacDecDecode(mi->hDecoder, buffer, &(mi->bytes_consumed), (short*)bufout, &samples);
-  if(mi->bytes_into_buffer>mi->bytes_consumed)
-   mi->bytes_into_buffer-=mi->bytes_consumed;
-  else
-   mi->bytes_into_buffer=0;
-//  if(result>FAAD_OK_CHUPDATE)
-  if(result==FAAD_FATAL_ERROR)
-  {
-//   MessageBox(0, "ReadFilterInput: FAAD_FATAL_ERROR or FAAD_ERROR", "FAAD interface", MB_OK);
-//   MessageBox(0, "ReadFilterInput: FAAD_FATAL_ERROR", "FAAD interface", MB_OK);
-   GlobalUnlock(hInput);
-   return 0;
-  }
-
-  bytesDec=sizeof(short)*1024*mi->wChannels;
-
-  GlobalUnlock(hInput);
- }
-
- return bytesDec;
+	if(result==FAAD_FATAL_ERROR || result==FAAD_ERROR)
+	{
+		MessageBox(0, "ReadFilterInput: FAAD_FATAL_ERROR or FAAD_ERROR", "FAAD interface", MB_OK);
+		GlobalUnlock(hInput);
+		return 0;
+	}
+/*    if(shorts_decoded>1024*MAX_CHANNELS)
+		return 0;*/
+	return shorts_decoded*sizeof(short);
 }

@@ -12,7 +12,6 @@ EXPORTS
 				ReadFilterInput    @8
                 FilterUnderstandsFormat @9
 				FilterGetOptions		@14 
-				FilterOptions			@15
 				FilterGetFileSize		@16
 				FilterOptionsString		@17
 				DIALOGMsgProc 			@20
