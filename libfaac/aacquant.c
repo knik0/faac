@@ -17,7 +17,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: aacquant.c,v 1.14 2002/11/27 17:19:59 knik Exp $
+ * $Id: aacquant.c,v 1.15 2002/12/28 09:22:18 knik Exp $
  */
 
 #include <math.h>
@@ -484,6 +484,7 @@ static void CalcAllowedDist(PsyInfo *psyInfo, int *cb_offset, int num_cb,
 {
     int sfb, start, end;
     double xmin0;
+    static const double globalthr = 23e-3;
 
     for (sfb = 0; sfb < num_cb; sfb++)
     {
@@ -492,7 +493,7 @@ static void CalcAllowedDist(PsyInfo *psyInfo, int *cb_offset, int num_cb,
 
         xmin0 = psyInfo->maskEn[sfb];
         if (xmin0 > 0.0)
-	  xmin0 = psyInfo->maskThr[sfb] / xmin0;
+	  xmin0 = psyInfo->maskThr[sfb] * (double)end * globalthr / xmin0;
 
 	xmin[sfb] = xmin0;
     }
