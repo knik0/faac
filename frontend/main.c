@@ -16,7 +16,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: main.c,v 1.43 2003/08/17 19:38:15 menno Exp $
+ * $Id: main.c,v 1.44 2003/09/07 17:44:36 ca5e Exp $
  */
 
 #include <mp4.h>
@@ -64,52 +64,52 @@ char* progName;
 
 static int *mkChanMap(int channels, int center, int lf)
 {
-  int *map;
-  int inpos;
-  int outpos;
+    int *map;
+    int inpos;
+    int outpos;
 
-  if (!center && !lf)
-    return NULL;
+    if (!center && !lf)
+        return NULL;
 
-  if (channels < 3)
-    return NULL;
+    if (channels < 3)
+        return NULL;
 
-  if (lf > 0)
-    lf--;
-  else
-    lf = channels - 1; // default AAC position
-
-  if (center > 0)
-    center--;
-  else
-    center = 0; // default AAC position
-
-  map = malloc(channels * sizeof(map[0]));
-  memset(map, 0, channels * sizeof(map[0]));
-
-  outpos = 0;
-  if ((center >= 0) && (center < channels))
-    map[outpos++] = center;
-
-  inpos = 0;
-  for (; outpos < (channels - 1); inpos++)
-  {
-    if (inpos == center)
-      continue;
-    if (inpos == lf)
-      continue;
-
-    map[outpos++] = inpos;
-  }
-  if (outpos < channels)
-  {
-    if ((lf >= 0) && (lf < channels))
-      map[outpos] = lf;
+    if (lf > 0)
+        lf--;
     else
-      map[outpos] = inpos;
-  }
+        lf = channels - 1; // default AAC position
 
-  return map;
+    if (center > 0)
+        center--;
+    else
+        center = 0; // default AAC position
+
+    map = malloc(channels * sizeof(map[0]));
+    memset(map, 0, channels * sizeof(map[0]));
+
+    outpos = 0;
+    if ((center >= 0) && (center < channels))
+        map[outpos++] = center;
+
+    inpos = 0;
+    for (; outpos < (channels - 1); inpos++)
+    {
+        if (inpos == center)
+            continue;
+        if (inpos == lf)
+            continue;
+
+        map[outpos++] = inpos;
+    }
+    if (outpos < channels)
+    {
+        if ((lf >= 0) && (lf < channels))
+            map[outpos] = lf;
+        else
+            map[outpos] = inpos;
+    }
+
+    return map;
 }
 
 int main(int argc, char *argv[])
@@ -131,12 +131,10 @@ int main(int argc, char *argv[])
     unsigned long quantqual = 0;
     int chanC = 3;
     int chanLF = 4;
-    int addsilent = 1;
 
     char *audioFileName;
     char *aacFileName;
 
-    //int32_t *pcmbuf;
     float *floatbuf;
     int *chanmap = NULL;
 
@@ -163,16 +161,16 @@ int main(int argc, char *argv[])
     myFormat = faacEncGetCurrentConfiguration(hEncoder);
     if (myFormat->version == FAAC_CFG_VERSION)
     {
-      fprintf(stderr, "%s(see the faac.html file for more details)\n\n",
-	     myFormat->copyright);
-      fprintf(stderr, "libfaac version %s\n", myFormat->name);
-      faacEncClose(hEncoder);
+        fprintf(stderr, "%s(see the faac.html file for more details)\n\n",
+            myFormat->copyright);
+        fprintf(stderr, "libfaac version %s\n", myFormat->name);
+        faacEncClose(hEncoder);
     }
     else
     {
-      fprintf(stderr, __FILE__ "(%d): wrong libfaac version\n", __LINE__);
-      faacEncClose(hEncoder);
-      return 1;
+        fprintf(stderr, __FILE__ "(%d): wrong libfaac version\n", __LINE__);
+        faacEncClose(hEncoder);
+        return 1;
     }
 
     /* begin process command line */
@@ -191,52 +189,51 @@ int main(int argc, char *argv[])
             { "pcmsamplerate", 1, 0, 'R'},
             { "pcmsamplebits", 1, 0, 'B'},
             { "pcmchannels", 1, 0, 'C'},
-            { "addsilent", 1, 0, 300},
             { "createmp4", 0, 0, 'w'},
             { 0, 0, 0, 0}
         };
-      int c = -1;
-      int option_index = 0;
+        int c = -1;
+        int option_index = 0;
 
-      c = getopt_long(argc, argv, "a:m:o:rnwc:q:PR:B:C:I:",
+        c = getopt_long(argc, argv, "a:m:o:rnwc:q:PR:B:C:I:",
             long_options, &option_index);
 
         if (c == -1)
             break;
 
-	if (!c)
-	  continue;
+        if (!c)
+            continue;
 
         switch (c) {
-	case 'm':
-	  mpegVersion = atoi(optarg);
-	  switch(mpegVersion)
-	  {
-	  case 2:
-	    mpegVersion = MPEG2;
-	    break;
-	  case 4:
-	    mpegVersion = MPEG4;
-	    break;
-	  default:
-	    mpegVersion = MPEG4;
-	  }
-	  break;
+        case 'm':
+            mpegVersion = atoi(optarg);
+            switch(mpegVersion)
+            {
+            case 2:
+                mpegVersion = MPEG2;
+                break;
+            case 4:
+                mpegVersion = MPEG4;
+                break;
+            default:
+                mpegVersion = MPEG4;
+            }
+            break;
         case 'o':
-	  objectType = atoi(optarg);
-	  switch (objectType)
-	  {
-	  case 1:
-	    objectType = MAIN;
-	    break;
-	  case 2:
-	    objectType = LTP;
-	    break;
-	  default:
-	    objectType = LOW;
-	    break;
-	  }
-	  break;
+            objectType = atoi(optarg);
+            switch (objectType)
+            {
+            case 1:
+                objectType = MAIN;
+                break;
+            case 2:
+                objectType = LTP;
+                break;
+            default:
+                objectType = LOW;
+                break;
+            }
+            break;
         case 'r': {
             useAdts = 0;
             break;
@@ -247,72 +244,69 @@ int main(int argc, char *argv[])
         }
         case 'c': {
             unsigned int i;
-        if (sscanf(optarg, "%u", &i) > 0) {
+            if (sscanf(optarg, "%u", &i) > 0) {
                 cutOff = i;
             }
             break;
         }
         case 'a': {
-	  unsigned int i;
-	  if (sscanf(optarg, "%u", &i) > 0)
-	  {
-	    bitRate = 1000 * i;
-	  }
-	  break;
-        }
-    case 'q':
-      {
             unsigned int i;
-        if (sscanf(optarg, "%u", &i) > 0)
-        {
-          if (i > 0 && i < 1000)
-	    quantqual = i;
+            if (sscanf(optarg, "%u", &i) > 0)
+            {
+                bitRate = 1000 * i;
             }
             break;
         }
-    case 'I':
-      sscanf(optarg, "%d,%d", &chanC, &chanLF);
-      break;
-   case 'P':
-	  rawChans = 2; // enable raw input
-       break;
-   case 'R':
-     {
-       unsigned int i;
-       if (sscanf(optarg, "%u", &i) > 0)
-	    {
-	      rawRate = i;
-	      rawChans = (rawChans > 0) ? rawChans : 2;
-	    }
-       break;
-       }
-   case 'B':
-     {
-       unsigned int i;
-       if (sscanf(optarg, "%u", &i) > 0)
-	    {
-	      if (i > 32)
-                i = 32;
-	      if (i < 8)
-		i = 8;
-	      rawBits = i;
-	      rawChans = (rawChans > 0) ? rawChans : 2;
-	    }
-       break;
-       }
-   case 'C':
-     {
-       unsigned int i;
-       if (sscanf(optarg, "%u", &i) > 0)
-	      rawChans = i;
-       break;
-       }
-	case 300:
-	  sscanf(optarg, "%u", &addsilent);
-	  break;
-    case 'w':
-      mp4 = 1;
-      break;
+        case 'q':
+        {
+            unsigned int i;
+            if (sscanf(optarg, "%u", &i) > 0)
+            {
+                if (i > 0 && i < 1000)
+                    quantqual = i;
+            }
+            break;
+        }
+        case 'I':
+            sscanf(optarg, "%d,%d", &chanC, &chanLF);
+            break;
+        case 'P':
+            rawChans = 2; // enable raw input
+            break;
+        case 'R':
+        {
+            unsigned int i;
+            if (sscanf(optarg, "%u", &i) > 0)
+            {
+                rawRate = i;
+                rawChans = (rawChans > 0) ? rawChans : 2;
+            }
+            break;
+        }
+        case 'B':
+        {
+            unsigned int i;
+            if (sscanf(optarg, "%u", &i) > 0)
+            {
+                if (i > 32)
+                    i = 32;
+                if (i < 8)
+                    i = 8;
+                rawBits = i;
+                rawChans = (rawChans > 0) ? rawChans : 2;
+            }
+            break;
+        }
+        case 'C':
+        {
+            unsigned int i;
+            if (sscanf(optarg, "%u", &i) > 0)
+                rawChans = i;
+            break;
+        }
+        case 'w':
+            mp4 = 1;
+            break;
         case '?':
             break;
         default:
@@ -324,29 +318,28 @@ int main(int argc, char *argv[])
     /* check that we have at least two non-option arguments */
     if ((argc - optind) < 2 || dieUsage == 1)
     {
-	printf("\nUsage: %s -options infile outfile\n", progName);
-	printf("Options:\n");
-	printf("  -a <x>\tSet average bitrate to approximately x kbps/channel.\n");
-	printf("  -c <bandwidth>\tSet the bandwidth in Hz. (default=automatic)\n");
-	printf("  -q <quality>\tSet quantizer quality.\n");
+        printf("\nUsage: %s -options infile outfile\n", progName);
+        printf("Options:\n");
+        printf("  -a <x>\tSet average bitrate to approximately x kbps/channel.\n");
+        printf("  -c <bandwidth>\tSet the bandwidth in Hz. (default=automatic)\n");
+        printf("  -q <quality>\tSet quantizer quality.\n");
 #if !DEFAULT_TNS
-	printf("  --tns  \tEnable TNS coding.\n");
+        printf("  --tns  \tEnable TNS coding.\n");
 #else
-	printf("  --notns\tDisable TNS coding.\n");
+        printf("  --notns\tDisable TNS coding.\n");
 #endif
-	printf("  -n     Don\'t use mid/side coding.\n");
-	printf("  -m X   AAC MPEG version, X can be 2 or 4.\n");
-	printf("  -o X   AAC object type. (0=Low Complexity (default), 1=Main, 2=LTP)\n");
-	printf("  -r     RAW AAC output file.\n");
-	printf("  -P     Raw PCM input mode (default 44100Hz 16bit stereo).\n");
-	printf("  -R     Raw PCM input rate.\n");
-	printf("  -B     Raw PCM input sample size (8, 16 (default), 24 or 32bits).\n");
-	printf("  -C     Raw PCM input channels.\n");
-	printf("  -I <C,LF> Input channel config, default is 3,4 (Center third, LF fourth)\n");
-    printf("  -w     Wrap AAC data in MP4 container\n");
-	//printf("  --addsilent <n> Add n silent frames at the end of output (default=%d)\n", addsilent);
-	//printf("More details on FAAC usage can be found in the faac.html file.\n");
-	printf("More tips on FAAC usage can be found in Knowledge base at www.audiocoding.com\n");
+        printf("  -n     Don\'t use mid/side coding.\n");
+        printf("  -m X   AAC MPEG version, X can be 2 or 4.\n");
+        printf("  -o X   AAC object type. (0=Low Complexity (default), 1=Main, 2=LTP)\n");
+        printf("  -r     RAW AAC output file.\n");
+        printf("  -P     Raw PCM input mode (default 44100Hz 16bit stereo).\n");
+        printf("  -R     Raw PCM input rate.\n");
+        printf("  -B     Raw PCM input sample size (8, 16 (default), 24 or 32bits).\n");
+        printf("  -C     Raw PCM input channels.\n");
+        printf("  -I <C,LF> Input channel config, default is 3,4 (Center third, LF fourth)\n");
+        printf("  -w     Wrap AAC data in MP4 container\n");
+        //printf("More details on FAAC usage can be found in the faac.html file.\n");
+        printf("More tips on FAAC usage can be found in Knowledge base at www.audiocoding.com\n");
 
         return 1;
     }
@@ -358,16 +351,16 @@ int main(int argc, char *argv[])
     /* open the audio input file */
     if (rawChans > 0) // use raw input
     {
-      infile = wav_open_read(audioFileName, 1);
-      if (infile)
-      {
-	infile->channels = rawChans;
-	infile->samplebytes = rawBits / 8;
-	infile->samplerate = rawRate;
-      }
+        infile = wav_open_read(audioFileName, 1);
+        if (infile)
+        {
+            infile->channels = rawChans;
+            infile->samplebytes = rawBits / 8;
+            infile->samplerate = rawRate;
+        }
     }
     else // header input
-      infile = wav_open_read(audioFileName, 0);
+        infile = wav_open_read(audioFileName, 0);
 
     if (infile == NULL)
     {
@@ -383,42 +376,42 @@ int main(int argc, char *argv[])
 
     /* open the encoder library */
     hEncoder = faacEncOpen(infile->samplerate, infile->channels,
-			   &samplesInput, &maxBytesOutput);
+        &samplesInput, &maxBytesOutput);
 
     frameSize = samplesInput/infile->channels;
     delay_samples = frameSize; // encoder delay 1024 samples
-    //pcmbuf = (int32_t *)malloc(samplesInput*sizeof(int32_t));
     floatbuf = (float *)malloc(samplesInput*sizeof(float));
     bitbuf = (unsigned char*)malloc(maxBytesOutput*sizeof(unsigned char));
     chanmap = mkChanMap(infile->channels, chanC, chanLF);
     if (chanmap)
     {
-      fprintf(stderr, "Remapping input channels: Center=%d, LFE=%d\n",
-	      chanC, chanLF);
+        fprintf(stderr, "Remapping input channels: Center=%d, LFE=%d\n",
+            chanC, chanLF);
     }
 
     if (cutOff <= 0)
     {
-      if (cutOff < 0) // default
-	cutOff = 0;
-      else // disabled
-    cutOff = infile->samplerate / 2;
+        if (cutOff < 0) // default
+            cutOff = 0;
+        else // disabled
+            cutOff = infile->samplerate / 2;
     }
     if (cutOff > (infile->samplerate / 2))
-      cutOff = infile->samplerate / 2;
+        cutOff = infile->samplerate / 2;
 
     /* put the options in the configuration struct */
     myFormat = faacEncGetCurrentConfiguration(hEncoder);
     myFormat->aacObjectType = objectType;
     myFormat->mpegVersion = mpegVersion;
     myFormat->useTns = useTns;
-    if (infile->channels >= 6) myFormat->useLfe = 1;
+    if (infile->channels >= 6)
+        myFormat->useLfe = 1;
     myFormat->allowMidside = useMidSide;
     if (bitRate)
-      myFormat->bitRate = bitRate;
+        myFormat->bitRate = bitRate;
     myFormat->bandWidth = cutOff;
     if (quantqual > 0)
-      myFormat->quantqual = quantqual;
+        myFormat->quantqual = quantqual;
     myFormat->outputFormat = useAdts;
     myFormat->inputFormat = FAAC_INPUT_FLOAT;
     if (!faacEncSetConfiguration(hEncoder, myFormat)) {
@@ -441,7 +434,6 @@ int main(int argc, char *argv[])
         MP4SetTimeScale(MP4hFile, 90000);
         MP4track = MP4AddAudioTrack(MP4hFile, infile->samplerate, MP4_INVALID_DURATION, MP4_MPEG4_AUDIO_TYPE);
         MP4SetAudioProfileLevel(MP4hFile, 0x0F);
-        //MP4AV_AacGetConfiguration(&ASC, &ASCLength, (u_int8_t)objectType, (u_int32_t)infile->samplerate, (u_int8_t)infile->channels);
         faacEncGetDecoderSpecificInfo(hEncoder, &ASC, &ASCLength);
         MP4SetTrackESConfiguration(MP4hFile, MP4track, ASC, ASCLength);
     }
@@ -460,134 +452,120 @@ int main(int argc, char *argv[])
     quantqual = myFormat->quantqual;
     bitRate = myFormat->bitRate;
     if (bitRate)
-      fprintf(stderr, "Approximate ABR: %d kbps/channel\n", bitRate/1000);
+        fprintf(stderr, "Approximate ABR: %d kbps/channel\n", bitRate/1000);
     fprintf(stderr, "Quantization quality: %ld\n", quantqual);
     fprintf(stderr, "Bandwidth: %d Hz\n", cutOff);
     fprintf(stderr, "Object type: ");
     switch(objectType)
     {
     case LOW:
-      fprintf(stderr, "Low Complexity");
-      break;
+        fprintf(stderr, "Low Complexity");
+        break;
     case MAIN:
-      fprintf(stderr, "Main");
-      break;
+        fprintf(stderr, "Main");
+        break;
     case LTP:
-      fprintf(stderr, "LTP");
-      break;
+        fprintf(stderr, "LTP");
+        break;
     }
     fprintf(stderr, "(MPEG-%d)", (mpegVersion == MPEG4) ? 4 : 2);
     if (myFormat->useTns)
-      fprintf(stderr, " + TNS");
+        fprintf(stderr, " + TNS");
     if (myFormat->allowMidside)
-      fprintf(stderr, " + M/S");
+        fprintf(stderr, " + M/S");
     fprintf(stderr, "\n");
 
     if (outfile || MP4hFile != MP4_INVALID_FILE_HANDLE)
     {
-    int showcnt = 0;
+        int showcnt = 0;
 #ifdef _WIN32
-    long begin = GetTickCount();
+        long begin = GetTickCount();
 #endif
-   if (infile->samples)
-     frames = (int)infile->samples / 1024 + 1 + addsilent;
-   else
-     frames = 0;
+        if (infile->samples)
+            frames = ((infile->samples + 1023) / 1024) + 1;
+        else
+            frames = 0;
         currentFrame = 0;
 
-    fprintf(stderr, "Encoding %s to %s\n", audioFileName, aacFileName);
-   if (frames != 0)
-     fprintf(stderr,
-        "   frame          | elapsed/estim | play/CPU | ETA\n");
-   else
-     fprintf(stderr,
-           " frame | elapsed | play/CPU\n");
+        fprintf(stderr, "Encoding %s to %s\n", audioFileName, aacFileName);
+        if (frames != 0)
+            fprintf(stderr, "   frame          | elapsed/estim | play/CPU | ETA\n");
+        else
+            fprintf(stderr, " frame | elapsed | play/CPU\n");
+
         /* encoding loop */
         for ( ;; )
         {
             int bytesWritten;
 
-	    //samplesRead = wav_read_int24(infile, pcmbuf, samplesInput, chanmap);
-	    samplesRead = wav_read_float32(infile, floatbuf, samplesInput, chanmap);
+            samplesRead = wav_read_float32(infile, floatbuf, samplesInput, chanmap);
 
-        total_samples += samplesRead / infile->channels;
-
-	    if (!samplesRead)
-	    {
-	      if (encoded_samples < total_samples/*addsilent*/) // make sure we output as many samples as we read from input
-	      {
-		//addsilent--;
-		//memset(pcmbuf, 0, samplesInput * sizeof(*pcmbuf));
-		memset(floatbuf, 0, samplesInput * sizeof(*floatbuf));
-		samplesRead = samplesInput;
-	      }
-	    }
+            total_samples += samplesRead / infile->channels;
 
             /* call the actual encoding routine */
             bytesWritten = faacEncEncode(hEncoder,
-                //pcmbuf,
                 (int32_t *)floatbuf,
                 samplesRead,
                 bitbuf,
                 maxBytesOutput);
 
-        if (bytesWritten)
-      {
-          currentFrame++;
-          showcnt--;
-        }
+            if (bytesWritten)
+            {
+                currentFrame++;
+                showcnt--;
+            }
 
-        if ((showcnt <= 0) || !bytesWritten)
-        {
-          double timeused;
+            if ((showcnt <= 0) || !bytesWritten)
+            {
+                double timeused;
 #ifdef __unix__
-          struct rusage usage;
+                struct rusage usage;
 #endif
 #ifdef _WIN32
-          char percent[MAX_PATH + 20];
-          timeused = (GetTickCount() - begin) * 1e-3;
+                char percent[MAX_PATH + 20];
+                timeused = (GetTickCount() - begin) * 1e-3;
 #else
 #ifdef __unix__
-          if (getrusage(RUSAGE_SELF, &usage) == 0) {
-        timeused = (double)usage.ru_utime.tv_sec +
-          (double)usage.ru_utime.tv_usec * 1e-6;
-          }
-          else
-                timeused = 0;
+                if (getrusage(RUSAGE_SELF, &usage) == 0) {
+                    timeused = (double)usage.ru_utime.tv_sec +
+                        (double)usage.ru_utime.tv_usec * 1e-6;
+                }
+                else
+                    timeused = 0;
 #else
-          timeused = (double)clock() * (1.0 / CLOCKS_PER_SEC);
+                timeused = (double)clock() * (1.0 / CLOCKS_PER_SEC);
 #endif
 #endif
-          if (currentFrame && (timeused > 0.1))
-          {
+                if (currentFrame && (timeused > 0.1))
+                {
+                    showcnt += 50;
 
-        showcnt += 50;
+                    if (frames != 0)
+                        fprintf(stderr,
+                            "\r%5d/%-5d (%3d%%)| %6.1f/%-6.1f | %8.3f | %.1f ",
+                            currentFrame, frames, currentFrame*100/frames,
+                            timeused,
+                            timeused * frames / currentFrame,
+                            (1024.0 * currentFrame / infile->samplerate) / timeused,
+                            timeused  * (frames - currentFrame) / currentFrame);
+                    else
+                        fprintf(stderr,
+                            "\r %5d |  %6.1f | %8.3f ",
+                            currentFrame,
+                            timeused,
+                            (1024.0 * currentFrame / infile->samplerate) / timeused);
 
-       if (frames != 0)
-         fprintf(stderr,
-            "\r%5d/%-5d (%3d%%)| %6.1f/%-6.1f | %8.3f | %.1f ",
-            currentFrame, frames, currentFrame*100/frames,
-            timeused,
-            timeused * frames / currentFrame,
-            (1024.0 * currentFrame / infile->samplerate) / timeused,
-            timeused  * (frames - currentFrame) / currentFrame);
-       else
-         fprintf(stderr,
-           "\r %5d |  %6.1f | %8.3f ",
-           currentFrame,
-           timeused,
-           (1024.0 * currentFrame / infile->samplerate) / timeused);
-        fflush(stderr);
+                    fflush(stderr);
 #ifdef _WIN32
-       if (frames != 0)
-       {
-         sprintf(percent, "%.2f%% encoding %s",
-            100.0 * currentFrame / frames, audioFileName);
-            SetConsoleTitle(percent);
-       }
+                    if (frames != 0)
+                    {
+                        sprintf(percent, "%.2f%% encoding %s",
+                            100.0 * currentFrame / frames, audioFileName);
+                        SetConsoleTitle(percent);
+                    }
 #endif
-          }
-      }
+                }
+            }
 
             /* all done, bail out */
             if (!samplesRead && !bytesWritten)
@@ -624,7 +602,7 @@ int main(int argc, char *argv[])
                 encoded_samples += samples;
             }
         }
-    fprintf(stderr, "\n\n");
+        fprintf(stderr, "\n\n");
 
         /* clean up */
         if (mp4)
@@ -637,7 +615,6 @@ int main(int argc, char *argv[])
 
     wav_close(infile);
 
-    //if (pcmbuf) free(pcmbuf);
     if (floatbuf) free(floatbuf);
     if (bitbuf) free(bitbuf);
 
@@ -646,6 +623,14 @@ int main(int argc, char *argv[])
 
 /*
 $Log: main.c,v $
+Revision 1.44  2003/09/07 17:44:36  ca5e
+length calculations/silence padding changed to match current libfaac behavior
+changed tabs to spaces, fixes to indentation
+
+Revision 1.44  2003/09/07 19:38:15  ca5e
+length calculations/silence padding changed to match current libfaac behavior
+changed tabs to spaces, fixes to indentation
+
 Revision 1.43  2003/08/17 19:38:15  menno
 fixes to MP4 files by Case
 
