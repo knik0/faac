@@ -23,6 +23,7 @@ BsBitStream *BsOpenWrite(int size)
 	bs->numBit = 0;
 	bs->currentBit = 0;
 	bs->data = malloc(bit2byte(size));
+	memset(bs->data, 0, bit2byte(size));
 
 	return bs;
 }

@@ -52,9 +52,9 @@ Copyright (c) 1997.
 
 Source file:
 
-$Id: psych.c,v 1.27 2000/01/31 18:59:30 menno Exp $
-$Id: psych.c,v 1.27 2000/01/31 18:59:30 menno Exp $
-$Id: psych.c,v 1.27 2000/01/31 18:59:30 menno Exp $
+$Id: psych.c,v 1.28 2000/02/02 20:20:19 menno Exp $
+$Id: psych.c,v 1.28 2000/02/02 20:20:19 menno Exp $
+$Id: psych.c,v 1.28 2000/02/02 20:20:19 menno Exp $
 
 **********************************************************************/
 
@@ -289,6 +289,7 @@ void psy_part_table_init(double sampling_rate,
 	part_tbl_long->len = crit_bands+1;
 //	printf("%d %d\t",part_tbl_long->len, part_tbl_long->w_high[crit_bands]);
 
+	cbound /= 3;
 	part_tbl_short->sampling_rate = (int)sampling_rate;
 	part_tbl_short->w_low[0] = 0;
 	part_tbl_short->w_high[0] = 0;
@@ -297,7 +298,7 @@ void psy_part_table_init(double sampling_rate,
 	crit_bands = 0;
 	for(j = 1; j <= cbands; j++)
 	{
-		cbound = (int)(bark2hz((double)j/3) * (double)BLOCK_LEN_SHORT * 2.0 / sampling_rate +0.5);
+		cbound = (int)(bark2hz((double)j/*/3*/) * (double)BLOCK_LEN_SHORT * 2.0 / sampling_rate +0.5);
 		if(cbound > prev_cbound) {
 			crit_bands++;
 			part_tbl_short->w_low[crit_bands] = min(prev_cbound,BLOCK_LEN_SHORT-1);
@@ -523,7 +524,7 @@ void EncTf_psycho_acoustic(
 				psy_stvar_long[3].fft_r[w+psy_stvar_long->p_fft] = (psy_stvar_long[0].fft_r[w+psy_stvar_long->p_fft]-psy_stvar_long[1].fft_r[w+psy_stvar_long->p_fft])*0.5;
 			}
 			for (l = 0; l < MAX_SHORT_WINDOWS; l++) {
-				for (w = 0; w < BLOCK_LEN_LONG; w++) {
+				for (w = 0; w < BLOCK_LEN_SHORT; w++) {
 					psy_stvar_short[2].fft_r[l][w] = (psy_stvar_short[0].fft_r[l][w]+psy_stvar_short[1].fft_r[l][w])*0.5;
 					psy_stvar_short[3].fft_r[l][w] = (psy_stvar_short[0].fft_r[l][w]-psy_stvar_short[1].fft_r[l][w])*0.5;
 				}
