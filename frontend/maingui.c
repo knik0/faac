@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: maingui.c,v 1.2 2001/01/24 12:56:46 menno Exp $
+ * $Id: maingui.c,v 1.3 2001/01/25 12:37:45 menno Exp $
  */
 
 #include <windows.h>
@@ -36,7 +36,9 @@ static HINSTANCE hInstance;
 
 static char inputFilename[_MAX_PATH], outputFilename [_MAX_PATH];
 
-static BOOL SelectFileName(HWND hParent, char *filename, BOOL forReading)
+static BOOL Encoding = FALSE;
+
+static BOOL SelectFileName (HWND hParent, char *filename, BOOL forReading)
 {
 	OPENFILENAME ofn;
 
@@ -61,8 +63,6 @@ static BOOL SelectFileName(HWND hParent, char *filename, BOOL forReading)
 	if (forReading)
 	{
 		char filters[] = { "Wave Files (*.wav)\0*.wav\0" \
-			"AIFF Files (*.aif;*.aiff;*.aifc)\0*.aif;*.aiff;*.aifc\0" \
-			"AU Files (*.au)\0*.au\0" \
 			"All Files (*.*)\0*.*\0\0" };
 
 		ofn.lpstrFilter = filters;
@@ -120,7 +120,7 @@ static void AwakeDialogControls(HWND hWnd)
 
 	SetDlgItemText(hWnd, IDC_OUTPUTFILENAME, outputFilename);
 
-	wsprintf(szTemp, "%iHz %ich", sampleRate, numChannels);
+	wsprintf(szTemp, "%iHz %s", sampleRate, (numChannels > 1) ? "Stereo" : "Mono");
 	SetDlgItemText(hWnd, IDC_INPUTPARAMS, szTemp);
 
 	// // //
@@ -151,8 +151,9 @@ static void AwakeDialogControls(HWND hWnd)
 	}
 }
 
-static void EncodeFile(HWND hWnd)
+static DWORD WINAPI EncodeFile(LPVOID pParam)
 {
+	HWND hWnd = (HWND) pParam;
 	SNDFILE *infile;
 	SF_INFO sfinfo;
 
@@ -177,7 +178,6 @@ static void EncodeFile(HWND hWnd)
 			faacEncConfigurationPtr config = faacEncGetCurrentConfiguration(hEncoder);
 
 			config->allowMidside = IsDlgButtonChecked(hWnd, IDC_ALLOWMIDSIDE) == BST_CHECKED ? 1 : 0;
-			config->useLfe = IsDlgButtonChecked(hWnd, IDC_USELFE) == BST_CHECKED ? 1 : 0;
 			GetDlgItemText(hWnd, IDC_BITRATE, szTemp, sizeof(szTemp));
 			config->bitRate = atoi(szTemp);
 			GetDlgItemText(hWnd, IDC_BANDWIDTH, szTemp, sizeof(szTemp));
@@ -189,7 +189,7 @@ static void EncodeFile(HWND hWnd)
 				sf_close(infile);
 
 				MessageBox (hWnd, "faacEncSetConfiguration failed!", "Error", MB_OK | MB_ICONSTOP);
-				return;
+				return 0;
 			}
 
 			/* open the output file */
@@ -205,26 +205,31 @@ static void EncodeFile(HWND hWnd)
 
 				unsigned int bytesInput = 0, bytesConsumed = 0;
 				DWORD numberOfBytesWritten = 0;
-				short *pcmbuf;
-				unsigned char *bitbuf;
-
-				pcmbuf = (short*)malloc(PCMBUFSIZE*numChannels*sizeof(short));
-				bitbuf = (unsigned char*)malloc(BITBUFSIZE*sizeof(unsigned char));
+				unsigned char bitbuf[BITBUFSIZE];
+				short pcmbuf[PCMBUFSIZE];
+				char HeaderText[50];
+				char Percentage[5];
 
 				SendDlgItemMessage(hWnd, IDC_PROGRESS, PBM_SETRANGE, 0, MAKELPARAM(0, 1024));
 				SendDlgItemMessage(hWnd, IDC_PROGRESS, PBM_SETPOS, 0, 0);
 
 				for ( ;; )
 				{
-					MSG msg;
 					int bytesWritten;
 					int samplesToRead = PCMBUFSIZE;
 					UINT timeElapsed, timeEncoded;
 
 					bytesInput = sf_read_short(infile, pcmbuf, numChannels*PCMBUFSIZE) * sizeof(short);
-
+					
 					SendDlgItemMessage (hWnd, IDC_PROGRESS, PBM_SETPOS, (unsigned long)((float)totalBytesRead * 1024.0f / (sfinfo.samples*2*numChannels)), 0);
-
+					
+					/* Percentage for Dialog Output */
+					_itoa((int)((float)totalBytesRead * 100.0f / (sfinfo.samples*2*numChannels)),Percentage,10);
+					strcpy(HeaderText,"FAAC GUI: ");
+					strcat(HeaderText,Percentage);
+					strcat(HeaderText,"%");
+					SendMessage(hWnd,WM_SETTEXT,0,(long)HeaderText);
+					
 					totalBytesRead += bytesInput;
 
 					timeElapsed = (GetTickCount () - startTime) / 1000;
@@ -253,6 +258,10 @@ static void EncodeFile(HWND hWnd)
 						bitbuf,
 						BITBUFSIZE);
 
+					/* Stop Pressed */
+					if ( !Encoding ) 
+						break;
+
 					/* all done, bail out */
 					if (!bytesInput && !bytesWritten)
 						break;
@@ -264,19 +273,10 @@ static void EncodeFile(HWND hWnd)
 					}
 
 					WriteFile(hOutfile, bitbuf, bytesWritten, &numberOfBytesWritten, NULL);
-
-					/* for the sake of structural simplicity, we're a modal dialog
-					   and we do not run the encoder in a separate worker thread */
-					if (PeekMessage(&msg, hWnd, 0, 0, PM_REMOVE))
-					{
-						if (msg.message == WM_PAINT) IsDialogMessage(hWnd, &msg);
-						else if (msg.message == WM_LBUTTONDOWN) break;
+				
 					}
-				}
 
 				CloseHandle(hOutfile);
-				if (pcmbuf) free(pcmbuf);
-				if (bitbuf) free(bitbuf);
 			}
 
 			faacEncClose(hEncoder);
@@ -289,6 +289,11 @@ static void EncodeFile(HWND hWnd)
 	} else {
 		MessageBox(hWnd, "Couldn't open input file!", "Error", MB_OK | MB_ICONSTOP);
 	}
+
+	SendMessage(hWnd,WM_SETTEXT,0,(long)"FAAC GUI");
+	Encoding = FALSE;
+	SetDlgItemText(hWnd, IDOK, "Encode");
+	return 0;
 }
 
 static BOOL WINAPI DialogProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
@@ -300,7 +305,6 @@ static BOOL WINAPI DialogProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 		inputFilename [0] = 0x00;
 
 		CheckDlgButton(hWnd, IDC_ALLOWMIDSIDE, TRUE);
-		CheckDlgButton(hWnd, IDC_USELFE, FALSE);
 		SetDlgItemText(hWnd, IDC_BITRATE, "64000");
 		SetDlgItemText(hWnd, IDC_BANDWIDTH, "18000");
 
@@ -320,8 +324,19 @@ static BOOL WINAPI DialogProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 		switch (wParam)
 		{
         case IDOK:
-
-			EncodeFile(hWnd);
+			
+			if ( !Encoding ) 
+			{
+				int retval;
+				CreateThread(NULL,0,EncodeFile,hWnd,0,&retval);
+				Encoding = TRUE;
+				SetDlgItemText(hWnd, IDOK, "Stop");
+			}
+			else
+			{
+				Encoding = FALSE;
+				SetDlgItemText(hWnd, IDOK, "Encode");
+			}
 			return TRUE;
 
         case IDCANCEL:
