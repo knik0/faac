@@ -1,0 +1,123 @@
+//Microsoft Developer Studio generated resource script.
+//
+#include "resource.h"
+
+#define APSTUDIO_READONLY_SYMBOLS
+/////////////////////////////////////////////////////////////////////////////
+//
+// Generated from the TEXTINCLUDE 2 resource.
+//
+#include "afxres.h"
+
+/////////////////////////////////////////////////////////////////////////////
+#undef APSTUDIO_READONLY_SYMBOLS
+
+/////////////////////////////////////////////////////////////////////////////
+// English (U.S.) resources
+
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_ENU)
+#ifdef _WIN32
+LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
+#pragma code_page(1252)
+#endif //_WIN32
+
+#ifdef APSTUDIO_INVOKED
+/////////////////////////////////////////////////////////////////////////////
+//
+// TEXTINCLUDE
+//
+
+1 TEXTINCLUDE DISCARDABLE 
+BEGIN
+    "resource.h\0"
+END
+
+2 TEXTINCLUDE DISCARDABLE 
+BEGIN
+    "#include ""afxres.h""\r\n"
+    "\0"
+END
+
+3 TEXTINCLUDE DISCARDABLE 
+BEGIN
+    "\r\n"
+    "\0"
+END
+
+#endif    // APSTUDIO_INVOKED
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Dialog
+//
+
+IDD_MAINDIALOG DIALOGEX 0, 0, 266, 170
+STYLE DS_MODALFRAME | DS_CENTER | WS_MINIMIZEBOX | WS_POPUP | WS_CAPTION | 
+    WS_SYSMENU
+CAPTION "FAAC GUI"
+FONT 8, "MS Sans Serif"
+BEGIN
+    PUSHBUTTON      "...",IDC_SELECT_INPUTFILE,228,12,19,14,0,
+                    WS_EX_STATICEDGE
+    PUSHBUTTON      "...",IDC_SELECT_OUTPUTFILE,228,32,19,14,WS_DISABLED,
+                    WS_EX_STATICEDGE
+    CONTROL         "Allow Mid/Side",IDC_ALLOWMIDSIDE,"Button",
+                    BS_AUTOCHECKBOX | BS_LEFTTEXT | WS_TABSTOP,17,78,63,10
+    EDITTEXT        IDC_BITRATE,142,73,69,14,ES_AUTOHSCROLL
+    EDITTEXT        IDC_BANDWIDTH,142,93,69,14,ES_AUTOHSCROLL
+    DEFPUSHBUTTON   "Encode",IDOK,75,149,50,14,WS_DISABLED
+    PUSHBUTTON      "Quit",IDCANCEL,141,149,50,14
+    EDITTEXT        IDC_INPUTFILENAME,61,12,161,14,ES_AUTOHSCROLL
+    EDITTEXT        IDC_OUTPUTFILENAME,61,32,161,14,ES_AUTOHSCROLL | 
+                    WS_DISABLED
+    LTEXT           "Input File:",IDC_STATIC,18,13,38,8
+    LTEXT           "Output File:",IDC_STATIC,18,34,37,8
+    CONTROL         "",IDC_STATIC,"Static",SS_BLACKFRAME | SS_SUNKEN,7,54,
+                    252,1
+    LTEXT           "-",IDC_INPUTPARAMS,32,66,55,8
+    LTEXT           "In:",IDC_STATIC,18,66,12,8
+    CONTROL         "Progress1",IDC_PROGRESS,"msctls_progress32",WS_BORDER,7,
+                    120,252,10
+    GROUPBOX        "Output Format",IDC_STATIC,94,62,153,51
+    CTEXT           "- - -",IDC_TIME,7,136,252,8
+    LTEXT           "Bandwidth:",IDC_STATIC,101,96,37,8
+    LTEXT           "Bitrate:",IDC_STATIC,101,76,37,8
+    LTEXT           "bps/ch",IDC_STATIC,218,76,24,8
+    LTEXT           "Hz",IDC_STATIC,218,96,10,8
+END
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// DESIGNINFO
+//
+
+#ifdef APSTUDIO_INVOKED
+GUIDELINES DESIGNINFO DISCARDABLE 
+BEGIN
+    IDD_MAINDIALOG, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 259
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 163
+    END
+END
+#endif    // APSTUDIO_INVOKED
+
+#endif    // English (U.S.) resources
+/////////////////////////////////////////////////////////////////////////////
+
+
+
+#ifndef APSTUDIO_INVOKED
+/////////////////////////////////////////////////////////////////////////////
+//
+// Generated from the TEXTINCLUDE 3 resource.
+//
+
+
+/////////////////////////////////////////////////////////////////////////////
+#endif    // not APSTUDIO_INVOKED
+

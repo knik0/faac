@@ -4,6 +4,7 @@ Big list, but a lot of it can be done fairly easily with some old code
 
 - DONE: Add frequency cutoff filter
 - DONE: Add ADTS headers
+- DONE: Write GUI
 - Add TNS
 - Add PNS
 - Add LTP
@@ -19,7 +20,6 @@ Big list, but a lot of it can be done fairly easily with some old code
 - Add Window shape switching
 - Test (and maybe fix) sample rates other than 44100 Hz
 - Test (and maybe fix) multichannel and mono support
-- Write GUI
 - Improve command line tool (wildcards)
 - Write documentation for library interface
 - Speedup?? (no priority)
