@@ -16,7 +16,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: frame.c,v 1.47 2003/09/24 16:26:54 knik Exp $
+ * $Id: frame.c,v 1.48 2003/10/12 14:29:53 knik Exp $
  */
 
 /*
@@ -229,6 +229,8 @@ int FAACAPI faacEncSetConfiguration(faacEncHandle hEncoder,
     if (config->quantqual < 10)
       config->quantqual = 10;
     hEncoder->config.quantqual = config->quantqual;
+    /* set quantization quality */
+    hEncoder->aacquantCfg.quality = config->quantqual;
 
     // reset psymodel
     hEncoder->psymodel->PsyEnd(&hEncoder->gpsyInfo, hEncoder->psyInfo, hEncoder->numChannels);
@@ -661,7 +663,6 @@ int FAACAPI faacEncEncode(faacEncHandle hEncoder,
     MSEncode(coderInfo, channelInfo, hEncoder->freqBuff, numChannels, allowMidside);
 
     /* Quantize and code the signal */
-    hEncoder->aacquantCfg.quality = hEncoder->config.quantqual;
     for (channel = 0; channel < numChannels; channel++) {
         if (coderInfo[channel].block_type == ONLY_SHORT_WINDOW) {
             AACQuantize(&coderInfo[channel], &hEncoder->psyInfo[channel],
@@ -742,9 +743,27 @@ int FAACAPI faacEncEncode(faacEncHandle hEncoder,
     /* Close the bitstream and return the number of bytes written */
     frameBytes = CloseBitStream(bitStream);
 
-#ifdef _DEBUG
-    printf("%4d %4d\n", hEncoder->frameNum-3, frameBytes);
-#endif
+    /* Adjust quality to get correct average bitrate */
+    if (hEncoder->config.bitRate)
+    {
+      double fix;
+      int desbits = numChannels * ((hEncoder->config.bitRate * 1024)
+				   / hEncoder->sampleRate);
+
+      hEncoder->bitDiff += frameBytes * 8;
+      hEncoder->bitDiff -= desbits;
+
+      fix = (double)hEncoder->bitDiff / desbits;
+      fix *= 0.01;
+      fix = max(fix, -0.2);
+      fix = min(fix, 0.2);
+
+      hEncoder->aacquantCfg.quality *= (1.0 - fix);
+      if (hEncoder->aacquantCfg.quality > 200)
+        hEncoder->aacquantCfg.quality = 200;
+      if (hEncoder->aacquantCfg.quality < 70)
+        hEncoder->aacquantCfg.quality = 70;
+    }
 
     return frameBytes;
 }
@@ -857,6 +876,9 @@ static SR_INFO srInfo[12+1] =
 
 /*
 $Log: frame.c,v $
+Revision 1.48  2003/10/12 14:29:53  knik
+more accurate average bitrate control
+
 Revision 1.47  2003/09/24 16:26:54  knik
 faacEncStruct: quantizer specific data enclosed in AACQuantCfg structure.
 Added config option to enforce block type.

@@ -16,7 +16,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: main.c,v 1.46 2003/09/24 16:30:34 knik Exp $
+ * $Id: main.c,v 1.47 2003/10/12 14:30:29 knik Exp $
  */
 
 #ifdef _MSC_VER
@@ -341,7 +341,7 @@ int main(int argc, char *argv[])
     {
         printf("\nUsage: %s -options infile outfile\n", progName);
         printf("Options:\n");
-        printf("  -a <x>\tSet average bitrate to approximately x kbps/channel.\n");
+        printf("  -a <x>\tSet average bitrate to x kbps/channel.\n");
         printf("  -c <bandwidth>\tSet the bandwidth in Hz. (default=automatic)\n");
         printf("  -q <quality>\tSet quantizer quality.\n");
 #if !DEFAULT_TNS
@@ -495,7 +495,8 @@ int main(int argc, char *argv[])
     quantqual = myFormat->quantqual;
     bitRate = myFormat->bitRate;
     if (bitRate)
-        fprintf(stderr, "Approximate ABR: %d kbps/channel\n", bitRate/1000);
+      fprintf(stderr, "Average bitrate: %d kbps/channel\n",
+	      (bitRate + 500)/1000);
     fprintf(stderr, "Quantization quality: %ld\n", quantqual);
     fprintf(stderr, "Bandwidth: %d Hz\n", cutOff);
     fprintf(stderr, "Object type: ");
@@ -678,6 +679,9 @@ int main(int argc, char *argv[])
 
 /*
 $Log: main.c,v $
+Revision 1.47  2003/10/12 14:30:29  knik
+more accurate average bitrate control
+
 Revision 1.46  2003/09/24 16:30:34  knik
 Added option to enforce block type.
 

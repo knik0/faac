@@ -16,7 +16,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: frame.h,v 1.23 2003/09/24 16:27:48 knik Exp $
+ * $Id: frame.h,v 1.24 2003/10/12 14:29:54 knik Exp $
  */
 
 #ifndef FRAME_H
@@ -117,6 +117,9 @@ typedef struct {
 
     /* quantizer specific config */
     AACQuantCfg aacquantCfg;
+
+    /* output bits difference in average bitrate mode */
+    int bitDiff;
 } faacEncStruct, *faacEncHandle;
 
 int FAACAPI faacEncGetDecoderSpecificInfo(faacEncHandle hEncoder,
