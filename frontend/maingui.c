@@ -16,7 +16,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: maingui.c,v 1.18 2001/10/26 11:21:23 menno Exp $
+ * $Id: maingui.c,v 1.19 2003/02/25 10:51:59 menno Exp $
  */
 
 #include <windows.h>
@@ -24,7 +24,7 @@
 #include <commctrl.h>
 #include <stdlib.h>
 
-#include <sndfile.h>  /* http://www.zip.com.au/~erikd/libsndfile/ */
+#include "input.h"
 
 #include <faac.h>
 #include "resource.h"
@@ -89,19 +89,18 @@ static BOOL SelectFileName(HWND hParent, char *filename, BOOL forReading)
 static void AwakeDialogControls(HWND hWnd)
 {
     char szTemp[64];
-    SNDFILE *infile;
-    SF_INFO sfinfo;
+    pcmfile_t *infile = NULL;
     unsigned int sampleRate, numChannels;
     char *pExt;
 
-    if ((infile = sf_open_read(inputFilename, &sfinfo)) == NULL)
+    if ((infile = wav_open_read(inputFilename)) == NULL)
         return;
 
     /* determine input file parameters */
-    sampleRate = sfinfo.samplerate;
-    numChannels = sfinfo.channels;
+    sampleRate = infile->samplerate;
+    numChannels = infile->channels;
 
-    sf_close(infile);
+    wav_close(infile);
 
     SetDlgItemText (hWnd, IDC_INPUTFILENAME, inputFilename);
 
@@ -126,18 +125,17 @@ static void AwakeDialogControls(HWND hWnd)
 static DWORD WINAPI EncodeFile(LPVOID pParam)
 {
     HWND hWnd = (HWND) pParam;
-    SNDFILE *infile;
-    SF_INFO sfinfo;
+    pcmfile_t *infile = NULL;
 
     GetDlgItemText(hWnd, IDC_INPUTFILENAME, inputFilename, sizeof(inputFilename));
     GetDlgItemText(hWnd, IDC_OUTPUTFILENAME, outputFilename, sizeof(outputFilename));
 
     /* open the input file */
-    if ((infile = sf_open_read(inputFilename, &sfinfo)) != NULL)
+    if ((infile = wav_open_read(inputFilename)) != NULL)
     {
         /* determine input file parameters */
-        unsigned int sampleRate = sfinfo.samplerate;
-        unsigned int numChannels = sfinfo.channels;
+        unsigned int sampleRate = infile->samplerate;
+        unsigned int numChannels = infile->channels;
 
         unsigned long inputSamples;
         unsigned long maxOutputBytes;
@@ -172,7 +170,7 @@ static DWORD WINAPI EncodeFile(LPVOID pParam)
             if (!faacEncSetConfiguration(hEncoder, config))
             {
                 faacEncClose(hEncoder);
-                sf_close(infile);
+                wav_close(infile);
 
                 MessageBox (hWnd, "faacEncSetConfiguration failed!", "Error", MB_OK | MB_ICONSTOP);
 
@@ -210,12 +208,12 @@ static DWORD WINAPI EncodeFile(LPVOID pParam)
                     int bytesWritten;
                     UINT timeElapsed, timeEncoded;
 
-                    bytesInput = sf_read_short(infile, pcmbuf, inputSamples) * sizeof(short);
+                    bytesInput = wav_read_short(infile, pcmbuf, inputSamples) * sizeof(short);
 
-                    SendDlgItemMessage (hWnd, IDC_PROGRESS, PBM_SETPOS, (unsigned long)((float)totalBytesRead * 1024.0f / (sfinfo.samples*2*numChannels)), 0);
+                    SendDlgItemMessage (hWnd, IDC_PROGRESS, PBM_SETPOS, (unsigned long)((float)totalBytesRead * 1024.0f / (infile->samples*2*numChannels)), 0);
 
                     /* Percentage for Dialog Output */
-                    _itoa((int)((float)totalBytesRead * 100.0f / (sfinfo.samples*2*numChannels)),Percentage,10);
+                    _itoa((int)((float)totalBytesRead * 100.0f / (infile->samples*2*numChannels)),Percentage,10);
                     lstrcpy(HeaderText,"FAAC GUI: ");
                     lstrcat(HeaderText,Percentage);
                     lstrcat(HeaderText,"%");
@@ -275,7 +273,7 @@ static DWORD WINAPI EncodeFile(LPVOID pParam)
             faacEncClose(hEncoder);
         }
 
-        sf_close(infile);
+        wav_close(infile);
         MessageBeep(1);
 
         SendDlgItemMessage(hWnd, IDC_PROGRESS, PBM_SETPOS, 0, 0);
