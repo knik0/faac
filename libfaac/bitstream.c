@@ -24,7 +24,7 @@ copyright notice must be included in all copies or derivative works.
 Copyright (c) 1997.
 **********************************************************************/
 /*
- * $Id: bitstream.c,v 1.28 2004/07/04 12:10:52 corrados Exp $
+ * $Id: bitstream.c,v 1.29 2004/07/08 14:01:25 corrados Exp $
  */
 
 #include <stdio.h>
@@ -1163,7 +1163,10 @@ static int WriteReorderedSpectralData(CoderInfo *coderInfo,
 
         /* presorting (first presorting step) */
         /* only needed for short windows */
-        if (coderInfo->block_type == ONLY_SHORT_WINDOW) {
+
+/* Somehow the second presorting step does not give expected results. Disabling the
+   following code surprisingly gives good results. TODO: find the bug */
+        if (0) {//coderInfo->block_type == ONLY_SHORT_WINDOW) {
             for (i = 0; i < MAX_SHORT_WINDOWS; i++)
                 window_cw_cnt[i] = 0; /* reset all counters */
 

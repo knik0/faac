@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: psychkni.c,v 1.15 2003/12/10 17:48:55 knik Exp $
+ * $Id: psychkni.c,v 1.16 2004/07/08 14:01:24 corrados Exp $
  */
 #include <stdio.h>
 #include <stdlib.h>
@@ -353,7 +353,7 @@ static void PsyBufferUpdate( FFT_Tables *fft_tables, GlobalPsyInfo * gpsyInfo, P
     int first = 0;
     int last = 0;
 
-    memcpy(transBuffS, transBuff + (win * 128) + (512 - 64),
+    memcpy(transBuffS, transBuff + (win * BLOCK_LEN_SHORT) + (BLOCK_LEN_LONG - BLOCK_LEN_SHORT) / 2,
 	   2 * psyInfo->sizeS * sizeof(double));
 
     Hann(gpsyInfo, transBuffS, 2 * psyInfo->sizeS);
