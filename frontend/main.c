@@ -18,7 +18,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: main.c,v 1.74 2004/08/03 00:08:51 danchr Exp $
+ * $Id: main.c,v 1.75 2004/08/06 19:33:19 danchr Exp $
  */
 
 #ifdef _MSC_VER
@@ -33,7 +33,7 @@
 # include <mp4.h>
 #endif
 
-#define DEFAULT_TNS     1
+#define DEFAULT_TNS     0
 
 #ifdef _WIN32
 #include <windows.h>
@@ -153,9 +153,9 @@ const char *long_help =
   "\t\tsame works for stdout as well, so FAAC can pipe its output to\n"
   "\t\tother apps such as a server.\n"
   "  -o X\t\tSet output file to X (only for one input file)\n"
-  "\t\tonly for one input file; you can use *.aac, *.mp4 or *.m4a as\n"
-  "\t\tfile extension, and the file format will be set automatically\n"
-  "\t\tto ADTS or MP4).\n"
+  "\t\tonly for one input file; you can use *.aac, *.mp4, *.m4a or\n"
+  "\t\t*.m4b as file extension, and the file format will be set\n"
+  "\t\tautomatically to ADTS or MP4).\n"
   "  -P\t\tRaw PCM input mode (default: off, i.e. expecting a WAV header;\n"
   "\t\tnecessary for input files or bitstreams without a header; using\n"
   "\t\tonly -P assumes the default values for -R, -B and -C in the\n"
@@ -173,7 +173,8 @@ const char *long_help =
   "\n"
   "MP4 specific options:\n"
 #ifdef HAVE_LIBMP4V2
-  "  -w\t\tWrap AAC data in MP4 container. (default for *.mp4 and *.m4a)\n"
+  "  -w\t\tWrap AAC data in MP4 container. (default for *.mp4, *.m4a and\n"
+  "\t\t*.m4b)\n"
   "  --artist X\tSet artist to X\n"
   "  --writer X\tSet writer/composer to X\n"
   "  --title X\tSet title/track name to X\n"
@@ -472,7 +473,7 @@ int main(int argc, char *argv[])
     while (1) {
         static struct option long_options[] = {
             { "help", 0, 0, 'h'},
-            { "long-help", 0, 0, '?'},
+            { "long-help", 0, 0, 'H'},
             { "raw", 0, 0, 'r'},
             { "no-midside", 0, 0, NO_MIDSIDE_FLAG},
             { "cutoff", 1, 0, 'c'},
@@ -518,7 +519,7 @@ int main(int argc, char *argv[])
 
         if (!c)
         {
-          dieMessage = short_help;
+          dieMessage = usage;
           break;
         }
 
@@ -706,18 +707,20 @@ int main(int argc, char *argv[])
 	        dieMessage = "Unrecognised object type!\n";
 	    break;
         case 'L':
-	    printf(faac_copyright_string);
+	    fprintf(stderr, faac_copyright_string);
 	    dieMessage = license;
 	    break;
 	case 'X':
 	  rawEndian = 0;
 	  break;
-	case '?':
+	case 'H':
+	  abort();
 	  dieMessage = long_help;
 	  break;
 	case 'h':
           dieMessage = short_help;
 	  break;
+	case '?':
         default:
 	  dieMessage = usage;
           break;
@@ -725,12 +728,12 @@ int main(int argc, char *argv[])
     }
 
     /* check that we have at least one non-option arguments */
-    if ((argc - optind) > 1 && aacFileNameGiven)
+    if (!dieMessage && (argc - optind) > 1 && aacFileNameGiven)
         dieMessage = "Cannot encode several input files to one output file.\n";
 
     if (argc - optind < 1 || dieMessage)
     {
-      fprintf(stderr, dieMessage ? dieMessage : usage,
+        fprintf(stderr, dieMessage ? dieMessage : usage,
 	       progName, progName, progName, progName);
         return 1;
     }
@@ -758,7 +761,7 @@ int main(int argc, char *argv[])
     } else {
         aacFileExt = strrchr(aacFileName, '.');
 
-        if (aacFileExt && (!strcmp(".m4a", aacFileExt) || !strcmp(".mp4", aacFileExt)))
+        if (aacFileExt && (!strcmp(".m4a", aacFileExt) || !strcmp(".m4b", aacFileExt) || !strcmp(".mp4", aacFileExt)))
 #ifndef HAVE_LIBMP4V2
 	    fprintf(stderr, "WARNING: MP4 support unavailable!\n");
 #else
@@ -1142,6 +1145,11 @@ int main(int argc, char *argv[])
 
 /*
 $Log: main.c,v $
+Revision 1.75  2004/08/06 19:33:19  danchr
+TNS is no longer enabled by default (reported by guruboolez)
+documentation fixes in frontend
+default to mp4 for *.m4b as well
+
 Revision 1.74  2004/08/03 00:08:51  danchr
 fix --shortctl documentation
 
