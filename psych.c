@@ -21,8 +21,8 @@
 /**************************************************************************
   Version Control Information			Method: CVS
   Identifiers:
-  $Revision: 1.69 $
-  $Date: 2000/10/06 14:47:27 $ (check in)
+  $Revision: 1.70 $
+  $Date: 2000/10/08 20:32:33 $ (check in)
   $Author: menno $
   *************************************************************************/
 
@@ -153,7 +153,7 @@ PSY_STATVARIABLE_SHORT    psy_stvar_short[MAX_TIME_CHANNELS*2];
                                /* variables for short block */
 
 
-void EncTf_psycho_acoustic_init( void )
+void Psy_Init( void )
 {
 	int chanNum;
 
@@ -410,7 +410,7 @@ void psy_calc_init(
 	sqrt256 = 1/sqrt(256);
 }
 
-void psy_fill_lookahead(double *p_time_signal[], int no_of_chan)
+void Psy_FillBuffer(double *p_time_signal[], int no_of_chan)
 {
 	int i, ch;
 
@@ -422,7 +422,7 @@ void psy_fill_lookahead(double *p_time_signal[], int no_of_chan)
 }
 
 /* main */
-void EncTf_psycho_acoustic( 
+void Psy_Calculate( 
 			   /* input */
 			   double sampling_rate,
 			   int    no_of_chan,         /* no of audio channels */
@@ -555,13 +555,11 @@ void EncTf_psycho_acoustic(
 				}
 
 				psy_step12(&part_tbl_long, &part_tbl_short, &psy_stvar_long[leftChan], &psy_stvar_short[leftChan],
-					&psy_var_long[0], &psy_var_short[0]);
-				psy_step12(&part_tbl_long, &part_tbl_short, &psy_stvar_long[rightChan], &psy_stvar_short[rightChan],
-					&psy_var_long[1], &psy_var_short[1]);
+					&psy_var_long[0], &psy_var_short[0], &block_type[leftChan]);
 
-				psy_step13(&psy_var_long[0], &block_type[leftChan]);
-				if (*block_type != ONLY_SHORT_WINDOW) {
-					psy_step13(&psy_var_long[1], &block_type[rightChan]);
+				if (block_type[leftChan] != ONLY_SHORT_WINDOW) {
+					psy_step12(&part_tbl_long, &part_tbl_short, &psy_stvar_long[rightChan], &psy_stvar_short[rightChan],
+						&psy_var_long[1], &psy_var_short[1], &block_type[rightChan]);
 					block_type[leftChan] = block_type[rightChan];
 				} else {
 					block_type[rightChan] = block_type[leftChan];
@@ -642,8 +640,7 @@ void EncTf_psycho_acoustic(
 					&psy_var_long[0], &psy_var_short[0]);
 				psy_step11(&part_tbl_long, &part_tbl_short, &psy_stvar_long[chanNum], &psy_stvar_short[chanNum]);
 				psy_step12(&part_tbl_long, &part_tbl_short, &psy_stvar_long[chanNum], &psy_stvar_short[chanNum],
-					&psy_var_long[0], &psy_var_short[0]);
-				psy_step13(&psy_var_long[0], &block_type[chanNum]);
+					&psy_var_long[0], &psy_var_short[0], &block_type[chanNum]);
 				psy_step14(p_sri, &part_tbl_long, &part_tbl_short, &psy_stvar_long[chanNum],
 					&psy_stvar_short[chanNum], &psy_var_long[0], &psy_var_short[0]);
 
@@ -662,9 +659,11 @@ void EncTf_psycho_acoustic(
 
 }
 
+
+/* input samples */
 void psy_step1(double* p_time_signal[],
-	       double sample[][BLOCK_LEN_LONG*2], 
-	       int ch)
+			   double sample[][BLOCK_LEN_LONG*2],
+			   int ch)
 {
 	int i;
 
@@ -674,6 +673,7 @@ void psy_step1(double* p_time_signal[],
 	}
 }
 
+/* FFT */
 void psy_step2(double sample[][BLOCK_LEN_LONG*2],
                PSY_STATVARIABLE_LONG *psy_stvar_long,
                PSY_STATVARIABLE_SHORT *psy_stvar_short,
@@ -760,7 +760,7 @@ void psy_step2(double sample[][BLOCK_LEN_LONG*2],
     }
 }
 
-
+/* FFT for Mid/Side */
 void psy_step2MS(PSY_STATVARIABLE_LONG *psy_stvar_long,
 			PSY_STATVARIABLE_SHORT *psy_stvar_short,
 			int leftChan, int rightChan,
@@ -787,7 +787,7 @@ void psy_step2MS(PSY_STATVARIABLE_LONG *psy_stvar_long,
 	}
 }
 
-
+/* caluculation of predicted FFT values, from previous FFT's */
 void psy_step3(PSY_STATVARIABLE_LONG *psy_stvar_long,
                PSY_STATVARIABLE_SHORT *psy_stvar_short,
                PSY_VARIABLE_LONG *psy_var_long,
@@ -831,6 +831,7 @@ void psy_step3(PSY_STATVARIABLE_LONG *psy_stvar_long,
     }
 }
 
+/* caluculation of unpredictability measure */
 void psy_step4(PSY_STATVARIABLE_LONG *psy_stvar_long,
                PSY_STATVARIABLE_SHORT *psy_stvar_short,
 			   PSY_VARIABLE_LONG *psy_var_long,
@@ -891,6 +892,7 @@ void psy_step4(PSY_STATVARIABLE_LONG *psy_stvar_long,
 	}
 }
 
+/* caluculation of unpredictability measure for Mid/Side */
 void psy_step4MS(PSY_VARIABLE_LONG *psy_var_long,
 			PSY_VARIABLE_SHORT *psy_var_short,
 			int leftChan, int rightChan,
@@ -905,6 +907,7 @@ void psy_step4MS(PSY_VARIABLE_LONG *psy_var_long,
 			psy_var_short[midChan].c[i][b] = psy_var_short[sideChan].c[i][b] = min(psy_var_short[leftChan].c[i][b], psy_var_short[rightChan].c[i][b]);
 }
 
+/* caluculation of energy and unpredictability in each partition */
 void psy_step5(PARTITION_TABLE_LONG *part_tbl_long,
 			   PARTITION_TABLE_SHORT *part_tbl_short,
 			   PSY_STATVARIABLE_LONG *psy_stvar_long,
@@ -943,7 +946,7 @@ void psy_step5(PARTITION_TABLE_LONG *part_tbl_long,
     }
 }
 
-
+/* convolution of energy and unpredictability */
 void psy_step6(PARTITION_TABLE_LONG *part_tbl_long, 
 			   PARTITION_TABLE_SHORT *part_tbl_short, 
 			   PSY_STATVARIABLE_LONG *psy_stvar_long,
@@ -999,6 +1002,7 @@ void psy_step6(PARTITION_TABLE_LONG *part_tbl_long,
 	}
 }
 
+/* caluculation of tonality in each partition */
 void psy_step7(PARTITION_TABLE_LONG *part_tbl_long,
 	       PARTITION_TABLE_SHORT *part_tbl_short,
 	       PSY_VARIABLE_LONG *psy_var_long, 
@@ -1038,7 +1042,7 @@ void psy_step7(PARTITION_TABLE_LONG *part_tbl_long,
     }
 }
 
-
+/* caluculation of tonality in each partition for Mid/Side */
 void psy_step7MS(PSY_VARIABLE_LONG *psy_var_long,
 				 PSY_VARIABLE_SHORT *psy_var_short,
 				 int leftChan, int rightChan,
@@ -1057,7 +1061,7 @@ void psy_step7MS(PSY_VARIABLE_LONG *psy_var_long,
 		}
 }
 
-
+/* caluculation of SNR in each partition */
 void psy_step8(PARTITION_TABLE_LONG *part_tbl_long,
 	       PARTITION_TABLE_SHORT *part_tbl_short,
 	       PSY_VARIABLE_LONG *psy_var_long, 
@@ -1076,6 +1080,7 @@ void psy_step8(PARTITION_TABLE_LONG *part_tbl_long,
 	}
 }    
 
+/* caluculation of power ratio in each partition */
 void psy_step9(PARTITION_TABLE_LONG *part_tbl_long,
 	       PARTITION_TABLE_SHORT *part_tbl_short,
 	       PSY_VARIABLE_LONG *psy_var_long, 
@@ -1093,6 +1098,7 @@ void psy_step9(PARTITION_TABLE_LONG *part_tbl_long,
     }
 }
 
+/* caluculation of actual energy threshold in each partition */
 void psy_step10(PARTITION_TABLE_LONG *part_tbl_long,
 		PARTITION_TABLE_SHORT *part_tbl_short,
 		PSY_STATVARIABLE_LONG *psy_stvar_long,
@@ -1120,6 +1126,7 @@ void psy_step10(PARTITION_TABLE_LONG *part_tbl_long,
     }
 }
 
+/* check for small energy threshold in previous block */
 void psy_step11(PARTITION_TABLE_LONG *part_tbl_long, 
 		PARTITION_TABLE_SHORT *part_tbl_short, 
 		PSY_STATVARIABLE_LONG *psy_stvar_long, 
@@ -1159,6 +1166,7 @@ void psy_step11(PARTITION_TABLE_LONG *part_tbl_long,
 	}
 }
 
+/* calculate Mid/Side energy thresholds */
 void psy_step11MS(PARTITION_TABLE_LONG *part_tbl_long,
 						PARTITION_TABLE_SHORT *part_tbl_short,
 						PSY_STATVARIABLE_LONG *psy_stvar_long,
@@ -1249,27 +1257,28 @@ void psy_step11MS(PARTITION_TABLE_LONG *part_tbl_long,
 #endif
 }
 
-
+/* pre-echo control using PE and energy surges */
 void psy_step12(PARTITION_TABLE_LONG *part_tbl_long,
 				PARTITION_TABLE_SHORT *part_tbl_short,
 				PSY_STATVARIABLE_LONG *psy_stvar_long,
 				PSY_STATVARIABLE_SHORT *psy_stvar_short,
 				PSY_VARIABLE_LONG *psy_var_long,
-				PSY_VARIABLE_SHORT *psy_var_short
+				PSY_VARIABLE_SHORT *psy_var_short,
+				enum WINDOW_TYPE *block_type
 				)
 {
 	int b,i,shb;
-	double temp;
+	double temp, pe;
 	double tot, mx, estot[8];
 
-	psy_var_long->pe = 0.0;
+	pe = 0.0;
 	for(b = 0; b < part_tbl_long->len; b++){
 		temp = part_tbl_long->width[b]
 			* log((psy_stvar_long->nb[psy_stvar_long->p_nb + b] + 0.0000000001)
 			/ (psy_var_long->e[b] + 0.0000000001));
 		temp = min(0,temp);
 
-		psy_var_long->pe -= temp;
+		pe -= temp;
 	}
 	
 	for (i=0; i < MAX_SHORT_WINDOWS; i++) {
@@ -1288,25 +1297,15 @@ void psy_step12(PARTITION_TABLE_LONG *part_tbl_long,
 	
 	shb = 0;
 
-	if (psy_var_long->pe > 5600) shb = 1;
+	if (pe > 5600) shb = 1;
 
 	if ((mx/tot) > 0.3) shb = 1;
 	
-	if (shb) psy_var_long->pe = 1;
-	else psy_var_long->pe = 0;
+	if (shb) *block_type = ONLY_SHORT_WINDOW;
+	else *block_type = ONLY_LONG_WINDOW;
 }
 
-void psy_step13(PSY_VARIABLE_LONG *psy_var_long,
-				enum WINDOW_TYPE *block_type
-				)
-{
-	if(psy_var_long->pe == 1) {
-        *block_type = ONLY_SHORT_WINDOW;
-	} else {
-        *block_type = ONLY_LONG_WINDOW;
-	}
-}
-
+/* calculation of 1/SMR in each band */
 void psy_step14(SR_INFO *p_sri,
 				PARTITION_TABLE_LONG *part_tbl_long,
 				PARTITION_TABLE_SHORT *part_tbl_short,
@@ -1406,7 +1405,7 @@ void psy_step14(SR_INFO *p_sri,
     }
 }
 
-
+/* decision of Mid/Side coding */
 void psy_step15(SR_INFO *p_sri,
 				PSY_STATVARIABLE_LONG *psy_stvar_long,
 				PSY_STATVARIABLE_SHORT *psy_stvar_short,

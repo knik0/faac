@@ -21,8 +21,8 @@
 /**************************************************************************
   Version Control Information			Method: CVS
   Identifiers:
-  $Revision: 1.22 $
-  $Date: 2000/10/05 13:04:05 $ (check in)
+  $Revision: 1.23 $
+  $Date: 2000/10/08 20:32:33 $ (check in)
   $Author: menno $
   *************************************************************************/
 
@@ -116,7 +116,6 @@ typedef struct {
   double tb[NPART_LONG];
   double snr[NPART_LONG];
   double bc[NPART_LONG];
-  double pe;
   double epart[NSFB_LONG];
   double thr[BLOCK_LEN_LONG];
   double npart[NSFB_LONG];
@@ -151,7 +150,6 @@ typedef struct {
   double epart[MAX_SHORT_WINDOWS][NSFB_SHORT];
   double thr[MAX_SHORT_WINDOWS][BLOCK_LEN_SHORT];
   double npart[MAX_SHORT_WINDOWS][NSFB_SHORT];
-  double pe[MAX_SHORT_WINDOWS];
 } PSY_VARIABLE_SHORT;
 
 typedef struct {
@@ -172,9 +170,9 @@ typedef struct {
 extern "C" {
 #endif
 
-void EncTf_psycho_acoustic_init( void );
-void psy_fill_lookahead(double *p_time_signal[], int no_of_chan);
-void EncTf_psycho_acoustic( 
+void Psy_Init( void );
+void Psy_FillBuffer(double *p_time_signal[], int no_of_chan);
+void Psy_Calculate( 
   /* input */
   double sampling_rate,
   int    no_of_chan,         /* no of audio channels */
@@ -279,26 +277,22 @@ void psy_step11(PARTITION_TABLE_LONG *part_tbl_long,
 		PSY_STATVARIABLE_SHORT *psy_stvar_short
 		);
 
-void psy_step12(
-                PARTITION_TABLE_LONG *part_tbl_long,
-		PARTITION_TABLE_SHORT *part_tbl_short,
-		PSY_STATVARIABLE_LONG *psy_stvar_long,
-		PSY_STATVARIABLE_SHORT *psy_stvar_short,
-		PSY_VARIABLE_LONG *psy_var_long
-		,PSY_VARIABLE_SHORT *psy_var_short
-		);
-
-void psy_step13(PSY_VARIABLE_LONG *psy_var_long,
-		enum WINDOW_TYPE *block_type
-		);
+void psy_step12(PARTITION_TABLE_LONG *part_tbl_long,
+				PARTITION_TABLE_SHORT *part_tbl_short,
+				PSY_STATVARIABLE_LONG *psy_stvar_long,
+				PSY_STATVARIABLE_SHORT *psy_stvar_short,
+				PSY_VARIABLE_LONG *psy_var_long,
+				PSY_VARIABLE_SHORT *psy_var_short,
+				enum WINDOW_TYPE *block_type
+				);
 
 void psy_step14(SR_INFO *p_sri,
-		PARTITION_TABLE_LONG *part_tbl_long,
-		PARTITION_TABLE_SHORT *part_tbl_short,
-		PSY_STATVARIABLE_LONG *psy_stvar_long,
-		PSY_STATVARIABLE_SHORT *psy_stvar_short,
-		PSY_VARIABLE_LONG *psy_var_long,
-		PSY_VARIABLE_SHORT *psy_var_short
+				PARTITION_TABLE_LONG *part_tbl_long,
+				PARTITION_TABLE_SHORT *part_tbl_short,
+				PSY_STATVARIABLE_LONG *psy_stvar_long,
+				PSY_STATVARIABLE_SHORT *psy_stvar_short,
+				PSY_VARIABLE_LONG *psy_var_long,
+				PSY_VARIABLE_SHORT *psy_var_short
                 );
 
 void psy_step15(SR_INFO *p_sri,
@@ -309,14 +303,14 @@ void psy_step15(SR_INFO *p_sri,
 				);
 
 void psy_step2MS(PSY_STATVARIABLE_LONG *psy_stvar_long,
-			PSY_STATVARIABLE_SHORT *psy_stvar_short,
-			int leftChan, int rightChan,
-			int midChan, int sideChan);
+				 PSY_STATVARIABLE_SHORT *psy_stvar_short,
+				 int leftChan, int rightChan,
+				 int midChan, int sideChan);
 
 void psy_step4MS(PSY_VARIABLE_LONG *psy_var_long,
-			PSY_VARIABLE_SHORT *psy_var_short,
-			int leftChan, int rightChan,
-			int midChan, int sideChan);
+				 PSY_VARIABLE_SHORT *psy_var_short,
+				 int leftChan, int rightChan,
+				 int midChan, int sideChan);
 
 void psy_step7MS(PSY_VARIABLE_LONG *psy_var_long,
 				 PSY_VARIABLE_SHORT *psy_var_short,
@@ -324,11 +318,11 @@ void psy_step7MS(PSY_VARIABLE_LONG *psy_var_long,
 				 int midChan, int sideChan);
 
 void psy_step11MS(PARTITION_TABLE_LONG *part_tbl_long,
-						PARTITION_TABLE_SHORT *part_tbl_short,
-						PSY_STATVARIABLE_LONG *psy_stvar_long,
-						PSY_STATVARIABLE_SHORT *psy_stvar_short,
-						int leftChan, int rightChan,
-						int midChan, int sideChan);
+				  PARTITION_TABLE_SHORT *part_tbl_short,
+				  PSY_STATVARIABLE_LONG *psy_stvar_long,
+				  PSY_STATVARIABLE_SHORT *psy_stvar_short,
+				  int leftChan, int rightChan,
+				  int midChan, int sideChan);
 
 #ifdef __cplusplus
 }

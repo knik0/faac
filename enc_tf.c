@@ -21,8 +21,8 @@
 /**************************************************************************
   Version Control Information			Method: CVS
   Identifiers:
-  $Revision: 1.64 $
-  $Date: 2000/10/06 14:47:27 $ (check in)
+  $Revision: 1.65 $
+  $Date: 2000/10/08 20:32:33 $ (check in)
   $Author: menno $
   *************************************************************************/
 
@@ -160,7 +160,7 @@ void EncTfInit (faacAACStream *as)
   }
 
   /* initialize psychoacoustic module */
-  EncTf_psycho_acoustic_init();
+  Psy_Init();
 
   /* initialize spectrum processing */
   /* initialize quantization and coding */
@@ -288,7 +288,7 @@ int EncTfFrame (faacAACStream *as, BsBitStream  *fixed_stream)
 
 
   if (fixed_stream == NULL) {
-    psy_fill_lookahead(DTimeSigLookAheadBuf, max_ch);
+    Psy_FillBuffer(DTimeSigLookAheadBuf, max_ch);
     return FNO_ERROR; /* quick'n'dirty fix for encoder startup */
   }
 
@@ -298,7 +298,7 @@ int EncTfFrame (faacAACStream *as, BsBitStream  *fixed_stream)
   /*****************************************************************************/
   /* psychoacoustics */
   /*****************************************************************************/
-  EncTf_psycho_acoustic(
+  Psy_Calculate(
 	  as->out_sampling_rate,
 	  max_ch,
 	  channelInfo,
