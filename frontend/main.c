@@ -18,7 +18,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: main.c,v 1.67 2004/04/16 09:49:10 danchr Exp $
+ * $Id: main.c,v 1.68 2004/04/16 14:51:10 danchr Exp $
  */
 
 #ifdef _MSC_VER
@@ -63,6 +63,11 @@
 
 #if !defined(HAVE_STRCASECMP) && !defined(_WIN32)
 # define strcasecmp strcmp
+#endif
+
+#ifdef _WIN32
+# undef stderr
+# define stderr stdout
 #endif
 
 #include "input.h"
@@ -1122,6 +1127,9 @@ int main(int argc, char *argv[])
 
 /*
 $Log: main.c,v $
+Revision 1.68  2004/04/16 14:51:10  danchr
+don't use stderr on Windows
+
 Revision 1.67  2004/04/16 09:49:10  danchr
 change -a <kbps/channel> to -b <kbps>
 Darwin portability fixes
