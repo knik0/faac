@@ -16,7 +16,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: main.c,v 1.51 2003/12/13 21:58:35 ca5e Exp $
+ * $Id: main.c,v 1.52 2003/12/14 12:25:44 ca5e Exp $
  */
 
 #ifdef _MSC_VER
@@ -638,16 +638,13 @@ int main(int argc, char *argv[])
             {
 #ifdef HAVE_LIBMP4V2
                 u_int64_t samples_left = total_samples - encoded_samples + delay_samples;
-                MP4Duration dur = 0;
-                if (samples_left > frameSize + delay_samples)
-                    dur = frameSize;
-                else if (samples_left > delay_samples)
-                    dur = samples_left - delay_samples;
+                MP4Duration dur = samples_left > frameSize ? frameSize : samples_left;
+                MP4Duration ofs = encoded_samples > 0 ? 0 : delay_samples;
 
                 if (mp4)
                 {
                     /* write bitstream to mp4 file */
-                    MP4WriteSample(MP4hFile, MP4track, bitbuf, bytesWritten, dur, delay_samples, 1);
+                    MP4WriteSample(MP4hFile, MP4track, bitbuf, bytesWritten, dur, ofs, 1);
                 }
                 else
                 {
@@ -684,6 +681,9 @@ int main(int argc, char *argv[])
 
 /*
 $Log: main.c,v $
+Revision 1.52  2003/12/14 12:25:44  ca5e
+Gapless MP4 handling method changed again...
+
 Revision 1.51  2003/12/13 21:58:35  ca5e
 Improved gapless encoding
 

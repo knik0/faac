@@ -2,6 +2,7 @@
 // Copyright (C) 2003 Janne Hyvärinen
 //
 // Changes:
+//  0.4.2 (2003-12-14): Changed the gapless method again
 //  0.4.1 (2003-12-13): Added ctts field writing for MP4 mode
 //  0.4   (2003-12-11): Added support for average bitrate controlling
 //  0.3.5 (2003-10-17): Changed way gapless encoding is handled (iTunes is buggy...)
@@ -36,7 +37,7 @@
 #include <faac.h>
 #include <version.h>
 
-#define FOO_FAAC_VERSION     "0.4.1"
+#define FOO_FAAC_VERSION     "0.4.2"
 
 #define FF_AAC  0
 #define FF_MP4  1
@@ -297,14 +298,16 @@ public:
 
                     if ( bytesWritten > 0 ) {
                         MP4Duration dur = frameSize;
+                        MP4Duration ofs = 0;
 
                         if ( delay_samples > 0 ) {
                             dur = 0;
+                            ofs = delay_samples;
                             delay_samples -= frameSize;
                         }
 
                         if ( create_mp4 ) {
-                            MP4WriteSample ( MP4hFile, MP4track, (const unsigned __int8 *)bitbuf.get_ptr(), bytesWritten, frameSize, 1024 );
+                            MP4WriteSample ( MP4hFile, MP4track, (const unsigned __int8 *)bitbuf.get_ptr(), bytesWritten, frameSize, ofs );
                         } else {
                             m_reader->write ( bitbuf.get_ptr(), bytesWritten );
                         }
@@ -343,12 +346,10 @@ public:
                     break;
                 }
                 else if ( bytesWritten > 0 ) {
-                    MP4Duration dur = 0;
-                    if ( samples_left > frameSize + 1024 ) dur = frameSize;
-                    else if ( samples_left > 1024 ) dur = samples_left - 1024;
+                    MP4Duration dur = samples_left > frameSize ? frameSize : samples_left;
 
                     if ( create_mp4 ) {
-                        MP4WriteSample ( MP4hFile, MP4track, (const unsigned __int8 *)bitbuf.get_ptr(), bytesWritten, dur, 1024 );
+                        MP4WriteSample ( MP4hFile, MP4track, (const unsigned __int8 *)bitbuf.get_ptr(), bytesWritten, dur );
                     } else {
                         m_reader->write ( bitbuf.get_ptr(), bytesWritten );
                     }
