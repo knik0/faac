@@ -16,7 +16,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: aacquant.h,v 1.5 2002/11/23 17:32:16 knik Exp $
+ * $Id: aacquant.h,v 1.6 2003/06/26 19:19:31 knik Exp $
  */
 
 #ifndef AACQUANT_H
@@ -48,6 +48,13 @@ int AACQuantize(CoderInfo *coderInfo,
                 int num_cb,
                 double *xr,
                 int desired_rate);
+int SortForGrouping(CoderInfo* coderInfo,
+		    PsyInfo *psyInfo,
+		    ChannelInfo *channelInfo,
+		    int *sfb_width_table,
+		    double *xr);
+void CalcAvgEnrg(CoderInfo *coderInfo,
+		 const double *xr);
 
 #ifdef __cplusplus
 }
