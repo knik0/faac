@@ -1,3 +1,42 @@
+2005-02-02  sur
+	* libfaac:
+		Directory kiss_fft added to the repository
+	
+	* libfaac/kiss_fft/README.kiss_fft:
+		Instructions how to download and install kiss_fft library.
+	
+	* libfaac/coder.h:
+		Added DRM-compatible FRAMLE_LEN, BLOCK_LEN_LONG, BLOCK_LEN_SHORT definitions.
+
+	* libfaac/fft.c:
+		Added interface to kiss_fft library to implement FFT for 960 transform length.
+	
+	* libfaac/fft.h:
+		Added interface to kiss_fft library to implement FFT for 960 transform length.
+
+	* libfaac/filtbank.c:
+		960 transform length implemented.
+	
+	* libfaac/filtbank.h:
+		NFLAT_LS definition changed to be 1024/960 transform length compatible.
+	
+	* libfaac/huffman.c:
+		Fixed bug in Huffman_End.
+		
+	* libfaac/libfaac_dll_drm.sln:
+		Win32 Visual Studio solution file to build DRM-compatible libfaac.
+		This is experimental code, please do not use this project to build 'ordinary' libfaac.
+	
+	* libfaac/libfaac_dll_drm.vcproj:
+		Win32 Visual Studio project file to build DRM-compatible libfaac. 
+		This is experimental code, please do not use this project to build 'ordinary' libfaac.
+	
+	* libfaac/libfaacdrm.def:
+		Win32 module definition file for libfaac_dll_drm project.
+
+	* libfaac/util.c:
+		Minor changes to make code 1024/960 transform length compatible.
+			
 2004-08-19  menno
 	* frontend/main.c:
 		Removed stupid comment in help of FAAC. RAW AAC files are USELESS,
