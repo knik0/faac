@@ -16,11 +16,9 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: psych.c,v 1.9 2001/03/06 21:02:33 menno Exp $
+ * $Id: psych.c,v 1.10 2001/03/12 16:58:37 menno Exp $
  */
 
-#include <malloc.h>
-#include <memory.h>
 #include <math.h>
 #ifdef _DEBUG
 #include <stdio.h>
@@ -42,12 +40,12 @@ void PsyInit(GlobalPsyInfo *gpsyInfo, PsyInfo *psyInfo, unsigned int numChannels
 	double tmpx,tmpy,tmp,x;
 	double bval[MAX_NPART], SNR;
 
-	gpsyInfo->ath = (double*)malloc(NPART_LONG*sizeof(double));
-	gpsyInfo->athS = (double*)malloc(MAX_SCFAC_BANDS*sizeof(double));
-	gpsyInfo->mld = (double*)malloc(NPART_LONG*sizeof(double));
-	gpsyInfo->mldS = (double*)malloc(MAX_SCFAC_BANDS*sizeof(double));
-	gpsyInfo->window = (double*)malloc(2*BLOCK_LEN_LONG*sizeof(double));
-	gpsyInfo->windowS = (double*)malloc(2*BLOCK_LEN_SHORT*sizeof(double));
+	gpsyInfo->ath = (double*)AllocMemory(NPART_LONG*sizeof(double));
+	gpsyInfo->athS = (double*)AllocMemory(MAX_SCFAC_BANDS*sizeof(double));
+	gpsyInfo->mld = (double*)AllocMemory(NPART_LONG*sizeof(double));
+	gpsyInfo->mldS = (double*)AllocMemory(MAX_SCFAC_BANDS*sizeof(double));
+	gpsyInfo->window = (double*)AllocMemory(2*BLOCK_LEN_LONG*sizeof(double));
+	gpsyInfo->windowS = (double*)AllocMemory(2*BLOCK_LEN_SHORT*sizeof(double));
 
 	for(i = 0; i < BLOCK_LEN_LONG*2; i++)
 		gpsyInfo->window[i] = 0.42-0.5*cos(2*M_PI*(i+.5)/(BLOCK_LEN_LONG*2))+
@@ -63,29 +61,29 @@ void PsyInit(GlobalPsyInfo *gpsyInfo, PsyInfo *psyInfo, unsigned int numChannels
 		psyInfo[channel].lastPe = 0.0;
 		psyInfo[channel].lastEnr = 0.0;
 		psyInfo[channel].threeInARow = 0;
-		psyInfo[channel].tonality = (double*)malloc(NPART_LONG*sizeof(double));
-		psyInfo[channel].nb = (double*)malloc(NPART_LONG*sizeof(double));
-		psyInfo[channel].maskThr = (double*)malloc(MAX_SCFAC_BANDS*sizeof(double));
-		psyInfo[channel].maskEn = (double*)malloc(MAX_SCFAC_BANDS*sizeof(double));
-		psyInfo[channel].maskThrNext = (double*)malloc(MAX_SCFAC_BANDS*sizeof(double));
-		psyInfo[channel].maskEnNext = (double*)malloc(MAX_SCFAC_BANDS*sizeof(double));
-		psyInfo[channel].maskThrMS = (double*)malloc(MAX_SCFAC_BANDS*sizeof(double));
-		psyInfo[channel].maskEnMS = (double*)malloc(MAX_SCFAC_BANDS*sizeof(double));
-		psyInfo[channel].maskThrNextMS = (double*)malloc(MAX_SCFAC_BANDS*sizeof(double));
-		psyInfo[channel].maskEnNextMS = (double*)malloc(MAX_SCFAC_BANDS*sizeof(double));
-		psyInfo[channel].prevSamples = (double*)malloc(size*sizeof(double));
-		memset(psyInfo[channel].prevSamples, 0, size*sizeof(double));
+		psyInfo[channel].tonality = (double*)AllocMemory(NPART_LONG*sizeof(double));
+		psyInfo[channel].nb = (double*)AllocMemory(NPART_LONG*sizeof(double));
+		psyInfo[channel].maskThr = (double*)AllocMemory(MAX_SCFAC_BANDS*sizeof(double));
+		psyInfo[channel].maskEn = (double*)AllocMemory(MAX_SCFAC_BANDS*sizeof(double));
+		psyInfo[channel].maskThrNext = (double*)AllocMemory(MAX_SCFAC_BANDS*sizeof(double));
+		psyInfo[channel].maskEnNext = (double*)AllocMemory(MAX_SCFAC_BANDS*sizeof(double));
+		psyInfo[channel].maskThrMS = (double*)AllocMemory(MAX_SCFAC_BANDS*sizeof(double));
+		psyInfo[channel].maskEnMS = (double*)AllocMemory(MAX_SCFAC_BANDS*sizeof(double));
+		psyInfo[channel].maskThrNextMS = (double*)AllocMemory(MAX_SCFAC_BANDS*sizeof(double));
+		psyInfo[channel].maskEnNextMS = (double*)AllocMemory(MAX_SCFAC_BANDS*sizeof(double));
+		psyInfo[channel].prevSamples = (double*)AllocMemory(size*sizeof(double));
+		SetMemory(psyInfo[channel].prevSamples, 0, size*sizeof(double));
 
-		psyInfo[channel].lastNb = (double*)malloc(NPART_LONG*sizeof(double));
-		psyInfo[channel].lastNbMS = (double*)malloc(NPART_LONG*sizeof(double));
+		psyInfo[channel].lastNb = (double*)AllocMemory(NPART_LONG*sizeof(double));
+		psyInfo[channel].lastNbMS = (double*)AllocMemory(NPART_LONG*sizeof(double));
 		for (j = 0; j < NPART_LONG; j++) {
 			psyInfo[channel].lastNb[j] = 2.;
 			psyInfo[channel].lastNbMS[j] = 2.;
 		}
 
-		psyInfo[channel].energy = (double*)malloc(size*sizeof(double));
-		psyInfo[channel].energyMS = (double*)malloc(size*sizeof(double));
-		psyInfo[channel].transBuff = (double*)malloc(2*size*sizeof(double));
+		psyInfo[channel].energy = (double*)AllocMemory(size*sizeof(double));
+		psyInfo[channel].energyMS = (double*)AllocMemory(size*sizeof(double));
+		psyInfo[channel].transBuff = (double*)AllocMemory(2*size*sizeof(double));
 	}
 
 	gpsyInfo->psyPart = &psyPartTableLong[sampleRateIdx];
@@ -95,23 +93,23 @@ void PsyInit(GlobalPsyInfo *gpsyInfo, PsyInfo *psyInfo, unsigned int numChannels
 	for (channel = 0; channel < numChannels; channel++) {
 		psyInfo[channel].sizeS = size;
 
-		psyInfo[channel].prevSamplesS = (double*)malloc(size*sizeof(double));
-		memset(psyInfo[channel].prevSamplesS, 0, size*sizeof(double));
+		psyInfo[channel].prevSamplesS = (double*)AllocMemory(size*sizeof(double));
+		SetMemory(psyInfo[channel].prevSamplesS, 0, size*sizeof(double));
 
 		for (j = 0; j < 8; j++) {
-			psyInfo[channel].nbS[j] = (double*)malloc(NPART_SHORT*sizeof(double));
-			psyInfo[channel].maskThrS[j] = (double*)malloc(MAX_SCFAC_BANDS*sizeof(double));
-			psyInfo[channel].maskEnS[j] = (double*)malloc(MAX_SCFAC_BANDS*sizeof(double));
-			psyInfo[channel].maskThrNextS[j] = (double*)malloc(MAX_SCFAC_BANDS*sizeof(double));
-			psyInfo[channel].maskEnNextS[j] = (double*)malloc(MAX_SCFAC_BANDS*sizeof(double));
-			psyInfo[channel].maskThrSMS[j] = (double*)malloc(MAX_SCFAC_BANDS*sizeof(double));
-			psyInfo[channel].maskEnSMS[j] = (double*)malloc(MAX_SCFAC_BANDS*sizeof(double));
-			psyInfo[channel].maskThrNextSMS[j] = (double*)malloc(MAX_SCFAC_BANDS*sizeof(double));
-			psyInfo[channel].maskEnNextSMS[j] = (double*)malloc(MAX_SCFAC_BANDS*sizeof(double));
+			psyInfo[channel].nbS[j] = (double*)AllocMemory(NPART_SHORT*sizeof(double));
+			psyInfo[channel].maskThrS[j] = (double*)AllocMemory(MAX_SCFAC_BANDS*sizeof(double));
+			psyInfo[channel].maskEnS[j] = (double*)AllocMemory(MAX_SCFAC_BANDS*sizeof(double));
+			psyInfo[channel].maskThrNextS[j] = (double*)AllocMemory(MAX_SCFAC_BANDS*sizeof(double));
+			psyInfo[channel].maskEnNextS[j] = (double*)AllocMemory(MAX_SCFAC_BANDS*sizeof(double));
+			psyInfo[channel].maskThrSMS[j] = (double*)AllocMemory(MAX_SCFAC_BANDS*sizeof(double));
+			psyInfo[channel].maskEnSMS[j] = (double*)AllocMemory(MAX_SCFAC_BANDS*sizeof(double));
+			psyInfo[channel].maskThrNextSMS[j] = (double*)AllocMemory(MAX_SCFAC_BANDS*sizeof(double));
+			psyInfo[channel].maskEnNextSMS[j] = (double*)AllocMemory(MAX_SCFAC_BANDS*sizeof(double));
 
-			psyInfo[channel].energyS[j] = (double*)malloc(size*sizeof(double));
-			psyInfo[channel].energySMS[j] = (double*)malloc(size*sizeof(double));
-			psyInfo[channel].transBuffS[j] = (double*)malloc(2*size*sizeof(double));
+			psyInfo[channel].energyS[j] = (double*)AllocMemory(size*sizeof(double));
+			psyInfo[channel].energySMS[j] = (double*)AllocMemory(size*sizeof(double));
+			psyInfo[channel].transBuffS[j] = (double*)AllocMemory(2*size*sizeof(double));
 		}
 	}
 
@@ -277,50 +275,50 @@ void PsyEnd(GlobalPsyInfo *gpsyInfo, PsyInfo *psyInfo, unsigned int numChannels)
 	unsigned int channel;
 	int j;
 
-	if (gpsyInfo->ath) free(gpsyInfo->ath);
-	if (gpsyInfo->athS) free(gpsyInfo->athS);
-	if (gpsyInfo->mld) free(gpsyInfo->mld);
-	if (gpsyInfo->mldS) free(gpsyInfo->mldS);
-	if (gpsyInfo->window) free(gpsyInfo->window);
-	if (gpsyInfo->windowS) free(gpsyInfo->windowS);
+	if (gpsyInfo->ath) FreeMemory(gpsyInfo->ath);
+	if (gpsyInfo->athS) FreeMemory(gpsyInfo->athS);
+	if (gpsyInfo->mld) FreeMemory(gpsyInfo->mld);
+	if (gpsyInfo->mldS) FreeMemory(gpsyInfo->mldS);
+	if (gpsyInfo->window) FreeMemory(gpsyInfo->window);
+	if (gpsyInfo->windowS) FreeMemory(gpsyInfo->windowS);
 
 	for (channel = 0; channel < numChannels; channel++) {
-		if (psyInfo[channel].nb) free(psyInfo[channel].nb);
-		if (psyInfo[channel].tonality) free(psyInfo[channel].tonality);
-		if (psyInfo[channel].prevSamples) free(psyInfo[channel].prevSamples);
-		if (psyInfo[channel].maskThr) free(psyInfo[channel].maskThr);
-		if (psyInfo[channel].maskEn) free(psyInfo[channel].maskEn);
-		if (psyInfo[channel].maskThrNext) free(psyInfo[channel].maskThrNext);
-		if (psyInfo[channel].maskEnNext) free(psyInfo[channel].maskEnNext);
-		if (psyInfo[channel].maskThrMS) free(psyInfo[channel].maskThrMS);
-		if (psyInfo[channel].maskEnMS) free(psyInfo[channel].maskEnMS);
-		if (psyInfo[channel].maskThrNextMS) free(psyInfo[channel].maskThrNextMS);
-		if (psyInfo[channel].maskEnNextMS) free(psyInfo[channel].maskEnNextMS);
+		if (psyInfo[channel].nb) FreeMemory(psyInfo[channel].nb);
+		if (psyInfo[channel].tonality) FreeMemory(psyInfo[channel].tonality);
+		if (psyInfo[channel].prevSamples) FreeMemory(psyInfo[channel].prevSamples);
+		if (psyInfo[channel].maskThr) FreeMemory(psyInfo[channel].maskThr);
+		if (psyInfo[channel].maskEn) FreeMemory(psyInfo[channel].maskEn);
+		if (psyInfo[channel].maskThrNext) FreeMemory(psyInfo[channel].maskThrNext);
+		if (psyInfo[channel].maskEnNext) FreeMemory(psyInfo[channel].maskEnNext);
+		if (psyInfo[channel].maskThrMS) FreeMemory(psyInfo[channel].maskThrMS);
+		if (psyInfo[channel].maskEnMS) FreeMemory(psyInfo[channel].maskEnMS);
+		if (psyInfo[channel].maskThrNextMS) FreeMemory(psyInfo[channel].maskThrNextMS);
+		if (psyInfo[channel].maskEnNextMS) FreeMemory(psyInfo[channel].maskEnNextMS);
 		
-		if (psyInfo[channel].lastNb) free(psyInfo[channel].lastNb);
-		if (psyInfo[channel].lastNbMS) free(psyInfo[channel].lastNbMS);
+		if (psyInfo[channel].lastNb) FreeMemory(psyInfo[channel].lastNb);
+		if (psyInfo[channel].lastNbMS) FreeMemory(psyInfo[channel].lastNbMS);
 
-		if (psyInfo[channel].energy) free(psyInfo[channel].energy);
-		if (psyInfo[channel].energyMS) free(psyInfo[channel].energyMS);
-		if (psyInfo[channel].transBuff) free(psyInfo[channel].transBuff);
+		if (psyInfo[channel].energy) FreeMemory(psyInfo[channel].energy);
+		if (psyInfo[channel].energyMS) FreeMemory(psyInfo[channel].energyMS);
+		if (psyInfo[channel].transBuff) FreeMemory(psyInfo[channel].transBuff);
 	}
 
 	for (channel = 0; channel < numChannels; channel++) {
-		if(psyInfo[channel].prevSamplesS) free(psyInfo[channel].prevSamplesS);
+		if(psyInfo[channel].prevSamplesS) FreeMemory(psyInfo[channel].prevSamplesS);
 		for (j = 0; j < 8; j++) {
-			if (psyInfo[channel].nbS[j]) free(psyInfo[channel].nbS[j]);
-			if (psyInfo[channel].maskThrS[j]) free(psyInfo[channel].maskThrS[j]);
-			if (psyInfo[channel].maskEnS[j]) free(psyInfo[channel].maskEnS[j]);
-			if (psyInfo[channel].maskThrNextS[j]) free(psyInfo[channel].maskThrNextS[j]);
-			if (psyInfo[channel].maskEnNextS[j]) free(psyInfo[channel].maskEnNextS[j]);
-			if (psyInfo[channel].maskThrSMS[j]) free(psyInfo[channel].maskThrSMS[j]);
-			if (psyInfo[channel].maskEnSMS[j]) free(psyInfo[channel].maskEnSMS[j]);
-			if (psyInfo[channel].maskThrNextSMS[j]) free(psyInfo[channel].maskThrNextSMS[j]);
-			if (psyInfo[channel].maskEnNextSMS[j]) free(psyInfo[channel].maskEnNextSMS[j]);
+			if (psyInfo[channel].nbS[j]) FreeMemory(psyInfo[channel].nbS[j]);
+			if (psyInfo[channel].maskThrS[j]) FreeMemory(psyInfo[channel].maskThrS[j]);
+			if (psyInfo[channel].maskEnS[j]) FreeMemory(psyInfo[channel].maskEnS[j]);
+			if (psyInfo[channel].maskThrNextS[j]) FreeMemory(psyInfo[channel].maskThrNextS[j]);
+			if (psyInfo[channel].maskEnNextS[j]) FreeMemory(psyInfo[channel].maskEnNextS[j]);
+			if (psyInfo[channel].maskThrSMS[j]) FreeMemory(psyInfo[channel].maskThrSMS[j]);
+			if (psyInfo[channel].maskEnSMS[j]) FreeMemory(psyInfo[channel].maskEnSMS[j]);
+			if (psyInfo[channel].maskThrNextSMS[j]) FreeMemory(psyInfo[channel].maskThrNextSMS[j]);
+			if (psyInfo[channel].maskEnNextSMS[j]) FreeMemory(psyInfo[channel].maskEnNextSMS[j]);
 
-			if (psyInfo[channel].energyS[j]) free(psyInfo[channel].energyS[j]);
-			if (psyInfo[channel].energySMS[j]) free(psyInfo[channel].energySMS[j]);
-			if (psyInfo[channel].transBuffS[j]) free(psyInfo[channel].transBuffS[j]);
+			if (psyInfo[channel].energyS[j]) FreeMemory(psyInfo[channel].energyS[j]);
+			if (psyInfo[channel].energySMS[j]) FreeMemory(psyInfo[channel].energySMS[j]);
+			if (psyInfo[channel].transBuffS[j]) FreeMemory(psyInfo[channel].transBuffS[j]);
 		}
 	}
 }

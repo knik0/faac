@@ -177,10 +177,6 @@ SOURCE=.\joint.h
 # End Source File
 # Begin Source File
 
-SOURCE=.\kbd_win.h
-# End Source File
-# Begin Source File
-
 SOURCE=.\ltp.h
 # End Source File
 # Begin Source File

@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: filtbank.c,v 1.5 2001/03/05 11:33:37 menno Exp $
+ * $Id: filtbank.c,v 1.6 2001/03/12 16:58:37 menno Exp $
  */
 
 /*
@@ -28,7 +28,6 @@
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <memory.h>
 
 #include "coder.h"
 #include "filtbank.h"
@@ -44,15 +43,15 @@ void FilterBankInit(faacEncHandle hEncoder)
 	unsigned int i, channel;
 
 	for (channel = 0; channel < hEncoder->numChannels; channel++) {
-		hEncoder->freqBuff[channel] = (double*)malloc(2*FRAME_LEN*sizeof(double));
-		hEncoder->overlapBuff[channel] = (double*)malloc(FRAME_LEN*sizeof(double));
-		memset(hEncoder->overlapBuff[channel], 0, FRAME_LEN*sizeof(double));
+		hEncoder->freqBuff[channel] = (double*)AllocMemory(2*FRAME_LEN*sizeof(double));
+		hEncoder->overlapBuff[channel] = (double*)AllocMemory(FRAME_LEN*sizeof(double));
+		SetMemory(hEncoder->overlapBuff[channel], 0, FRAME_LEN*sizeof(double));
 	}
 
-	hEncoder->sin_window_long = (double*)malloc(BLOCK_LEN_LONG*sizeof(double));
-	hEncoder->sin_window_short = (double*)malloc(BLOCK_LEN_SHORT*sizeof(double));
-	hEncoder->kbd_window_long = (double*)malloc(BLOCK_LEN_LONG*sizeof(double));
-	hEncoder->kbd_window_short = (double*)malloc(BLOCK_LEN_SHORT*sizeof(double));
+	hEncoder->sin_window_long = (double*)AllocMemory(BLOCK_LEN_LONG*sizeof(double));
+	hEncoder->sin_window_short = (double*)AllocMemory(BLOCK_LEN_SHORT*sizeof(double));
+	hEncoder->kbd_window_long = (double*)AllocMemory(BLOCK_LEN_LONG*sizeof(double));
+	hEncoder->kbd_window_short = (double*)AllocMemory(BLOCK_LEN_SHORT*sizeof(double));
 
 	for( i=0; i<BLOCK_LEN_LONG; i++ )
 		hEncoder->sin_window_long[i] = sin((M_PI/(2*BLOCK_LEN_LONG)) * (i + 0.5));
@@ -68,14 +67,14 @@ void FilterBankEnd(faacEncHandle hEncoder)
 	unsigned int channel;
 
 	for (channel = 0; channel < hEncoder->numChannels; channel++) {
-		if (hEncoder->freqBuff[channel]) free(hEncoder->freqBuff[channel]);
-		if (hEncoder->overlapBuff[channel]) free(hEncoder->overlapBuff[channel]);
+		if (hEncoder->freqBuff[channel]) FreeMemory(hEncoder->freqBuff[channel]);
+		if (hEncoder->overlapBuff[channel]) FreeMemory(hEncoder->overlapBuff[channel]);
 	}
 
-	if (hEncoder->sin_window_long) free(hEncoder->sin_window_long);
-	if (hEncoder->sin_window_short) free(hEncoder->sin_window_short);
-	if (hEncoder->kbd_window_long) free(hEncoder->kbd_window_long);
-	if (hEncoder->kbd_window_short) free(hEncoder->kbd_window_short);
+	if (hEncoder->sin_window_long) FreeMemory(hEncoder->sin_window_long);
+	if (hEncoder->sin_window_short) FreeMemory(hEncoder->sin_window_short);
+	if (hEncoder->kbd_window_long) FreeMemory(hEncoder->kbd_window_long);
+	if (hEncoder->kbd_window_short) FreeMemory(hEncoder->kbd_window_short);
 }
 
 void FilterBank(faacEncHandle hEncoder,
@@ -90,7 +89,7 @@ void FilterBank(faacEncHandle hEncoder,
 	int k, i;
 	int block_type = coderInfo->block_type;
 
-	transf_buf = (double*)malloc(2*BLOCK_LEN_LONG*sizeof(double));
+	transf_buf = (double*)AllocMemory(2*BLOCK_LEN_LONG*sizeof(double));
 
 	/* create / shift old values */
 	/* We use p_overlap here as buffer holding the last frame time signal*/
@@ -158,12 +157,12 @@ void FilterBank(faacEncHandle hEncoder,
 		memcpy(p_out_mdct+BLOCK_LEN_LONG,p_o_buf+BLOCK_LEN_LONG,NFLAT_LS*sizeof(double));
 		for ( i = 0 ; i < BLOCK_LEN_SHORT ; i++)
 			p_out_mdct[i+BLOCK_LEN_LONG+NFLAT_LS] = p_o_buf[i+BLOCK_LEN_LONG+NFLAT_LS] * second_window[BLOCK_LEN_SHORT-i-1];
-		memset(p_out_mdct+BLOCK_LEN_LONG+NFLAT_LS+BLOCK_LEN_SHORT,0,NFLAT_LS*sizeof(double));
+		SetMemory(p_out_mdct+BLOCK_LEN_LONG+NFLAT_LS+BLOCK_LEN_SHORT,0,NFLAT_LS*sizeof(double));
 		MDCT( p_out_mdct, 2*BLOCK_LEN_LONG );
 		break;
 
     case SHORT_LONG_WINDOW :
-		memset(p_out_mdct,0,NFLAT_LS*sizeof(double));
+		SetMemory(p_out_mdct,0,NFLAT_LS*sizeof(double));
 		for ( i = 0 ; i < BLOCK_LEN_SHORT ; i++)
 			p_out_mdct[i+NFLAT_LS] = p_o_buf[i+NFLAT_LS] * first_window[i];
 		memcpy(p_out_mdct+NFLAT_LS+BLOCK_LEN_SHORT,p_o_buf+NFLAT_LS+BLOCK_LEN_SHORT,NFLAT_LS*sizeof(double));
@@ -187,7 +186,7 @@ void FilterBank(faacEncHandle hEncoder,
 		break;
 	}
 
-	if (transf_buf) free(transf_buf);
+	if (transf_buf) FreeMemory(transf_buf);
 }
 
 void IFilterBank(faacEncHandle hEncoder,
@@ -204,8 +203,8 @@ void IFilterBank(faacEncHandle hEncoder,
 	int k, i;
 	int block_type = coderInfo->block_type;
 
-	transf_buf = (double*)malloc(2*BLOCK_LEN_LONG*sizeof(double));
-	overlap_buf = (double*)malloc(2*BLOCK_LEN_LONG*sizeof(double));
+	transf_buf = (double*)AllocMemory(2*BLOCK_LEN_LONG*sizeof(double));
+	overlap_buf = (double*)AllocMemory(2*BLOCK_LEN_LONG*sizeof(double));
 
 	/*  Window shape processing */
 	if (overlap_select != MNON_OVERLAPPED) {
@@ -277,11 +276,11 @@ void IFilterBank(faacEncHandle hEncoder,
 			memcpy(o_buf+BLOCK_LEN_LONG,transf_buf+BLOCK_LEN_LONG,NFLAT_LS*sizeof(double));
 			for ( i = 0 ; i < BLOCK_LEN_SHORT ; i++)
 				o_buf[i+BLOCK_LEN_LONG+NFLAT_LS] = transf_buf[i+BLOCK_LEN_LONG+NFLAT_LS] * second_window[BLOCK_LEN_SHORT-i-1];
-			memset(o_buf+BLOCK_LEN_LONG+NFLAT_LS+BLOCK_LEN_SHORT,0,NFLAT_LS*sizeof(double));
+			SetMemory(o_buf+BLOCK_LEN_LONG+NFLAT_LS+BLOCK_LEN_SHORT,0,NFLAT_LS*sizeof(double));
         } else { /* overlap_select == NON_OVERLAPPED */
 			for ( i = 0 ; i < BLOCK_LEN_SHORT ; i++)
 				transf_buf[i+BLOCK_LEN_LONG+NFLAT_LS] *= second_window[BLOCK_LEN_SHORT-i-1];
-			memset(transf_buf+BLOCK_LEN_LONG+NFLAT_LS+BLOCK_LEN_SHORT,0,NFLAT_LS*sizeof(double));
+			SetMemory(transf_buf+BLOCK_LEN_LONG+NFLAT_LS+BLOCK_LEN_SHORT,0,NFLAT_LS*sizeof(double));
 		}
 		break;
 
@@ -297,7 +296,7 @@ void IFilterBank(faacEncHandle hEncoder,
 			for ( i = 0 ; i < BLOCK_LEN_LONG ; i++)
 				o_buf[i+BLOCK_LEN_LONG] = transf_buf[i+BLOCK_LEN_LONG] * second_window[BLOCK_LEN_LONG-i-1];
 		} else { /* overlap_select == NON_OVERLAPPED */
-			memset(transf_buf,0,NFLAT_LS*sizeof(double));
+			SetMemory(transf_buf,0,NFLAT_LS*sizeof(double));
 			for ( i = 0 ; i < BLOCK_LEN_LONG ; i++)
 				transf_buf[i+BLOCK_LEN_LONG] *= second_window[BLOCK_LEN_LONG-i-1];
 		}
@@ -329,7 +328,7 @@ void IFilterBank(faacEncHandle hEncoder,
 			}
 			first_window = second_window;
 		}
-		memset(o_buf+BLOCK_LEN_LONG+NFLAT_LS+BLOCK_LEN_SHORT,0,NFLAT_LS*sizeof(double));
+		SetMemory(o_buf+BLOCK_LEN_LONG+NFLAT_LS+BLOCK_LEN_SHORT,0,NFLAT_LS*sizeof(double));
 		break;
 	}
 
@@ -341,8 +340,8 @@ void IFilterBank(faacEncHandle hEncoder,
 	/* save unused output data */
 	memcpy(p_overlap,o_buf+BLOCK_LEN_LONG,BLOCK_LEN_LONG*sizeof(double));
 
-	if (overlap_buf) free(overlap_buf);
-	if (transf_buf) free(transf_buf);
+	if (overlap_buf) FreeMemory(overlap_buf);
+	if (transf_buf) FreeMemory(transf_buf);
 }
 
 void specFilter(double *freqBuff,
@@ -357,7 +356,7 @@ void specFilter(double *freqBuff,
 	lowpass = (lowpassFreq * specLen) / (sampleRate>>1) + 1;
 	xlowpass = (lowpass < specLen) ? lowpass : specLen ;
 
-	memset(freqBuff+xlowpass,0,(specLen-xlowpass)*sizeof(double));
+	SetMemory(freqBuff+xlowpass,0,(specLen-xlowpass)*sizeof(double));
 }
 
 static double Izero(double x)
@@ -414,8 +413,8 @@ static void MDCT(double *data, int N)
 	double cosfreq8, sinfreq8;
 	int i, n;
 
-	xi = (double*)malloc((N >> 2)*sizeof(double));
-	xr = (double*)malloc((N >> 2)*sizeof(double));
+	xi = (double*)AllocMemory((N >> 2)*sizeof(double));
+	xr = (double*)AllocMemory((N >> 2)*sizeof(double));
 
 	/* prepare for recurrence relation in pre-twiddle */
 	cfreq = cos (freq);
@@ -481,8 +480,8 @@ static void MDCT(double *data, int N)
 		s = s * cfreq + cold * sfreq;
 	}
 
-	if (xr) free(xr);
-	if (xi) free(xi);
+	if (xr) FreeMemory(xr);
+	if (xi) FreeMemory(xi);
 }
 
 static void IMDCT(double *data, int N)
@@ -493,8 +492,8 @@ static void IMDCT(double *data, int N)
 	double fac, cosfreq8, sinfreq8;
 	int i;
 
-	xi = (double*)malloc((N >> 2)*sizeof(double));
-	xr = (double*)malloc((N >> 2)*sizeof(double));
+	xi = (double*)AllocMemory((N >> 2)*sizeof(double));
+	xr = (double*)AllocMemory((N >> 2)*sizeof(double));
 
 	/* Choosing to allocate 2/N factor to Inverse Xform! */
 	fac = 2. / N; /* remaining 2/N from 4/N IFFT factor */
@@ -561,6 +560,6 @@ static void IMDCT(double *data, int N)
 		s = s * cfreq + cold * sfreq;
 	}
 
-	if (xr) free(xr);
-	if (xi) free(xi);
+	if (xr) FreeMemory(xr);
+	if (xi) FreeMemory(xi);
 }

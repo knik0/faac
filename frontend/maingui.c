@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: maingui.c,v 1.10 2001/03/06 21:02:33 menno Exp $
+ * $Id: maingui.c,v 1.11 2001/03/12 16:58:36 menno Exp $
  */
 
 #include <windows.h>
@@ -193,8 +193,8 @@ static DWORD WINAPI EncodeFile(LPVOID pParam)
 				char HeaderText[50];
 				char Percentage[5];
 
-				pcmbuf = (short*)malloc(PCMBUFSIZE*numChannels*sizeof(short));
-				bitbuf = (unsigned char*)malloc(BITBUFSIZE*sizeof(unsigned char));
+				pcmbuf = (short*)LocalAlloc(0, PCMBUFSIZE*numChannels*sizeof(short));
+				bitbuf = (unsigned char*)LocalAlloc(0, BITBUFSIZE*sizeof(unsigned char));
 
 				SendDlgItemMessage(hWnd, IDC_PROGRESS, PBM_SETRANGE, 0, MAKELPARAM(0, 1024));
 				SendDlgItemMessage(hWnd, IDC_PROGRESS, PBM_SETPOS, 0, 0);
@@ -263,8 +263,8 @@ static DWORD WINAPI EncodeFile(LPVOID pParam)
 					}
 
 				CloseHandle(hOutfile);
-				if (pcmbuf) free(pcmbuf);
-				if (bitbuf) free(bitbuf);
+				if (pcmbuf) LocalFree(pcmbuf);
+				if (bitbuf) LocalFree(bitbuf);
 			}
 
 			faacEncClose(hEncoder);

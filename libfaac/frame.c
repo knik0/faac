@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: frame.c,v 1.13 2001/03/06 14:01:36 menno Exp $
+ * $Id: frame.c,v 1.14 2001/03/12 16:58:37 menno Exp $
  */
 
 /*
@@ -29,7 +29,6 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <memory.h>
 
 #include "frame.h"
 #include "coder.h"
@@ -87,8 +86,8 @@ faacEncHandle FAACAPI faacEncOpen(unsigned long sampleRate,
 	unsigned int channel;
 	faacEncHandle hEncoder;
 
-	hEncoder = (faacEncStruct*)malloc(sizeof(faacEncStruct));
-	memset(hEncoder, 0, sizeof(faacEncStruct));
+	hEncoder = (faacEncStruct*)AllocMemory(sizeof(faacEncStruct));
+	SetMemory(hEncoder, 0, sizeof(faacEncStruct));
 
 	hEncoder->numChannels = numChannels;
 	hEncoder->sampleRate = sampleRate;
@@ -120,8 +119,8 @@ faacEncHandle FAACAPI faacEncOpen(unsigned long sampleRate,
 		hEncoder->sampleBuff[channel] = NULL;
 		hEncoder->nextSampleBuff[channel] = NULL;
 		hEncoder->next2SampleBuff[channel] = NULL;
-		hEncoder->ltpTimeBuff[channel] = (double*)malloc(2*BLOCK_LEN_LONG*sizeof(double));
-		memset(hEncoder->ltpTimeBuff[channel], 0, 2*BLOCK_LEN_LONG*sizeof(double));
+		hEncoder->ltpTimeBuff[channel] = (double*)AllocMemory(2*BLOCK_LEN_LONG*sizeof(double));
+		SetMemory(hEncoder->ltpTimeBuff[channel], 0, 2*BLOCK_LEN_LONG*sizeof(double));
 	}
 
 	/* Initialize coder functions */
@@ -159,13 +158,13 @@ int FAACAPI faacEncClose(faacEncHandle hEncoder)
 
 	/* Free remaining buffer memory */
 	for (channel = 0; channel < hEncoder->numChannels; channel++) {
-		if (hEncoder->ltpTimeBuff[channel]) free(hEncoder->ltpTimeBuff[channel]);
-		if (hEncoder->sampleBuff[channel]) free(hEncoder->sampleBuff[channel]);
-		if (hEncoder->nextSampleBuff[channel]) free(hEncoder->nextSampleBuff[channel]);
+		if (hEncoder->ltpTimeBuff[channel]) FreeMemory(hEncoder->ltpTimeBuff[channel]);
+		if (hEncoder->sampleBuff[channel]) FreeMemory(hEncoder->sampleBuff[channel]);
+		if (hEncoder->nextSampleBuff[channel]) FreeMemory(hEncoder->nextSampleBuff[channel]);
 	}
 
 	/* Free handle */
-	if (hEncoder) free(hEncoder);
+	if (hEncoder) FreeMemory(hEncoder);
 
 	return 0;
 }
@@ -226,9 +225,9 @@ int FAACAPI faacEncEncode(faacEncHandle hEncoder,
 		}
 
 		if (hEncoder->sampleBuff[channel])
-			free(hEncoder->sampleBuff[channel]);
+			FreeMemory(hEncoder->sampleBuff[channel]);
 		hEncoder->sampleBuff[channel] = hEncoder->nextSampleBuff[channel];
-		hEncoder->nextSampleBuff[channel] = (double*)malloc(FRAME_LEN*sizeof(double));
+		hEncoder->nextSampleBuff[channel] = (double*)AllocMemory(FRAME_LEN*sizeof(double));
 
 		if (samplesInput == 0) { /* start flushing*/
 			for (i = 0; i < FRAME_LEN; i++)

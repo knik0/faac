@@ -16,10 +16,9 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: ltp.c,v 1.2 2001/03/05 15:55:40 menno Exp $
+ * $Id: ltp.c,v 1.3 2001/03/12 16:58:37 menno Exp $
  */
 
-#include <malloc.h>
 #include <stdio.h>
 #include <math.h>
 
@@ -28,6 +27,7 @@
 #include "ltp.h"
 #include "tns.h"
 #include "filtbank.h"
+#include "util.h"
 
 /* short double_to_int(double sig_in); */
 #define double_to_int(sig_in) \
@@ -287,10 +287,10 @@ void LtpInit(faacEncHandle hEncoder)
 	for (channel = 0; channel < hEncoder->numChannels; channel++) {
 		LtpInfo *ltpInfo = &(hEncoder->coderInfo[channel].ltpInfo);
 
-		ltpInfo->buffer = malloc(NOK_LT_BLEN * sizeof(short));
-		ltpInfo->mdct_predicted = malloc(2*BLOCK_LEN_LONG*sizeof(double));
-		ltpInfo->time_buffer = malloc(BLOCK_LEN_LONG*sizeof(double));
-		ltpInfo->ltp_overlap_buffer = malloc(BLOCK_LEN_LONG*sizeof(double));
+		ltpInfo->buffer = AllocMemory(NOK_LT_BLEN * sizeof(short));
+		ltpInfo->mdct_predicted = AllocMemory(2*BLOCK_LEN_LONG*sizeof(double));
+		ltpInfo->time_buffer = AllocMemory(BLOCK_LEN_LONG*sizeof(double));
+		ltpInfo->ltp_overlap_buffer = AllocMemory(BLOCK_LEN_LONG*sizeof(double));
 
 		for (i = 0; i < NOK_LT_BLEN; i++)
 			ltpInfo->buffer[i] = 0;
@@ -316,8 +316,8 @@ void LtpEnd(faacEncHandle hEncoder)
 	for (channel = 0; channel < hEncoder->numChannels; channel++) {
 		LtpInfo *ltpInfo = &(hEncoder->coderInfo[channel].ltpInfo);
 
-		if (ltpInfo->buffer) free(ltpInfo->buffer);
-		if (ltpInfo->mdct_predicted) free(ltpInfo->mdct_predicted);
+		if (ltpInfo->buffer) FreeMemory(ltpInfo->buffer);
+		if (ltpInfo->mdct_predicted) FreeMemory(ltpInfo->mdct_predicted);
 	}
 }
 
@@ -335,7 +335,7 @@ int LtpEncode(faacEncHandle hEncoder,
 	ltpInfo->global_pred_flag = 0;
 	ltpInfo->side_info = 0;
 
-	predicted_samples = (double*)malloc(2*BLOCK_LEN_LONG*sizeof(double));
+	predicted_samples = (double*)AllocMemory(2*BLOCK_LEN_LONG*sizeof(double));
 
 	switch(coderInfo->block_type)
 	{
@@ -370,7 +370,7 @@ int LtpEncode(faacEncHandle hEncoder,
 		break;
 	}
 
-	if (predicted_samples) free(predicted_samples);
+	if (predicted_samples) FreeMemory(predicted_samples);
 
 	return (ltpInfo->global_pred_flag);
 }

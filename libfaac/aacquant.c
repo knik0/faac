@@ -16,12 +16,11 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: aacquant.c,v 1.6 2001/03/06 14:01:36 menno Exp $
+ * $Id: aacquant.c,v 1.7 2001/03/12 16:58:36 menno Exp $
  */
 
 #include <math.h>
 #include <stdlib.h>
-#include <memory.h>
 
 #include "aacquant.h"
 #include "coder.h"
@@ -44,9 +43,9 @@ void AACQuantizeInit(CoderInfo *coderInfo, unsigned int numChannels)
 {
 	unsigned int channel, i;
 
-	pow43 = (double*)malloc(PRECALC_SIZE*sizeof(double));
-	adj43 = (double*)malloc(PRECALC_SIZE*sizeof(double));
-	adj43asm = (double*)malloc(PRECALC_SIZE*sizeof(double));
+	pow43 = (double*)AllocMemory(PRECALC_SIZE*sizeof(double));
+	adj43 = (double*)AllocMemory(PRECALC_SIZE*sizeof(double));
+	adj43asm = (double*)AllocMemory(PRECALC_SIZE*sizeof(double));
 
 	pow43[0] = 0.0;
 	for(i=1;i<PRECALC_SIZE;i++)
@@ -63,7 +62,7 @@ void AACQuantizeInit(CoderInfo *coderInfo, unsigned int numChannels)
 		coderInfo[channel].old_value = 0;
 		coderInfo[channel].CurrentStep = 4;
 
-		coderInfo[channel].requantFreq = (double*)malloc(BLOCK_LEN_LONG*sizeof(double));
+		coderInfo[channel].requantFreq = (double*)AllocMemory(BLOCK_LEN_LONG*sizeof(double));
 	}
 }
 
@@ -71,12 +70,12 @@ void AACQuantizeEnd(CoderInfo *coderInfo, unsigned int numChannels)
 {
 	unsigned int channel;
 
-	if (pow43) free(pow43);
-	if (adj43) free(adj43);
-	if (adj43asm) free(adj43asm);
+	if (pow43) FreeMemory(pow43);
+	if (adj43) FreeMemory(adj43);
+	if (adj43asm) FreeMemory(adj43asm);
 
 	for (channel = 0; channel < numChannels; channel++) {
-		if (coderInfo[channel].requantFreq) free(coderInfo[channel].requantFreq);
+		if (coderInfo[channel].requantFreq) FreeMemory(coderInfo[channel].requantFreq);
 	}
 }
 
@@ -97,9 +96,9 @@ int AACQuantize(CoderInfo *coderInfo,
 	int *scale_factor = coderInfo->scale_factor;
 
 
-	xr_pow = (double*)malloc(FRAME_LEN*sizeof(double));
-	xmin = (double*)malloc(MAX_SCFAC_BANDS*sizeof(double));
-	xi = (int*)malloc(FRAME_LEN*sizeof(int));
+	xr_pow = (double*)AllocMemory(FRAME_LEN*sizeof(double));
+	xmin = (double*)AllocMemory(MAX_SCFAC_BANDS*sizeof(double));
+	xi = (int*)AllocMemory(FRAME_LEN*sizeof(int));
 
 
 	if (coderInfo->block_type == ONLY_SHORT_WINDOW) {
@@ -139,7 +138,7 @@ int AACQuantize(CoderInfo *coderInfo,
 		}
 	} else {
 		coderInfo->global_gain = 0;
-		memset(xi, 0, FRAME_LEN*sizeof(int));
+		SetMemory(xi, 0, FRAME_LEN*sizeof(int));
 	}
 
 	CountBitsLong(coderInfo, xi);
@@ -165,9 +164,9 @@ int AACQuantize(CoderInfo *coderInfo,
 	}
 
 
-	if (xmin) free(xmin);
-	if (xr_pow) free(xr_pow);
-	if (xi) free(xi);
+	if (xmin) FreeMemory(xmin);
+	if (xr_pow) FreeMemory(xr_pow);
+	if (xi) FreeMemory(xi);
 
 	return bits;
 }
@@ -417,10 +416,10 @@ static int OuterLoop(CoderInfo *coderInfo,
 	int *save_xi;
 	double *distort;
 
-	distort = (double*)malloc(MAX_SCFAC_BANDS*sizeof(double));
-	best_scale_factor = (int*)malloc(MAX_SCFAC_BANDS*sizeof(int));
+	distort = (double*)AllocMemory(MAX_SCFAC_BANDS*sizeof(double));
+	best_scale_factor = (int*)AllocMemory(MAX_SCFAC_BANDS*sizeof(int));
 
-	save_xi = (int*)malloc(FRAME_LEN*sizeof(int));
+	save_xi = (int*)AllocMemory(FRAME_LEN*sizeof(int));
 
 	notdone = 1;
 	outer_loop_count = 0;
@@ -473,9 +472,9 @@ static int OuterLoop(CoderInfo *coderInfo,
 	}
 	memcpy(xi, save_xi, sizeof(int)*BLOCK_LEN_LONG);
 
-	if (best_scale_factor) free(best_scale_factor);
-	if (save_xi) free(save_xi);
-	if (distort) free(distort);
+	if (best_scale_factor) FreeMemory(best_scale_factor);
+	if (save_xi) FreeMemory(save_xi);
+	if (distort) FreeMemory(distort);
 
 	return 0;
 }

@@ -16,17 +16,17 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: bitstream.c,v 1.5 2001/03/05 11:33:37 menno Exp $
+ * $Id: bitstream.c,v 1.6 2001/03/12 16:58:36 menno Exp $
  */
 
 #include <stdlib.h>
-#include <memory.h>
 
 #include "coder.h"
 #include "channels.h"
 #include "huffman.h"
 #include "bitstream.h"
 #include "ltp.h"
+#include "util.h"
 
 int WriteBitstream(faacEncHandle hEncoder,
 				   CoderInfo *coderInfo,
@@ -653,12 +653,12 @@ BitStream *OpenBitStream(int size, unsigned char *buffer)
 {
 	BitStream *bitStream;
 
-	bitStream = malloc(sizeof(BitStream));
+	bitStream = AllocMemory(sizeof(BitStream));
 	bitStream->size = size;
 	bitStream->numBit = 0;
 	bitStream->currentBit = 0;
 	bitStream->data = buffer;
-	memset(bitStream->data, 0, size);
+	SetMemory(bitStream->data, 0, size);
 
 	return bitStream;
 }
@@ -667,7 +667,7 @@ int CloseBitStream(BitStream *bitStream)
 {
 	int bytes = bit2byte(bitStream->numBit);
 
-	free(bitStream);
+	FreeMemory(bitStream);
 
 	return bytes;
 }

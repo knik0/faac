@@ -16,11 +16,10 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: tns.c,v 1.2 2001/03/05 21:24:02 oxygene Exp $
+ * $Id: tns.c,v 1.3 2001/03/12 16:58:37 menno Exp $
  */
 
 #include <math.h>
-#include <malloc.h>
 #include "frame.h"
 #include "coder.h"
 #include "bitstream.h"
@@ -376,7 +375,7 @@ static void TnsInvFilter(int length,double* spec,TnsFilterData* filter)
 	double* a=filter->aCoeffs;
 	double* temp;
 
-    temp = (double *) malloc (length * sizeof (double));
+    temp = (double *)AllocMemory(length * sizeof (double));
 
 	/* Determine loop parameters for given direction */
 	if (filter->direction) {
@@ -419,7 +418,7 @@ static void TnsInvFilter(int length,double* spec,TnsFilterData* filter)
 			}
 		}
 	}
-	if (temp) free(temp);
+	if (temp) FreeMemory(temp);
 }
 
 

@@ -16,14 +16,14 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: fft.c,v 1.2 2001/02/04 17:50:47 oxygene2000 Exp $
+ * $Id: fft.c,v 1.3 2001/03/12 16:58:36 menno Exp $
  */
 
 #include <math.h>
 #include <stdlib.h>
 
 #include "fft.h"
-
+#include "util.h"
 
 #define  MAXLOGM     11    /* max FFT length = 2^MAXLOGM */
 #define  TWOPI       6.28318530717958647692
@@ -42,9 +42,9 @@ static void build_table(int logm)
  
    /* Allocate memory for tables */
    nel = m4 - 2;
-   tabr[logm-4] = (double *) calloc(3 * nel, sizeof(double));
+   tabr[logm-4] = (double *)AllocMemory(3 * nel * sizeof(double));
 /*
-   if ((tab[logm-4] = (double *) calloc(3 * nel, sizeof(double))) == NULL) {
+   if ((tab[logm-4] = (double *) AllocMemory(3 * nel * sizeof(double))) == NULL) {
       printf("Error : RSFFT : not enough memory for cosine tables.\n");
       error_exit();
    }
@@ -287,9 +287,9 @@ static void srrec(double *xr, double *xi, int logm)
  
       /* Allocate memory for tables */
       nel = m4 - 2;
-	  tab[logm-4] = (double *) calloc(6 * nel, sizeof(double));
+	  tab[logm-4] = (double *)AllocMemory(6 * nel * sizeof(double));
 /*
-      if ((tab[logm-4] = (double *) calloc(6 * nel, sizeof(double))) == NULL) {
+      if ((tab[logm-4] = (double *)AllocMemory(6 * nel * sizeof(double))) == NULL) {
          error_exit();
       }
 */

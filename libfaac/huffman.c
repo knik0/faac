@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: huffman.c,v 1.3 2001/02/04 17:50:47 oxygene2000 Exp $
+ * $Id: huffman.c,v 1.4 2001/03/12 16:58:37 menno Exp $
  */
 
 #include <math.h>
@@ -25,6 +25,7 @@
 #include "huffman.h"
 #include "coder.h"
 #include "bitstream.h"
+#include "util.h"
 
 #include "hufftab.h"
 
@@ -33,8 +34,8 @@ void HuffmanInit(CoderInfo *coderInfo, unsigned int numChannels)
 	unsigned int channel;
 
 	for (channel = 0; channel < numChannels; channel++) {
-		coderInfo[channel].data = (int*)malloc(5*FRAME_LEN*sizeof(int));
-		coderInfo[channel].len = (int*)malloc(5*FRAME_LEN*sizeof(int));
+		coderInfo[channel].data = (int*)AllocMemory(5*FRAME_LEN*sizeof(int));
+		coderInfo[channel].len = (int*)AllocMemory(5*FRAME_LEN*sizeof(int));
 	}
 }
 
@@ -43,8 +44,8 @@ void HuffmanEnd(CoderInfo *coderInfo, unsigned int numChannels)
 	unsigned int channel;
 
 	for (channel = 0; channel < numChannels; channel++) {
-		if (coderInfo[channel].data) free(coderInfo[channel].data);
-		if (coderInfo[channel].len) free(coderInfo[channel].len);
+		if (coderInfo[channel].data) FreeMemory(coderInfo[channel].data);
+		if (coderInfo[channel].len) FreeMemory(coderInfo[channel].len);
 	}
 }
 
@@ -97,12 +98,12 @@ int BitSearch(CoderInfo *coderInfo,
 /* #define SLOW */
 
 #ifdef SLOW
-	for(i=0;i<5;i++){
-		hop = 1 << i;
+	for(i = 0; i < 5; i++) {
 #else
-		hop = 1;
 		i = 0;
 #endif
+		hop = 1 << i;
+
 		NoiselessBitCount(coderInfo, quant, hop, min_book_choice);
 
 		/* load up the (not-full) binary search tree with the min_book_choice values */
