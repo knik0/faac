@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: psychkni.c,v 1.2 2002/08/21 16:54:55 knik Exp $
+ * $Id: psychkni.c,v 1.3 2002/11/23 17:33:28 knik Exp $
  */
 #include <stdio.h>
 #include <stdlib.h>
@@ -74,34 +74,47 @@ static void PsyThreshold(GlobalPsyInfo * gpsyInfo, PsyInfo * psyInfo, int *cb_wi
 			 int num_cb_long, int *cb_width_short, int num_cb_short)
 {
   int b, j;
-  double enb[8][NSFB_SHORT];	// total energy in each band in each window
-  double enchg[NSFB_SHORT];	// energy change
+  double volb[8][NSFB_SHORT];	// band volume in each window
   double totchg;
   int lastband;
+  int offset;
   psydata_t *psydata = psyInfo->data;
+  const double globalthr = 70;
+  double tmp;
+  double thr;
 
 
   /* Long window */
+  offset = 1;
   for (b = 0; b < num_cb_long; b++)
   {
-    psyInfo->maskThr[b] = 0.8;
+    tmp = (double)(offset + cb_width_long[b]) / offset;
+
+    thr = log(tmp) * globalthr;
+
     psyInfo->maskEn[b] = 1.0;
-    // extremely simple constant masking threshold
-    // but it works better than those elaborate but buggy models >:)
+    psyInfo->maskThr[b] = 1.0 / thr;
+    offset += cb_width_long[b];
   }
 
   /* Short windows */
+  offset = 1;
   for (j = 0; j < 8; j++)
   {
     for (b = 0; b < num_cb_short; b++)
     {
-      psyInfo->maskThrS[j][b] = 0.5;
+      tmp = (double)(offset + cb_width_short[b]) / offset;
+
+      thr = log(tmp) * globalthr;
+
       psyInfo->maskEnS[j][b] = 1.0;
+      psyInfo->maskThrS[j][b] = 1.0 / thr;
+      offset += cb_width_short[b];
     }
   }
 
   /* long/short block switch */
-  // compute energy
+  // compute band volume
   for (j = 0; j < 8; j++)
   {
     int l = 0;
@@ -109,43 +122,44 @@ static void PsyThreshold(GlobalPsyInfo * gpsyInfo, PsyInfo * psyInfo, int *cb_wi
     {
       int last = l + cb_width_short[b];
       double e = 0;
+
+      if (last > psydata->bandS) // band out of range
+      {
+	volb[j][b] = 0;
+	l = last;
+	continue;
+      }
+
       for (; l < last; l++)
 	e += psydata->fftEnrgS[j][l];
-
-      if (l >= psydata->bandS)
-	break;
-      enb[j][b] = e;
-      //printf("en[%d][%d] = %g\n", j, b, e);
+      volb[j][b] = sqrt(e);
     }
   }
   lastband = b;
 
-  // compare levels of energy in each band of short widows
+  // compare volume levels in each band of short widows
   totchg = 0.0;
   for (b = 2; b < lastband; b++)
   {
     double maxdif = 0;
 
-    enchg[b] = 0.0;
     for (j = 1; j < 7; j++)
     {
-      double slowen = (1.0 / 7.0) * ((7 - j) * enb[0][b] + j * enb[7][b]);
-      double endif = enb[j][b] - slowen;
+      double slowvol = (1.0 / 7.0) * ((7 - j) * volb[0][b] + j * volb[7][b]);
+      double voldif = volb[j][b] / slowvol;
 
-      endif /= enb[j][b];
+      if (voldif < 1.0)
+	voldif = 1.0 / voldif;
+      voldif -= 1.0;
 
-      if (endif < 0)
-	endif = -endif;
-      if (endif > maxdif)
-	maxdif = endif;
+      if (voldif > maxdif)
+	maxdif = voldif;
     }
-    enchg[b] += maxdif;
-    totchg += enchg[b];
-    //printf("enchg[%d] = %g\n", b, enchg[b]);
+    totchg += maxdif;
   }
   totchg = totchg / lastband;
 
-  psyInfo->block_type = (totchg > 3.0) ? ONLY_SHORT_WINDOW : ONLY_LONG_WINDOW;
+  psyInfo->block_type = (totchg > 1.0) ? ONLY_SHORT_WINDOW : ONLY_LONG_WINDOW;
 
 #if 0
   printf("totchg: %s %g\n", (psyInfo->block_type == ONLY_SHORT_WINDOW)
@@ -403,8 +417,8 @@ static void PsyBufferUpdate(GlobalPsyInfo * gpsyInfo, PsyInfo * psyInfo,
 {
   int i, j;
   double a, b;
-  static double transBuff[2 * BLOCK_LEN_LONG];
-  static double transBuffS[2 * BLOCK_LEN_SHORT];
+  double transBuff[2 * BLOCK_LEN_LONG];
+  double transBuffS[2 * BLOCK_LEN_SHORT];
   psydata_t *psydata = psyInfo->data;
   psyfloat *tmp;
 
