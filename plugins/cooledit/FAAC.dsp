@@ -43,7 +43,7 @@ RSC=rc.exe
 # PROP Ignore_Export_Lib 0
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /MT /W3 /GX /O2 /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /D "_MBCS" /D "_USRDLL" /D "FAAC_EXPORTS" /YX /FD /c
-# ADD CPP /nologo /MD /W3 /GX /O2 /I "../../../faad2/common/faad" /I "../../include" /I "../../../faad2/include" /I "../../common/mp4v2" /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /D "WIN32_LEAN_AND_MEAN" /YX /FD /c
+# ADD CPP /nologo /MD /W3 /GX /O2 /I "." /I "../../../faad2/common/Cfaac" /I "../../../faad2/common/id3lib/include" /I "../../include" /I "../../../faad2/include" /I "../../../faad2/common/faad" /I "../../../faad2/common/mp4v2" /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /D "WIN32_LEAN_AND_MEAN" /YX /FD /c
 # ADD BASE MTL /nologo /D "NDEBUG" /mktyplib203 /win32
 # ADD MTL /nologo /D "NDEBUG" /mktyplib203 /win32
 # ADD BASE RSC /l 0x410 /d "NDEBUG"
@@ -69,7 +69,7 @@ LINK32=xilink6.exe
 # PROP Ignore_Export_Lib 0
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /MTd /W3 /Gm /GX /ZI /Od /D "WIN32" /D "_DEBUG" /D "_WINDOWS" /D "_MBCS" /D "_USRDLL" /D "FAAC_EXPORTS" /YX /FD /GZ /c
-# ADD CPP /nologo /MDd /W3 /Gm /GX /ZI /Od /I "../../include" /I "../../../faad2/include" /I "../../../faad2/common/faad" /I "../../common/mp4v2" /D "WIN32" /D "_DEBUG" /D "_WINDOWS" /D "WIN32_LEAN_AND_MEAN" /YX /FD /GZ /c
+# ADD CPP /nologo /MDd /W3 /Gm /GX /ZI /Od /I "." /I "../../../faad2/common/Cfaac" /I "../../../faad2/common/id3lib/include" /I "../../include" /I "../../../faad2/include" /I "../../../faad2/common/faad" /I "../../../faad2/common/mp4v2" /D "WIN32" /D "_DEBUG" /D "_WINDOWS" /D "WIN32_LEAN_AND_MEAN" /YX /FD /GZ /c
 # ADD BASE MTL /nologo /D "_DEBUG" /mktyplib203 /win32
 # ADD MTL /nologo /D "_DEBUG" /mktyplib203 /win32
 # ADD BASE RSC /l 0x410 /d "_DEBUG"
@@ -79,7 +79,7 @@ BSC32=bscmake.exe
 # ADD BSC32 /nologo
 LINK32=xilink6.exe
 # ADD BASE LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /nologo /dll /debug /machine:I386 /pdbtype:sept
-# ADD LINK32 ws2_32.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /nologo /dll /debug /machine:I386 /out:"C:\Programmi\Adobe\Audition 1.0\FAAC.flt" /pdbtype:sept
+# ADD LINK32 ws2_32.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /nologo /dll /debug /machine:I386 /out:"Debug\FAAC.flt" /pdbtype:sept
 # SUBTRACT LINK32 /nodefaultlib /force
 
 !ENDIF 
@@ -93,15 +93,27 @@ LINK32=xilink6.exe
 # PROP Default_Filter "cpp;c;cxx;rc;def;r;odl;idl;hpj;bat"
 # Begin Source File
 
-SOURCE=.\Cfaac.cpp
+SOURCE=..\..\..\faad2\common\Cfaac\Cfaac.cpp
 # End Source File
 # Begin Source File
 
-SOURCE=.\Cfaad.cpp
+SOURCE=..\..\..\faad2\common\Cfaac\Cfaad.cpp
 # End Source File
 # Begin Source File
 
-SOURCE=.\CRegistry.cpp
+SOURCE=..\..\..\faad2\common\Cfaac\CRegistry.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\..\faad2\common\Cfaac\CTag.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\..\faad2\common\Cfaac\DecDialog.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\..\faad2\common\Cfaac\EncDialog.cpp
 # End Source File
 # Begin Source File
 
@@ -113,7 +125,7 @@ SOURCE=.\FAAC.def
 # End Source File
 # Begin Source File
 
-SOURCE=.\FAAC.rc
+SOURCE=..\..\..\faad2\common\Cfaac\FAAC.rc
 # End Source File
 # Begin Source File
 
@@ -129,19 +141,31 @@ SOURCE=.\Main.cpp
 # PROP Default_Filter "h;hpp;hxx;hm;inl"
 # Begin Source File
 
-SOURCE=.\Cfaac.h
+SOURCE=..\..\..\faad2\common\Cfaac\Cfaac.h
 # End Source File
 # Begin Source File
 
-SOURCE=.\Cfaad.h
+SOURCE=..\..\..\faad2\common\Cfaac\Cfaad.h
 # End Source File
 # Begin Source File
 
-SOURCE=.\CRegistry.h
+SOURCE=..\..\..\faad2\common\Cfaac\CRegistry.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\..\faad2\common\Cfaac\CTag.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\..\faad2\common\Cfaac\DecDialog.h
 # End Source File
 # Begin Source File
 
 SOURCE=.\Defines.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\..\faad2\common\Cfaac\EncDialog.h
 # End Source File
 # Begin Source File
 
@@ -157,7 +181,11 @@ SOURCE=.\Filters.h
 # End Source File
 # Begin Source File
 
-SOURCE=.\resource.h
+SOURCE=..\..\..\faad2\common\Cfaac\resource.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\..\faad2\common\Cfaac\TypeDef.h
 # End Source File
 # End Group
 # Begin Group "Resource Files"
@@ -165,19 +193,23 @@ SOURCE=.\resource.h
 # PROP Default_Filter "ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe"
 # Begin Source File
 
-SOURCE=.\AudioCoding.bmp
+SOURCE=..\..\..\faad2\common\Cfaac\AudioCoding.bmp
 # End Source File
 # Begin Source File
 
-SOURCE=.\Email.bmp
+SOURCE=..\..\..\faad2\common\Cfaac\Email.bmp
 # End Source File
 # Begin Source File
 
-SOURCE=.\Mail.bmp
+SOURCE=..\..\..\faad2\common\Cfaac\id3v2.ico
 # End Source File
 # Begin Source File
 
-SOURCE=".\mpeg4ip-v.bmp"
+SOURCE=..\..\..\faad2\common\Cfaac\Mail.bmp
+# End Source File
+# Begin Source File
+
+SOURCE="..\..\..\faad2\common\Cfaac\mpeg4ip-v.bmp"
 # End Source File
 # End Group
 # End Target

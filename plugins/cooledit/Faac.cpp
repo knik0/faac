@@ -77,8 +77,10 @@ HANDLE FAR PASCAL OpenFilterOutput(LPSTR lpstrFilename,long lSamprate,WORD wBits
 {
 HANDLE	hOutput;
 Cfaac	tmp;
+CMyEncCfg	cfg(false);
+char	*srcFilename=tmp.getSourceFilename(cfg.TagSrcPath,lpstrFilename,cfg.TagSrcExt);
 
-	if(hOutput=tmp.Init(lpstrFilename,lSamprate,wBitsPerSample,wChannels,lSize))
+	if(hOutput=tmp.Init(srcFilename,lpstrFilename,lSamprate,wBitsPerSample,wChannels,lSize))
 	{
 	MYOUTPUT *mo;
 		GLOBALLOCK(mo,hOutput,MYOUTPUT,return NULL);
@@ -88,6 +90,7 @@ Cfaac	tmp;
 		tmp.hOutput=NULL;
 	}
 
+	FREE_ARRAY(srcFilename);
 	return hOutput;
 }
 // *********************************************************************************************

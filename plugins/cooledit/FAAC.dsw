@@ -20,6 +20,39 @@ Package=<4>
     Begin Project Dependency
     Project_Dep_Name libmp4v2_st
     End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name aacInfoLib
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name id3lib
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name zlib
+    End Project Dependency
+}}}
+
+###############################################################################
+
+Project: "aacInfoLib"=.\aacInfoLib.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+}}}
+
+###############################################################################
+
+Project: "id3lib"=..\..\..\faad2\common\id3lib\libprj\id3lib.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
 }}}
 
 ###############################################################################
@@ -48,7 +81,19 @@ Package=<4>
 
 ###############################################################################
 
-Project: "libmp4v2_st"=..\..\common\mp4v2\libmp4v2_st60.dsp - Package Owner=<4>
+Project: "libmp4v2_st"=..\..\..\faad2\common\mp4v2\libmp4v2_st60.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+}}}
+
+###############################################################################
+
+Project: "zlib"=..\..\..\faad2\common\id3lib\zlib\prj\zlib.dsp - Package Owner=<4>
 
 Package=<5>
 {{{

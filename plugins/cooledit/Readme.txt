@@ -24,7 +24,7 @@ To use it:
 To write .mp4 files:
 --------------------
 
-Check "Write .mp4" in the config dialog or
+Select "Write .mp4" in the config dialog or
 append .mp4 extension to the name of file in the "Save waveform as" dialog.
 
 ----------------------------------------------------------------------------
