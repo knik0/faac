@@ -39,10 +39,10 @@ rfftw_destroy_plan(rdft_plan8);
 void rdft( double *fr, unsigned lg2n ) 
 /* real discrete Fourier transform; not recursive */
 {
-fftw_init();
-/*FIXME: has to be placed elsewhere*/
 rfftw_plan rdft_plan;
 double fo[lg2n];
+fftw_init();
+// FIXME: has to be placed elsewhere
 switch(lg2n) {
     case 11: rfftw_one(rdft_plan11,fr,fo);
 	break;
