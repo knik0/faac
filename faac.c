@@ -21,8 +21,8 @@
 /**************************************************************************
   Version Control Information			Method: CVS
   Identifiers:
-  $Revision: 1.16 $
-  $Date: 2000/10/05 08:39:02 $ (check in)
+  $Revision: 1.17 $
+  $Date: 2000/12/04 20:03:47 $ (check in)
   $Author: menno $
   *************************************************************************/
 
@@ -77,10 +77,10 @@ void combine_path(char *path, char *dir, char *file)
   strcpy(path, dir);
 }
 
-void usage(void)
+void usage(char* argv0ptr)
 {
   printf("Usage:\n");
-  printf("faac.exe -options file ...\n");
+  printf("%s -options file ...\n", argv0ptr);
   printf("Options:\n");
   printf(" -?    Shows this help screen.\n");
   printf(" -pX   AAC profile (X can be LOW, or MAIN (default).\n");
@@ -103,7 +103,7 @@ void usage(void)
   printf("       Can be any of the filetypes supported by libsndfile\n");
   printf("       (http://www.zip.com.au/~erikd/libsndfile/).\n");
   printf("Example:\n");
-  printf("       faac.exe -b96 -oc:\\aac\\ *.wav\n");
+  printf("       %s -b96 -oc:\\aac\\ *.wav\n", argv0ptr);
   return;
 }
 
@@ -114,7 +114,7 @@ int parse_arg(int argc, char *argv[],faacAACStream *as, char *InFileNames[100], 
 
   faac_InitParams(as);
   if (argc == 1) {
-    usage();
+    usage(argv[0]);
     return -1;
   }
 
@@ -226,7 +226,7 @@ int parse_arg(int argc, char *argv[],faacAACStream *as, char *InFileNames[100], 
 	  strcpy(out_dir, &argv[i][2]);
 	  break;
 	case '?':
-	  usage();
+	  usage(argv[0]);
 	  return 0;
         default:
           printf("Unknown option: %s\n", argv[i]);
