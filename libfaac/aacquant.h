@@ -16,7 +16,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: aacquant.h,v 1.7 2003/08/11 09:43:47 menno Exp $
+ * $Id: aacquant.h,v 1.8 2003/09/24 16:26:28 knik Exp $
  */
 
 #ifndef AACQUANT_H
@@ -37,18 +37,28 @@ extern "C" {
 #define POW20(x)  pow(2.0,((double)x)*.25)
 #define IPOW20(x)  pow(2.0,-((double)x)*.1875)
 
+#pragma pack(push, 1)
+typedef struct
+  {
+    double *pow43;
+    double *adj43;
+    int quality;
+  } AACQuantCfg;
+#pragma pack(pop)
 
-void AACQuantizeInit(faacEncHandle hEncoder, CoderInfo *coderInfo, unsigned int numChannels);
-void AACQuantizeEnd(faacEncHandle hEncoder, CoderInfo *coderInfo, unsigned int numChannels);
+void AACQuantizeInit(CoderInfo *coderInfo, unsigned int numChannels,
+		     AACQuantCfg *aacquantCfg);
+void AACQuantizeEnd(CoderInfo *coderInfo, unsigned int numChannels,
+		    AACQuantCfg *aacquantCfg);
 
-int AACQuantize(faacEncHandle hEncoder,
-				CoderInfo *coderInfo,
+int AACQuantize(CoderInfo *coderInfo,
                 PsyInfo *psyInfo,
                 ChannelInfo *channelInfo,
                 int *cb_width,
                 int num_cb,
                 double *xr,
-                int desired_rate);
+		AACQuantCfg *aacquantcfg);
+
 int SortForGrouping(CoderInfo* coderInfo,
 		    PsyInfo *psyInfo,
 		    ChannelInfo *channelInfo,
