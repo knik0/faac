@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: util.c,v 1.2 2001/02/04 17:50:47 oxygene2000 Exp $
+ * $Id: util.c,v 1.3 2001/02/10 12:28:54 menno Exp $
  */
 
 /* Returns the sample rate index */
@@ -37,10 +37,27 @@ int GetSRIndex(unsigned int sampleRate)
 	return 11;
 }
 
-int max(a, b){
- return (((a) > (b)) ? (a) : (b));
+/* Returns the maximum bitrate per channel for that sampling frequency */
+unsigned int MaxBitrate(unsigned long sampleRate)
+{
+	/*
+	 *  Maximum of 6144 bit for a channel
+	 */
+	return (int)(6144.0 * (double)sampleRate/1024.0 + .5);
 }
 
-int min(a, b){
- return (((a) < (b)) ? (a) : (b));
+/* Returns the minimum bitrate per channel for that sampling frequency */
+unsigned int MinBitrate(unsigned long sampleRate)
+{
+	return 8000;
+}
+
+int max(a, b)
+{
+	return (((a) > (b)) ? (a) : (b));
+}
+
+int min(a, b)
+{
+	return (((a) < (b)) ? (a) : (b));
 }

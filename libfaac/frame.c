@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: frame.c,v 1.7 2001/02/09 09:07:35 menno Exp $
+ * $Id: frame.c,v 1.8 2001/02/10 12:28:54 menno Exp $
  */
 
 /*
@@ -53,8 +53,17 @@ int FAACAPI faacEncSetConfiguration(faacEncHandle hEncoder,
 {
 	hEncoder->config.allowMidside = config->allowMidside;
 	hEncoder->config.useLfe = config->useLfe;
+
+	/* Check for correct bitrate */
+	if (config->bitRate > MaxBitrate(hEncoder->sampleRate))
+		return 0;
+	if (config->bitRate < MinBitrate(hEncoder->sampleRate))
+		return 0;
+
+	/* Bitrate check passed */
 	hEncoder->config.bitRate = config->bitRate;
 
+	/* OK */
 	return 1;
 }
 
