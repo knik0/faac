@@ -3,7 +3,7 @@ AM_INIT_AUTOMAKE(faac,1.0beta)
 
 AM_CONFIG_HEADER(config.h)
 
-CFLAGS="-O2 -Wall"
+CFLAGS=${CFLAGS:-"-O2 -Wall"}
 AC_PROG_CC
 AM_PROG_LIBTOOL
 
