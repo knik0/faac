@@ -53,6 +53,7 @@ faacAACStream *faacEncodeInit(faacAACConfig *ac, int *samplesToRead, int *bitBuf
 	as->out_sampling_rate = ac->out_sampling_rate;
 	as->in_sampling_rate = ac->in_sampling_rate;
 	as->write_header = ac->write_header;
+	as->cut_off = ac->cut_off;
 	as->use_MS = ac->use_MS;
 	as->use_IS = ac->use_IS;
 	as->use_TNS = ac->use_TNS;
@@ -335,7 +336,7 @@ faacVersion *faacEncodeVersion(void)
 	faacVersion *faacv = malloc(sizeof(faacVersion));
 
 	faacv->DLLMajorVersion = 2;
-	faacv->DLLMinorVersion = 15;
+	faacv->DLLMinorVersion = 16;
 	faacv->MajorVersion = 0;
 	faacv->MinorVersion = 55;
 	strcpy(faacv->HomePage, "http://www.slimline.net/aac/");
@@ -405,6 +406,7 @@ void usage(void)
 	printf(" -nh   No header will be written to the AAC file.\n");
 	printf(" -oX   Set output directory.\n");
 	printf(" -sX   Set output sampling rate.\n");
+	printf(" -cX   Set cut-off frequency.\n");
 	printf(" -r    Use raw data input file.\n");
 	printf(" file  Multiple files can be given as well as wild cards.\n");
 	printf("       Can be any of the filetypes supported by libsndfile\n");
@@ -433,6 +435,7 @@ int main(int argc, char *argv[])
 	int profile = MAIN_PROFILE;
 	int no_header = 0;
 	int use_IS = 0, use_MS = 0, use_TNS = 1, use_LTP = 1, use_PNS = 0;
+	int cut_off = 0;
 	int bit_rate = 128;
 	int out_rate = 0;
 	char out_dir[255];
@@ -511,8 +514,7 @@ int main(int argc, char *argv[])
 			}
 		} else {
 			switch(argv[i][1]) {
-			case 'p':
-			case 'P':
+			case 'p': case 'P':
 				if (argv[i][2] == 'n' || 'N')
 					use_PNS = 1;
 				else if (argv[i][2] == 'l' || 'L')
@@ -520,8 +522,7 @@ int main(int argc, char *argv[])
 				else
 					profile = MAIN_PROFILE;
 				break;
-			case 'n':
-			case 'N':
+			case 'n': case 'N':
 				if (argv[i][2] == 'm' || 'M')
 					use_MS = -1;
 				else if (argv[i][2] == 't' || 'T')
@@ -531,33 +532,29 @@ int main(int argc, char *argv[])
 				else
 					no_header = 1;
 				break;
-			case 'm':
-			case 'M':
+			case 'm': case 'M':
 				use_MS = 1;
 				break;
-			case 'i':
-			case 'I':
+			case 'i': case 'I':
 				use_IS = 1;
 				break;
-			case 'r':
-			case 'R':
+			case 'r': case 'R':
 				raw_audio = 1;
 				break;
-			case 'b':
-			case 'B':
+			case 'b': case 'B':
 				bit_rate = atoi(&argv[i][2]);
 				break;
-			case 's':
-			case 'S':
-				out_rate = atoi(&argv[i][2]);
+			case 's': case 'S':
+				cut_off = atoi(&argv[i][2]);
 				break;
-			case 'o':
-			case 'O':
+			case 'c': case 'C':
+				cut_off = atoi(&argv[i][2]);
+				break;
+			case 'o': case 'O':
 				out_dir_set = 1;
 				strcpy(out_dir, &argv[i][2]);
 				break;
-			case 'h':
-			case 'H':
+			case 'h': case 'H':
 				usage();
 				return 1;
 			}
@@ -614,6 +611,7 @@ int main(int argc, char *argv[])
 		ac.in_sampling_rate = sf_info.samplerate;
 		ac.out_sampling_rate = out_rate ? out_rate : sf_info.samplerate;
 		ac.bit_rate = bit_rate * 1000;
+		ac.cut_off = cut_off ? cut_off : (ac.out_sampling_rate>>1);
 		ac.profile = profile;
 		ac.use_MS = use_MS;
 		ac.use_IS = use_IS;

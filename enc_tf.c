@@ -408,7 +408,7 @@ int EncTfFrame (faacAACStream *as, BsBitStream  *fixed_stream)
 	******************************************************************************************************************************/
 
 	{
-		int chanNum;
+		int chanNum, k;
 		for (chanNum=0;chanNum<max_ch;chanNum++) {
 			buffer2freq(
 				DTimeSigBuf[chanNum],
@@ -421,6 +421,14 @@ int EncTfFrame (faacAACStream *as, BsBitStream  *fixed_stream)
 				block_size_samples/short_win_in_long,
 				MOVERLAPPED
 				);
+
+			if (block_type[chanNum] == ONLY_SHORT_WINDOW) {  
+				for( k=0; k<8; k++ ) {
+					specFilter(spectral_line_vector[chanNum]+k*BLOCK_LEN_SHORT, spectral_line_vector[chanNum]+k*BLOCK_LEN_SHORT, as->out_sampling_rate, as->cut_off, BLOCK_LEN_SHORT); 
+				}
+			} else {
+				specFilter(spectral_line_vector[chanNum], spectral_line_vector[chanNum], as->out_sampling_rate, as->cut_off, BLOCK_LEN_LONG);
+			}
 		}
 	}
 

@@ -351,3 +351,29 @@ void freq2buffer(double           p_in_data[],
 }
 
 /***********************************************************************************************/ 
+
+void specFilter (double p_in[],
+				 double p_out[],
+				 int  samp_rate,
+				 int lowpass_freq,
+				 int    specLen
+				 )
+{
+	float lowpass;
+	int    xlowpass,i;
+
+	/* calculate the last line which is not zero */
+	lowpass = (float)lowpass_freq * (float)specLen;
+	lowpass /= (samp_rate>>1);
+	lowpass += 1.0;             /* round up to ensure that the desired upper frequency limit is correct */
+	xlowpass = ((int)lowpass < specLen) ? (int)lowpass : specLen ;
+
+	if( p_out != p_in ) {
+		for (i = 0; i < specLen; i++ ) {
+			p_out[i] = p_in[i];
+		}
+	}
+	for (i = xlowpass; i <specLen ; i++ ) {
+		p_out[i]  = 0;
+	}
+}

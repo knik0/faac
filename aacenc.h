@@ -13,6 +13,7 @@ typedef struct {
 	int in_sampling_rate; // Sampling rate of the input file
 	int out_sampling_rate; // Sampling rate of the output AAC file
 	int bit_rate;      // Bitrate: can be any bitrate higher than 16kbps in steps of 1kbps
+	int cut_off;       // Sets the cut_off frequency.
 	int profile;       // AAC Profile: can be MAIN_PROFILE or LOW_PROFILE
 	int write_header;  // If this is 1, a ADIF header will be written, if it is 0, no
 	                   //    header will be written. (better turn this on, because
@@ -57,6 +58,7 @@ typedef struct {
 	int samplesToRead;
 	int savedSize;
 	float saved[2048];
+	int cut_off;
 } faacAACStream;
 
 #ifndef FAAC_DLL

@@ -138,5 +138,12 @@ void buffer2freq(                    /* Input: Time signal              */
 
 void imdct(double in_data[], double out_data[], int len);
 
+void specFilter (double p_in[],
+				 double p_out[],
+				 int  samp_rate,
+				 int lowpass_freq,
+				 int    specLen
+				 );
+
 #endif	/* #ifndef _TF_MAIN_H_INCLUDED */
 
