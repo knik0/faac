@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: psychiso.c,v 1.2 2002/08/21 16:54:26 knik Exp $
+ * $Id: psychiso.c,v 1.3 2002/10/08 18:53:02 menno Exp $
  */
 
 #include <stdlib.h>
@@ -419,6 +419,8 @@ static void PsyEnd(GlobalPsyInfo *gpsyInfo, PsyInfo *psyInfo, unsigned int numCh
 	  if (psyInfo[channel].data)
 	    FreeMemory(psyInfo[channel].data);
 	}
+
+    if (gpsyInfo->data) FreeMemory(gpsyInfo->data);
 }
 
 /* Do psychoacoustical analysis */
