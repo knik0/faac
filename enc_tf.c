@@ -138,7 +138,10 @@ void EncTfInit (faacAACConfig *ac, int VBR_setting)
 		qc_select = AAC_QC;          /* disable prediction */
 	}
 
-	pns_sfb_start = 60;
+	if (ac->use_PNS)
+		pns_sfb_start = 0;
+	else
+		pns_sfb_start = 60;
 
 	/* set the return values */
 	max_ch = ac->channels;

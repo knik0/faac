@@ -425,6 +425,22 @@ int tf_encode_spectrum_aac(
 		}
     } 
 
+	/* initialize the scale_factors that aren't intensity stereo bands */
+	is_info=&(ch_info->is_info);
+	for(k=0; k< quantInfo -> nr_of_sfb ;k++) {
+		scale_factor[k]=((is_info->is_present)&&(is_info->is_used[k])) ? scale_factor[k] : 0;
+	}
+
+	/* Mark IS bands by setting book_vector to INTENSITY_HCB */
+	ptr_book_vector=quantInfo->book_vector;
+	for (k=0;k<quantInfo->nr_of_sfb;k++) {
+		if ((is_info->is_present)&&(is_info->is_used[k])) {
+			ptr_book_vector[k] = (is_info->sign[k]) ? INTENSITY_HCB2 : INTENSITY_HCB;
+		} else {
+			ptr_book_vector[k] = 0;
+		}
+	}
+
 	/* PNS prepare */
     for(sb=0; sb < quantInfo->nr_of_sfb; sb++ )
 		quantInfo->pns_sfb_flag[sb] = 0;
@@ -436,29 +452,27 @@ int tf_encode_spectrum_aac(
 				quantInfo->pns_sfb_flag[sb] = 0;
 				continue;
 			}
-			
-			quantInfo->pns_sfb_flag[sb] = 1;
-			quantInfo->pns_sfb_nrg[sb] = (int) (2.0 * log(energy[0][sb]*sfb_width_table[0][sb]+1e-60) / log(2.0) + 0.5) + PNS_SF_OFFSET;
-			
-			/* Erase spectral lines */
-			for( i=sfb_offset[sb]; i<sfb_offset[sb+1]; i++ ) {
-				p_spectrum[0][i] = 0.0;
+
+			if ((10*log10(energy[MONO_CHAN][sb]*sfb_width_table[0][sb]+1e-60)<70)||(SigMaskRatio[sb] > 1.0)) {
+				quantInfo->pns_sfb_flag[sb] = 1;
+				quantInfo->pns_sfb_nrg[sb] = (int) (2.0 * log(energy[0][sb]*sfb_width_table[0][sb]+1e-60) / log(2.0) + 0.5) + PNS_SF_OFFSET;
+				
+				/* Erase spectral lines */
+				for( i=sfb_offset[sb]; i<sfb_offset[sb+1]; i++ ) {
+					p_spectrum[0][i] = 0.0;
+				}
 			}
 		}
     }
 
 	/* Compute allowed distortion */
 	for(sb = 0; sb < quantInfo->nr_of_sfb; sb++) {
-		if (10*log10(energy[MONO_CHAN][sb]*sfb_width_table[0][sb]+1e-60)>70) {
-			allowed_dist[MONO_CHAN][sb] = energy[MONO_CHAN][sb] * SigMaskRatio[sb];
-//			if (allowed_dist[MONO_CHAN][sb] < ATH[sb]) {
-//				printf("%d Yes\n", sb);
-//				allowed_dist[MONO_CHAN][sb] = ATH[sb];
-//			}
-//			printf("%d\t\t%.3f\n", sb, SigMaskRatio[sb]);
-		} else {
-			allowed_dist[MONO_CHAN][sb] = energy[MONO_CHAN][sb] * 1.1;
-		}
+		allowed_dist[MONO_CHAN][sb] = energy[MONO_CHAN][sb] * SigMaskRatio[sb];
+//		if (allowed_dist[MONO_CHAN][sb] < ATH[sb]) {
+//			printf("%d Yes\n", sb);
+//			allowed_dist[MONO_CHAN][sb] = ATH[sb];
+//		}
+//		printf("%d\t\t%.3f\n", sb, SigMaskRatio[sb]);
 	}
 
 	/** find the maximum spectral coefficient **/
@@ -483,22 +497,6 @@ int tf_encode_spectrum_aac(
 	}
 	if ((start_com_sf>200) || (start_com_sf<40) )
 		start_com_sf = 40;
-
-	/* initialize the scale_factors that aren't intensity stereo bands */
-	is_info=&(ch_info->is_info);
-	for(k=0; k< quantInfo -> nr_of_sfb ;k++) {
-		scale_factor[k]=((is_info->is_present)&&(is_info->is_used[k])) ? scale_factor[k] : 0;
-	}
-
-	/* Mark IS bands by setting book_vector to INTENSITY_HCB */
-	ptr_book_vector=quantInfo->book_vector;
-	for (k=0;k<quantInfo->nr_of_sfb;k++) {
-		if ((is_info->is_present)&&(is_info->is_used[k])) {
-			ptr_book_vector[k] = (is_info->sign[k]) ? INTENSITY_HCB2 : INTENSITY_HCB;
-		} else {
-			ptr_book_vector[k] = 0;
-		}
-	}
 
 	outer_loop_count = 0;
 
