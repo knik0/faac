@@ -18,7 +18,7 @@
 #include "winswitch.h"
 #include "transfo.h"
 
-#define SQRT2 sqrt(2)
+#define SQRT2 C_SQRT2
 
 /* AAC tables */
 
