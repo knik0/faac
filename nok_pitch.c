@@ -34,9 +34,9 @@ Copyright (c)1997.
 /**************************************************************************
   Version Control Information			Method: CVS
   Identifiers:
-  $Revision: 1.4 $
-  $Date: 2000/01/08 13:31:28 $ (check in)
-  $Author: lenox $
+  $Revision: 1.5 $
+  $Date: 2000/02/07 06:52:41 $ (check in)
+  $Author: oxygene2000 $
   *************************************************************************/
 
 
@@ -55,7 +55,6 @@ Copyright (c)1997.
 #include "interface.h"
 #include "nok_ltp_common.h"
 #include "nok_ltp_enc.h"
-
 
 /*************************************************************************
   External Objects Provided
@@ -273,36 +272,60 @@ int estimate_delay (double *sb_samples,
 {
 	int i, j;
 	int delay;
-	double corr[DELAY];
+	double corr[DELAY],corrtmp;
 	double p_max, energy;
-
-	for (i = 0; i < DELAY; i+=16)
-	{
-		energy = 0.0;
-		corr[i] = 0.0;
-		for (j = 0; j < flen; j++)
-		{
-			corr[i] += x_buffer[NOK_LT_BLEN - i - j - 1] * sb_samples[flen - j - 1];
-			energy += x_buffer[NOK_LT_BLEN - i - j - 1] * x_buffer[NOK_LT_BLEN - i - j - 1];
-		}
-
-		if (energy != 0.0)
-			corr[i] = corr[i] / sqrt (energy);
-		else
-			corr[i] = 0.0;
-    }
 
 	p_max = 0.0;
 	delay = 0;
-	for (i = 0; i < DELAY; i+=16)
+		energy = 0.0;
+		corr[0] = 0.0;
+		for (j = 1; j < 2049; j++)
+		{
+			corr[0] += x_buffer[NOK_LT_BLEN - j] * sb_samples[2048 - j];
+			energy += x_buffer[NOK_LT_BLEN - j] * x_buffer[NOK_LT_BLEN - j];
+		}
+		corrtmp=corr[0];
+		if (energy != 0.0)
+			corr[0] = corr[0] / sqrt(energy);
+		else
+			corr[0] = 0.0;
+
+		if (p_max < corr[0])
+		{
+			p_max = corr[0];
+			delay = 0;
+		}
+
+	for (i = 1; i < DELAY; i+=16)
+	{
+//NOK_LT_BLEN=4096
+		energy -= x_buffer[NOK_LT_BLEN - i] * x_buffer[NOK_LT_BLEN - i]; 
+		energy += x_buffer[NOK_LT_BLEN - i - 2048] * x_buffer[NOK_LT_BLEN - i - 2048]; //2048=j_max
+		corr[i] = corrtmp;
+		corr[i] -= x_buffer[NOK_LT_BLEN - i] * sb_samples[2047];
+		corr[i] += x_buffer[NOK_LT_BLEN - i - 2048] * sb_samples[0];
+		corrtmp=corr[i];
+//flen=2048
+//		for (j = 1; j < 2049; j++) //2049=flen+1
+//		{
+//			corr[i] += x_buffer[NOK_LT_BLEN - i - j] * sb_samples[2048 - j];
+//			energy += x_buffer[NOK_LT_BLEN - i - j] * x_buffer[NOK_LT_BLEN - i - j];
+//		}
+		if (energy != 0.0)
+			corr[i] = corr[i] / sqrt(energy);
+		else
+			corr[i] = 0.0;
+
 		if (p_max < corr[i])
 		{
 			p_max = corr[i];
 			delay = i;
 		}
+	}
 
-	if (delay < (LPC - 1) / 2)
-		delay = (LPC - 1) / 2;
+//	if (delay < (LPC - 1) / 2)
+//		delay = (LPC - 1) / 2;
+	if (delay<0) delay=0; //for LPC=1
 
 	/*
 	fprintf(stdout, "delay : %d ... ", delay);
