@@ -16,7 +16,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: frame.c,v 1.63 2004/07/08 14:01:25 corrados Exp $
+ * $Id: frame.c,v 1.64 2004/07/13 17:56:37 corrados Exp $
  */
 
 /*
@@ -106,16 +106,7 @@ int FAACAPI faacEncGetDecoderSpecificInfo(faacEncHandle hEncoder,unsigned char**
 
         memset(*ppBuffer,0,*pSizeOfDecoderSpecificInfo);
         pBitStream = OpenBitStream(*pSizeOfDecoderSpecificInfo, *ppBuffer);
-        PutBit(pBitStream, hEncoder->config.aacObjectType + 1, 5);
-
-        /*
-        temporary fix,
-        when object type defines will be changed to values defined by ISO 14496-3
-        "+ 1" shall be removed
-
-        /AV
-        */
-
+        PutBit(pBitStream, hEncoder->config.aacObjectType, 5);
         PutBit(pBitStream, hEncoder->sampleRateIdx, 4);
         PutBit(pBitStream, hEncoder->numChannels, 4);
         CloseBitStream(pBitStream);
@@ -1079,6 +1070,9 @@ static SR_INFO srInfo[12+1] =
 
 /*
 $Log: frame.c,v $
+Revision 1.64  2004/07/13 17:56:37  corrados
+bug fix with new object type definitions
+
 Revision 1.63  2004/07/08 14:01:25  corrados
 New scalefactorband table for 960 transform length, bug fix in HCR
 

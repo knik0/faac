@@ -24,7 +24,7 @@ copyright notice must be included in all copies or derivative works.
 Copyright (c) 1997.
 **********************************************************************/
 /*
- * $Id: bitstream.c,v 1.29 2004/07/08 14:01:25 corrados Exp $
+ * $Id: bitstream.c,v 1.30 2004/07/13 17:56:37 corrados Exp $
  */
 
 #include <stdio.h>
@@ -335,7 +335,7 @@ static int WriteADTSHeader(faacEncHandle hEncoder,
         PutBit(bitStream, hEncoder->config.mpegVersion, 1); /* ID == 0 for MPEG4 AAC, 1 for MPEG2 AAC */
         PutBit(bitStream, 0, 2); /* layer == 0 */
         PutBit(bitStream, 1, 1); /* protection absent */
-        PutBit(bitStream, hEncoder->config.aacObjectType, 2); /* profile */
+        PutBit(bitStream, hEncoder->config.aacObjectType - 1, 2); /* profile */
         PutBit(bitStream, hEncoder->sampleRateIdx, 4); /* sampling rate */
         PutBit(bitStream, 0, 1); /* private bit */
         PutBit(bitStream, hEncoder->numChannels, 3); /* ch. config (must be > 0) */
