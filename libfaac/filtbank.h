@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: filtbank.h,v 1.2 2001/01/17 15:51:15 menno Exp $
+ * $Id: filtbank.h,v 1.3 2001/02/04 17:50:47 oxygene2000 Exp $
  */
 
 #ifndef FILTBANK_H

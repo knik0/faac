@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: aacquant.c,v 1.2 2001/01/19 14:59:23 menno Exp $
+ * $Id: aacquant.c,v 1.3 2001/02/04 17:50:47 oxygene2000 Exp $
  */
 
 #include <math.h>
@@ -211,7 +211,7 @@ static int SearchStepSize(CoderInfo *coderInfo,
 	return nBits;
 }
 
-#if 1 // TAKEHIRO_IEEE754_HACK
+#if 1 /* TAKEHIRO_IEEE754_HACK */
 
 #pragma warning( disable : 4244 4307 )
 

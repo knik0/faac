@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: frame.h,v 1.3 2001/01/23 13:46:18 menno Exp $
+ * $Id: frame.h,v 1.4 2001/02/04 17:50:47 oxygene2000 Exp $
  */
 
 #ifndef FRAME_H
@@ -113,7 +113,7 @@ faacEncHandle FAACAPI faacEncOpen(unsigned long sampleRate,
 int FAACAPI faacEncEncode(faacEncHandle hEncoder,
 						  short *inputBuffer,
 						  unsigned int samplesInput,
-						  void *outputBuffer,
+						  unsigned char *outputBuffer,
 						  unsigned int bufferSize
 						  );
 

@@ -16,12 +16,19 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: main.c,v 1.2 2001/01/17 15:51:15 menno Exp $
+ * $Id: main.c,v 1.3 2001/02/04 17:50:47 oxygene2000 Exp $
  */
 
 #ifdef _WIN32
 #include <windows.h>
 #endif
+
+#ifdef LINUX
+#include <sys/time.h>
+#include <sys/resource.h>
+#include <unistd.h>
+#endif
+
 #include <stdio.h>
 #include <stdlib.h>
 

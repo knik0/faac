@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: psych.c,v 1.4 2001/02/01 20:22:47 menno Exp $
+ * $Id: psych.c,v 1.5 2001/02/04 17:50:47 oxygene2000 Exp $
  */
 
 #include <stdlib.h>
@@ -603,7 +603,9 @@ static void PsyThreshold(GlobalPsyInfo *gpsyInfo, PsyInfo *psyInfo, int *cb_widt
 
 		/* Actual energy threshold */
 		psyInfo->nb[b] = NS_INTERP(min(ecb, 2*psyInfo->lastNb[b]), ecb, 1/*pcfact*/);
-//		psyInfo->nb[b] = max(psyInfo->nb[b], gpsyInfo->ath[b]);
+/*
+		psyInfo->nb[b] = max(psyInfo->nb[b], gpsyInfo->ath[b]);
+*/
 		psyInfo->lastNb[b] = ecb;
 
 		/* Perceptual entropy */
@@ -685,7 +687,9 @@ static void PsyThreshold(GlobalPsyInfo *gpsyInfo, PsyInfo *psyInfo, int *cb_widt
 
 			/* Actual energy threshold */
 			psyInfo->nbS[j][b] = max(1e-6, ecb);
-//			psyInfo->nbS[j][b] = max(psyInfo->nbS[j][b], gpsyInfo->athS[b]);
+/*
+			psyInfo->nbS[j][b] = max(psyInfo->nbS[j][b], gpsyInfo->athS[b]);
+*/
 
 			estot[j] += e[b];
 		}
@@ -825,7 +829,9 @@ static void PsyThresholdMS(ChannelInfo *channelInfoL, GlobalPsyInfo *gpsyInfo,
 
 		/* Actual energy threshold */
 		nbM[b] = NS_INTERP(min(ecb, 2*psyInfoL->lastNbMS[b]), ecb, 1/*pcfact*/);
-//		nbM[b] = max(nbM[b], gpsyInfo->ath[b]);
+/*
+		nbM[b] = max(nbM[b], gpsyInfo->ath[b]);
+*/
 		psyInfoL->lastNbMS[b] = ecb;
 
 
@@ -840,7 +846,9 @@ static void PsyThresholdMS(ChannelInfo *channelInfoL, GlobalPsyInfo *gpsyInfo,
 
 		/* Actual energy threshold */
 		nbS[b] = NS_INTERP(min(ecb, 2*psyInfoR->lastNbMS[b]), ecb, 1/*pcfact*/);
-//		nbS[b] = max(nbS[b], gpsyInfo->ath[b]);
+/*
+		nbS[b] = max(nbS[b], gpsyInfo->ath[b]);
+*/
 		psyInfoR->lastNbMS[b] = ecb;
 
 		if (psyInfoL->nb[b] <= 1.58*psyInfoR->nb[b]
@@ -986,8 +994,9 @@ static void PsyThresholdMS(ChannelInfo *channelInfoL, GlobalPsyInfo *gpsyInfo,
 
 			/* Actual energy threshold */
 			nbM[b] = max(1e-6, ecb);
-//			nbM[b] = max(nbM[b], gpsyInfo->athS[b]);
-
+/*
+			nbM[b] = max(nbM[b], gpsyInfo->athS[b]);
+*/
 
 			/* Side channel */
 
@@ -1000,7 +1009,9 @@ static void PsyThresholdMS(ChannelInfo *channelInfoL, GlobalPsyInfo *gpsyInfo,
 
 			/* Actual energy threshold */
 			nbS[b] = max(1e-6, ecb);
-//			nbS[b] = max(nbS[b], gpsyInfo->athS[b]);
+/*
+			nbS[b] = max(nbS[b], gpsyInfo->athS[b]);
+*/
 
 			if (psyInfoL->nbS[j][b] <= 1.58*psyInfoR->nbS[j][b]
 				&& psyInfoR->nbS[j][b] <= 1.58*psyInfoL->nbS[j][b]) {

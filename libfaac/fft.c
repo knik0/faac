@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: fft.c,v 1.1 2001/01/17 11:21:40 menno Exp $
+ * $Id: fft.c,v 1.2 2001/02/04 17:50:47 oxygene2000 Exp $
  */
 
 #include <math.h>
@@ -43,10 +43,12 @@ static void build_table(int logm)
    /* Allocate memory for tables */
    nel = m4 - 2;
    tabr[logm-4] = (double *) calloc(3 * nel, sizeof(double));
-//   if ((tab[logm-4] = (double *) calloc(3 * nel, sizeof(double))) == NULL) {
-//      printf("Error : RSFFT : not enough memory for cosine tables.\n");
-//      error_exit();
-//   }
+/*
+   if ((tab[logm-4] = (double *) calloc(3 * nel, sizeof(double))) == NULL) {
+      printf("Error : RSFFT : not enough memory for cosine tables.\n");
+      error_exit();
+   }
+*/
  
    /* Initialize pointers */
    cn  = tabr[logm-4]; spcn  = cn + nel;  smcn  = spcn + nel;
@@ -286,9 +288,11 @@ static void srrec(double *xr, double *xi, int logm)
       /* Allocate memory for tables */
       nel = m4 - 2;
 	  tab[logm-4] = (double *) calloc(6 * nel, sizeof(double));
-//      if ((tab[logm-4] = (double *) calloc(6 * nel, sizeof(double))) == NULL) {
-//         error_exit();
-//      }
+/*
+      if ((tab[logm-4] = (double *) calloc(6 * nel, sizeof(double))) == NULL) {
+         error_exit();
+      }
+*/
  
       /* Initialize pointers */
       cn  = tab[logm-4]; spcn  = cn + nel;  smcn  = spcn + nel;

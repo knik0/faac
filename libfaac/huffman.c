@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: huffman.c,v 1.2 2001/01/19 14:59:23 menno Exp $
+ * $Id: huffman.c,v 1.3 2001/02/04 17:50:47 oxygene2000 Exp $
  */
 
 #include <math.h>
@@ -94,7 +94,8 @@ int BitSearch(CoderInfo *coderInfo,
 	levels = (int) ((log((double)coderInfo->nr_of_sfb)/log((double)2.0))+1);
 	fraction = (pow(2,levels)+coderInfo->nr_of_sfb)/(double)(pow(2,levels));
 
-//#define SLOW
+/* #define SLOW */
+
 #ifdef SLOW
 	for(i=0;i<5;i++){
 		hop = 1 << i;
