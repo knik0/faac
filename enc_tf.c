@@ -545,7 +545,7 @@ int EncTfFrame (faacAACStream *as, BsBitStream  *fixed_stream)
 							block_type[leftChan], 
 							WS_FHG,
 							block_size_samples,
-							block_size_samples/2,
+							0,
 							block_size_samples/short_win_in_long, 
 							&sfb_offset_table[leftChan][0], 
 							nr_of_sfb[leftChan],
@@ -561,9 +561,9 @@ int EncTfFrame (faacAACStream *as, BsBitStream  *fixed_stream)
 							nok_lt_status[leftChan].sfb_prediction_used[i];
 						nok_lt_status[rightChan].weight = nok_lt_status[leftChan].weight;
 						nok_lt_status[rightChan].delay[0] = nok_lt_status[leftChan].delay[0];
-						for(i = 0; i < NOK_MAX_BLOCK_LEN_LONG; i++)
-							spectral_line_vector[rightChan][i] -=
-							nok_lt_status[rightChan].pred_mdct[i];
+//						for(i = 0; i < NOK_MAX_BLOCK_LEN_LONG; i++)
+//							spectral_line_vector[rightChan][i] -=
+//							nok_lt_status[rightChan].pred_mdct[i];
 
 						if(block_type[leftChan] != block_type[rightChan])
 							nok_ltp_enc(spectral_line_vector[rightChan],
@@ -571,7 +571,7 @@ int EncTfFrame (faacAACStream *as, BsBitStream  *fixed_stream)
 							block_type[rightChan], 
 							WS_FHG,
 							block_size_samples,
-							block_size_samples/2,
+							0,
 							block_size_samples/short_win_in_long, 
 							&sfb_offset_table[rightChan][0], 
 							nr_of_sfb[rightChan],
@@ -585,7 +585,7 @@ int EncTfFrame (faacAACStream *as, BsBitStream  *fixed_stream)
 					block_type[chanNum], 
 					WS_FHG,
 					block_size_samples,
-					block_size_samples/2,
+					0,
 					block_size_samples/short_win_in_long, 
 					&sfb_offset_table[chanNum][0], 
 					nr_of_sfb[chanNum],
