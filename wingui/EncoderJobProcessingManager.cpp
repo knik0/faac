@@ -18,10 +18,6 @@ static char THIS_FILE[]=__FILE__;
 
 //#define DUMMY_ENCODERJOB_PROCESSING
 
-// constants copied from reference implementation in VC project faacgui
-#define PCMBUFSIZE 1024
-#define BITBUFSIZE 8192
-
 //////////////////////////////////////////////////////////////////////
 // Construction/Destruction
 //////////////////////////////////////////////////////////////////////
@@ -166,182 +162,29 @@ bool CEncoderJobProcessingManager::DoProcessing()
 }
 
 #else
+
 bool CEncoderJobProcessingManager::DoProcessing()
 {
 	long lStartTimeMillis=::GetTickCount();
 	const CEncoderJob *poJob=m_poJobToProcess;
 	bool bInterrupted=false;
 
-	SNDFILE *infile;
-	SF_INFO sfinfo;
-
-	// open the input file
-	if ((infile = sf_open_read(poJob->GetFiles().GetCompleteSourceFilePath(), &sfinfo)) != NULL)
-	{
-		// determine input file parameters
-		unsigned int sampleRate = sfinfo.samplerate;
-		unsigned int numChannels = sfinfo.channels;
-
-		// open and setup the encoder
-		unsigned long inputSamples;
-		unsigned long maxOutputSize;
-		faacEncHandle hEncoder = faacEncOpen(sampleRate, numChannels, &inputSamples, &maxOutputSize);
-		if (hEncoder)
-		{
-			HANDLE hOutfile;
-
-			// set encoder configuration
-			faacEncConfigurationPtr config = faacEncGetCurrentConfiguration(hEncoder);
-
-			config->allowMidside = poJob->GetAllowMidside() ? 1 : 0;
-			config->useTns = poJob->GetUseTns() ? 1 : 0;
-			config->useLtp = poJob->GetUseLtp() ? 1 : 0;
-			config->useLfe = poJob->GetUseLfe() ? 1 : 0;
-			config->bitRate = poJob->GetBitRate();
-			config->bandWidth = poJob->GetBandwidth();
-			config->aacProfile = GetAacProfileConstant(poJob->GetAacProfile());
-
-			if (!faacEncSetConfiguration(hEncoder, config))
-			{
-				faacEncClose(hEncoder);
-				sf_close(infile);
-
-				AfxMessageBox("faacEncSetConfiguration failed!", MB_OK | MB_ICONSTOP);
-
-				return false;
-			}
-
-			// open the output file
-			hOutfile = CreateFile(poJob->GetFiles().GetCompleteTargetFilePath(), GENERIC_WRITE, 0, NULL,
-				CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
-
-			if (hOutfile != INVALID_HANDLE_VALUE)
-			{
-				UINT startTime = GetTickCount(), lastUpdated = 0;
-				DWORD totalBytesRead = 0;
-
-				unsigned int bytesInput = 0, bytesConsumed = 0;
-				DWORD numberOfBytesWritten = 0;
-				short *pcmbuf;
-				unsigned char *bitbuf;
-
-				pcmbuf = (short*)malloc(PCMBUFSIZE*numChannels*sizeof(short));
-				bitbuf = (unsigned char*)malloc(BITBUFSIZE*sizeof(unsigned char));
-
-				while (true)
-				{
-					int bytesWritten;
-					int samplesToRead = PCMBUFSIZE;
-
-					bytesInput = sf_read_short(infile, pcmbuf, numChannels*PCMBUFSIZE) * sizeof(short);
-					
-					//SendDlgItemMessage (hWnd, IDC_PROGRESS, PBM_SETPOS, (unsigned long)((float)totalBytesRead * 1024.0f / (sfinfo.samples*2*numChannels)), 0);
-					
-					totalBytesRead += bytesInput;
-
-					// call the actual encoding routine
-					bytesWritten = faacEncEncode(hEncoder,
-						pcmbuf,
-						bytesInput/2,
-						bitbuf,
-						BITBUFSIZE);
-
-					switch (m_eCurrentWorkingState)
-					{
-					case eRunning:
-						{
-							// just report our current state and process waiting window messages
-							WriteProgress(lStartTimeMillis, (sfinfo.samples*2*numChannels), totalBytesRead);
-							m_poInfoTarget->ProcessUserMessages();
-							break;
-						}
-					case ePaused:
-						{
-							// must wait
-							while (m_eCurrentWorkingState==ePaused)
-							{
-								// be idle
-								m_poInfoTarget->ProcessUserMessages();
-								Sleep(200);
-							}
-							break;
-						}
-					case eStopped:
-						{
-							// must interrupt
-							bInterrupted=true;
-							break;
-						}
-					}
-					
-					if (bInterrupted) 
-					{
-						// Stop Pressed
-						break;
-					}
-
-					if (!bytesInput && !bytesWritten)
-					{
-						// all done, bail out
-						break;
-					}
-
-					if (bytesWritten < 0)
-					{
-						AfxMessageBox("faacEncEncodeFrame failed!", MB_OK | MB_ICONSTOP);
-						bInterrupted=true;
-						break;
-					}
-
-					WriteFile(hOutfile, bitbuf, bytesWritten, &numberOfBytesWritten, NULL);
-				}
-
-				CloseHandle(hOutfile);
-				if (pcmbuf) free(pcmbuf);
-				if (bitbuf) free(bitbuf);
-			}
-
-			faacEncClose(hEncoder);
-		}
-
-		sf_close(infile);
-		MessageBeep(1);
-	}
-	else
-	{
-		AfxMessageBox("Couldn't open input file!", MB_OK | MB_ICONSTOP);
-		bInterrupted=true;
-	}
-
-	return !bInterrupted;
-}
-
-
-// this is a version that I will try to put more the Hungarian Notation and C++ style
-/*bool CEncoderJobProcessingManager::DoProcessing()
-{
-	long lStartTimeMillis=::GetTickCount();
-	const CEncoderJob *poJob=m_poJobToProcess;
-	bool bInterrupted=false;
-
-	SNDFILE *phInfile;
+	SNDFILE *phInFile;
 	SF_INFO sctSfInfo;
 
 	// open the input file
-	if ((phInfile=sf_open_read(poJob->GetFiles().GetCompleteSourceFilePath(), &sctSfInfo)) != NULL)
+	if ((phInFile=sf_open_read(poJob->GetFiles().GetCompleteSourceFilePath(), &sctSfInfo)) != NULL)
 	{
 		// determine input file parameters
-		unsigned int uiSampleRate=sctSfInfo.samplerate;
-		unsigned int uiNumChannels=sctSfInfo.channels;
+		long lSampleRate=sctSfInfo.samplerate;
+		long lNumChannels=sctSfInfo.channels;
 
 		// open and setup the encoder
 		unsigned long ulInputSamplesPerLoopCycle;
-		unsigned long ulMaxLoopCycleCompressionOutputSize;
-		faacEncHandle hEncoder=faacEncOpen(uiSampleRate, uiNumChannels, &ulInputSamplesPerLoopCycle, &ulMaxLoopCycleCompressionOutputSize);
-		if (hEncoder)
+		unsigned long ulMaxLoopCycleOutputSize;
+		faacEncHandle hEncoder=faacEncOpen(lSampleRate, lNumChannels, &ulInputSamplesPerLoopCycle, &ulMaxLoopCycleOutputSize);
+		if (hEncoder!=0)
 		{
-			HANDLE hOutfile;
-
 			// set encoder configuration
 			faacEncConfigurationPtr pEncConfig=faacEncGetCurrentConfiguration(hEncoder);
 
@@ -356,7 +199,7 @@ bool CEncoderJobProcessingManager::DoProcessing()
 			if (!faacEncSetConfiguration(hEncoder, pEncConfig))
 			{
 				faacEncClose(hEncoder);
-				sf_close(phInfile);
+				sf_close(phInFile);
 
 				AfxMessageBox("faacEncSetConfiguration failed!", MB_OK | MB_ICONSTOP);
 
@@ -364,46 +207,44 @@ bool CEncoderJobProcessingManager::DoProcessing()
 			}
 
 			// open the output file
-			hOutfile=CreateFile(poJob->GetFiles().GetCompleteTargetFilePath(), GENERIC_WRITE, 0, NULL,
-				CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
-
-			if (hOutfile != INVALID_HANDLE_VALUE)
+			CFile *poFile;
+			CArchive *poTargetFileOutputArchive;
+			if (OpenOutputFileArchive(poJob->GetFiles().GetCompleteTargetFilePath(), poFile, poTargetFileOutputArchive))
 			{
-				UINT startTime = GetTickCount(), lastUpdated = 0;
-				DWORD totalBytesRead = 0;
+				long lStartTime=GetTickCount();
+				long lLastUpdated=0;
+				long lTotalBytesRead = 0;
 
-				unsigned int bytesInput = 0, bytesConsumed = 0;
-				DWORD numberOfBytesWritten = 0;
-				short *pcmbuf;
-				unsigned char *bitbuf;
+				long lSamplesInput=0;
+				long lBytesConsumed=0;
+				short *parsPcmBuf;
+				char *parcBitBuf;
 
-				pcmbuf = (short*)malloc(PCMBUFSIZE*numChannels*sizeof(short));
-				bitbuf = (unsigned char*)malloc(BITBUFSIZE*sizeof(unsigned char));
+				parsPcmBuf=new short[ulInputSamplesPerLoopCycle];
+				parcBitBuf=new char[ulMaxLoopCycleOutputSize];
 
 				while (true)
 				{
-					int bytesWritten;
-					int samplesToRead = PCMBUFSIZE;
+					long lBytesWritten;
 
-					bytesInput = sf_read_short(infile, pcmbuf, numChannels*PCMBUFSIZE) * sizeof(short);
+					lSamplesInput=sf_read_short(phInFile, parsPcmBuf, ulInputSamplesPerLoopCycle);
 					
-					//SendDlgItemMessage (hWnd, IDC_PROGRESS, PBM_SETPOS, (unsigned long)((float)totalBytesRead * 1024.0f / (sfinfo.samples*2*numChannels)), 0);
-					
-					totalBytesRead += bytesInput;
+					lTotalBytesRead+=lSamplesInput*sizeof(short);
 
 					// call the actual encoding routine
-					bytesWritten = faacEncEncode(hEncoder,
-						pcmbuf,
-						bytesInput/2,
-						bitbuf,
-						BITBUFSIZE);
+					lBytesWritten=faacEncEncode(
+						hEncoder,
+						parsPcmBuf,
+						lSamplesInput,
+						parcBitBuf,
+						ulMaxLoopCycleOutputSize);
 
 					switch (m_eCurrentWorkingState)
 					{
 					case eRunning:
 						{
 							// just report our current state and process waiting window messages
-							WriteProgress(lStartTimeMillis, (sfinfo.samples*2*numChannels), totalBytesRead);
+							WriteProgress(lStartTimeMillis, (sctSfInfo.samples*sizeof(short)*lNumChannels), lTotalBytesRead);
 							m_poInfoTarget->ProcessUserMessages();
 							break;
 						}
@@ -432,32 +273,34 @@ bool CEncoderJobProcessingManager::DoProcessing()
 						break;
 					}
 
-					if (!bytesInput && !bytesWritten)
+					if (lSamplesInput==0 && lBytesWritten==0)
 					{
 						// all done, bail out
 						break;
 					}
 
-					if (bytesWritten < 0)
+					if (lBytesWritten < 0)
 					{
 						AfxMessageBox("faacEncEncodeFrame failed!", MB_OK | MB_ICONSTOP);
 						bInterrupted=true;
 						break;
 					}
 
-					WriteFile(hOutfile, bitbuf, bytesWritten, &numberOfBytesWritten, NULL);
+					poTargetFileOutputArchive->Write(parcBitBuf, lBytesWritten);
 				}
 
-				CloseHandle(hOutfile);
-				if (pcmbuf) free(pcmbuf);
-				if (bitbuf) free(bitbuf);
+				// close the target file
+				if (poTargetFileOutputArchive!=0) delete poTargetFileOutputArchive;
+				if (poFile!=0) delete poFile;
+				if (parsPcmBuf!=0) delete[] parsPcmBuf;
+				if (parcBitBuf!=0) delete[] parcBitBuf;
 			}
 
 			faacEncClose(hEncoder);
 		}
 
-		sf_close(infile);
-		MessageBeep(1);
+		sf_close(phInFile);
+		//MessageBeep(1);		// no more done here
 	}
 	else
 	{
@@ -466,7 +309,7 @@ bool CEncoderJobProcessingManager::DoProcessing()
 	}
 
 	return !bInterrupted;
-}*/
+}
 #endif
 
 void CEncoderJobProcessingManager::WriteProgress(long lOperationStartTickCount, long lMaxSteps, long lCurSteps)
@@ -512,7 +355,30 @@ int CEncoderJobProcessingManager::GetAacProfileConstant(CEncoderJob::EAacProfile
 	}
 }
 
-CArchive* CEncoderJobProcessingManager::GetOutputFileArchive(const CString &oFileName)
+bool CEncoderJobProcessingManager::OpenOutputFileArchive(const CString &oFileName, CFile* &poFile, CArchive* &poArchive)
 {
-	return 0;
+	try
+	{
+		poFile=0;
+		poArchive=0;
+
+		// open the file
+		poFile=new CFile(oFileName, CFile::modeCreate | CFile::modeWrite | CFile::shareDenyWrite);
+		poArchive=new CArchive(poFile, CArchive::store);
+
+		return true;
+	}
+	catch (...)
+	{
+		// error opening the file for exclusive writing
+		if (poArchive!=0)
+		{
+			delete poArchive;
+		}
+		if (poFile!=0)
+		{
+			delete poFile;
+		}
+		return false;
+	}
 }

@@ -48,7 +48,14 @@ private:
 
 	static int GetAacProfileConstant(CEncoderJob::EAacProfile eAacProfile);
 
-	static CArchive* GetOutputFileArchive(const CString &oFileName);
+	// opens an archive that writes in the specified file, 0 in
+	// case of errors;
+	// the caller must specify two pointers that are both initialized
+	// by this method; the caller must delete these two objects when
+	// he's finished - first the archive, then the file;
+	// this method returns false in case of errors; then neither of
+	// the two pointers must be tried to be deleted
+	static bool OpenOutputFileArchive(const CString &oFileName, CFile* &poFile, CArchive* &poArchive);
 };
 
 #endif // !defined(AFX_ENCODERJOBPROCESSINGMANAGER_H__A1444E93_1546_11D5_8402_0080C88C25BD__INCLUDED_)
