@@ -32,7 +32,7 @@ copyright notice must be included in all copies or derivative works.
 Copyright (c) 1996.
 **********************************************************************/
 /*
- * $Id: bitstream.h,v 1.12 2001/12/07 08:40:52 menno Exp $
+ * $Id: bitstream.h,v 1.13 2002/08/19 16:35:53 knik Exp $
  */
 
 #ifndef BITSTREAM_H
@@ -146,93 +146,14 @@ int WriteBitstream(faacEncHandle hEncoder,
                    BitStream *bitStream,
                    int numChannels);
 
-static int CountBitstream(faacEncHandle hEncoder,
-                          CoderInfo *coderInfo,
-                          ChannelInfo *channelInfo,
-                          BitStream *bitStream,
-                          int numChannels);
-
-static int WriteADTSHeader(faacEncHandle hEncoder,
-                           BitStream *bitStream,
-                           int writeFlag);
-
-static int WriteCPE(CoderInfo *coderInfoL,
-                    CoderInfo *coderInfoR,
-                    ChannelInfo *channelInfo,
-                    BitStream* bitStream,
-                    int objectType,
-                    int writeFlag);
-
-static int WriteSCE(CoderInfo *coderInfo,
-                    ChannelInfo *channelInfo,
-                    BitStream *bitStream,
-                    int objectType,
-                    int writeFlag);
-
-static int WriteLFE(CoderInfo *coderInfo,
-                    ChannelInfo *channelInfo,
-                    BitStream *bitStream,
-                    int objectType,
-                    int writeFlag);
-
-static int WriteICSInfo(CoderInfo *coderInfo,
-                        BitStream *bitStream,
-                        int objectType,
-                        int common_window,
-                        int writeFlag);
-
-static int WriteICS(CoderInfo *coderInfo,
-                    BitStream *bitStream,
-                    int commonWindow,
-                    int objectType,
-                    int writeFlag);
-
-static int WriteLTPPredictorData(CoderInfo *coderInfo,
-                                 BitStream *bitStream,
-                                 int writeFlag);
-
-static int WritePredictorData(CoderInfo *coderInfo,
-                              BitStream *bitStream,
-                              int writeFlag);
-
-static int WritePulseData(CoderInfo *coderInfo,
-                          BitStream *bitStream,
-                          int writeFlag);
-
-static int WriteTNSData(CoderInfo *coderInfo,
-                        BitStream *bitStream,
-                        int writeFlag);
-
-static int WriteGainControlData(CoderInfo *coderInfo,
-                                BitStream *bitStream,
-                                int writeFlag);
-
-static int WriteSpectralData(CoderInfo *coderInfo,
-                             BitStream *bitStream,
-                             int writeFlag);
-
-static int WriteAACFillBits(BitStream* bitStream,
-                            int numBits,
-                            int writeFlag);
-
-static int FindGroupingBits(CoderInfo *coderInfo);
 
 BitStream *OpenBitStream(int size, unsigned char *buffer);
 
 int CloseBitStream(BitStream *bitStream);
 
-static long BufferNumBit(BitStream *bitStream);
-
-static int WriteByte(BitStream *bitStream,
-                     unsigned long data,
-                     int numBit);
-
 int PutBit(BitStream *bitStream,
            unsigned long data,
            int numBit);
-
-static int ByteAlign(BitStream* bitStream,
-                     int writeFlag);
 
 #ifdef __cplusplus
 }
