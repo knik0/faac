@@ -3,43 +3,45 @@
 
 typedef struct RCBufStruct RCBuf;	/* buffer handle */
 
-#define PROFILE         1
-#define HEADER_TYPE     2
-#define MS_STEREO       3
-#define IS_STEREO       4
-#define BITRATE         5         // default: 128
-#define CUT_OFF         6         // default: 0
-#define OUT_SAMPLING_RATE       7 // default: 0
-#define RAW_AUDIO       8         // default: 0
-#define TNS             9
-#define LTP             10
-#define PNS             11
+#define PROFILE                 1
+#define HEADER_TYPE             2
+#define MS_STEREO               3
+#define IS_STEREO               4
+#define BITRATE                 5
+#define CUT_OFF                 6
+#define OUT_SAMPLING_RATE       7
+#define RAW_AUDIO               8
+#define TNS                     9
+#define LTP                     10
+#define PNS                     11
+#define IN_SAMPLING_RATE        12
+#define NUMBER_OF_CHANNELS      13
 
-#define MAIN_PROFILE 0           // default
+#define MAIN_PROFILE 0
 #define LOW_PROFILE 1
 
 #define NO_HEADER	0
 #define ADIF_HEADER     1
-#define ADTS_HEADER     2        // default
+#define ADTS_HEADER     2
 
 #define NO_MS           -1
 #define FORCE_MS        1
-#define SWITCHING_MS    0        // default
+#define SWITCHING_MS    0
 
 #define USE_IS          1
-#define NO_IS           0        // default
+#define NO_IS           0
 
 #define USE_TNS         1
-#define NO_TNS          0        // default
+#define NO_TNS          0
 
-#define USE_LTP         1        // default
+#define USE_LTP         1
 #define NO_LTP          0
 
 #define USE_PNS         1
-#define NO_PNS          0        // default
+#define NO_PNS          0
 
 #define USE_RAW_AUDIO   1
-#define NO_RAW_AUDIO    0        //default
+#define NO_RAW_AUDIO    0
 
 #define FNO_ERROR 0
 #define FERROR 1

@@ -81,34 +81,36 @@ int faac_EncodeInit(faacAACStream *as, char *in_file, char *out_file)
 {
   int frameNumSample,delayNumSample;
   int ch, frames, startupNumFrame;
-  SF_INFO sf_info;
-
-  if (as->raw_audio) {
-    sf_info.format =  SF_FORMAT_RAW;
-    sf_info.format |= SF_FORMAT_PCM_BE;
-    sf_info.channels = 2;
-    sf_info.pcmbitwidth = 16;
-    sf_info.samplerate = 44100;
-  }
 
   if ( strcmp(in_file,"") ) {
+    SF_INFO sf_info;
+
     as->in_file = sf_open_read(in_file, &sf_info);
     if (as->in_file == NULL)
       return -1;
+    if (as->raw_audio) {
+      sf_info.format =  SF_FORMAT_RAW;
+      sf_info.format |= SF_FORMAT_PCM_BE;
+      sf_info.channels = 2;
+      sf_info.pcmbitwidth = 16;
+      sf_info.samplerate = 44100;
     }
-  else
+    frames = (int)(sf_info.samples/1024+0.5);
+    as->channels = sf_info.channels;
+    as->in_sampling_rate = sf_info.samplerate;
+    as->out_sampling_rate = (as->out_sampling_rate) ? (as->out_sampling_rate) : (sf_info.samplerate);
+  }
+  else {
     as->in_file = NULL;
+    frames = 0;
+    as->out_sampling_rate = (as->out_sampling_rate) ? (as->out_sampling_rate) : (as->in_sampling_rate);
+  }
+  as->cut_off = (as->cut_off) ? (as->cut_off) : ((as->out_sampling_rate)>>1);
 
   as->out_file = fopen(out_file, "wb");
   if (as->out_file == NULL)
     return -2;
 
-  frames = (int)(sf_info.samples/1024+0.5);
-
-  as->channels = sf_info.channels;
-  as->in_sampling_rate = sf_info.samplerate;
-  as->out_sampling_rate = (as->out_sampling_rate) ? (as->out_sampling_rate) : sf_info.samplerate;
-  as->cut_off = (as->cut_off) ? (as->cut_off) : ((as->out_sampling_rate)>>1);
 
   if ((as->inputBuffer = (double**)malloc( as->channels*sizeof(double*))) == NULL)
     return -3;
@@ -425,6 +427,12 @@ void faac_SetParam(faacAACStream *as, int param, int value)
       break;
     case PNS:
       as->use_PNS = value;
+      break;
+    case IN_SAMPLING_RATE:
+      as->in_sampling_rate = value;
+      break;
+    case NUMBER_OF_CHANNELS:
+      as->channels = value;
       break;
   }
 }
