@@ -31,16 +31,6 @@ Copyright(c)1996.
 
 typedef struct
 {
-    int is_present;	/* right channel uses intensiy stereo */
-    int is_used[MAXBANDS];
-    int sign[2*(MAXBANDS+1)];
-    int fac[2*(MAXBANDS+1)];
-    int bot[2*(MAXBANDS+1)];
-    int top[2*(MAXBANDS+1)];
-} IS_Info;
-
-typedef struct
-{
     int is_present;  
     int ms_used[MAXBANDS];
 } MS_Info;
@@ -55,7 +45,6 @@ typedef struct
     int	ch_is_left;	/* 1 if left channel of cpe */
     int	paired_ch;	/* index of paired channel in cpe */
     int widx;		/* window element index for this channel */
-    IS_Info is_info;	/* IS information */
     MS_Info ms_info;    /* MS information */
 } Ch_Info;
 

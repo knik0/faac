@@ -384,7 +384,6 @@ void faac_InitParams(faacAACStream *as)
 {
   as->profile = MAIN_PROFILE;
   as->header_type = ADTS_HEADER;
-  as->use_IS = 0;
   as->use_MS = 0;
   as->use_TNS = 1;
   as->use_LTP = 1;
@@ -406,9 +405,6 @@ void faac_SetParam(faacAACStream *as, int param, int value)
       break;
     case MS_STEREO:
       as->use_MS = value;
-      break;
-    case IS_STEREO:
-      as->use_IS = value;
       break;
     case BITRATE:
       as->bit_rate = value*1000;

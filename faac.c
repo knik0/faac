@@ -59,7 +59,6 @@ void usage(void)
   printf(" -bX   Bitrate in kbps (in steps of 1kbps, min. 16kbps)\n");
   printf(" -pns  Use PNS (Perceptual Noise Substitution).\n");
   printf(" -nt   Don't use TNS (Temporal Noise Shaping).\n");
-  printf(" -is   Use intensity stereo coding.\n");
   printf(" -ms   Use mid/side stereo coding.\n");
   printf(" -nm   Don't use mid/side stereo coding.\n");
   printf("       The default for MS is intelligent switching.\n");
@@ -178,9 +177,6 @@ int parse_arg(int argc, char *argv[],faacAACStream *as, char *InFileNames[100], 
         case 'm': case 'M':
 	  faac_SetParam(as,MS_STEREO,FORCE_MS);
 	  break;
-	case 'i': case 'I':
-	  faac_SetParam(as,IS_STEREO,USE_IS);
-	  break;
 	case 'r': case 'R':
 	  faac_SetParam(as,RAW_AUDIO,USE_RAW_AUDIO);
 	  break;
@@ -243,7 +239,6 @@ void printConf(faacAACStream *as)
   printf("Bitrate: %dkbps.\n", as->bit_rate/1000);
   printf("Mid/Side (MS) stereo coding: %s.\n",
  	(as->use_MS==1)?"Always (If CPE)":((as->use_MS==0)?"Switching (If CPE)":"Off"));
-  printf("Intensity stereo (IS) coding: %s.\n", as->use_IS?"On":"Off");
   printf("Temporal Noise Shaping: %s.\n", as->use_TNS?"On":"Off");
   printf("Long Term Prediction: %s.\n", as->use_LTP?"On":"Off");
   printf("Perceptual Noise Substitution: %s.\n", as->use_PNS?"On":"Off");

@@ -28,9 +28,6 @@ typedef struct RCBufStruct RCBuf;	/* buffer handle */
 #define FORCE_MS        1
 #define SWITCHING_MS    0
 
-#define USE_IS          1
-#define NO_IS           0
-
 #define USE_TNS         1
 #define NO_TNS          0
 
@@ -69,7 +66,6 @@ typedef struct {
 	int available_bits;
         int header_type;
 	int use_MS;
-	int use_IS;
 	int use_TNS;
 	int use_LTP;
 	int use_PNS;

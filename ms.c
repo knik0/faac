@@ -34,7 +34,6 @@ Copyright(c)1996.
 
 #include "psych.h"
 #include "ms.h"
-#include "is.h"
 
 void MSPreprocess(double p_ratio_long[][MAX_SCFAC_BANDS],
 		  double p_ratio_short[][MAX_SCFAC_BANDS],
@@ -43,7 +42,7 @@ void MSPreprocess(double p_ratio_long[][MAX_SCFAC_BANDS],
 		  Ch_Info *channelInfo,                  /* Pointer to Ch_Info */
 		  enum WINDOW_TYPE block_type[MAX_TIME_CHANNELS], /* Block type */
 		  AACQuantInfo* quantInfo,               /* Quant info */
-		  int use_ms, int use_is,
+		  int use_ms,
 		   int numberOfChannels
 		  )
 {
@@ -76,12 +75,7 @@ void MSPreprocess(double p_ratio_long[][MAX_SCFAC_BANDS],
 
 					/* Determine which bands should be enabled */
 					msInfo = &(channelInfo[leftChan].ms_info);
-					if (use_is) {
-						isBand = (block_type[rightChan]==ONLY_SHORT_WINDOW) ? IS_MIN_BAND_S : IS_MIN_BAND_L;
-						isBand = (isBand>maxSfb) ? maxSfb : isBand;
-					} else {
-						isBand = maxSfb;
-					}
+					isBand = maxSfb;
 
 					for (g=0;g<numGroups;g++) {
 						for (sfbNum=0;sfbNum<maxSfb;sfbNum++) {
@@ -364,7 +358,6 @@ void MSEncode(double *spectrum[MAX_TIME_CHANNELS],   /* array of pointers to spe
 					int maxSfb;
 					int g,b,w,line_offset;
 					int startWindow,stopWindow;
-					IS_Info *isInfo;
 					MS_Info *msInfo;
 
 					channelInfo[leftChan].common_window = 1;  /* Use common window */
@@ -375,12 +368,11 @@ void MSEncode(double *spectrum[MAX_TIME_CHANNELS],   /* array of pointers to spe
 
 					/* Determine which bands should be enabled */
 					/* Right now, simply enable bands which do not use intensity stereo */
-					isInfo = &(channelInfo[rightChan].is_info);
 					msInfo = &(channelInfo[leftChan].ms_info);
 					for (g=0;g<numGroups;g++) {
 						for (sfbNum=0;sfbNum<maxSfb;sfbNum++) {
 							b = g*maxSfb+sfbNum;
-							msInfo->ms_used[b] = ( (!isInfo->is_used[b])||(!isInfo->is_present) );
+							msInfo->ms_used[b] = 1;
 						}
 					}
 
@@ -437,7 +429,6 @@ void MSEncodeSwitch(double *spectrum[MAX_TIME_CHANNELS],   /* array of pointers 
 				int maxSfb;
 				int g,b,w,line_offset;
 				int startWindow,stopWindow;
-				IS_Info *isInfo;
 				MS_Info *msInfo;
 
 				channelInfo[leftChan].common_window = 1;  /* Use common window */
@@ -448,13 +439,12 @@ void MSEncodeSwitch(double *spectrum[MAX_TIME_CHANNELS],   /* array of pointers 
 
 				/* Determine which bands should be enabled */
 				/* Right now, simply enable bands which do not use intensity stereo */
-				isInfo = &(channelInfo[rightChan].is_info);
 				msInfo = &(channelInfo[leftChan].ms_info);
 #if 1
 				for (g=0;g<numGroups;g++) {
 					for (sfbNum=0;sfbNum<maxSfb;sfbNum++) {
 						b = g*maxSfb+sfbNum;
-						msInfo->ms_used[b] = (((!isInfo->is_used[b])||(!isInfo->is_present))&&msInfo->ms_used[b]);
+						msInfo->ms_used[b] = msInfo->ms_used[b];
 					}
 				}
 #endif
