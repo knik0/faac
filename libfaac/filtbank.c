@@ -22,7 +22,7 @@ Copyright(c)1996.
  *                                                                           *
  ****************************************************************************/
 /*
- * $Id: filtbank.c,v 1.9 2001/09/04 18:39:35 menno Exp $
+ * $Id: filtbank.c,v 1.10 2002/08/21 16:53:42 knik Exp $
  */
 
 /*
@@ -458,10 +458,10 @@ static void MDCT(double *data, int N)
     /* Perform in-place complex FFT of length N/4 */
     switch (N) {
     case 256:
-        srfft(xr, xi, 6);
+        fft(xr, xi, 6);
         break;
     case 2048:
-        srfft(xr, xi, 9);
+        fft(xr, xi, 9);
     }
 
     /* prepare for recurrence relations in post-twiddle */
@@ -530,10 +530,10 @@ static void IMDCT(double *data, int N)
     /* Perform in-place complex IFFT of length N/4 */
     switch (N) {
     case 256:
-        srifft(xr, xi, 6);
+        ffti(xr, xi, 6);
         break;
     case 2048:
-        srifft(xr, xi, 9);
+        ffti(xr, xi, 9);
     }
 
     /* prepare for recurrence relations in post-twiddle */
