@@ -141,10 +141,6 @@ SOURCE=.\tns.c
 
 SOURCE=.\transfo.c
 # End Source File
-# Begin Source File
-
-SOURCE=.\util.c
-# End Source File
 # End Group
 # End Target
 # End Project
