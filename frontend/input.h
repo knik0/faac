@@ -16,14 +16,40 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: input.h,v 1.2 2003/06/21 08:58:27 knik Exp $
+ * $Id: input.h,v 1.3 2003/07/10 19:18:58 knik Exp $
  */
 
 #ifndef _INPUT_H
 #define _INPUT_H
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
 #include <stdio.h>
 #include <stdlib.h>
+#ifdef HAVE_SYS_TYPES_H
+# include <sys/types.h>
+#endif
+#ifdef HAVE_INTTYPES_H
+# include <inttypes.h>
+#endif
+#ifdef HAVE_STDINT_H
+# include <stdint.h>
+#endif
+
+#ifndef HAVE_INT32_T
+typedef int int32_t;
+#endif
+#ifndef HAVE_INT16_T
+typedef short int16_t;
+#endif
+#ifndef HAVE_U_INT32_T
+typedef unsigned int u_int32_t;
+#endif
+#ifndef HAVE_U_INT16_T
+typedef unsigned short u_int16_t;
+#endif
 
 #ifdef __cplusplus
 extern "C"
@@ -34,15 +60,14 @@ typedef struct
 {
   FILE *f;
   int channels;
-  int samplebits;
+  int samplebytes;
   int samplerate;
   int samples;
   int bigendian;
 } pcmfile_t;
 
-pcmfile_t *wav_open_read(const char *path,
-			 int rawchans, int rawbits, int rawrate);
-size_t wav_read_short(pcmfile_t *file, short *ptr, size_t size);
+pcmfile_t *wav_open_read(const char *path, int rawchans);
+size_t wav_read_int24(pcmfile_t *sndf, int32_t *buf, size_t num, int *map);
 int wav_close(pcmfile_t *file);
 
 #ifdef __cplusplus
