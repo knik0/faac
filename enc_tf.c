@@ -418,19 +418,6 @@ int EncTfFrame (faacAACStream *as, BsBitStream  *fixed_stream)
 		}
 	}
 
-	{
-		int chanNum;
-		for (chanNum=0;chanNum<max_ch;chanNum++) {
-
-			/* Count number of bits used for gain_control_data */
-//			used_bits += WriteGainControlData(&quantInfo[chanNum],     /* quantInfo contains packed gain control data */
-			used_bits += WriteGainControlData(NULL,           /* NULL BsBitStream.  Only counting bits, no need to write yet */
-				0);             /* Zero write flag means don't write */
-		}
-	}
-
-
-
 	/******************************************************************************************************************************
 	*
 	* T/F mapping

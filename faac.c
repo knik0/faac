@@ -1,4 +1,4 @@
-#ifdef WIN32
+#ifdef _WIN32
 #include <windows.h>
 #else
 #include <time.h>
@@ -99,7 +99,7 @@ int parse_arg(int argc, char *argv[],faacAACStream *as, char *InFileNames[100], 
 	FileCount++;
       }
       else {
-#ifdef WIN32
+#ifdef _WIN32
 	HANDLE hFindFile;
 	WIN32_FIND_DATA fd;
 
@@ -263,7 +263,7 @@ int main(int argc, char *argv[])
   faacAACStream *as;
 
 	/* System dependant types */
-#ifdef WIN32
+#ifdef _WIN32
   long	begin, end;
   int nTotSecs, nSecs;
   int nMins;
@@ -287,7 +287,7 @@ int main(int argc, char *argv[])
   /* Process input files */
   for (i = 0; i < FileCount; i++) {
     printf("0%\tBusy encoding %s.\r", InFileNames[i]);
-#ifdef WIN32
+#ifdef _WIN32
     begin = GetTickCount();
 #endif
 
@@ -312,7 +312,7 @@ int main(int argc, char *argv[])
     /* finishing last frames and destroying internal data */
     faac_EncodeFinish(as);
     faac_EncodeFree(as);
-#ifdef WIN32
+#ifdef _WIN32
     end = GetTickCount();
     nTotSecs = (end-begin)/1000;
     nMins = nTotSecs / 60;

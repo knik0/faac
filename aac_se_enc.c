@@ -263,10 +263,6 @@ int WriteICS(AACQuantInfo* quantInfo,    /* AACQuantInfo structure */
 	/* Write TNS data */
 	bit_count += WriteTNSData(quantInfo,fixed_stream,writeFlag);
 	
-	/* Write gain control data */
-//	bit_count += WriteGainControlData(quantInfo,fixed_stream,writeFlag);
-        bit_count += WriteGainControlData(fixed_stream,writeFlag);
-
 	/* Write out spectral_data() */
 	bit_count += WriteSpectralData(quantInfo,fixed_stream,writeFlag);
 
@@ -465,26 +461,6 @@ int WriteTNSData(AACQuantInfo* quantInfo,    /* AACQuantInfo structure */
 
   return bit_count;
 }
-
-
-/*****************************************************************************/
-/* WriteGainControlData(...), write gain control data.                       */
-/*****************************************************************************/
-int WriteGainControlData(
-//                         AACQuantInfo* quantInfo,    /* AACQuantInfo structure */
-			 BsBitStream* fixed_stream,  /* Pointer to bitstream */
-			 int writeFlag)              /* 1 means write, 0 means count only */  
-{
-	int bit_count = 0;
-	bit_count += LEN_GAIN_PRES;
-
-	if (writeFlag) {
-		BsPutBit(fixed_stream,0,LEN_GAIN_PRES);
-	}
-	return bit_count;
-}
-
-
 /*****************************************************************************/
 /* WriteSpectralData(...), write spectral data.                              */
 /*****************************************************************************/

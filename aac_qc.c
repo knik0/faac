@@ -30,12 +30,12 @@ double ATHformula(double f)
 	ath=(3.640 * pow(f,-0.8)
 		-  6.500 * exp(-0.6*pow(f-3.3,2.0))
 		+  0.001 * pow(f,4.0));
-	
+
 	/* convert to energy */
 	ath = pow( 10.0, ath/10.0 );
 	return ath;
 }
- 
+
 
 void compute_ath(AACQuantInfo *quantInfo, double ATH[SFB_NUM_MAX])
 {
