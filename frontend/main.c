@@ -18,7 +18,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: main.c,v 1.63 2004/04/03 15:50:05 danchr Exp $
+ * $Id: main.c,v 1.64 2004/04/03 15:54:48 danchr Exp $
  */
 
 #ifdef _MSC_VER
@@ -33,7 +33,7 @@
 # include <mp4.h>
 #endif
 
-#define DEFAULT_TNS     0
+#define DEFAULT_TNS     1
 
 #ifdef _WIN32
 #include <windows.h>
@@ -174,9 +174,9 @@ const char *long_help =
   "\n"
   "Expert options:\n"
 #if !DEFAULT_TNS
-  "  --tns  \tEnable TNS coding.\n"
+  "  --tns  \tEnable TNS, temporal noise shaping, coding.\n"
 #else
-  "  --no-tns\tDisable TNS coding.\n"
+  "  --no-tns\tDisable TNS, temporal noise shaping, coding.\n"
 #endif
   "  --no-midside\tDon\'t use mid/side coding.\n"
   "  --mpeg-vers X\tAAC MPEG version, X can be 2 or 4.\n"
@@ -1071,6 +1071,9 @@ int main(int argc, char *argv[])
 
 /*
 $Log: main.c,v $
+Revision 1.64  2004/04/03 15:54:48  danchr
+make TNS default
+
 Revision 1.63  2004/04/03 15:50:05  danchr
 non-backwards compatible revamp of the FAAC command line interface
 cover art metadata support based on patch by Jordan Breeding (jordan breeding (a) mac com)
