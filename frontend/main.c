@@ -18,7 +18,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: main.c,v 1.62 2004/03/29 14:02:04 danchr Exp $
+ * $Id: main.c,v 1.63 2004/04/03 15:50:05 danchr Exp $
  */
 
 #ifdef _MSC_VER
@@ -64,6 +64,194 @@
 #include "input.h"
 
 #include <faac.h>
+
+const char *usage =
+  "Usage: %s [options] [-o outfile] infiles ...\n"
+  "\n"
+  "\t<infiles> and/or <outfile> can be \"-\", which means stdin/stdout.\n"
+  "\n"
+  "See also:\n"
+  "\t\"%s --help\" for short help on using FAAC\n"
+  "\t\"%s --long-help\" for a description of all options for FAAC.\n"
+  "\t\"%s --license\" for the license terms for FAAC.\n\n";
+
+const char *short_help = 
+  "Usage: %s [options] infiles ...\n"
+  "Options:\n"
+  "  -q <quality>\tSet quantizer quality.\n"
+  "  -a <bitrate>\tSet average bitrate to x kbps/channel. (lower quality mode)\n"
+  "  -c <freq>\tSet the bandwidth in Hz. (default=automatic)\n"
+  "  -o X\t\tSet output file to X (only for one input file)\n"
+  "  -r\t\tUse RAW AAC output file.\n"
+  "  -P\t\tRaw PCM input mode (default 44100Hz 16bit stereo).\n"
+  "  -R\t\tRaw PCM input rate.\n"
+  "  -B\t\tRaw PCM input sample size (8, 16 (default), 24 or 32bits).\n"
+  "  -C\t\tRaw PCM input channels.\n"
+  "  -X\t\tRaw PCM swap input bytes\n"
+  "  -I <C,LF>\tInput channel config, default is 3,4 (Center third, LF fourth)\n"
+  "\n"
+  "MP4 specific options:\n"
+#ifdef HAVE_LIBMP4V2
+  "  -w\t\tWrap AAC data in MP4 container. (default for *.mp4 and *.m4a)\n"
+  "  --artist X\tSet artist to X\n"
+  "  --title X\tSet title to X\n"
+  "  --genre X\tSet genre to X\n"
+  "  --album X\tSet album to X\n"
+  "  --track X\tSet track to X (number/total)\n"
+  "  --disc X\tSet disc to X (number/total)\n"
+  "  --year X\tSet year to X\n"
+  "  --cover-art X\tRead cover art from file X\n"
+  "  --comment X\tSet comment to X\n"
+#else
+  "  MP4 support unavailable.\n"
+#endif
+  "\n"
+  "Documentation:\n"
+  "  --license\tShow the FAAC license.\n"
+  "  --help\tShow this abbreviated help.\n"
+  "  --long-help\tShow complete help.\n"
+  "\n"
+  "  More tips can be found in the audiocoding.com Knowledge Base at\n"
+  "  <http://www.audiocoding.com/wiki/>\n"
+  "\n";
+
+const char *long_help = 
+  "Usage: %s [options] infiles ...\n"
+  "\n"
+  "Quality-related options:\n"
+  "  -q <quality>\tSet default variable bitrate (VBR) quantizer quality in percent\n"
+  "\t\t(default: 100, averages at approx. 120 kbps VBR for a normal \n"
+  "\t\tstereo input file with 16 bit and 44.1 kHz sample rate; max.\n"
+  "\t\tvalue 500, min. 10).Set quantizer quality.\n"
+  "  -a <bitrate>\tSet average bitrate (ABR) to approximately X kbps PER CHANNEL\n"
+  "\t\t(default: VBR mode; using -a 64 averages at 128 kbps/stereo max.\n"
+  "\t\tvalue 76 kbps/channel = 152 kbps/stereo at a 16 kHz cutoff).\n"
+  "  -c <freq>\tSet the bandwidth in Hz (default: automatic, i.e. adapts\n"
+  "\t\tmaximum value to input sample rate).\n"
+  "\n"
+  "Input/output options:\n"
+  "  - <stdin>\tIf you simply use a hyphen/minus sign instead of an input\n"
+  "\t\tfile name, FAAC can encode directly from stdin, thus enabling\n"
+  "\t\tpiping within other applications like foobar2000 (see example\n"
+  "\t\tbelow). The same works for stdout as well, so FAAC can pipe its\n"
+  "\t\toutput to other apps such as mp4live (streaming live AAC\n"
+  "\t\tcontent).\n"
+  "  -o X\t\tSet output file to X (only for one input file)\n"
+  "  -P\t\tRaw PCM input mode (default: off, i.e. expecting a WAV header;\n"
+  "\t\tnecessary for input files or bitstreams without a header; using\n"
+  "\t\tonly -P assumes the default values for -R, -B and -C in the\n"
+  "\t\tinput file).\n"
+  "  -R\t\tRaw PCM input sample rate in Hz (default: 44100 Hz, max. 96 kHz)\n"
+  "  -B\t\tRaw PCM input sample size (default: 16, also possible 8, 24, 32\n"
+  "\t\tbit fixed or float input).\n"
+  "  -C\t\tRaw PCM input channels (default: 2, max. 33 + 1 LFE).\n"
+  "  -X\t\tRaw PCM swap input bytes (default: bigendian).\n"
+  "  -I <C[,LFE]>\tInput multichannel configuration (default: 3,4 which means\n"
+  "\t\tCenter is third and LFE is fourth like in 5.1 WAV, so you only\n"
+  "\t\thave to specify a different position of these two mono channels\n"
+  "\t\tin your multichannel input files if they haven't been reordered\n"
+  "\t\talready).\n"
+  "  -r\t\taw AAC output mode (i.e. without ADTS headers, needed when\n"
+  "\t\tdirectly using the AAC bitstream in a MP4 container like e.g.\n"
+  "\t\tmp4live does; -w uses this mode automatically).\n"
+  "\n"
+  "MP4 specific options:\n"
+#ifdef HAVE_LIBMP4V2
+  "  -w\t\tWrap AAC data in MP4 container. (default for *.mp4 and *.m4a)\n"
+  "  --artist X\tSet artist to X\n"
+  "  --title X\tSet title to X\n"
+  "  --genre X\tSet genre to X\n"
+  "  --album X\tSet album to X\n"
+  "  --track X\tSet track to X (number/total)\n"
+  "  --disc X\tSet disc to X (number/total)\n"
+  "  --year X\tSet year to X\n"
+  "  --cover-art X\tRead cover art from file X\n"
+  "\t\tSupported image formats are jpg and png."
+  "  --comment X\tSet comment to X\n"
+#else
+  "  MP4 support unavailable.\n"
+#endif
+  "\n"
+  "Expert options:\n"
+#if !DEFAULT_TNS
+  "  --tns  \tEnable TNS coding.\n"
+#else
+  "  --no-tns\tDisable TNS coding.\n"
+#endif
+  "  --no-midside\tDon\'t use mid/side coding.\n"
+  "  --mpeg-vers X\tAAC MPEG version, X can be 2 or 4.\n"
+  "  --obj-type X\tAAC object type. (0=Low Complexity (default), 1=Main, 2=LTP)\n"
+  "  --shortctl X\tEnforce block type (default: both; 1 = short only; 2 = long\n"
+  "\t\tonly).\n"
+  "\n"
+  "Documentation:\n"
+  "  --license\tShow the FAAC license.\n"
+  "  --help\tShow this abbreviated help.\n"
+  "  --long-help\tShow complete help.\n"
+  "\n"
+  "  More tips can be found in the audiocoding.com Knowledge Base at\n"
+  "  <http://www.audiocoding.com/wiki/>\n"
+  "\n";
+
+char *license =
+  "\nPlease note that the use of this software may require the payment of patent\n"
+  "royalties. You need to consider this issue before you start building derivative\n"
+  "works. We are not warranting or indemnifying you in any way for patent\n"
+  "royalities! YOU ARE SOLELY RESPONSIBLE FOR YOUR OWN ACTIONS!\n"
+  "\n"
+  "FAAC is based on the ISO MPEG-4 reference code. For this code base the\n"
+  "following license applies:\n"
+  "\n"
+  "This software module was originally developed by\n"
+  "\n"
+  "FirstName LastName (CompanyName)\n"
+  "\n"
+  "and edited by\n"
+  "\n"
+  "FirstName LastName (CompanyName)\n"
+  "FirstName LastName (CompanyName)\n"
+  "\n"
+  "in the course of development of the MPEG-2 NBC/MPEG-4 Audio standard\n"
+  "ISO/IEC 13818-7, 14496-1,2 and 3. This software module is an\n"
+  "implementation of a part of one or more MPEG-2 NBC/MPEG-4 Audio tools\n"
+  "as specified by the MPEG-2 NBC/MPEG-4 Audio standard. ISO/IEC gives\n"
+  "users of the MPEG-2 NBC/MPEG-4 Audio standards free license to this\n"
+  "software module or modifications thereof for use in hardware or\n"
+  "software products claiming conformance to the MPEG-2 NBC/ MPEG-4 Audio\n"
+  "standards. Those intending to use this software module in hardware or\n"
+  "software products are advised that this use may infringe existing\n"
+  "patents. The original developer of this software module and his/her\n"
+  "company, the subsequent editors and their companies, and ISO/IEC have\n"
+  "no liability for use of this software module or modifications thereof\n"
+  "in an implementation. Copyright is not released for non MPEG-2\n"
+  "NBC/MPEG-4 Audio conforming products. The original developer retains\n"
+  "full right to use the code for his/her own purpose, assign or donate\n"
+  "the code to a third party and to inhibit third party from using the\n"
+  "code for non MPEG-2 NBC/MPEG-4 Audio conforming products. This\n"
+  "copyright notice must be included in all copies or derivative works.\n"
+  "\n"
+  "Copyright (c) 1997.\n"
+  "\n"
+  "For the changes made for the FAAC project the GNU Lesser General Public\n"
+  "License (LGPL), version 2 1991 applies:\n"
+  "\n"
+  "FAAC - Freeware Advanced Audio Coder\n"
+  "Copyright (C) 2001-2004 The individual contributors\n"
+  "\n"
+  "This library is free software; you can redistribute it and/or\n"
+  "modify it under the terms of the GNU Lesser General Public\n"
+  "License as published by the Free Software Foundation; either\n"
+  "version 2.1 of the License, or (at your option) any later version.\n"
+  "\n"
+  "This library is distributed in the hope that it will be useful,\n"
+  "but WITHOUT ANY WARRANTY; without even the implied warranty of\n"
+  "MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU\n"
+  "Lesser General Public License for more details.\n"
+  "\n"
+  "You should have received a copy of the GNU Lesser General Public\n"
+  "License along with this library; if not, write to the Free Software\n"
+  "Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA\n"
+  "\n";
 
 #ifndef min
 #define min(a,b) ( (a) < (b) ? (a) : (b) )
@@ -164,16 +352,16 @@ int main(int argc, char *argv[])
     int chanC = 3;
     int chanLF = 4;
 
-    char *audioFileName;
-    char *aacFileName;
-    char *aacFileExt;
+    char *audioFileName = NULL;
+    char *aacFileName = NULL;
+    char *aacFileExt = NULL;
 
     float *pcmbuf;
     int *chanmap = NULL;
 
     unsigned char *bitbuf;
     int samplesRead = 0;
-    int dieUsage = 0;
+    const char *dieMessage = NULL;
 
     int rawChans = 0; // disabled by default
     int rawBits = 16;
@@ -191,6 +379,8 @@ int main(int argc, char *argv[])
     int ndiscs = 0, discno = 0;
     const char *artist = NULL, *title = NULL, *album = NULL, *year = NULL,
       *genre = NULL, *comment = NULL;
+    u_int8_t *art = NULL;
+    u_int64_t artSize = 0;
     u_int64_t total_samples = 0;
     u_int64_t encoded_samples = 0;
     unsigned int delay_samples;
@@ -208,9 +398,7 @@ int main(int argc, char *argv[])
     // get faac version
     if (faacEncGetVersion(&faac_id_string, &faac_copyright_string) == FAAC_CFG_VERSION)
     {
-        fprintf(stderr, "%s(see the faac.html file for more details)\n\n",
-	      faac_copyright_string);
-      fprintf(stderr, "libfaac version %s\n", faac_id_string);
+        fprintf(stderr, "Freeware Advanced Audio Coder\nFAAC %s\n\n", faac_id_string);
     }
     else
     {
@@ -222,10 +410,10 @@ int main(int argc, char *argv[])
     progName = argv[0];
     while (1) {
         static struct option long_options[] = {
-            { "mpeg", 0, 0, 'm' },
-            { "objecttype", 0, 0, 'o' },
+            { "help", 0, 0, 'h' },
+            { "long-help", 0, 0, '?' },
             { "raw", 0, 0, 'r' },
-            { "nomidside", 0, 0, 'n' },
+            { "no-midside", 0, 0, 'n' },
             { "cutoff", 1, 0, 'c' },
             { "quality", 1, 0, 'q' },
             { "pcmraw", 0, 0, 'P'},
@@ -234,7 +422,10 @@ int main(int argc, char *argv[])
             { "pcmchannels", 1, 0, 'C'},
             { "shortctl", 1, 0, 300},
             { "tns", 0, 0, 301},
-            { "notns", 0, 0, 302},
+            { "no-tns", 0, 0, 302},
+            { "mpeg-version", 0, 0, 303},
+            { "object-type", 0, 0, 304},
+            { "license", 0, 0, 305},
 #ifdef HAVE_LIBMP4V2
             { "createmp4", 0, 0, 'w'},
             { "artist", 1, 0, 'A'},
@@ -244,6 +435,7 @@ int main(int argc, char *argv[])
             { "disc", 1, 0, 'D'},
             { "genre", 1, 0, 'G'},
             { "year", 1, 0, 'Y'},
+            { "cover-art", 1, 0, 'V'},
             { "comment", 1, 0, 'M'},
 #endif
 	    { "pcmswapbytes", 0, 0, 'X'},
@@ -252,9 +444,9 @@ int main(int argc, char *argv[])
         int c = -1;
         int option_index = 0;
 
-        c = getopt_long(argc, argv, "a:m:o:rnc:q:PR:B:C:I:X"
+        c = getopt_long(argc, argv, "Hha:m:o:rnc:q:PR:B:C:I:X"
 #ifdef HAVE_LIBMP4V2
-                        "wA:T:L:N:G:D:Y:C:"
+                        "wA:T:L:N:G:D:Y:M:V:"
 #endif
             ,long_options, &option_index);
 
@@ -263,40 +455,18 @@ int main(int argc, char *argv[])
 
         if (!c)
         {
-          dieUsage = 1;
+          dieMessage = short_help;
           break;
         }
 
         switch (c) {
-        case 'm':
-            mpegVersion = atoi(optarg);
-            switch(mpegVersion)
-            {
-            case 2:
-                mpegVersion = MPEG2;
-                break;
-            case 4:
-                mpegVersion = MPEG4;
-                break;
-            default:
-                mpegVersion = MPEG4;
-            }
-            break;
-        case 'o':
-            objectType = atoi(optarg);
-            switch (objectType)
-            {
-            case 1:
-                objectType = MAIN;
-                break;
-            case 2:
-                objectType = LTP;
-                break;
-            default:
-                objectType = LOW;
-                break;
-            }
-            break;
+	case 'o':
+	    {
+	        int l = strlen(optarg);
+		aacFileName = malloc(l);
+		memcpy(aacFileName, optarg, l);
+	    }
+	    break;
         case 'r': {
             stream = RAW_STREAM;
             break;
@@ -395,6 +565,43 @@ int main(int argc, char *argv[])
 	case 'M':
 	    comment = optarg;
 	    break;
+	case 'V': {
+	    FILE *artFile = fopen(optarg, "rb");
+
+	    if(artFile) {
+	        u_int64_t r;
+
+	        fseek(artFile, 0, SEEK_END);
+		artSize = ftell(artFile);
+
+		art = malloc(artSize);
+
+	        fseek(artFile, 0, SEEK_SET);
+		clearerr(artFile);
+
+		r = fread(art, artSize, 1, artFile);
+
+		if (r != 1) {
+		    dieMessage = "Error reading cover art file!\n";
+		    free(art);
+		    art = NULL;
+		} else if (artSize < 12 ||
+			   (strncmp(art, "\x89\x50\x4E\x47\x0D\x0A\x1A\x0A", 8)
+			    && (strncmp(art, "\xFF\xD8\xFF\xE0", 4) || 
+				strncmp(art + 6, "JFIF", 5)))) {
+		    /* the above expression checks the image signature */
+		    dieMessage = "Cover image is neither PNG nor JPEG\n";
+		    free(art);
+		    art = NULL;
+		}		  
+
+		fclose(artFile);
+	    } else {
+	        dieMessage = "Error opening cover art file!\n";
+	    }
+
+	    break;
+	}
 #endif
         case 300:
             shortctl = atoi(optarg);
@@ -405,81 +612,107 @@ int main(int argc, char *argv[])
         case 302:
             useTns = 0;
             break;
+	case 303:
+            mpegVersion = atoi(optarg);
+            switch(mpegVersion)
+            {
+            case 2:
+                mpegVersion = MPEG2;
+                break;
+            case 4:
+                mpegVersion = MPEG4;
+                break;
+            default:
+                mpegVersion = MPEG4;
+            }
+            break;
+	case 304:
+            objectType = atoi(optarg);
+            switch (objectType)
+            {
+            case 1:
+                objectType = MAIN;
+                break;
+            case 2:
+                objectType = LTP;
+                break;
+            default:
+                objectType = LOW;
+                break;
+            }
+            break;
+        case 305:
+	    printf(faac_copyright_string);
+	    dieMessage = license;
+	    break;
 	case 'X':
 	  rawEndian = 0;
 	  break;
-        case '?':
-            break;
+	case '?':
+	  dieMessage = long_help;
+	  break;
+	case 'h':
+          dieMessage = short_help;
+	  break;
         default:
-          dieUsage = 1;
+	  dieMessage = usage;
           break;
         }
     }
 
-    /* check that we have at least two non-option arguments */
-    if ((argc - optind) < 2 || dieUsage == 1)
-    {
-        printf("\nUsage: %s -options infile outfile\n", progName);
-        printf("Options:\n");
-        printf("  -a <x> Set average bitrate to x kbps/channel. (lower quality mode)\n");
-        printf("  -c <bandwidth>\tSet the bandwidth in Hz. (default=automatic)\n");
-        printf("  -q <quality>\tSet quantizer quality.\n");
-#if !DEFAULT_TNS
-        printf("  --tns  \tEnable TNS coding.\n");
-#else
-        printf("  --notns\tDisable TNS coding.\n");
-#endif
-        printf("  -n     Don\'t use mid/side coding.\n");
-        printf("  -m X   AAC MPEG version, X can be 2 or 4.\n");
-        printf("  -o X   AAC object type. (0=Low Complexity (default), 1=Main, 2=LTP)\n");
-        printf("  --shortctl <x>  Enforce block type (1 = no short; 2 = no long)\n");
-        printf("  -P     Raw PCM input mode (default 44100Hz 16bit stereo).\n");
-        printf("  -R     Raw PCM input rate.\n");
-        printf("  -B     Raw PCM input sample size (8, 16 (default), 24 or 32bits).\n");
-        printf("  -C     Raw PCM input channels.\n");
-	printf("  -X     Raw PCM swap input bytes\n");
-        printf("  -I <C,LF> Input channel config, default is 3,4 (Center third, LF fourth)\n");
-        printf("  -r     Use RAW AAC output file.\n");
-#ifdef HAVE_LIBMP4V2
-        printf("\n");
-        printf("MP4 specific options:\n");
-	printf("  -w\t\tWrap AAC data in MP4 container. (default for *.mp4 and *.m4a)\n");
-        printf("  --artist X\tSet artist to X\n");
-        printf("  --title X\tSet title to X\n");
-        printf("  --genre X\tSet genre to X\n");
-        printf("  --album X\tSet album to X\n");
-        printf("  --number X\tSet track to X (number/total)\n");
-        printf("  --disc X\tSet disc to X (number/total)\n");
-        printf("  --year X\tSet year to X\n");
-        printf("  --comment X\tSet comment to X\n");
-        printf("\n");
-#else
-        printf("\n");
-        printf("MP4 support unavailable.\n");
-#endif
-        //printf("More details on FAAC usage can be found in the faac.html file.\n");
-        printf("More tips on FAAC usage can be found in Knowledge base at www.audiocoding.com\n");
+    /* check that we have at least one non-option arguments */
+    if ((argc - optind) > 1 && aacFileName)
+        dieMessage = "Cannot encode several input files to one output file.\n";
+    else if ((argc - optind) > 1)
+        dieMessage = "Multiple input files not supported yet.\n";
 
+    if ((argc - optind) < 1 || dieMessage)
+    {
+      fprintf(stderr, dieMessage ? dieMessage : usage,
+	       progName, progName, progName, progName);
         return 1;
     }
 
-    /* point to the specified file names */
+    /* get the input file name */
     audioFileName = argv[optind++];
-    aacFileName = argv[optind++];
-    aacFileExt = strrchr(aacFileName, '.');
+
+    /* generate the output file name, if necessary */
+    if (!aacFileName) {
+        char *t = strrchr(audioFileName, '.');
+	int l = t ? strlen(audioFileName) - strlen(t) : strlen(audioFileName);
+
+#ifdef HAVE_LIBMP4V2
+	aacFileExt = container == MP4_CONTAINER ? ".m4a" : ".aac";
+#else
+	aacFileExt = ".aac";
+#endif
+
+	aacFileName = malloc(l+4);
+	memcpy(aacFileName, audioFileName, l);
+	memcpy(aacFileName + l, aacFileExt, 4);
+    } else {
+        aacFileExt = strrchr(aacFileName, '.');
+
+        if (aacFileExt && (!strcmp(".m4a", aacFileExt) || !strcmp(".mp4", aacFileExt)))
+#ifndef HAVE_LIBMP4V2
+	    fprintf(stderr, "WARNING: MP4 support unavailable!\n");
+#else
+	    container = MP4_CONTAINER;
+#endif
+    }
 
     /* open the audio input file */
     if (rawChans > 0) // use raw input
     {
         infile = wav_open_read(audioFileName, 1);
-        if (infile)
-        {
-	  infile->bigendian = rawEndian;
-            infile->channels = rawChans;
-            infile->samplebytes = rawBits / 8;
-            infile->samplerate = rawRate;
+	if (infile)
+	{
+	    infile->bigendian = rawEndian;
+	    infile->channels = rawChans;
+	    infile->samplebytes = rawBits / 8;
+	    infile->samplerate = rawRate;
 	    infile->samples /= (infile->channels * infile->samplebytes);
-        }
+	}
     }
     else // header input
         infile = wav_open_read(audioFileName, 0);
@@ -487,7 +720,7 @@ int main(int argc, char *argv[])
     if (infile == NULL)
     {
         fprintf(stderr, "Couldn't open input file %s\n", audioFileName);
-        return 1;
+	return 1;
     }
 
 
@@ -495,26 +728,14 @@ int main(int argc, char *argv[])
     hEncoder = faacEncOpen(infile->samplerate, infile->channels,
         &samplesInput, &maxBytesOutput);
 
-
-    /* check file extension */
-    if (aacFileExt && 
-	(!strcmp(".m4a", aacFileExt) || !strcmp(".mp4", aacFileExt))) 
-#ifndef HAVE_LIBMP4V2
-        printf("WARNING: MP4 support unavailable!\n");
-#else
-    {
-        container = MP4_CONTAINER;
-    }
-
 #ifdef HAVE_LIBMP4V2
     if (container != MP4_CONTAINER && (ntracks || trackno || artist ||
-				       title ||  album || year ||
+				       title ||  album || year || art ||
 				       genre || comment || discno || ndiscs))
     {
-      printf("\nERROR: Metadata requires MP4 output!");
-	dieUsage = 1;
+        fprintf(stderr, "Metadata requires MP4 output!\n");
+	return 1;
     }
-#endif
 
     if (container == MP4_CONTAINER)
     {
@@ -619,6 +840,10 @@ int main(int argc, char *argv[])
 	if (year) MP4SetMetadataYear(MP4hFile, year);
 	if (genre) MP4SetMetadataGenre(MP4hFile, genre);
 	if (comment) MP4SetMetadataComment(MP4hFile, genre);
+        if (artSize) {
+	    MP4SetMetadataCoverArt(MP4hFile, art, artSize);
+	    free(art);
+	}
     }
     else
     {
@@ -846,6 +1071,10 @@ int main(int argc, char *argv[])
 
 /*
 $Log: main.c,v $
+Revision 1.63  2004/04/03 15:50:05  danchr
+non-backwards compatible revamp of the FAAC command line interface
+cover art metadata support based on patch by Jordan Breeding (jordan breeding (a) mac com)
+
 Revision 1.62  2004/03/29 14:02:04  danchr
 MP4 bug fixes by Jordan Breeding (jordan breeding (a) mac com)
 Document long options for metadata - they are much more intuitive.
