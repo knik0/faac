@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: psychiso.c,v 1.1 2002/08/07 18:15:06 knik Exp $
+ * $Id: psychiso.c,v 1.2 2002/08/21 16:54:26 knik Exp $
  */
 
 #include <stdlib.h>
@@ -501,7 +501,7 @@ static void PsyBufferUpdate(GlobalPsyInfo *gpsyInfo, PsyInfo *psyInfo,
 	/* In 2 frames this will be the frequencies where
 	   the psychoacoustics are calculated for */
 	Hann(gpsyInfo, transBuff, 2*psyInfo->size);
-	rsfft(transBuff, 11);
+	rfft(transBuff, 11);
 
 
 	/* shift all buffers 1 frame ahead */
@@ -555,7 +555,7 @@ static void PsyBufferUpdate(GlobalPsyInfo *gpsyInfo, PsyInfo *psyInfo,
 		/* In 2 frames this will be the frequencies where
 		   the psychoacoustics are calculated for */
 		Hann(gpsyInfo, transBuffS, 2*psyInfo->sizeS);
-		rsfft(transBuffS, 8);
+		rfft(transBuffS, 8);
 
 
 		/* shift all buffers 1 frame ahead */
