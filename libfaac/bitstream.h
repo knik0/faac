@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: bitstream.h,v 1.6 2001/05/02 05:39:14 menno Exp $
+ * $Id: bitstream.h,v 1.7 2001/05/28 14:11:47 menno Exp $
  */
 
 #ifndef BITSTREAM_H
@@ -215,7 +215,8 @@ int PutBit(BitStream *bitStream,
 		   int numBit);
 
 static int ByteAlign(BitStream* bitStream,
-					 int writeFlag);
+					 int writeFlag,
+					 int offset);
 
 #ifdef __cplusplus
 }
