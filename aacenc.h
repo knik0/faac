@@ -33,7 +33,7 @@ typedef struct {
 	int use_MS;
 	int use_IS;
 	int profile;
-	float **inputBuffer;
+	double **inputBuffer;
 } faacAACStream;
 
 typedef struct {

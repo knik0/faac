@@ -27,11 +27,11 @@ faacAACStream *faacEncodeInit(faacAACConfig *ac, int *samplesToRead, int *bitBuf
 	int startupNumFrame;
 
 	as = malloc( sizeof(faacAACStream));
-	if ((as->inputBuffer = (float**)malloc( ac->channels*sizeof(float*)))==NULL)
+	if ((as->inputBuffer = (double**)malloc( ac->channels*sizeof(double*)))==NULL)
 		return NULL;
 	for (ch=0; ch < ac->channels; ch++)
 	{
-		if ((as->inputBuffer[ch]=(float*)malloc( 1024*sizeof(float)))==NULL)
+		if ((as->inputBuffer[ch]=(double*)malloc( 1024*sizeof(double)))==NULL)
 			return NULL;
 	}
 
@@ -107,24 +107,26 @@ int faacEncodeFrame(faacAACStream *as, short *Buffer, int Samples, unsigned char
 	}
 
 	// Process Buffer
-	if (as->channels == 2)
-	{
-		if (Samples > 0)
-			for (i = 0; i < 1024; i++)
-			{
-				as->inputBuffer[0][i] = *Buffer++;
-				as->inputBuffer[1][i] = *Buffer++;
-			}
-		else // (Samples == 0) when called by faacEncodeFinish
-			for (i = 0; i < 1024; i++)
-			{
-				as->inputBuffer[0][i] = 0;
-				as->inputBuffer[1][i] = 0;
-			}
-	} else {
-		// No mono supported yet (basically only a problem with decoder
-		// the encoder in fact supports it).
-		return FERROR;
+	if (Buffer) {
+		if (as->channels == 2)
+		{
+			if (Samples > 0)
+				for (i = 0; i < 1024; i++)
+				{
+					as->inputBuffer[0][i] = *Buffer++;
+					as->inputBuffer[1][i] = *Buffer++;
+				}
+				else // (Samples == 0) when called by faacEncodeFinish
+					for (i = 0; i < 1024; i++)
+					{
+						as->inputBuffer[0][i] = 0;
+						as->inputBuffer[1][i] = 0;
+					}
+		} else {
+			// No mono supported yet (basically only a problem with decoder
+			// the encoder in fact supports it).
+			return FERROR;
+		}
 	}
 
 	if (as->is_first_frame) {
