@@ -64,8 +64,8 @@ BEGIN
                     WS_EX_STATICEDGE
     CONTROL         "Allow Mid/Side",IDC_ALLOWMIDSIDE,"Button",
                     BS_AUTOCHECKBOX | BS_LEFTTEXT | WS_TABSTOP,13,78,71,10
-    EDITTEXT        IDC_BITRATE,142,73,69,14,ES_AUTOHSCROLL
-    EDITTEXT        IDC_BANDWIDTH,142,95,69,14,ES_AUTOHSCROLL
+    EDITTEXT        IDC_BITRATE,138,77,31,14,ES_AUTOHSCROLL
+    EDITTEXT        IDC_BANDWIDTH,138,95,31,14,ES_AUTOHSCROLL
     DEFPUSHBUTTON   "Encode",IDOK,75,154,50,14,WS_DISABLED
     PUSHBUTTON      "Quit",IDCANCEL,141,154,50,14
     EDITTEXT        IDC_INPUTFILENAME,61,12,161,14,ES_AUTOHSCROLL
@@ -78,13 +78,13 @@ BEGIN
     LTEXT           "-",IDC_INPUTPARAMS,32,66,55,8
     LTEXT           "In:",IDC_STATIC,14,66,12,8
     CONTROL         "Progress1",IDC_PROGRESS,"msctls_progress32",WS_BORDER,7,
-                    124,252,10
-    GROUPBOX        "Output Format",IDC_STATIC,94,62,153,57
-    CTEXT           "- - -",IDC_TIME,7,140,252,8
-    LTEXT           "Bandwidth:",IDC_STATIC,101,98,37,8
-    LTEXT           "Bitrate:",IDC_STATIC,101,76,37,8
-    LTEXT           "bps/ch",IDC_STATIC,218,76,24,8
-    LTEXT           "Hz",IDC_STATIC,218,98,10,8
+                    126,252,10
+    GROUPBOX        "Output Format",IDC_STATIC,94,62,165,59
+    CTEXT           "- - -",IDC_TIME,7,142,252,8
+    LTEXT           "Bandwidth:",IDC_STATIC,97,98,37,8
+    LTEXT           "Bitrate:",IDC_STATIC,97,80,37,8
+    LTEXT           "bps/ch",IDC_STATIC,173,80,24,8
+    LTEXT           "Hz",IDC_STATIC,173,98,10,8
     CONTROL         "Use LFE channel",IDC_USELFE,"Button",BS_AUTOCHECKBOX | 
                     BS_LEFTTEXT | WS_DISABLED | WS_TABSTOP,13,111,71,10
     CONTROL         "Use TNS",IDC_USETNS,"Button",BS_AUTOCHECKBOX | 
@@ -92,6 +92,11 @@ BEGIN
     CONTROL         "Use LTP",IDC_USELTP,"Button",BS_AUTOCHECKBOX | 
                     BS_LEFTTEXT | WS_TABSTOP,13,100,71,10
     RTEXT           "-",IDC_COMPILEDATE,196,160,63,8
+    GROUPBOX        "AAC Profile",IDC_STATIC,203,71,50,46
+    CONTROL         "Main",IDC_MAIN,"Button",BS_AUTORADIOBUTTON,210,92,31,10
+    CONTROL         "LC",IDC_LC,"Button",BS_AUTORADIOBUTTON,210,81,25,10
+    CONTROL         "SSR",IDC_SSR,"Button",BS_AUTORADIOBUTTON | WS_DISABLED,
+                    210,103,31,10
 END
 
 

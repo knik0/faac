@@ -16,13 +16,13 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: maingui.c,v 1.9 2001/03/05 15:55:40 menno Exp $
+ * $Id: maingui.c,v 1.10 2001/03/06 21:02:33 menno Exp $
  */
 
 #include <windows.h>
 #include <commdlg.h>
 #include <commctrl.h>
-#include <stdio.h>
+#include <stdlib.h>
 
 #include <sndfile.h>  /* http://www.zip.com.au/~erikd/libsndfile/ */
 
@@ -34,11 +34,11 @@
 
 static HINSTANCE hInstance;
 
-static char inputFilename[_MAX_PATH], outputFilename [_MAX_PATH];
+static char inputFilename[_MAX_PATH], outputFilename[_MAX_PATH];
 
 static BOOL Encoding = FALSE;
 
-static BOOL SelectFileName (HWND hParent, char *filename, BOOL forReading)
+static BOOL SelectFileName(HWND hParent, char *filename, BOOL forReading)
 {
 	OPENFILENAME ofn;
 
@@ -95,7 +95,6 @@ static void AwakeDialogControls(HWND hWnd)
 	SF_INFO sfinfo;
 	unsigned int sampleRate, numChannels;
 	char *pExt;
-	faacEncHandle hEncoder;
 
 	if ((infile = sf_open_read(inputFilename, &sfinfo)) == NULL)
 		return;
@@ -106,16 +105,14 @@ static void AwakeDialogControls(HWND hWnd)
 
 	sf_close(infile);
 
-	// // //
-
 	SetDlgItemText (hWnd, IDC_INPUTFILENAME, inputFilename);
 
 	strncpy(outputFilename, inputFilename, sizeof(outputFilename) - 5);
 
 	pExt = strrchr(outputFilename, '.');
 
-	if (pExt == NULL) strcat(outputFilename, ".aac");
-	else strcpy(pExt, ".aac");
+	if (pExt == NULL) lstrcat(outputFilename, ".aac");
+	else lstrcpy(pExt, ".aac");
 
 	EnableWindow(GetDlgItem(hWnd, IDC_OUTPUTFILENAME), TRUE);
 	EnableWindow(GetDlgItem(hWnd, IDC_SELECT_OUTPUTFILE), TRUE);
@@ -125,31 +122,7 @@ static void AwakeDialogControls(HWND hWnd)
 	wsprintf(szTemp, "%iHz %ich", sampleRate, numChannels);
 	SetDlgItemText(hWnd, IDC_INPUTPARAMS, szTemp);
 
-	// // //
-
-	hEncoder = faacEncOpen(sampleRate, numChannels);
-	if (hEncoder)
-	{
-		faacEncConfigurationPtr config;
-
-		EnableWindow(GetDlgItem(hWnd, IDOK), TRUE);
-
-		config = faacEncGetCurrentConfiguration(hEncoder);
-
-		config->allowMidside = IsDlgButtonChecked(hWnd, IDC_ALLOWMIDSIDE) == BST_CHECKED ? 1 : 0;
-		config->useTns = IsDlgButtonChecked(hWnd, IDC_USETNS) == BST_CHECKED ? 1 : 0;
-		config->useLtp = IsDlgButtonChecked(hWnd, IDC_USELTP) == BST_CHECKED ? 1 : 0;
-		GetDlgItemText(hWnd, IDC_BITRATE, szTemp, sizeof(szTemp));
-		config->bitRate = atoi(szTemp);
-		GetDlgItemText(hWnd, IDC_BANDWIDTH, szTemp, sizeof(szTemp));
-		config->bandWidth = atoi(szTemp);
-
-		faacEncSetConfiguration(hEncoder, config);
-
-		faacEncClose(hEncoder);
-	} else {
-		MessageBeep(1);
-	}
+	EnableWindow(GetDlgItem(hWnd, IDOK), TRUE);
 }
 
 static DWORD WINAPI EncodeFile(LPVOID pParam)
@@ -182,6 +155,9 @@ static DWORD WINAPI EncodeFile(LPVOID pParam)
 			config->useTns = IsDlgButtonChecked(hWnd, IDC_USETNS) == BST_CHECKED ? 1 : 0;
 			config->useLfe = IsDlgButtonChecked(hWnd, IDC_USELFE) == BST_CHECKED ? 1 : 0;
 			config->useLtp = IsDlgButtonChecked(hWnd, IDC_USELTP) == BST_CHECKED ? 1 : 0;
+			config->aacProfile = IsDlgButtonChecked(hWnd, IDC_LC) == BST_CHECKED ? LOW : 0;
+			config->aacProfile = IsDlgButtonChecked(hWnd, IDC_MAIN) == BST_CHECKED ? MAIN : 0;
+			config->aacProfile = IsDlgButtonChecked(hWnd, IDC_SSR) == BST_CHECKED ? SSR : 0;
 			GetDlgItemText(hWnd, IDC_BITRATE, szTemp, sizeof(szTemp));
 			config->bitRate = atoi(szTemp);
 			GetDlgItemText(hWnd, IDC_BANDWIDTH, szTemp, sizeof(szTemp));
@@ -235,9 +211,9 @@ static DWORD WINAPI EncodeFile(LPVOID pParam)
 					
 					/* Percentage for Dialog Output */
 					_itoa((int)((float)totalBytesRead * 100.0f / (sfinfo.samples*2*numChannels)),Percentage,10);
-					strcpy(HeaderText,"FAAC GUI: ");
-					strcat(HeaderText,Percentage);
-					strcat(HeaderText,"%");
+					lstrcpy(HeaderText,"FAAC GUI: ");
+					lstrcat(HeaderText,Percentage);
+					lstrcat(HeaderText,"%");
 					SendMessage(hWnd,WM_SETTEXT,0,(long)HeaderText);
 					
 					totalBytesRead += bytesInput;
@@ -316,6 +292,7 @@ static BOOL WINAPI DialogProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 
 		inputFilename [0] = 0x00;
 
+		CheckDlgButton(hWnd, IDC_MAIN, TRUE);
 		CheckDlgButton(hWnd, IDC_ALLOWMIDSIDE, TRUE);
 		CheckDlgButton(hWnd, IDC_USELFE, FALSE);
 		CheckDlgButton(hWnd, IDC_USETNS, TRUE);
