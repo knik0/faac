@@ -1,6 +1,4 @@
 #include "transfo.h"
-#ifndef USE_ORIG_FFT
-
 #include "fastfft.h"
 
 int unscambled64[64];
@@ -1644,5 +1642,3 @@ for (i=0 ; i < 512 ; i++){
      unscambled512[i]=PFFTW(permutation_512)(i);
      }
 }
-
-#endif

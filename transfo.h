@@ -1,13 +1,9 @@
 #ifndef TRANSFORM_H
 #define TRANSFORM_H 
 
-/* Define this to use original FFT*/
-//#define USE_ORIG_FFT
-
 void MDCT(double* data, int N);
 void FFT(double *data, int nn, int isign);
 
-#ifndef USE_ORIG_FFT
 #define c_re(c)  ((c).re)
 #define c_im(c)  ((c).im)
 
@@ -17,7 +13,6 @@ typedef struct {
 
 #define DEFINE_PFFTW(size)			\
  void pfftw_d_##size(fftw_complex_d *input);	\
- void pfftwi_d_##size(fftw_complex_d *input);	\
  int pfftw_d_permutation_##size(int i);		
 
 DEFINE_PFFTW(16)
@@ -30,4 +25,3 @@ void MakeFFTOrder(void);
 
 #endif
 
-#endif
