@@ -14,6 +14,7 @@
 #define IDC_BANDWIDTH                   1009
 #define IDC_BITRATE                     1010
 #define IDC_USELFE                      1011
+#define IDC_USETNS                      1012
 
 // Next default values for new objects
 // 

@@ -86,7 +86,9 @@ BEGIN
     LTEXT           "bps/ch",IDC_STATIC,218,76,24,8
     LTEXT           "Hz",IDC_STATIC,218,96,10,8
     CONTROL         "Use LFE channel",IDC_USELFE,"Button",BS_AUTOCHECKBOX | 
-                    BS_LEFTTEXT | WS_DISABLED | WS_TABSTOP,13,89,71,10
+                    BS_LEFTTEXT | WS_DISABLED | WS_TABSTOP,13,102,71,10
+    CONTROL         "Use TNS",IDC_USETNS,"Button",BS_AUTOCHECKBOX | 
+                    BS_LEFTTEXT | WS_TABSTOP,13,90,71,10
 END
 
 

@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: main.c,v 1.5 2001/02/26 13:55:29 oxygene Exp $
+ * $Id: main.c,v 1.6 2001/02/28 19:09:56 menno Exp $
  */
 
 #ifdef _WIN32
@@ -77,6 +77,7 @@ int main(int argc, char *argv[])
 		printf("USAGE: %s -options infile outfile\n", argv[0]);
 		printf("Options:\n");
 		printf("  -nm   Don\'t use mid/side coding\n");
+		printf("  -tns  Use TNS coding\n");
 		printf("  -bwX  Set the bandwidth, X in Hz\n");
 		printf("  -brX  Set the bitrate per channel, X in bps\n\n");
 		return 1;
@@ -117,6 +118,10 @@ int main(int argc, char *argv[])
 		for (i = 1; i < argc-2; i++) {
 			if ((argv[i][0] == '-') || (argv[i][0] == '/')) {
 				switch(argv[i][1]) {
+				case 't': case 'T':
+					if ((argv[i][2] == 'n') || (argv[i][2] == 'N'))
+						myFormat->useTns = 1;
+				break;
 				case 'n': case 'N':
 					if ((argv[i][2] == 'm') || (argv[i][2] == 'M'))
 						myFormat->allowMidside = 0;

@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: maingui.c,v 1.6 2001/02/25 18:41:16 menno Exp $
+ * $Id: maingui.c,v 1.7 2001/02/28 19:09:56 menno Exp $
  */
 
 #include <windows.h>
@@ -137,6 +137,7 @@ static void AwakeDialogControls(HWND hWnd)
 		config = faacEncGetCurrentConfiguration(hEncoder);
 
 		config->allowMidside = IsDlgButtonChecked(hWnd, IDC_ALLOWMIDSIDE) == BST_CHECKED ? 1 : 0;
+		config->useTns = IsDlgButtonChecked(hWnd, IDC_USETNS) == BST_CHECKED ? 1 : 0;
 		GetDlgItemText(hWnd, IDC_BITRATE, szTemp, sizeof(szTemp));
 		config->bitRate = atoi(szTemp);
 		GetDlgItemText(hWnd, IDC_BANDWIDTH, szTemp, sizeof(szTemp));
@@ -177,6 +178,7 @@ static DWORD WINAPI EncodeFile(LPVOID pParam)
 			faacEncConfigurationPtr config = faacEncGetCurrentConfiguration(hEncoder);
 
 			config->allowMidside = IsDlgButtonChecked(hWnd, IDC_ALLOWMIDSIDE) == BST_CHECKED ? 1 : 0;
+			config->useTns = IsDlgButtonChecked(hWnd, IDC_USETNS) == BST_CHECKED ? 1 : 0;
 			config->useLfe = IsDlgButtonChecked(hWnd, IDC_USELFE) == BST_CHECKED ? 1 : 0;
 			GetDlgItemText(hWnd, IDC_BITRATE, szTemp, sizeof(szTemp));
 			config->bitRate = atoi(szTemp);
@@ -314,6 +316,7 @@ static BOOL WINAPI DialogProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 
 		CheckDlgButton(hWnd, IDC_ALLOWMIDSIDE, TRUE);
 		CheckDlgButton(hWnd, IDC_USELFE, FALSE);
+		CheckDlgButton(hWnd, IDC_USETNS, TRUE);
 		SetDlgItemText(hWnd, IDC_BITRATE, "64000");
 		SetDlgItemText(hWnd, IDC_BANDWIDTH, "18000");
 
