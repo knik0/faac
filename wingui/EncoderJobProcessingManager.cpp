@@ -263,7 +263,7 @@ bool CEncoderJobProcessingManager::DoProcessing()
 
 			pEncConfig->allowMidside = poJob->GetAllowMidside() ? 1 : 0;
 			pEncConfig->useTns = poJob->GetUseTns() ? 1 : 0;
-			pEncConfig->useLtp = poJob->GetUseLtp() ? 1 : 0;
+//			pEncConfig->useLtp = poJob->GetUseLtp() ? 1 : 0;
 			pEncConfig->useLfe = poJob->GetUseLfe() ? 1 : 0;
 			pEncConfig->bitRate = poJob->GetBitRate();
 			pEncConfig->bandWidth = poJob->GetBandwidth();
