@@ -7,4 +7,4 @@ automake --add-missing
 autoconf
 ./configure
 make -j2
-echo Install with 'make install'
+echo "Install with: 'make install'"
