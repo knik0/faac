@@ -18,11 +18,11 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: main.c,v 1.75 2004/08/06 19:33:19 danchr Exp $
+ * $Id: main.c,v 1.76 2004/08/19 13:18:44 menno Exp $
  */
 
 #ifdef _MSC_VER
-# define HAVE_LIBMP4V2	1
+# define HAVE_LIBMP4V2  1
 #endif
 
 #ifdef HAVE_CONFIG_H
@@ -90,7 +90,7 @@ const char *usage =
   "\t\"%s --long-help\" for a description of all options for FAAC.\n"
   "\t\"%s --license\" for the license terms for FAAC.\n\n";
 
-const char *short_help = 
+const char *short_help =
   "Usage: %s [options] infiles ...\n"
   "Options:\n"
   "  -q <quality>\tSet quantizer quality.\n"
@@ -132,7 +132,7 @@ const char *short_help =
   "  <http://www.audiocoding.com/wiki/>\n"
   "\n";
 
-const char *long_help = 
+const char *long_help =
   "Usage: %s [options] infiles ...\n"
   "\n"
   "Quality-related options:\n"
@@ -203,9 +203,8 @@ const char *long_help =
   "\t\t(Long Term Prediction)\n"
   "  --shortctl X\tEnforce block type (0 = both (default); 1 = no short; 2 = no\n"
   "\t\tlong).\n"
-  "  -r\t\tGenerate raw AAC bitstream (i.e. without any headers, needed\n"
-  "\t\twhen directly using the AAC bitstream in a MP4 container like\n"
-  "\t\te.g. mp4live does; used automatically for MP4).\n"
+  "  -r\t\tGenerate raw AAC bitstream (i.e. without any headers).\n"
+  "\t\tNot adviced!!!, RAW AAC files are practically useless!!!\n"
   "\n"
   "Documentation:\n"
   "  --license\tShow the FAAC license.\n"
@@ -332,7 +331,7 @@ static int check_image_header(const char *buf) {
   if (!strncmp(buf, "\x89\x50\x4E\x47\x0D\x0A\x1A\x0A", 8))
     return 1; /* PNG */
   else if (!strncmp(buf, "\xFF\xD8\xFF\xE0", 4) &&
-	   !strncmp(buf + 6, "JFIF\0", 5))
+       !strncmp(buf + 6, "JFIF\0", 5))
     return 1; /* JPEG */
   else if (!strncmp(buf, "GIF87a", 6) || !strncmp(buf, "GIF89a", 6))
     return 1; /* GIF */
@@ -499,10 +498,10 @@ int main(int argc, char *argv[])
             { "year", 1, 0, YEAR_FLAG},
             { "cover-art", 1, 0, COVER_ART_FLAG},
             { "comment", 1, 0, COMMENT_FLAG},
-	    { "writer", 1, 0, WRITER_FLAG},
-	    { "compilation", 0, 0, COMPILATION_FLAG},
+        { "writer", 1, 0, WRITER_FLAG},
+        { "compilation", 0, 0, COMPILATION_FLAG},
 #endif
-	    { "pcmswapbytes", 0, 0, 'X'},
+        { "pcmswapbytes", 0, 0, 'X'},
             { 0, 0, 0, 0}
         };
         int c = -1;
@@ -524,15 +523,15 @@ int main(int argc, char *argv[])
         }
 
         switch (c) {
-	case 'o':
-	    {
-	        int l = strlen(optarg);
-		aacFileName = malloc(l+1);
-		memcpy(aacFileName, optarg, l);
-		aacFileName[l] = '\0';
-		aacFileNameGiven = 1;
-	    }
-	    break;
+    case 'o':
+        {
+            int l = strlen(optarg);
+        aacFileName = malloc(l+1);
+        memcpy(aacFileName, optarg, l);
+        aacFileName[l] = '\0';
+        aacFileNameGiven = 1;
+        }
+        break;
         case 'r': {
             stream = RAW_STREAM;
             break;
@@ -605,72 +604,72 @@ int main(int argc, char *argv[])
         }
 #ifdef HAVE_LIBMP4V2
         case 'w':
-	    container = MP4_CONTAINER;
+        container = MP4_CONTAINER;
             break;
-	case ARTIST_FLAG:
-	    artist = optarg;
-	    break;
-	case WRITER_FLAG:
-	    writer = optarg;
-	    break;
-	case TITLE_FLAG:
-	    title = optarg;
-	    break;
-	case ALBUM_FLAG:
-	    album = optarg;
-	    break;
-	case TRACK_FLAG:
-	    sscanf(optarg, "%u/%u", &trackno, &ntracks);
-	    break;
-	case DISC_FLAG:
-	    sscanf(optarg, "%u/%u", &discno, &ndiscs);
-	    break;
-	case COMPILATION_FLAG:
-	    compilation = 0x1;
-	    break;
-	case GENRE_FLAG:
-	    genre = optarg;
-	    break;
-	case YEAR_FLAG:
-	    year = optarg;
-	    break;
-	case COMMENT_FLAG:
-	    comment = optarg;
-	    break;
-	case COVER_ART_FLAG: {
-	    FILE *artFile = fopen(optarg, "rb");
+    case ARTIST_FLAG:
+        artist = optarg;
+        break;
+    case WRITER_FLAG:
+        writer = optarg;
+        break;
+    case TITLE_FLAG:
+        title = optarg;
+        break;
+    case ALBUM_FLAG:
+        album = optarg;
+        break;
+    case TRACK_FLAG:
+        sscanf(optarg, "%u/%u", &trackno, &ntracks);
+        break;
+    case DISC_FLAG:
+        sscanf(optarg, "%u/%u", &discno, &ndiscs);
+        break;
+    case COMPILATION_FLAG:
+        compilation = 0x1;
+        break;
+    case GENRE_FLAG:
+        genre = optarg;
+        break;
+    case YEAR_FLAG:
+        year = optarg;
+        break;
+    case COMMENT_FLAG:
+        comment = optarg;
+        break;
+    case COVER_ART_FLAG: {
+        FILE *artFile = fopen(optarg, "rb");
 
-	    if(artFile) {
-	        u_int64_t r;
+        if(artFile) {
+            u_int64_t r;
 
-	        fseek(artFile, 0, SEEK_END);
-		artSize = ftell(artFile);
+            fseek(artFile, 0, SEEK_END);
+        artSize = ftell(artFile);
 
-		art = malloc(artSize);
+        art = malloc(artSize);
 
-	        fseek(artFile, 0, SEEK_SET);
-		clearerr(artFile);
+            fseek(artFile, 0, SEEK_SET);
+        clearerr(artFile);
 
-		r = fread(art, artSize, 1, artFile);
+        r = fread(art, artSize, 1, artFile);
 
-		if (r != 1) {
-		    dieMessage = "Error reading cover art file!\n";
-		    free(art);
-		    art = NULL;
-		} else if (artSize < 12 || !check_image_header(art)) {
-		    /* the above expression checks the image signature */
-		    dieMessage = "Unsupported cover image file format!\n";
-		    free(art);
-		    art = NULL;
-		}
+        if (r != 1) {
+            dieMessage = "Error reading cover art file!\n";
+            free(art);
+            art = NULL;
+        } else if (artSize < 12 || !check_image_header(art)) {
+            /* the above expression checks the image signature */
+            dieMessage = "Unsupported cover image file format!\n";
+            free(art);
+            art = NULL;
+        }
 
-		fclose(artFile);
-	    } else {
-	        dieMessage = "Error opening cover art file!\n";
-	    }
+        fclose(artFile);
+        } else {
+            dieMessage = "Error opening cover art file!\n";
+        }
 
-	    break;
-	}
+        break;
+    }
 #endif
         case SHORTCTL_FLAG:
             shortctl = atoi(optarg);
@@ -681,7 +680,7 @@ int main(int argc, char *argv[])
         case NO_TNS_FLAG:
             useTns = 0;
             break;
-	case MPEGVERS_FLAG:
+    case MPEGVERS_FLAG:
             mpegVersion = atoi(optarg);
             switch(mpegVersion)
             {
@@ -692,37 +691,37 @@ int main(int argc, char *argv[])
                 mpegVersion = MPEG4;
                 break;
             default:
-	        dieMessage = "Unrecognised MPEG version!\n";
+            dieMessage = "Unrecognised MPEG version!\n";
             }
             break;
-	case OBJTYPE_FLAG:
-	    if (!strcasecmp(optarg, "LC"))
+    case OBJTYPE_FLAG:
+        if (!strcasecmp(optarg, "LC"))
                 objectType = LOW;
-	    else if (!strcasecmp(optarg, "Main"))
-	        objectType = MAIN;
-	    else if (!strcasecmp(optarg, "LTP")) {
-	        mpegVersion = MPEG4;
-		objectType = LTP;
-	    } else
-	        dieMessage = "Unrecognised object type!\n";
-	    break;
+        else if (!strcasecmp(optarg, "Main"))
+            objectType = MAIN;
+        else if (!strcasecmp(optarg, "LTP")) {
+            mpegVersion = MPEG4;
+        objectType = LTP;
+        } else
+            dieMessage = "Unrecognised object type!\n";
+        break;
         case 'L':
-	    fprintf(stderr, faac_copyright_string);
-	    dieMessage = license;
-	    break;
-	case 'X':
-	  rawEndian = 0;
-	  break;
-	case 'H':
-	  abort();
-	  dieMessage = long_help;
-	  break;
-	case 'h':
+        fprintf(stderr, faac_copyright_string);
+        dieMessage = license;
+        break;
+    case 'X':
+      rawEndian = 0;
+      break;
+    case 'H':
+      abort();
+      dieMessage = long_help;
+      break;
+    case 'h':
           dieMessage = short_help;
-	  break;
-	case '?':
+      break;
+    case '?':
         default:
-	  dieMessage = usage;
+      dieMessage = usage;
           break;
         }
     }
@@ -734,7 +733,7 @@ int main(int argc, char *argv[])
     if (argc - optind < 1 || dieMessage)
     {
         fprintf(stderr, dieMessage ? dieMessage : usage,
-	       progName, progName, progName, progName);
+           progName, progName, progName, progName);
         return 1;
     }
 
@@ -746,26 +745,26 @@ int main(int argc, char *argv[])
     /* generate the output file name, if necessary */
     if (!aacFileNameGiven) {
         char *t = strrchr(audioFileName, '.');
-	int l = t ? strlen(audioFileName) - strlen(t) : strlen(audioFileName);
+    int l = t ? strlen(audioFileName) - strlen(t) : strlen(audioFileName);
 
 #ifdef HAVE_LIBMP4V2
-	aacFileExt = container == MP4_CONTAINER ? ".m4a" : ".aac";
+    aacFileExt = container == MP4_CONTAINER ? ".m4a" : ".aac";
 #else
-	aacFileExt = ".aac";
+    aacFileExt = ".aac";
 #endif
 
-	aacFileName = malloc(l+1+4);
-	memcpy(aacFileName, audioFileName, l);
-	memcpy(aacFileName + l, aacFileExt, 4);
-	aacFileName[l+4] = '\0';
+    aacFileName = malloc(l+1+4);
+    memcpy(aacFileName, audioFileName, l);
+    memcpy(aacFileName + l, aacFileExt, 4);
+    aacFileName[l+4] = '\0';
     } else {
         aacFileExt = strrchr(aacFileName, '.');
 
         if (aacFileExt && (!strcmp(".m4a", aacFileExt) || !strcmp(".m4b", aacFileExt) || !strcmp(".mp4", aacFileExt)))
 #ifndef HAVE_LIBMP4V2
-	    fprintf(stderr, "WARNING: MP4 support unavailable!\n");
+        fprintf(stderr, "WARNING: MP4 support unavailable!\n");
 #else
-	    container = MP4_CONTAINER;
+        container = MP4_CONTAINER;
 #endif
     }
 
@@ -773,14 +772,14 @@ int main(int argc, char *argv[])
     if (rawChans > 0) // use raw input
     {
         infile = wav_open_read(audioFileName, 1);
-	if (infile)
-	{
-	    infile->bigendian = rawEndian;
-	    infile->channels = rawChans;
-	    infile->samplebytes = rawBits / 8;
-	    infile->samplerate = rawRate;
-	    infile->samples /= (infile->channels * infile->samplebytes);
-	}
+    if (infile)
+    {
+        infile->bigendian = rawEndian;
+        infile->channels = rawChans;
+        infile->samplebytes = rawBits / 8;
+        infile->samplerate = rawRate;
+        infile->samples /= (infile->channels * infile->samplebytes);
+    }
     }
     else // header input
         infile = wav_open_read(audioFileName, 0);
@@ -788,7 +787,7 @@ int main(int argc, char *argv[])
     if (infile == NULL)
     {
         fprintf(stderr, "Couldn't open input file %s\n", audioFileName);
-	return 1;
+    return 1;
     }
 
 
@@ -798,18 +797,18 @@ int main(int argc, char *argv[])
 
 #ifdef HAVE_LIBMP4V2
     if (container != MP4_CONTAINER && (ntracks || trackno || artist ||
-				       title ||  album || year || art ||
-				       genre || comment || discno || ndiscs ||
-				       writer || compilation))
+                       title ||  album || year || art ||
+                       genre || comment || discno || ndiscs ||
+                       writer || compilation))
     {
         fprintf(stderr, "Metadata requires MP4 output!\n");
-	return 1;
+    return 1;
     }
 
     if (container == MP4_CONTAINER)
     {
         mpegVersion = MPEG4;
-	stream = RAW_STREAM;
+    stream = RAW_STREAM;
     }
 
     frameSize = samplesInput/infile->channels;
@@ -873,14 +872,14 @@ int main(int argc, char *argv[])
     if (container == MP4_CONTAINER) {
         unsigned char *ASC = 0;
         unsigned long ASCLength = 0;
-	char *version_string;
+    char *version_string;
 
 #ifdef MP4_CREATE_EXTENSIBLE_FORMAT
-	/* hack to compile against libmp4v2 >= 1.0RC3
-	 * why is there no version identifier in mp4.h? */
+    /* hack to compile against libmp4v2 >= 1.0RC3
+     * why is there no version identifier in mp4.h? */
         MP4hFile = MP4Create(aacFileName, MP4_DETAILS_ERROR, 0);
 #else
-	MP4hFile = MP4Create(aacFileName, MP4_DETAILS_ERROR, 0, 0);
+    MP4hFile = MP4Create(aacFileName, MP4_DETAILS_ERROR, 0, 0);
 #endif
         if (!MP4_IS_VALID_FILE_HANDLE(MP4hFile)) {
             fprintf(stderr, "Couldn't create output file %s\n", aacFileName);
@@ -892,29 +891,29 @@ int main(int argc, char *argv[])
         MP4SetAudioProfileLevel(MP4hFile, 0x0F);
         faacEncGetDecoderSpecificInfo(hEncoder, &ASC, &ASCLength);
         MP4SetTrackESConfiguration(MP4hFile, MP4track, ASC, ASCLength);
-	free(ASC);
+    free(ASC);
 
-	/* set metadata */
-	version_string = malloc(strlen(faac_id_string) + 6);
-	strcpy(version_string, "FAAC ");
-	strcpy(version_string + 5, faac_id_string);
-	MP4SetMetadataTool(MP4hFile, version_string);
-	free(version_string);
+    /* set metadata */
+    version_string = malloc(strlen(faac_id_string) + 6);
+    strcpy(version_string, "FAAC ");
+    strcpy(version_string + 5, faac_id_string);
+    MP4SetMetadataTool(MP4hFile, version_string);
+    free(version_string);
 
-	if (artist) MP4SetMetadataArtist(MP4hFile, artist);
-	if (writer) MP4SetMetadataWriter(MP4hFile, writer);
-	if (title) MP4SetMetadataName(MP4hFile, title);
-	if (album) MP4SetMetadataAlbum(MP4hFile, album);
-	if (trackno > 0) MP4SetMetadataTrack(MP4hFile, trackno, ntracks);
-	if (discno > 0) MP4SetMetadataDisk(MP4hFile, discno, ndiscs);
-	if (compilation) MP4SetMetadataCompilation(MP4hFile, compilation);
-	if (year) MP4SetMetadataYear(MP4hFile, year);
-	if (genre) MP4SetMetadataGenre(MP4hFile, genre);
-	if (comment) MP4SetMetadataComment(MP4hFile, comment);
+    if (artist) MP4SetMetadataArtist(MP4hFile, artist);
+    if (writer) MP4SetMetadataWriter(MP4hFile, writer);
+    if (title) MP4SetMetadataName(MP4hFile, title);
+    if (album) MP4SetMetadataAlbum(MP4hFile, album);
+    if (trackno > 0) MP4SetMetadataTrack(MP4hFile, trackno, ntracks);
+    if (discno > 0) MP4SetMetadataDisk(MP4hFile, discno, ndiscs);
+    if (compilation) MP4SetMetadataCompilation(MP4hFile, compilation);
+    if (year) MP4SetMetadataYear(MP4hFile, year);
+    if (genre) MP4SetMetadataGenre(MP4hFile, genre);
+    if (comment) MP4SetMetadataComment(MP4hFile, comment);
         if (artSize) {
-	    MP4SetMetadataCoverArt(MP4hFile, art, artSize);
-	    free(art);
-	}
+        MP4SetMetadataCoverArt(MP4hFile, art, artSize);
+        free(art);
+    }
     }
     else
     {
@@ -935,7 +934,7 @@ int main(int argc, char *argv[])
     bitRate = myFormat->bitRate;
     if (bitRate)
       fprintf(stderr, "Average bitrate: %d kbps\n",
-	      (bitRate + 500)/1000*infile->channels);
+          (bitRate + 500)/1000*infile->channels);
     fprintf(stderr, "Quantization quality: %ld\n", quantqual);
     fprintf(stderr, "Bandwidth: %d Hz\n", cutOff);
     fprintf(stderr, "Object type: ");
@@ -963,14 +962,14 @@ int main(int argc, char *argv[])
     {
     case NO_CONTAINER:
       switch(stream)
-	{
-	case RAW_STREAM:
-	  fprintf(stderr, "Headerless AAC (RAW)\n");
-	  break;
-	case ADTS_STREAM:
-	  fprintf(stderr, "Transport Stream (ADTS)\n");
-	  break;
-	}
+    {
+    case RAW_STREAM:
+      fprintf(stderr, "Headerless AAC (RAW)\n");
+      break;
+    case ADTS_STREAM:
+      fprintf(stderr, "Transport Stream (ADTS)\n");
+      break;
+    }
         break;
 #ifdef HAVE_LIBMP4V2
     case MP4_CONTAINER:
@@ -998,13 +997,13 @@ int main(int argc, char *argv[])
         fprintf(stderr, "Encoding %s to %s\n", audioFileName, aacFileName);
         if (frames != 0)
             fprintf(stderr, "   frame          | bitrate | elapsed/estim | "
-		    "play/CPU | ETA\n");
+            "play/CPU | ETA\n");
         else
             fprintf(stderr, " frame | elapsed | play/CPU\n");
 
         /* encoding loop */
 #ifdef _WIN32
-	for (;;)
+    for (;;)
 #else
         while (running)
 #endif
@@ -1028,7 +1027,7 @@ int main(int argc, char *argv[])
             {
                 currentFrame++;
                 showcnt--;
-		totalBytesWritten += bytesWritten;
+        totalBytesWritten += bytesWritten;
             }
 
             if ((showcnt <= 0) || !bytesWritten)
@@ -1060,8 +1059,8 @@ int main(int argc, char *argv[])
                         fprintf(stderr,
                             "\r%5d/%-5d (%3d%%)|  %5.1f  | %6.1f/%-6.1f | %7.2fx | %.1f ",
                             currentFrame, frames, currentFrame*100/frames,
-			    ((double)totalBytesWritten * 8.0 / 1000.0) /
-			    ((double)infile->samples / infile->samplerate * currentFrame / frames),
+                ((double)totalBytesWritten * 8.0 / 1000.0) /
+                ((double)infile->samples / infile->samplerate * currentFrame / frames),
                             timeused,
                             timeused * frames / currentFrame,
                             (1024.0 * currentFrame / infile->samplerate) / timeused,
@@ -1145,6 +1144,9 @@ int main(int argc, char *argv[])
 
 /*
 $Log: main.c,v $
+Revision 1.76  2004/08/19 13:18:44  menno
+Removed stupid comment in help of FAAC. RAW AAC files are USELESS, it seems that already some people encoded their collection using the -r option.
+
 Revision 1.75  2004/08/06 19:33:19  danchr
 TNS is no longer enabled by default (reported by guruboolez)
 documentation fixes in frontend
