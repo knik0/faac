@@ -21,9 +21,30 @@ Format:
 thebard
 CVS Tue Feb 22 11:04:16 CST 2000
 -O6 -march=i686 -funroll-loops -finline-functions -fomit-frame-pointer
-
+10 min, 47.88 sec.
 The Outfield Bangin': track 2: Bangin' On My Heart
 This is the default fully optimized non profiled compile on my box.
 NO PROFILE DATA
 
-
+------------------------------------------------------------------------------
+thebard
+CVS Tue Feb 22 11:04:16 CST 2000
+-O6 -march=i686 -funroll-loops -finline-functions -g -pg -a
+11 min, 12.98 sec.
+The Outfield Bangin': track 2: Bangin' On My Heart
+This is the default fully optimized, profiled compile on my box.
+Each sample counts as 0.01 seconds.
+  %   cumulative   self              self     total           
+ time   seconds   seconds    calls  us/call  us/call  name    
+ 58.80    385.25   385.25    41048  9385.35  9385.35  psy_step6
+  3.92    410.93    25.68    41048   625.61   625.61  psy_step14
+  3.91    436.53    25.60    41048   623.66   623.66  psy_step11andahalf
+  3.72    460.87    24.34    20524  1185.93  1787.90  psy_step2
+  3.01    480.59    19.72    20524   960.83  2928.46  tf_encode_spectrum_aac
+  2.53    497.14    16.55    41048   403.19 13119.15  EncTf_psycho_acoustic
+  2.17    511.39    14.25    19506   730.54   730.54  estimate_delay
+  2.13    525.32    13.93    20524   678.72   678.72  psy_step4
+  2.02    538.53    13.21 22839582     0.58     0.61  output_bits
+  1.40    547.73     9.20    41104   223.82   223.98  calc_noise
+  1.17    555.37     7.64    41048   186.12   186.12  psy_step9
+  1.09    562.53     7.16 42029056     0.17     0.17  double_to_int

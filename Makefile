@@ -14,7 +14,7 @@ OBJ = $(SOURCE:.c=.o)
 
 CC=gcc
 
-#PROFILE_OPTS = -pg -a
+#PROFILE_OPTS = -g -pg -a
 
 CC_OPTS=-DHAS_ULONG $(CFLAGS) $(PROFILE_OPTS)
 LD_OPTS=

@@ -34,9 +34,9 @@ Copyright (c)1997.
 /**************************************************************************
   Version Control Information			Method: CVS
   Identifiers:
-  $Revision: 1.7 $
-  $Date: 2000/02/18 09:19:16 $ (check in)
-  $Author: lenox $
+  $Revision: 1.8 $
+  $Date: 2000/02/22 18:54:44 $ (check in)
+  $Author: thebard $
   *************************************************************************/
 
 
@@ -65,7 +65,12 @@ Copyright (c)1997.
   *************************************************************************/
 #include "nok_ltp_common_internal.h"
 
-short double_to_int (double sig_in);
+/* short double_to_int (double sig_in); */
+#define double_to_int(sig_in) \
+  ((sig_in) > 32767 ? 32767 : (\
+    (sig_in) < -32768 ? -32768 : (\
+      (sig_in) > 0.0 ? (sig_in)+0.5 : (\
+        (sig_in) <= 0.0 ? (sig_in)-0.5 : 0))))
 
 
 /**************************************************************************
@@ -484,7 +489,7 @@ nok_ltp_encode (BsBitStream *bs, enum WINDOW_TYPE win_type, int num_of_sfb,
   Author(s):	Juha Ojanpera
   *************************************************************************/
 
-short
+/*short
 double_to_int (double sig_in)
 {
 	short sig_out;
@@ -500,4 +505,4 @@ double_to_int (double sig_in)
 
 	return (sig_out);
 }
-
+*/
