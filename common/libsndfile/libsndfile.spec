@@ -1,6 +1,6 @@
 
 %define name    libsndfile
-%define version 0.0.22
+%define version 0.0.27
 %define release 1
 %define prefix  /usr
 

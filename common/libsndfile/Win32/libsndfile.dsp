@@ -25,7 +25,7 @@ CFG=libsndfile - Win32 Debug
 # PROP AllowPerConfigDependencies 0
 # PROP Scc_ProjName ""
 # PROP Scc_LocalPath ""
-CPP=cl.exe
+CPP=xicl6.exe
 RSC=rc.exe
 
 !IF  "$(CFG)" == "libsndfile - Win32 Release"
@@ -40,14 +40,14 @@ RSC=rc.exe
 # PROP Output_Dir "Release"
 # PROP Intermediate_Dir "Release"
 # PROP Target_Dir ""
-# ADD BASE CPP /nologo /W3 /GX /O2 /D "WIN32" /D "NDEBUG" /D "_MBCS" /D "_LIB" /YX /FD /c
-# ADD CPP /nologo /W3 /GX /O2 /I "..\win32" /D "WIN32" /D "NDEBUG" /D "_MBCS" /D "_LIB" /YX /FD /c
+# ADD BASE CPP /nologo /W3 /GX /O2 /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /YX /FD /c
+# ADD CPP /nologo /W3 /GX /O2 /I "..\win32" /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /YX /FD /c
 # ADD BASE RSC /l 0x413 /d "NDEBUG"
 # ADD RSC /l 0x413 /d "NDEBUG"
 BSC32=bscmake.exe
 # ADD BASE BSC32 /nologo
 # ADD BSC32 /nologo
-LIB32=link.exe -lib
+LIB32=xilink6.exe -lib
 # ADD BASE LIB32 /nologo
 # ADD LIB32 /nologo
 
@@ -63,14 +63,14 @@ LIB32=link.exe -lib
 # PROP Output_Dir "Debug"
 # PROP Intermediate_Dir "Debug"
 # PROP Target_Dir ""
-# ADD BASE CPP /nologo /W3 /Gm /GX /ZI /Od /D "WIN32" /D "_DEBUG" /D "_MBCS" /D "_LIB" /YX /FD /GZ /c
-# ADD CPP /nologo /W3 /Gm /GX /ZI /Od /I "..\win32" /D "WIN32" /D "_DEBUG" /D "_MBCS" /D "_LIB" /YX /FD /GZ /c
+# ADD BASE CPP /nologo /W3 /Gm /GX /ZI /Od /D "WIN32" /D "_DEBUG" /D "_WINDOWS" /YX /FD /GZ /c
+# ADD CPP /nologo /W3 /Gm /GX /ZI /Od /I "..\win32" /D "WIN32" /D "_DEBUG" /D "_WINDOWS" /YX /FD /GZ /c
 # ADD BASE RSC /l 0x413 /d "_DEBUG"
 # ADD RSC /l 0x413 /d "_DEBUG"
 BSC32=bscmake.exe
 # ADD BASE BSC32 /nologo
 # ADD BSC32 /nologo
-LIB32=link.exe -lib
+LIB32=xilink6.exe -lib
 # ADD BASE LIB32 /nologo
 # ADD LIB32 /nologo
 
@@ -85,15 +85,7 @@ LIB32=link.exe -lib
 # PROP Default_Filter "cpp;c;cxx;rc;def;r;odl;idl;hpj;bat"
 # Begin Source File
 
-SOURCE=..\src\GSM610\add.c
-# End Source File
-# Begin Source File
-
 SOURCE=..\src\aiff.c
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\alaw.c
 # End Source File
 # Begin Source File
 
@@ -101,71 +93,19 @@ SOURCE=..\src\au.c
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\au_g72x.c
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\GSM610\code.c
-# End Source File
-# Begin Source File
-
 SOURCE=..\src\common.c
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\GSM610\decode.c
+SOURCE=..\src\float32.c
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\G72x\g721.c
+SOURCE=..\src\ircam.c
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\G72x\g723_16.c
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\G72x\g723_24.c
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\G72x\g723_40.c
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\G72x\g72x.c
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\GSM610\gsm_create.c
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\GSM610\gsm_decode.c
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\GSM610\gsm_destroy.c
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\GSM610\gsm_encode.c
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\GSM610\gsm_option.c
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\GSM610\long_term.c
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\GSM610\lpc.c
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\newpcm.c
+SOURCE=..\src\nist.c
 # End Source File
 # Begin Source File
 
@@ -177,19 +117,11 @@ SOURCE=..\src\pcm.c
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\GSM610\preprocess.c
-# End Source File
-# Begin Source File
-
 SOURCE=..\src\raw.c
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\GSM610\rpe.c
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\GSM610\short_term.c
+SOURCE=..\src\samplitude.c
 # End Source File
 # Begin Source File
 
@@ -201,40 +133,16 @@ SOURCE=..\src\svx.c
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\GSM610\table.c
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\ulaw.c
+SOURCE=..\src\voc.c
 # End Source File
 # Begin Source File
 
 SOURCE=..\src\wav.c
 # End Source File
-# Begin Source File
-
-SOURCE=..\src\wav_float.c
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\wav_gsm610.c
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\wav_ima_adpcm.c
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\wav_ms_adpcm.c
-# End Source File
 # End Group
 # Begin Group "Header Files"
 
 # PROP Default_Filter "h;hpp;hxx;hm;inl"
-# Begin Source File
-
-SOURCE=..\src\alaw.h
-# End Source File
 # Begin Source File
 
 SOURCE=..\src\au.h
@@ -253,15 +161,15 @@ SOURCE=.\config.h
 # End Source File
 # Begin Source File
 
+SOURCE=..\src\floatcast.h
+# End Source File
+# Begin Source File
+
 SOURCE=..\src\G72x\g72x.h
 # End Source File
 # Begin Source File
 
 SOURCE=..\src\GSM610\gsm.h
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\pcm.h
 # End Source File
 # Begin Source File
 
@@ -282,10 +190,6 @@ SOURCE=..\src\sfendian.h
 # Begin Source File
 
 SOURCE=..\src\sndfile.h
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\ulaw.h
 # End Source File
 # Begin Source File
 

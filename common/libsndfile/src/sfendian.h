@@ -1,5 +1,5 @@
 /*
-** Copyright (C) 1999-2000 Erik de Castro Lopo <erikd@zip.com.au>
+** Copyright (C) 1999-2001 Erik de Castro Lopo <erikd@zip.com.au>
 **  
 ** This program is free software; you can redistribute it and/or modify
 ** it under the terms of the GNU Lesser General Public License as published by
@@ -74,5 +74,13 @@
 
 #else
 	#error "Cannot determine endian-ness of processor."
+#endif
+
+#if (CPU_IS_LITTLE_ENDIAN == 1)
+#	define	MAKE_MARKER(a,b,c,d)		((a)|((b)<<8)|((c)<<16)|((d)<<24))
+#elif (CPU_IS_BIG_ENDIAN == 1)
+#	define	MAKE_MARKER(a,b,c,d)		(((a)<<24)|((b)<<16)|((c)<<8)|(d))
+#else
+#	error "Cannot determine endian-ness of processor."
 #endif
 

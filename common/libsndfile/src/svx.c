@@ -1,5 +1,5 @@
 /*
-** Copyright (C) 1999-2000 Erik de Castro Lopo <erikd@zip.com.au>
+** Copyright (C) 1999-2001 Erik de Castro Lopo <erikd@zip.com.au>
 **  
 ** This program is free software; you can redistribute it and/or modify
 ** it under the terms of the GNU Lesser General Public License as published by
@@ -27,20 +27,11 @@
 #include	"config.h"
 #include	"sfendian.h"
 #include	"common.h"
-#include	"pcm.h"
 
 
 /*------------------------------------------------------------------------------
  * Macros to handle big/little endian issues.
 */
-
-#if (CPU_IS_LITTLE_ENDIAN == 1)
-#	define	MAKE_MARKER(a,b,c,d)		((a)|((b)<<8)|((c)<<16)|((d)<<24))
-#elif (CPU_IS_BIG_ENDIAN == 1)
-#	define	MAKE_MARKER(a,b,c,d)		(((a)<<24)|((b)<<16)|((c)<<8)|(d))
-#else
-#	error "Cannot determine endian-ness of processor."
-#endif
 
 #define FORM_MARKER	(MAKE_MARKER ('F', 'O', 'R', 'M'))
 #define SVX8_MARKER	(MAKE_MARKER ('8', 'S', 'V', 'X'))
@@ -57,7 +48,6 @@
 #define ANNO_MARKER	(MAKE_MARKER ('A', 'N', 'N', 'O')) 
 #define CHAN_MARKER	(MAKE_MARKER ('C', 'H', 'A', 'N')) 
 
-
 /*------------------------------------------------------------------------------
  * Typedefs for file chunks.
 */
@@ -69,91 +59,99 @@ typedef struct
 	unsigned int	volume ;
 } VHDR_CHUNK ;
 
+enum {
+	HAVE_FORM	= 0x01,
+	
+	HAVE_SVX	= 0x02,
+	HAVE_VHDR	= 0x04,
+	HAVE_BODY	= 0x08
+} ;
+
 /*------------------------------------------------------------------------------
  * Private static functions.
 */
 
-static	int		svx_close	(SF_PRIVATE  *psf) ;
+static int		svx_close	(SF_PRIVATE  *psf) ;
+static int		svx_write_header (SF_PRIVATE *psf) ;
 
-static
-void endswap_vhdr_chunk (VHDR_CHUNK *vhdr)
-{	vhdr->oneShotHiSamples  = ENDSWAP_INT (vhdr->oneShotHiSamples) ;
-	vhdr->repeatHiSamples   = ENDSWAP_INT (vhdr->repeatHiSamples) ;
-	vhdr->samplesPerHiCycle = ENDSWAP_INT (vhdr->samplesPerHiCycle) ;
-	vhdr->samplesPerSec     = ENDSWAP_SHORT (vhdr->samplesPerSec) ;
-	vhdr->volume            = ENDSWAP_INT (vhdr->volume) ;
-} /* endswap_vhdr_chunk */
+/*
+static void 	endswap_vhdr_chunk (VHDR_CHUNK *vhdr) ;
+*/
 
 /*------------------------------------------------------------------------------
 ** Public functions.
 */
 
-int 	svx_open_read	(SF_PRIVATE *psf)
+int 	
+svx_open_read	(SF_PRIVATE *psf)
 {	VHDR_CHUNK		vhdr ;
 	unsigned int	FORMsize, vhdrsize, dword, marker ;
-	int				filetype = 0, parsestage = 0, done = 0 ;
+	int				filetype = 0, parsestage = 0, done = 0, error ;
+	int 			bytecount = 0, channels ;
+
+	psf_binheader_readf (psf, "p", 0) ;
 	
 	/* Set default number of channels. */
 	psf->sf.channels = 1 ;
 
 	while (! done)
-	{	fread (&marker, sizeof (marker), 1, psf->file) ;
+	{	psf_binheader_readf (psf, "m", &marker) ;
 		switch (marker)
 		{	case FORM_MARKER :
-					if (parsestage != 0)
+					if (parsestage)
 						return SFE_SVX_NO_FORM ;
-					fread (&dword, sizeof (dword), 1, psf->file) ;
-					FORMsize = BE2H_INT (dword) ;
+
+					psf_binheader_readf (psf, "L", &FORMsize) ;
 
 					if (FORMsize != psf->filelength - 2 * sizeof (dword))
 					{	dword = psf->filelength - 2 * sizeof (dword);
-						psf_sprintf (psf, "FORM : %d (should be %d)\n", FORMsize, dword) ;
+						psf_log_printf (psf, "FORM : %d (should be %d)\n", FORMsize, dword) ;
 						FORMsize = dword ;
 						}
 					else
-						psf_sprintf (psf, "FORM : %d\n", FORMsize) ;
-					parsestage = 1 ;
+						psf_log_printf (psf, "FORM : %d\n", FORMsize) ;
+					parsestage |= HAVE_FORM ;
 					break ;
 
 			case SVX8_MARKER :
 			case SV16_MARKER :
-					if (parsestage != 1)
+					if (! (parsestage & HAVE_FORM))
 						return SFE_SVX_NO_FORM ;
 					filetype = marker ;
-					psf_sprintf (psf, " %D\n", marker) ;
-					parsestage = 2 ;
+					psf_log_printf (psf, " %D\n", marker) ;
+					parsestage |= HAVE_SVX ;
 					break ;
 
 			case VHDR_MARKER :
-					if (parsestage != 2)
+					if (! (parsestage & (HAVE_FORM | HAVE_SVX)))
 						return SFE_SVX_NO_FORM ;
-					fread (&dword, sizeof (dword), 1, psf->file) ;
-					vhdrsize = BE2H_INT (dword) ;
+					
+					psf_binheader_readf (psf, "L", &vhdrsize) ;
 
-					psf_sprintf (psf, " VHDR : %d\n", vhdrsize) ;
+					psf_log_printf (psf, " VHDR : %d\n", vhdrsize) ;
 
-					fread (&vhdr, sizeof (vhdr), 1, psf->file) ;
-					if (CPU_IS_LITTLE_ENDIAN)
-						endswap_vhdr_chunk (&vhdr) ;
+					psf_binheader_readf (psf, "LLLWbbL", &(vhdr.oneShotHiSamples), &(vhdr.repeatHiSamples), 
+						&(vhdr.samplesPerHiCycle), &(vhdr.samplesPerSec), &(vhdr.octave), &(vhdr.compression),
+						&(vhdr.volume)) ;
 
-					psf_sprintf (psf, "  OneShotHiSamples  : %d\n", vhdr.oneShotHiSamples) ;
-					psf_sprintf (psf, "  RepeatHiSamples   : %d\n", vhdr.repeatHiSamples) ;
-					psf_sprintf (psf, "  samplesPerHiCycle : %d\n", vhdr.samplesPerHiCycle) ;
-					psf_sprintf (psf, "  Sample Rate       : %d\n", vhdr.samplesPerSec) ;
-					psf_sprintf (psf, "  Octave            : %d\n", vhdr.octave) ;
+					psf_log_printf (psf, "  OneShotHiSamples  : %d\n", vhdr.oneShotHiSamples) ;
+					psf_log_printf (psf, "  RepeatHiSamples   : %d\n", vhdr.repeatHiSamples) ;
+					psf_log_printf (psf, "  samplesPerHiCycle : %d\n", vhdr.samplesPerHiCycle) ;
+					psf_log_printf (psf, "  Sample Rate       : %d\n", vhdr.samplesPerSec) ;
+					psf_log_printf (psf, "  Octave            : %d\n", vhdr.octave) ;
 
-					psf_sprintf (psf, "  Compression       : %d => ", vhdr.compression) ;
+					psf_log_printf (psf, "  Compression       : %d => ", vhdr.compression) ;
 					
 					switch (vhdr.compression)
-					{	case 0 : psf_sprintf (psf, "None.\n") ;
+					{	case 0 : psf_log_printf (psf, "None.\n") ;
 								break ;
-						case 1 : psf_sprintf (psf, "Fibonacci delta\n") ;
+						case 1 : psf_log_printf (psf, "Fibonacci delta\n") ;
 								break ;
-						case 2 : psf_sprintf (psf, "Exponential delta\n") ;
+						case 2 : psf_log_printf (psf, "Exponential delta\n") ;
 								break ;
 						} ;
 
-					psf_sprintf (psf, "  Volume            : %d\n", vhdr.volume) ;
+					psf_log_printf (psf, "  Volume            : %d\n", vhdr.volume) ;
 
 					psf->sf.samplerate 	= vhdr.samplesPerSec ;
 
@@ -162,73 +160,101 @@ int 	svx_open_read	(SF_PRIVATE *psf)
 					else if (filetype == SV16_MARKER)
 						psf->sf.pcmbitwidth = 16 ;
 						
-					parsestage = 3 ;
+					parsestage |= HAVE_VHDR ;
 					break ;
 
 			case BODY_MARKER :
-					if (parsestage != 3)
+					if (! (parsestage & HAVE_VHDR))
 						return SFE_SVX_NO_BODY ;
-					fread (&dword, sizeof (dword), 1, psf->file) ;
-
-					psf->datalength = BE2H_INT (dword) ;
+					
+					psf_binheader_readf (psf, "L", &(psf->datalength)) ;
 					psf->dataoffset = ftell (psf->file) ;
 					
 					if (psf->datalength > psf->filelength - psf->dataoffset)
-					{	psf_sprintf (psf, " BODY : %d (should be %d)\n", psf->datalength, psf->filelength - psf->dataoffset) ;
+					{	psf_log_printf (psf, " BODY : %d (should be %d)\n", psf->datalength, psf->filelength - psf->dataoffset) ;
 						psf->datalength = psf->filelength - psf->dataoffset ;
 						} 
 					else
-						psf_sprintf (psf, " BODY : %d\n", psf->datalength) ;
+						psf_log_printf (psf, " BODY : %d\n", psf->datalength) ;
+						
+					parsestage |= HAVE_BODY ;
+
+					if (! psf->sf.seekable)
+						break ;
 
 					fseek (psf->file, psf->datalength, SEEK_CUR) ;
-					parsestage = 4 ;
 					break ;
 
 			case NAME_MARKER :
 			case ANNO_MARKER :
-					if (parsestage < 2)
+					if (! (parsestage & HAVE_SVX))
 						return SFE_SVX_NO_FORM ;
-					fread (&dword, sizeof (dword), 1, psf->file) ;
-					dword = BE2H_INT (dword) ;
-					psf_sprintf (psf, " %D : %d\n", marker, dword) ;
-					fseek (psf->file, (int) dword, SEEK_CUR) ;					
+
+					psf_binheader_readf (psf, "L", &dword) ;
+					
+					psf_log_printf (psf, " %D : %d\n", marker, dword) ;
+
+					psf_binheader_readf (psf, "j", dword) ;
 					break ;
+
+			case CHAN_MARKER :
+					if (! (parsestage & HAVE_SVX))
+						return SFE_SVX_NO_FORM ;
+
+					psf_binheader_readf (psf, "L", &dword) ;
+					
+					psf_log_printf (psf, " %D : %d\n", marker, dword) ;
+					
+					bytecount += psf_binheader_readf (psf, "L", &channels) ;
+
+					psf_log_printf (psf, "  Channels : %d => %d\n", channels) ;
+					
+					psf_binheader_readf (psf, "j", dword - bytecount) ;
+					break ;
+
 
 			case AUTH_MARKER :
 			case c_MARKER :
-			case CHAN_MARKER :
-					if (parsestage < 2)
+					if (! (parsestage & HAVE_SVX))
 						return SFE_SVX_NO_FORM ;
-					fread (&dword, sizeof (dword), 1, psf->file) ;
-					dword = BE2H_INT (dword) ;
-					psf_sprintf (psf, " %D : %d\n", marker, dword) ;
-					fseek (psf->file, (int) dword, SEEK_CUR) ;					
+
+					psf_binheader_readf (psf, "L", &dword) ;
+					
+					psf_log_printf (psf, " %D : %d\n", marker, dword) ;
+
+					psf_binheader_readf (psf, "j", dword) ;
 					break ;
 
 			default : 
 					if (isprint ((marker >> 24) & 0xFF) && isprint ((marker >> 16) & 0xFF)
 						&& isprint ((marker >> 8) & 0xFF) && isprint (marker & 0xFF))
-					{	fread (&dword, sizeof (dword), 1, psf->file) ;
-						psf_sprintf (psf, "%D : %d (unknown marker)\n", marker, dword) ;
-						fseek (psf->file, (int) dword, SEEK_CUR) ;
+					{	psf_binheader_readf (psf, "L", &dword) ;
+					
+						psf_log_printf (psf, "%D : %d (unknown marker)\n", marker, dword) ;
+
+						psf_binheader_readf (psf, "j", dword) ;
 						break ;
 						} ;
 					if ((dword = ftell (psf->file)) & 0x03)
-					{	psf_sprintf (psf, "  Unknown chunk marker at position %d. Resynching.\n", dword - 4) ;
-						fseek (psf->file, -3, SEEK_CUR) ;
+					{	psf_log_printf (psf, "  Unknown chunk marker at position %d. Resynching.\n", dword - 4) ;
+
+						psf_binheader_readf (psf, "j", -3) ;
 						break ;
 						} ;
-					psf_sprintf (psf, "*** Unknown chunk marker : %X. Exiting parser.\n", marker) ;
+					psf_log_printf (psf, "*** Unknown chunk marker : %X. Exiting parser.\n", marker) ;
 					done = 1 ;
 			} ;	/* switch (marker) */
 
 		if (ferror (psf->file))
-		{	psf_sprintf (psf, "*** Error on file handle. ***\n", marker) ;
+		{	psf_log_printf (psf, "*** Error on file handle. ***\n", marker) ;
 			clearerr (psf->file) ;
 			break ;
 			} ;
+			
+		if (! psf->sf.seekable && (parsestage & HAVE_BODY))
+			break ;
 
-		if (ftell (psf->file) >= (off_t) (psf->filelength - (2 * sizeof (dword))))
+		if (ftell (psf->file) >= (long) (psf->filelength - (2 * sizeof (dword))))
 			break ;
 		} ; /* while (1) */
 		
@@ -238,8 +264,8 @@ int 	svx_open_read	(SF_PRIVATE *psf)
 	if (! psf->dataoffset)
 		return SFE_SVX_NO_DATA ;
 
-	psf->sf.format 		= (SF_FORMAT_SVX | SF_FORMAT_PCM);
-	psf->sf.sections 	= 1 ;
+	psf->sf.format   = (SF_FORMAT_SVX | SF_FORMAT_PCM);
+	psf->sf.sections = 1 ;
 					
 	psf->current     = 0 ;
 	psf->endian      = SF_ENDIAN_BIG ;			/* All SVX files are big endian. */
@@ -255,30 +281,17 @@ int 	svx_open_read	(SF_PRIVATE *psf)
 
 	psf->close = (func_close) svx_close ;
 
-	switch (psf->bytewidth)
-	{	case  1 :
-				psf->read_short  = (func_short)  pcm_read_sc2s ;
-				psf->read_int    = (func_int)    pcm_read_sc2i ;
-				psf->read_double = (func_double) pcm_read_sc2d ;
-				break ;
-		case  2 :
-				psf->read_short  = (func_short)  pcm_read_bes2s ;
-				psf->read_int    = (func_int)    pcm_read_bes2i ;
-				psf->read_double = (func_double) pcm_read_bes2d ;
-				break ;
-		default : 
-				/* printf ("Weird bytewidth (%d)\n", psf->bytewidth) ; */
-				return SFE_UNIMPLEMENTED ;
-		} ;
+	psf->chars = SF_CHARS_SIGNED ;
+	if ((error = pcm_read_init (psf)))
+		return error ;
 
 	return 0 ;
 } /* svx_open_read */
 
-int 	svx_open_write	(SF_PRIVATE *psf)
-{	static	char 	annotation	[] = "libsndfile by Erik de Castro Lopo\0\0\0" ;
-	VHDR_CHUNK		vhdr ;
-	unsigned int	FORMsize ;
-	
+int 	
+svx_open_write	(SF_PRIVATE *psf)
+{	int error ;
+
 	if ((psf->sf.format & SF_FORMAT_TYPEMASK) != SF_FORMAT_SVX)
 		return	SFE_BAD_OPEN_FORMAT ;
 	if ((psf->sf.format & SF_FORMAT_SUBMASK) != SF_FORMAT_PCM)
@@ -294,55 +307,16 @@ int 	svx_open_write	(SF_PRIVATE *psf)
 	psf->filelength  = psf->datalength + psf->dataoffset ;
 	psf->error       = 0 ;
 
-	FORMsize   = 0x7FFFFFFF ;   /* Correct this when closing file. */
-	
-	vhdr.oneShotHiSamples  = psf->sf.samples ;
-	vhdr.repeatHiSamples   = 0 ;
-	vhdr.samplesPerHiCycle = 0 ;
-	vhdr.samplesPerSec     = psf->sf.samplerate ;
-	vhdr.octave            = 1 ;
-	vhdr.compression       = 0 ;
-	vhdr.volume            = (psf->bytewidth == 1) ? 255 : 0xFFFF ;
+	error = svx_write_header (psf) ;
+	if (error)
+		return error ;
+		
+	psf->close        = (func_close)  svx_close ;
+	psf->write_header = (func_wr_hdr) svx_write_header ;
 
-	if (CPU_IS_LITTLE_ENDIAN)
-		endswap_vhdr_chunk (&vhdr) ;
-
-	psf_hprintf (psf, "mL"  , FORM_MARKER, FORMsize) ;
-	psf_hprintf (psf, "m"   , (psf->bytewidth == 1) ? SVX8_MARKER : SV16_MARKER) ;
-	psf_hprintf (psf, "mLb" , VHDR_MARKER, sizeof (VHDR_CHUNK), &vhdr, sizeof (VHDR_CHUNK)) ;
-	psf_hprintf (psf, "mSmS", NAME_MARKER, psf->filename, ANNO_MARKER, annotation) ;
-	psf_hprintf (psf, "mL"  , BODY_MARKER, psf->datalength) ;
-
-
-	fwrite (psf->header, psf->headindex, 1, psf->file) ;
-
-	psf->dataoffset  = ftell (psf->file) ;
-	
-	psf->close = (func_close) svx_close ;
-
-	switch (psf->bytewidth)
-	{	case  1 :
-				psf->write_short  = (func_short) pcm_write_s2sc ;
-				psf->write_int    = (func_int) pcm_write_i2sc ;
-				psf->write_double = (func_double) pcm_write_d2sc ;
-				break ;
-		case  2 :
-				psf->write_short  = (func_short) pcm_write_s2bes ;
-				psf->write_int    = (func_int) pcm_write_i2bes ;
-				psf->write_double = (func_double) pcm_write_d2bes ;
-				break ;
-		case  3 :
-				psf->write_short  = (func_short) pcm_write_s2bet ;
-				psf->write_int    = (func_int) pcm_write_i2bet ;
-				psf->write_double = (func_double) pcm_write_d2bet ;
-				break ;
-		case  4 :
-				psf->write_short  = (func_short) pcm_write_s2bei ;
-				psf->write_int    = (func_int) pcm_write_i2bei ;
-				psf->write_double = (func_double) pcm_write_d2bei ;
-				break ;
-		default : return SFE_UNIMPLEMENTED ;
-		} ;
+	psf->chars = SF_CHARS_SIGNED ;
+	if ((error = pcm_write_init (psf)))
+		return error ;
 
 	return 0 ;
 } /* svx_open_write */
@@ -350,7 +324,8 @@ int 	svx_open_write	(SF_PRIVATE *psf)
 /*------------------------------------------------------------------------------
 */
 
-int	svx_close	(SF_PRIVATE  *psf)
+static int	
+svx_close	(SF_PRIVATE  *psf)
 {	
 	if (psf->mode == SF_MODE_WRITE)
 	{	/*  Now we know for certain the length of the file we can re-write 
@@ -359,12 +334,11 @@ int	svx_close	(SF_PRIVATE  *psf)
                 
 		fseek (psf->file, 0, SEEK_END) ;
 		psf->filelength = ftell (psf->file) ;
-
-		psf_hsetf (psf, FORM_MARKER, "L", psf->filelength - 8) ;
-		psf_hsetf (psf, BODY_MARKER, "L", psf->filelength - psf->dataoffset) ;
-
 		fseek (psf->file, 0, SEEK_SET) ;
-		fwrite (psf->header, psf->headindex, 1, psf->file) ;
+		
+		psf->datalength = psf->filelength - psf->dataoffset ;
+
+		svx_write_header (psf) ;
 		} ;
 
 	if (psf->fdata)
@@ -373,4 +347,49 @@ int	svx_close	(SF_PRIVATE  *psf)
 	
 	return 0 ;
 } /* svx_close */
+
+static int
+svx_write_header (SF_PRIVATE *psf)
+{	static	char 	annotation	[] = "libsndfile by Erik de Castro Lopo\0\0\0" ;
+	
+	psf->header [0] = 0 ;
+	psf->headindex = 0 ;
+	fseek (psf->file, 0, SEEK_SET) ;
+
+	/* FORM marker and FORM size. */	
+	psf_binheader_writef (psf, "mL", FORM_MARKER, psf->filelength - 8) ;
+	psf_binheader_writef (psf, "m", (psf->bytewidth == 1) ? SVX8_MARKER : SV16_MARKER) ;
+
+	/* VHDR chunk. */
+	psf_binheader_writef (psf, "mL", VHDR_MARKER, sizeof (VHDR_CHUNK)) ;
+	/* VHDR : oneShotHiSamples, repeatHiSamples, samplesPerHiCycle */
+	psf_binheader_writef (psf, "LLL", psf->sf.samples, 0, 0) ;
+	/* VHDR : samplesPerSec, octave, compression */
+	psf_binheader_writef (psf, "Wbb", psf->sf.samplerate, 1, 0) ;
+	/* VHDR : volume */
+	psf_binheader_writef (psf, "L", (psf->bytewidth == 1) ? 255 : 0xFFFF) ;
+
+	/* Filename and annotation strings. */
+	psf_binheader_writef (psf, "mSmS", NAME_MARKER, psf->filename, ANNO_MARKER, annotation) ;
+	
+	/* BODY marker and size. */
+	psf_binheader_writef (psf, "mL", BODY_MARKER, psf->datalength) ;
+
+	fwrite (psf->header, psf->headindex, 1, psf->file) ;
+
+	psf->dataoffset = psf->headindex ;
+	
+	return 0 ;
+} /* svx_write_header */
+
+/*-
+static void 
+endswap_vhdr_chunk (VHDR_CHUNK *vhdr)
+{	vhdr->oneShotHiSamples  = ENDSWAP_INT (vhdr->oneShotHiSamples) ;
+	vhdr->repeatHiSamples   = ENDSWAP_INT (vhdr->repeatHiSamples) ;
+	vhdr->samplesPerHiCycle = ENDSWAP_INT (vhdr->samplesPerHiCycle) ;
+	vhdr->samplesPerSec     = ENDSWAP_SHORT (vhdr->samplesPerSec) ;
+	vhdr->volume            = ENDSWAP_INT (vhdr->volume) ;
+} /+* endswap_vhdr_chunk *+/
+-*/
 

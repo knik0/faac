@@ -1,5 +1,5 @@
 /*
-** Copyright (C) 1999-2000 Erik de Castro Lopo <erikd@zip.com.au>
+** Copyright (C) 2001 Erik de Castro Lopo <erikd@zip.com.au>
 **  
 ** This program is free software; you can redistribute it and/or modify
 ** it under the terms of the GNU Lesser General Public License as published by
@@ -16,12 +16,22 @@
 ** Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 */
 
+/* On Intel Pentium processors (especially PIII and probably P4), converting
+** from float to int is very slow. To meet the C specs, the code produced by 
+** most C compilers targeting Pentium needs to change the FPU rounding mode 
+** before the float to int conversion is performed. 
+**
+** Changing the FPU rounding mode causes the FPU pipeline to be flushed. It 
+** is this flushing of the pipeline which is so slow.
+*/
 
-int		alaw_read_alaw2s (SF_PRIVATE *psf, short *ptr, unsigned int len) ;
-int		alaw_read_alaw2i (SF_PRIVATE *psf, short *ptr, unsigned int len) ;
-int		alaw_read_alaw2d (SF_PRIVATE *psf, short *ptr, unsigned int len) ;
 
-int		alaw_write_s2alaw (SF_PRIVATE *psf, short *ptr, unsigned int len) ;
-int		alaw_write_i2alaw (SF_PRIVATE *psf, short *ptr, unsigned int len) ;
-int		alaw_write_d2alaw (SF_PRIVATE *psf, short *ptr, unsigned int len) ;
+/* These macros are place holders for inline functions which will replace 
+** them in the near future.
+*/
 
+#define	FLOAT_TO_INT(x)		((int)(x))
+#define	FLOAT_TO_SHORT(x)	((short)(x))
+
+#define	DOUBLE_TO_INT(x)	((int)(x))
+#define	DOUBLE_TO_SHORT(x)	((short)(x))

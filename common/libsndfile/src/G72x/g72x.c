@@ -31,6 +31,8 @@
  */
  
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 #include "g72x.h"
 #include "private.h"
@@ -509,13 +511,14 @@ update(
 				a2p += fa1 >> 5;
 
 			if (pk0 ^ state_ptr->pk[1])
-				/* LIMC */
+			{	/* LIMC */
 				if (a2p <= -12160)
 					a2p = -12288;
 				else if (a2p >= 12416)
 					a2p = 12288;
 				else
 					a2p -= 0x80;
+				}
 			else if (a2p <= -12416)
 				a2p = -12288;
 			else if (a2p >= 12160)

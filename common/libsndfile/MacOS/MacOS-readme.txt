@@ -1,5 +1,5 @@
-BUILDING LIBSNDFILE FOR MACINTOSH
----------------------------------
+BUILDING LIBSNDFILE FOR MACINTOSH (Pre Mac OSX)
+-----------------------------------------------
 
 These instructions are current as of libsndfile 0.0.16, and assume the
 following development environment:
@@ -15,8 +15,8 @@ suitable for inclusion in other MacOS projects:
 1. using CodeWarrior, create a new "Empty Project"
 
 2. obtain the libsndfile source distribution (see homepage URL below);
-   add all ".c" files found in the top level of the "src" folder to the
-   project
+   add all ".c" files found in the top level of the "src", "src/GSM610" and 
+   "src/G72x" folders to the project
 
 3. starting from the factory defaults, adjust the following project
    settings:
@@ -27,7 +27,7 @@ suitable for inclusion in other MacOS projects:
         file name = "libsndfile"
 
 4. grab the "config.h" file from the MacOS directory and replace the default
-   config.h file
+   config.h file in the "src" directory
 
 5. Make the project
 

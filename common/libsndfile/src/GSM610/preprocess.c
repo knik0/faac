@@ -4,7 +4,7 @@
  * details.  THERE IS ABSOLUTELY NO WARRANTY FOR THIS SOFTWARE.
  */
 
-/* $Header: /home/cvs/f/fa/faac/faac/common/libsndfile/src/GSM610/Attic/preprocess.c,v 1.1 2001/05/09 19:44:12 menno Exp $ */
+/* $Header: /home/cvs/f/fa/faac/faac/common/libsndfile/src/GSM610/Attic/preprocess.c,v 1.2 2002/02/13 12:42:02 menno Exp $ */
 
 #include	<stdio.h>
 #include	<assert.h>

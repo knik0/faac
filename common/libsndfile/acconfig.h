@@ -282,7 +282,7 @@
 /* Set to 1 if the processor is little endian, otherwise set to 0.  */
 #undef	GUESS_LITTLE_ENDIAN
 
-/* Set to 1 if the processor can read and write Intel x86 32 bit floats.  */
+/* Set to 1 to force the use of code for processors with broken floats */
 /* Otherwise set it to 0.  */
-#undef	CAN_READ_WRITE_x86_IEEE
+#undef	FORCE_BROKEN_FLOAT
 

@@ -1,4 +1,4 @@
-This is libsndfile, 0.0.16
+This is libsndfile, 0.0.26
 
 libsndfile is a library of C routines for reading and writing 
 files containing sampled audio data. 
@@ -29,6 +29,8 @@ The src/GSM610 directory contains code written by Jutta Degener and Carsten
 Bormann. Their original code can be found at :
     http://kbs.cs.tu-berlin.de/~jutta/toast.html
 
+The src/G72x directory contains code written and released by Sum Microsystems
+under a suitably free license.
 
 OTHER PLATFORMS
 ---------------
@@ -44,15 +46,16 @@ For platforms without the required shell, it is usually sufficient to
 create an approriate config.h file in the src/ directory with correct
 values for the following #defines  (this would work for AmigaOS) :
 
-#define __BIG_ENDIAN__ 1
-#define __LITTLE_ENDIAN__ 0
-#define CAN_READ_WRITE_x86_IEEE 0
+#define HAVE_ENDIAN_H 0
+#define GUESS_BIG_ENDIAN 1
+#define GUESS_LITTLE_ENDIAN 0
+#define FORCE_BROKEN_FLOAT 0
 
 
 CONTACTS
 --------
 
-libsndfile was written by Erik de Castro Lopo (erikd@zip.com.au).  
+libsndfile was written by Erik de Castro Lopo (erikd AT zip DOT com DOT au).  
 The libsndfile home page is at :
 
 	http://www.zip.com.au/~erikd/libsndfile/

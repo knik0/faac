@@ -15,7 +15,7 @@
 
 /* Define to `unsigned' if <sys/types.h> doesn't define.  */
 /* #undef size_t */
-
+
 /* Define if you have the ANSI C header files.  */
 #define STDC_HEADERS 1
 
@@ -25,9 +25,9 @@
 /* Set to 1 if the processor is little endian, otherwise set to 0.  */
 #define GUESS_LITTLE_ENDIAN 1
 
-/* Set to 1 if the processor can read and write Intel x86 32 bit floats.  */
+/* Set to 1 to force the use of code for processors with broken floats */
 /* Otherwise set it to 0.  */
-#define CAN_READ_WRITE_x86_IEEE 1
+#define FORCE_BROKEN_FLOAT 0
 
 /* The number of bytes in a double.  */
 #define SIZEOF_DOUBLE 8
@@ -71,6 +71,12 @@
 /* Define if you have the malloc function.  */
 #define HAVE_MALLOC 1
 
+/* Define if you have the snprintf function.  */
+#define HAVE_SNPRINTF 0
+
+/* Define if you have the vsnprintf function.  */
+#define HAVE_VSNPRINTF 0
+
 /* Define if you have the <endian.h> header file.  */
 #define HAVE_ENDIAN_H 0
 
@@ -78,5 +84,5 @@
 #define PACKAGE "libsndfile"
 
 /* Version number of package */
-#define VERSION "0.0.21"
+#define VERSION "0.0.26"
 

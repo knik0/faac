@@ -1,3 +1,39 @@
+Version 0.0.26 (2001-09-30)
+  * Offical release.
+  * Changed how A-law and u-law WAV file headers are written to allow files generated
+    by libsndfile to be read by M$ windoze.
+  * Added IRCAM file support.
+  * Minor bug fixes.
+  * This will be the last release in the 0.0.X development stream apart from bug fixes.
+    A new deveopement stream with minor interface changes in already in development.
+
+Version 0.0.25 (2001-09-24)
+  * Offical release.
+  * Added sf_command () interface which allows switching normalisation on and off for
+    sf_read/write_float () methods.  
+  * Minor bug fixes.
+  * This will be the last release in the 0.0.X development stream apart from bug fixes.
+    A new deveopement stream with minor interface changes in already in development.
+
+Version 0.0.24 (2001-08-19)
+  * Offical release.
+  * Massive refactoring of header reading code for all file formats.
+  * Added sf_read_float () and sf_write_float () interfaces.
+  * Minor bug fixes.
+
+Version 0.0.23 (2001-07-06)
+  * Offical release.
+  * Massive refactoring of header writing code for all file formats.
+  * Added support for Sphere NIST.
+  * Added support for 32 bit float AIFF and little endian AIFF files (Mac OSX).
+  * Added read and write support for the PEAK chunk in 32 bit float AIFF and WAV files.
+  * Added support for REX files (Propellorheads Reason).
+  * Minor bug fixes.
+
+Version 0.0.22 (2000-10-17)
+  * Offical release.
+  * Bug fix in G723 AU file handling.
+
 Version 0.0.21 (2000-08-16)
   * Offical release.
   * AU files without the normal AU file header are now recognised as headerless
@@ -5,6 +41,7 @@ Version 0.0.21 (2000-08-16)
   * Added handling for G721 4bit APDCM encoded AU files.
   * Added handling for G723 3bit APDCM encoded AU files.
   * Improved Win32 compiling and use instructions from Mike Ricos.
+  * License change from GPL to LGPL.
 
 Version 0.0.20 (2000-05-30)
   * Offical release.
