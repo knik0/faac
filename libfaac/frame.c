@@ -16,7 +16,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: frame.c,v 1.24 2001/09/07 11:26:04 menno Exp $
+ * $Id: frame.c,v 1.25 2001/09/09 16:03:16 menno Exp $
  */
 
 /*
@@ -180,7 +180,9 @@ faacEncHandle FAACAPI faacEncOpen(unsigned long sampleRate,
 
     /* Initialize coder functions */
     PsyInit(&hEncoder->gpsyInfo, hEncoder->psyInfo, hEncoder->numChannels,
-        hEncoder->sampleRate, hEncoder->sampleRateIdx);
+        hEncoder->sampleRate, hEncoder->srInfo->cb_width_long,
+        hEncoder->srInfo->num_cb_long, hEncoder->srInfo->cb_width_short,
+        hEncoder->srInfo->num_cb_short); 
 
     FilterBankInit(hEncoder);
 
@@ -259,9 +261,9 @@ int FAACAPI faacEncEncode(faacEncHandle hEncoder,
     if (samplesInput == 0)
         hEncoder->flushFrame++;
 
-    /* After 2 flush frames all samples have been encoded,
+    /* After 4 flush frames all samples have been encoded,
        return 0 bytes written */
-    if (hEncoder->flushFrame == 2)
+    if (hEncoder->flushFrame == 4)
         return 0;
 
     /* Determine the channel configuration */
@@ -284,26 +286,28 @@ int FAACAPI faacEncEncode(faacEncHandle hEncoder,
         if (hEncoder->sampleBuff[channel])
             FreeMemory(hEncoder->sampleBuff[channel]);
         hEncoder->sampleBuff[channel] = hEncoder->nextSampleBuff[channel];
-        hEncoder->nextSampleBuff[channel] = (double*)AllocMemory(FRAME_LEN*sizeof(double));
+        hEncoder->nextSampleBuff[channel] = hEncoder->next2SampleBuff[channel];
+        hEncoder->next2SampleBuff[channel] = hEncoder->next3SampleBuff[channel];
+        hEncoder->next3SampleBuff[channel] = (double*)AllocMemory(FRAME_LEN*sizeof(double));
 
         if (samplesInput == 0) { /* start flushing*/
             for (i = 0; i < FRAME_LEN; i++)
-                hEncoder->nextSampleBuff[channel][i] = 0.0;
+                hEncoder->next3SampleBuff[channel][i] = 0.0;
         } else {
             for (i = 0; i < (int)(samplesInput/numChannels); i++)
-                hEncoder->nextSampleBuff[channel][i] =
+                hEncoder->next3SampleBuff[channel][i] =
                     (double)inputBuffer[(i*numChannels)+channel];
             for (i = (int)(samplesInput/numChannels); i < FRAME_LEN; i++)
-                hEncoder->nextSampleBuff[channel][i] = 0.0;
+                hEncoder->next3SampleBuff[channel][i] = 0.0;
         }
 
         /* Psychoacoustics */
         /* Update buffers and run FFT on new samples */
         PsyBufferUpdate(&hEncoder->gpsyInfo, &hEncoder->psyInfo[channel],
-            hEncoder->nextSampleBuff[channel]);
+            hEncoder->next3SampleBuff[channel]);
     }
 
-    if (hEncoder->frameNum <= 1) /* Still filling up the buffers */
+    if (hEncoder->frameNum <= 3) /* Still filling up the buffers */
         return 0;
 
     /* Psychoacoustics */
@@ -496,7 +500,7 @@ int FAACAPI faacEncEncode(faacEncHandle hEncoder,
     frameBytes = CloseBitStream(bitStream);
 
 #ifdef _DEBUG
-    printf("%4d %4d\n", hEncoder->frameNum-1, frameBytes);
+    printf("%4d %4d\n", hEncoder->frameNum-3, frameBytes);
 #endif
 
     return frameBytes;

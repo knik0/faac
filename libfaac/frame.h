@@ -16,7 +16,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: frame.h,v 1.13 2001/09/07 11:26:04 menno Exp $
+ * $Id: frame.h,v 1.14 2001/09/09 16:03:16 menno Exp $
  */
 
 #ifndef FRAME_H
@@ -90,6 +90,7 @@ typedef struct {
     double *sampleBuff[MAX_CHANNELS];
     double *nextSampleBuff[MAX_CHANNELS];
     double *next2SampleBuff[MAX_CHANNELS];
+    double *next3SampleBuff[MAX_CHANNELS];
     double *ltpTimeBuff[MAX_CHANNELS];
 
     /* Filterbank buffers */
