@@ -221,23 +221,24 @@ int faac_EncodeFrameCore(faacAACStream *as, int Samples)
   while(samplesOut >= 1024*as->channels) {
     // Process Buffer
     if (as->sampleBuffer) {
-      if (as->channels == 2) {
+//      if (as->channels == 2) {
         if (Samples > 0)
           for (i = 0; i < 1024; i++) {
-	    as->inputBuffer[0][i] = data[curSample+(i*2)];
-  	    as->inputBuffer[1][i] = data[curSample+(i*2)+1];
+//	    as->inputBuffer[0][i] = data[curSample+(i*as->channels)];
+			  for (j = 0; j < as->channels; j++)
+				  as->inputBuffer[j][i] = data[curSample+(i*as->channels)+j];
 	  }
         else // (Samples == 0) when called by faacEncodeFinish
           for (i = 0; i < 1024; i++) {
 	    as->inputBuffer[0][i] = 0;
             as->inputBuffer[1][i] = 0;
 	  }
-        }
-      else {
+//        }
+//      else {
         // No mono supported yet (basically only a problem with decoder
         // the encoder in fact supports it).
-        return FERROR;
-      }
+//        return FERROR;
+//      }
     }
 
   if (as->is_first_frame) {
