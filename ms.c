@@ -156,14 +156,14 @@ void MSPreprocess(double p_ratio_long[][MAX_SCFAC_BANDS],
 
 									msInfo->ms_used[b] = 1;
 									for (j = groupIndex; j < quantInfo[chan].window_group_length[g]+groupIndex; j++) {
-										p_ratio_short[chan][(g*maxSfb)+sfbNum] = p_chpo_short[chan+2][j].p_ratio[sfbNum];
+										p_ratio_short[chan][(g*maxSfb)+sfbNum] = p_chpo_short[chan][j].p_ratio[sfbNum];
 										p_chpo_short[1][j].use_ms[sfbNum] = 1;
 									}
 
 								} else {
 
 									msInfo->ms_used[b] = 1;
-									p_ratio_long[chan][sfbNum] = p_chpo_long[chan+2].p_ratio[sfbNum];
+									p_ratio_long[chan][sfbNum] = p_chpo_long[chan].p_ratio[sfbNum];
 									p_chpo_long[1].use_ms[sfbNum] = 1;
 									
 								}
