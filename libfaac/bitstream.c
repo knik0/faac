@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: bitstream.c,v 1.7 2001/03/17 09:22:54 menno Exp $
+ * $Id: bitstream.c,v 1.8 2001/03/19 20:53:46 menno Exp $
  */
 
 #include <stdlib.h>
@@ -186,11 +186,10 @@ static int WriteADTSHeader(faacEncHandle hEncoder,
 		PutBit(bitStream, hEncoder->config.aacProfile, 2); /* profile */
 		PutBit(bitStream, hEncoder->sampleRateIdx, 4); /* sampling rate */
 		PutBit(bitStream, 0, 1); /* private bit */
-#ifdef MPEG2AAC
-		PutBit(bitStream, 2, 3); /* ch. config (must be > 0) */
-#else
-		PutBit(bitStream, 1, 3); /* ch. config (must be > 0) */
-#endif
+		PutBit(bitStream, hEncoder->numChannels, 3); /* ch. config (must be > 0) */
+													 /* simply using numChannels only works for
+														6 channels or less, else a channel
+														configuration should be written */
 		PutBit(bitStream, 0, 1); /* original/copy */
 		PutBit(bitStream, 0, 1); /* home */
 #ifndef MPEG2AAC

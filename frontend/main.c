@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: main.c,v 1.11 2001/03/12 20:12:37 menno Exp $
+ * $Id: main.c,v 1.12 2001/03/19 20:53:37 menno Exp $
  */
 
 #ifdef _WIN32
@@ -120,9 +120,9 @@ int main(int argc, char *argv[])
 				switch(argv[i][1]) {
 				case 'p': case 'P':
 					if ((argv[i][2] == 'l') || (argv[i][2] == 'L'))
-						myFormat->aacProfile = MAIN;
-					else if ((argv[i][2] == 'm') || (argv[i][2] == 'M'))
 						myFormat->aacProfile = LOW;
+					else if ((argv[i][2] == 'm') || (argv[i][2] == 'M'))
+						myFormat->aacProfile = MAIN;
 				break;
 				case 't': case 'T':
 					if ((argv[i][2] == 'n') || (argv[i][2] == 'N'))
