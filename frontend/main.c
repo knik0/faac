@@ -18,7 +18,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: main.c,v 1.60 2004/03/24 15:44:08 danchr Exp $
+ * $Id: main.c,v 1.61 2004/03/27 13:44:24 danchr Exp $
  */
 
 #ifdef _MSC_VER
@@ -694,7 +694,11 @@ int main(int argc, char *argv[])
             fprintf(stderr, " frame | elapsed | play/CPU\n");
 
         /* encoding loop */
+#ifdef _WIN32
+	for (;;)
+#else
         while (running)
+#endif
         {
             int bytesWritten;
 
@@ -829,6 +833,9 @@ int main(int argc, char *argv[])
 
 /*
 $Log: main.c,v $
+Revision 1.61  2004/03/27 13:44:24  danchr
+minor compile-time bugfix for Win32
+
 Revision 1.60  2004/03/24 15:44:08  danchr
 fixing WIN32 -> _WIN32
 
