@@ -545,7 +545,7 @@ int EncTfFrame (faacAACStream *as, BsBitStream  *fixed_stream)
 							block_type[leftChan], 
 							WS_FHG,
 							block_size_samples,
-							0,
+							1,
 							block_size_samples/short_win_in_long, 
 							&sfb_offset_table[leftChan][0], 
 							nr_of_sfb[leftChan],
@@ -571,7 +571,7 @@ int EncTfFrame (faacAACStream *as, BsBitStream  *fixed_stream)
 							block_type[rightChan], 
 							WS_FHG,
 							block_size_samples,
-							0,
+							1,
 							block_size_samples/short_win_in_long, 
 							&sfb_offset_table[rightChan][0], 
 							nr_of_sfb[rightChan],
@@ -585,7 +585,7 @@ int EncTfFrame (faacAACStream *as, BsBitStream  *fixed_stream)
 					block_type[chanNum], 
 					WS_FHG,
 					block_size_samples,
-					0,
+					1,
 					block_size_samples/short_win_in_long, 
 					&sfb_offset_table[chanNum][0], 
 					nr_of_sfb[chanNum],
@@ -687,10 +687,12 @@ int EncTfFrame (faacAACStream *as, BsBitStream  *fixed_stream)
 		}
 
 		/* If short window, reconstruction not needed for prediction */
-		if ((block_type[chanNum]==ONLY_SHORT_WINDOW)) {
-			int sind;
-			for (sind=0;sind<1024;sind++) {
-				reconstructed_spectrum[chanNum][sind]=0.0;
+		for (chanNum=0;chanNum<max_ch;chanNum++) {
+			if ((block_type[chanNum]==ONLY_SHORT_WINDOW)) {
+				int sind;
+				for (sind=0;sind<1024;sind++) {
+					reconstructed_spectrum[chanNum][sind]=0.0;
+				}
 			}
 		}
 
