@@ -52,9 +52,9 @@ Copyright (c) 1997.
 
 Source file:
 
-$Id: psych.c,v 1.16 2000/01/05 23:34:07 menno Exp $
-$Id: psych.c,v 1.16 2000/01/05 23:34:07 menno Exp $
-$Id: psych.c,v 1.16 2000/01/05 23:34:07 menno Exp $
+$Id: psych.c,v 1.17 2000/01/06 10:15:51 menno Exp $
+$Id: psych.c,v 1.17 2000/01/06 10:15:51 menno Exp $
+$Id: psych.c,v 1.17 2000/01/06 10:15:51 menno Exp $
 
 **********************************************************************/
 
@@ -1093,7 +1093,7 @@ void psy_step11andahalf(PARTITION_TABLE_LONG *part_tbl_long,
 			tempM = min(t, max(psy_stvar_long[2].nb[p1+b], min(part_tbl_long->dyn->bmax[b]*psy_stvar_long[3].en[b], psy_stvar_long[3].nb[p1+b])));
 			tempS = min(t, max(psy_stvar_long[3].nb[p1+b], min(part_tbl_long->dyn->bmax[b]*psy_stvar_long[2].en[b], psy_stvar_long[2].nb[p1+b])));
 
-			if ((psy_stvar_long[0].nb[p1+b] >= 1.58*psy_stvar_long[1].nb[p1+b])&&(psy_stvar_long[1].nb[p1+b] >= 1.58*psy_stvar_long[0].nb[p1+b])) {
+			if ((psy_stvar_long[0].nb[p1+b] <= 1.58*psy_stvar_long[1].nb[p1+b])&&(psy_stvar_long[1].nb[p1+b] <= 1.58*psy_stvar_long[0].nb[p1+b])) {
 				psy_stvar_long[2].nb[p1+b] = tempM;
 				psy_stvar_long[3].nb[p1+b] = tempS;
 				psy_stvar_long[0].nb[p1+b] = tempL;
@@ -1116,7 +1116,7 @@ void psy_step11andahalf(PARTITION_TABLE_LONG *part_tbl_long,
 				tempM = min(t, max(psy_stvar_short[2].nb[i][b], min(part_tbl_short->dyn->bmax[b]*psy_stvar_short[3].en[i][b], psy_stvar_short[3].nb[i][b])));
 				tempS = min(t, max(psy_stvar_short[3].nb[i][b], min(part_tbl_short->dyn->bmax[b]*psy_stvar_short[2].en[i][b], psy_stvar_short[2].nb[i][b])));
 
-				if ((psy_stvar_short[0].nb[i][b] >= 1.58*psy_stvar_short[1].nb[i][b])&&(psy_stvar_short[1].nb[i][b] >= 1.58*psy_stvar_short[0].nb[i][b])) {
+				if ((psy_stvar_short[0].nb[i][b] <= 1.58*psy_stvar_short[1].nb[i][b])&&(psy_stvar_short[1].nb[i][b] <= 1.58*psy_stvar_short[0].nb[i][b])) {
 					psy_stvar_short[2].nb[i][b] = tempM;
 					psy_stvar_short[3].nb[i][b] = tempS;
 					psy_stvar_short[0].nb[i][b] = tempL;
@@ -1219,7 +1219,7 @@ void psy_step14(SR_INFO *p_sri,
 			}
 		}
 
-		psy_var_long->npart[n] = minthr * (w_high - w_low);
+		psy_var_long->npart[n] = minthr /** (w_high - w_low)*/;
     }
 
     for(n = 0; n < p_sri->num_cb_long; n++){
@@ -1262,7 +1262,7 @@ void psy_step14(SR_INFO *p_sri,
 				}
 			}
 
-			psy_var_short->npart[i][n] = minthr * (w_high - w_low);
+			psy_var_short->npart[i][n] = minthr /** (w_high - w_low)*/;
         }
 
 		for(n = 0; n < p_sri->num_cb_short; n++){

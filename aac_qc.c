@@ -30,7 +30,6 @@ double ATHformula(double f)
 		+  0.001 * pow(f,4.0));
 	
 	/* convert to energy */
-	ath -= 114;    /* MDCT scaling.  From tests by macik and MUS420 code */
 	ath = pow( 10.0, ath/10.0 );
 	return ath;
 }
@@ -38,21 +37,29 @@ double ATHformula(double f)
 
 void compute_ath(AACQuantInfo *quantInfo, double ATH[SFB_NUM_MAX])
 {
-	int sfb,i,start,end;
+	int sfb,i,start=0,end=0;
 	double ATH_f;
 	double samp_freq = 44.1;
-
-	/* last sfb is not used */
-	for ( sfb = 0; sfb < quantInfo->nr_of_sfb; sfb++ ) {
-		start = quantInfo->sfb_offset[sfb];
-		end   = quantInfo->sfb_offset[sfb+1];
-		ATH[sfb]=1e99;
-		for (i=start ; i < end; i++) {
-			if (quantInfo->block_type==ONLY_SHORT_WINDOW)
-				ATH_f = ATHformula(samp_freq*i/(2*128)); /* freq in kHz */
-			else
-				ATH_f = ATHformula(samp_freq*i/(2*1024)); /* freq in kHz */
-			ATH[sfb]=min(ATH[sfb],ATH_f);
+	static int width[] = {0, 4,  4,  4,  4,  4,  8,  8,  8, 12, 12, 12, 16, 16, 16};
+	if (quantInfo->block_type==ONLY_SHORT_WINDOW) {
+		for ( sfb = 0; sfb < 14; sfb++ ) {
+			start = start+(width[sfb]*8);
+			end   = end+(width[sfb+1]*8);
+			ATH[sfb]=1e99;
+			for (i=start ; i < end; i++) {
+				ATH_f = ATHformula(samp_freq*i/(128)); /* freq in kHz */
+				ATH[sfb]=min(ATH[sfb],ATH_f);
+			}
+		}
+	} else {
+		for ( sfb = 0; sfb < quantInfo->nr_of_sfb; sfb++ ) {
+			start = quantInfo->sfb_offset[sfb];
+			end   = quantInfo->sfb_offset[sfb+1];
+			ATH[sfb]=1e99;
+			for (i=start ; i < end; i++) {
+				ATH_f = ATHformula(samp_freq*i/(1024)); /* freq in kHz */
+				ATH[sfb]=min(ATH[sfb],ATH_f);
+			}
 		}
 	}
 }
@@ -335,11 +342,8 @@ int tf_encode_spectrum_aac(
 	quantInfo -> block_type = block_type[MONO_CHAN];
 
 #if 0
-	if (init != (quantInfo->block_type==ONLY_SHORT_WINDOW?2:1)) {
-		if (quantInfo->block_type == ONLY_SHORT_WINDOW)
-			init = 2;
-		else
-			init = 1;
+	if (init != quantInfo->block_type) {
+		init = quantInfo->block_type;
 		compute_ath(quantInfo, ATH);
 	}
 #endif
@@ -410,8 +414,10 @@ int tf_encode_spectrum_aac(
 	for(sb = 0; sb < quantInfo->nr_of_sfb; sb++) {
 		if (10*log10(energy[MONO_CHAN][sb]+1e-15)>70) {
 			allowed_dist[MONO_CHAN][sb] = energy[MONO_CHAN][sb] * SigMaskRatio[sb];
-//			if (allowed_dist[MONO_CHAN][sb] < ATH[sb])
+//			if (allowed_dist[MONO_CHAN][sb] < ATH[sb]) {
+//				printf("%d Yes\n", sb);
 //				allowed_dist[MONO_CHAN][sb] = ATH[sb];
+//			}
 //			printf("%d\t\t%.3f\n", sb, SigMaskRatio[sb]);
 		} else {
 			allowed_dist[MONO_CHAN][sb] = energy[MONO_CHAN][sb] * 1.1;
@@ -540,14 +546,10 @@ int tf_encode_spectrum_aac(
 
 		amp_over = 0;
 
-#if 1
-		noise_thresh = 0;
-#else
 		noise_thresh = -900;
 		for ( sb = 0; sb < quantInfo->nr_of_sfb; sb++ )
 			noise_thresh = max(1.05*noise[sb], noise_thresh);
 		noise_thresh = min(noise_thresh, 0.0);
-#endif
 
 		for (sb = 0; sb < quantInfo->nr_of_sfb; sb++) {
 			if ((noise[sb] > noise_thresh)&&(quantInfo->book_vector[sb]!=INTENSITY_HCB)&&(quantInfo->book_vector[sb]!=INTENSITY_HCB2)) {
