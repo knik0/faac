@@ -1,0 +1,18 @@
+Compiling under Unix. Taken from a message by ed at the audiocoding.com forum. Thanks!
+
+the linux tools are munted by the CR/LFs all over the place ... to make then happy once again, all lines need to be terminated by LF alone
+
+how to sort this problem ?, well stick the following script into a file, unzip faad, run the script on the faad directory (it'll recursively fix all files), then continue with sh bootstrap ....
+
+
+#!/bin/bash
+
+if [ -d $1 ]; then
+for i in $1/*; do
+./$0 $i
+done
+else
+mv $1 tmp
+cat tmp | tr -d \\r > $1
+rm tmp
+fi
