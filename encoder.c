@@ -452,6 +452,8 @@ int main(int argc, char *argv[])
 	faacVersion *faacv;
 
 	long begin, end;
+	int nTotSecs, nSecs;
+	int nMins;
 
 	faacv = NULL;
 	faacv = faacEncodeVersion();
@@ -566,6 +568,23 @@ int main(int argc, char *argv[])
 	if (FileCount == 0) {
 		return 1;
 	}
+
+	printf("AAC profile: %s.\n", (profile==MAIN_PROFILE)?"MAIN":"LOW");
+	printf("Bitrate: %dkbps.\n", bit_rate);
+	printf("Mid/Side (MS) stereo coding: %s.\n",
+		(use_MS==1)?"Full":((use_MS==0)?"Switching":"Off"));
+	printf("Intensity stereo (IS) coding: %s.\n", use_IS?"On":"Off");
+	printf("Temporal Noise Shaping: %s.\n", use_TNS?"On":"Off");
+	printf("Long Term Prediction: %s.\n", use_LTP?"On":"Off");
+	printf("Perceptual Noise Substitution: %s.\n", use_PNS?"On":"Off");
+	printf("ADIF header: %s.\n", no_header?"Off":"On");
+	if (out_dir_set)
+		printf("Output directory: %s.\n", out_dir);
+	if (out_rate)
+		printf("Output sampling rate: %dHz.\n", out_rate);
+	if (cut_off)
+		printf("Cut-off frequency: %dHz.\n", cut_off);
+	printf("\n");
 
 	for (i = 0; i < FileCount; i++) {
 		char aac_fn[255];
@@ -693,7 +712,11 @@ int main(int argc, char *argv[])
 #else
 		end = clock();
 #endif
-		printf("Encoding %s took: %d sec.\n", FileNames[i], (end-begin)/1000);
+
+		nTotSecs = (end-begin)/1000;
+		nMins = nTotSecs / 60;
+		nSecs = nTotSecs - (60*nMins);
+		printf("Encoding %s took:\t%d:%.2d\t\n", FileNames[i], nMins, nSecs);
 	}
 
 	return FNO_ERROR;
