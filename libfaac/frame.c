@@ -16,7 +16,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: frame.c,v 1.53 2003/11/16 05:02:52 stux Exp $
+ * $Id: frame.c,v 1.54 2003/11/24 18:09:12 knik Exp $
  */
 
 /*
@@ -51,9 +51,8 @@
 static char *libfaacName = FAAC_VERSION " (" __DATE__ ")";
 static char *libCopyright =
   "FAAC - Freeware Advanced Audio Coder (http://www.audiocoding.com/)\n"
-  " Portions Copyright (C) 2001 Menno Bakker\n"
+  " Portions Copyright (C) 1999,2000,2001 Menno Bakker\n"
   " Portions Copyright (C) 2002,2003 Krzysztof Nikiel\n"
-  " Portions Copyright (C) 2003 Stuart Espey\n"
   "This software is based on the ISO MPEG-4 reference source code.\n";
 
 static const psymodellist_t psymodellist[] = {
@@ -65,28 +64,18 @@ static SR_INFO srInfo[12+1];
 static const int bwmax = 15000;
 static const double bwfac = 0.45;
 
-/*
- *	Allows an application to get FAAC version info. This is intended
- *	purely for informative purposes. 
- *	
- *	faac_version_string		:	if not NULL, will be "1.23.2"
- *	faac_name_string		:	if not NULL, will be "1.23.2 (Nov 15 2003)"
- *	faac_copyright_string	:	if not NULL, will be the copyright string
- *
- *	RETURNS					:	FAAC_CFG_VERSION
- */
-int FAACAPI faacEncGetVersion( char *faac_version_string, char *faac_name_string, char *faac_copyright_string )
+
+
+int FAACAPI faacEncGetVersion(char **faac_id_string,
+			      char **faac_copyright_string)
 {
-	if( faac_version_string )
-		strcpy( faac_version_string, FAAC_VERSION );
+  if (faac_id_string)
+    *faac_id_string = libfaacName;
 
-	if( faac_name_string )
-		strcpy( faac_name_string, libfaacName );
+  if (faac_copyright_string)
+    *faac_copyright_string = libCopyright;
 
-	if( faac_copyright_string )
-		strcpy( faac_copyright_string, libCopyright );
-
-	return FAAC_CFG_VERSION;
+  return FAAC_CFG_VERSION;
 }
 
 
@@ -953,6 +942,11 @@ static SR_INFO srInfo[12+1] =
 
 /*
 $Log: frame.c,v $
+Revision 1.54  2003/11/24 18:09:12  knik
+A safe version of faacEncGetVersion() without string length problem.
+Removed Stux from copyright notice. I don't think he contributed something very
+substantial to faac and this is not the right place to list all contributors.
+
 Revision 1.53  2003/11/16 05:02:52  stux
 moved global tables from fft.c into hEncoder FFT_Tables. Add fft_init and fft_terminate, flowed through all necessary changes. This should remove at least one instance of a memory leak, and fix some thread-safety problems. Version update to 1.23.3
 
