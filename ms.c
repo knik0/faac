@@ -42,6 +42,7 @@ void MSPreprocess(double p_ratio_long[][MAX_SCFAC_BANDS],
 				  Ch_Info *channelInfo,                  /* Pointer to Ch_Info */
 				  enum WINDOW_TYPE block_type[MAX_TIME_CHANNELS], /* Block type */
 				  AACQuantInfo* quantInfo,               /* Quant info */
+				  int use_ms,
 				  int numberOfChannels
 				  )
 {
@@ -62,7 +63,7 @@ void MSPreprocess(double p_ratio_long[][MAX_SCFAC_BANDS],
 				channelInfo[leftChan].common_window = 0;
 
 				/* Perform MS if block_types are the same */
-				if (block_type[leftChan]==block_type[rightChan]) { 
+				if ((block_type[leftChan]==block_type[rightChan])&&(use_ms==0)) { 
 
 					int numGroups;
 					int groupIndex = 0;
@@ -93,15 +94,15 @@ void MSPreprocess(double p_ratio_long[][MAX_SCFAC_BANDS],
 									realyused = 1;
 									used++;
 									for (j = groupIndex; j < quantInfo[leftChan].window_group_length[g]+groupIndex; j++) {
-										p_ratio_short[0][(j*maxSfb)+sfbNum] = p_chpo_short[2][j].p_ratio[sfbNum];
-										p_ratio_short[1][(j*maxSfb)+sfbNum] = p_chpo_short[3][j].p_ratio[sfbNum];
+										p_ratio_short[0][(g*maxSfb)+sfbNum] = p_chpo_short[2][j].p_ratio[sfbNum];
+										p_ratio_short[1][(g*maxSfb)+sfbNum] = p_chpo_short[3][j].p_ratio[sfbNum];
 										p_chpo_short[1][j].use_ms[sfbNum] = use_ms_short;
 									}
 								} else {
 									notused++;
 									for (j = groupIndex; j < quantInfo[leftChan].window_group_length[g]+groupIndex; j++) {
-										p_ratio_short[0][(j*maxSfb)+sfbNum] = p_chpo_short[0][j].p_ratio[sfbNum];
-										p_ratio_short[1][(j*maxSfb)+sfbNum] = p_chpo_short[1][j].p_ratio[sfbNum];
+										p_ratio_short[0][(g*maxSfb)+sfbNum] = p_chpo_short[0][j].p_ratio[sfbNum];
+										p_ratio_short[1][(g*maxSfb)+sfbNum] = p_chpo_short[1][j].p_ratio[sfbNum];
 										p_chpo_short[1][j].use_ms[sfbNum] = use_ms_short;
 									}
 								}
@@ -129,6 +130,48 @@ void MSPreprocess(double p_ratio_long[][MAX_SCFAC_BANDS],
 						channelInfo[leftChan].common_window = 1;  /* Use common window */
 						channelInfo[leftChan].ms_info.is_present=1;
 					}
+				} else if ((block_type[leftChan]==block_type[rightChan])&&(use_ms == 1)) {
+					int chan;
+					int numGroups;
+					int groupIndex = 0;
+					int maxSfb;
+					int g,b,w, j;
+					MS_Info *msInfo;
+
+					channelInfo[0].ms_info.is_present = 1;
+					channelInfo[0].common_window = 1;
+
+					for (chan = 0; chan < 2; chan++) {
+						maxSfb = quantInfo[chan].max_sfb;
+						w=0;
+
+						/* Determine which bands should be enabled */
+						msInfo = &(channelInfo[leftChan].ms_info);
+						numGroups = quantInfo[chan].num_window_groups;
+
+						for (g=0;g<numGroups;g++) {
+							for (sfbNum=0;sfbNum<maxSfb;sfbNum++) {
+								b = g*maxSfb+sfbNum;
+
+								if (block_type[chan] == ONLY_SHORT_WINDOW) {
+
+									msInfo->ms_used[b] = 1;
+									for (j = groupIndex; j < quantInfo[chan].window_group_length[g]+groupIndex; j++) {
+										p_ratio_short[chan][(g*maxSfb)+sfbNum] = p_chpo_short[chan+2][j].p_ratio[sfbNum];
+										p_chpo_short[1][j].use_ms[sfbNum] = 1;
+									}
+
+								} else {
+
+									msInfo->ms_used[b] = 1;
+									p_ratio_long[chan][sfbNum] = p_chpo_long[chan+2].p_ratio[sfbNum];
+									p_chpo_long[1].use_ms[sfbNum] = 1;
+									
+								}
+							}
+							groupIndex+=quantInfo[chan].window_group_length[g];
+						}
+					}
 				} else {
 					int chan;
 					int numGroups;
@@ -153,7 +196,7 @@ void MSPreprocess(double p_ratio_long[][MAX_SCFAC_BANDS],
 
 									msInfo->ms_used[b] = 0;
 									for (j = groupIndex; j < quantInfo[chan].window_group_length[g]+groupIndex; j++) {
-										p_ratio_short[chan][(j*maxSfb)+sfbNum] = p_chpo_short[chan][j].p_ratio[sfbNum];
+										p_ratio_short[chan][(g*maxSfb)+sfbNum] = p_chpo_short[chan][j].p_ratio[sfbNum];
 										p_chpo_short[1][j].use_ms[sfbNum] = 0;
 									}
 
@@ -184,17 +227,16 @@ void MSEnergy(double *spectral_line_vector[MAX_TIME_CHANNELS],
 			  Ch_Info *channelInfo,                  /* Pointer to Ch_Info */
 			  enum WINDOW_TYPE block_type[MAX_TIME_CHANNELS], /* Block type */
 			  AACQuantInfo* quantInfo,               /* Quant info */
+			  int use_ms,
 			  int numberOfChannels
 			  )
 {
 	int chanNum, numWindows, bandNumber;
-	int otherChan, windowLength, w, j;
+	int windowLength, w, j;
 	int *p_use_ms;
 
 	for (chanNum=0;chanNum<numberOfChannels;chanNum++) {
 		double dtmp;
-
-		otherChan = !chanNum;
 
 		/* Compute energy in each scalefactor band of each window */
 		numWindows = (block_type[chanNum]==ONLY_SHORT_WINDOW) ?	8 : 1;
@@ -219,10 +261,10 @@ void MSEnergy(double *spectral_line_vector[MAX_TIME_CHANNELS],
 				energy[chanNum][bandNumber] = 0.0;
 				width=sfb_width_table[chanNum][sfb];
 				for(i=offset; i<(offset+width); i++ ) {
-					if (p_use_ms[sfb] && (chanNum == 0))
-						dtmp = (spectral_line_vector[chanNum][j]+spectral_line_vector[otherChan][j])*0.5;
-					else if (p_use_ms[sfb] && (chanNum == 1))
-						dtmp = (spectral_line_vector[chanNum][j]-spectral_line_vector[otherChan][j])*0.5;
+					if (((p_use_ms[sfb]||(use_ms==1)) && (chanNum == 0))&&(use_ms!=-1))
+						dtmp = (spectral_line_vector[0][j]+spectral_line_vector[1][j])*0.5;
+					else if (((p_use_ms[sfb]||(use_ms==1)) && (chanNum == 1))&&(use_ms!=-1))
+						dtmp = (spectral_line_vector[0][j]-spectral_line_vector[1][j])*0.5;
 					else
 						dtmp = spectral_line_vector[chanNum][j];
 					j++;
@@ -239,6 +281,87 @@ void MSEnergy(double *spectral_line_vector[MAX_TIME_CHANNELS],
 /* Perform MS encoding.  Spectrum is non-interleaved.  */
 /* This would be a lot simpler on interleaved spectral data */
 void MSEncode(double *spectrum[MAX_TIME_CHANNELS],   /* array of pointers to spectral data */
+			  Ch_Info *channelInfo,                  /* Pointer to Ch_Info */
+			  int sfb_offset_table[][MAX_SCFAC_BANDS+1],
+			  enum WINDOW_TYPE block_type[MAX_TIME_CHANNELS], /* Block type */
+			  AACQuantInfo* quantInfo,               /* Quant info */
+			  int numberOfChannels) {                /* Number of channels */
+
+	int chanNum;
+	int sfbNum;
+	int lineNum;
+	double sum,diff;
+
+	/* Look for channel_pair_elements */
+	for (chanNum=0;chanNum<numberOfChannels;chanNum++) {
+		if (channelInfo[chanNum].present) {
+			if ((channelInfo[chanNum].cpe)&&(channelInfo[chanNum].ch_is_left)) {
+				int leftChan=chanNum;
+				int rightChan=channelInfo[chanNum].paired_ch;
+				channelInfo[leftChan].ms_info.is_present=0;
+
+				/* Perform MS if block_types are the same */
+				if (block_type[leftChan]==block_type[rightChan]) { 
+
+					int numGroups;
+					int maxSfb;
+					int g,b,w,line_offset;
+					int startWindow,stopWindow;
+					IS_Info *isInfo;
+					MS_Info *msInfo;
+
+					channelInfo[leftChan].common_window = 1;  /* Use common window */
+					channelInfo[leftChan].ms_info.is_present=1;
+
+					numGroups = quantInfo[leftChan].num_window_groups;
+					maxSfb = quantInfo[leftChan].max_sfb;
+					w=0;
+
+					/* Determine which bands should be enabled */
+					/* Right now, simply enable bands which do not use intensity stereo */
+					isInfo = &(channelInfo[rightChan].is_info);
+					msInfo = &(channelInfo[leftChan].ms_info);
+					for (g=0;g<numGroups;g++) {
+						for (sfbNum=0;sfbNum<maxSfb;sfbNum++) {
+							b = g*maxSfb+sfbNum;
+							msInfo->ms_used[b] = ( (!isInfo->is_used[b])||(!isInfo->is_present) );
+						}
+					}
+					
+					/* Perform sum and differencing on bands in which ms_used flag */
+					/* has been set. */
+					line_offset=0;
+					startWindow = 0;
+					for (g=0;g<numGroups;g++) {
+						int numWindows = quantInfo[leftChan].window_group_length[g];
+						stopWindow = startWindow + numWindows;
+						for (sfbNum=0;sfbNum<maxSfb;sfbNum++) {
+							/* Enable MS mask */
+							if (msInfo->ms_used[g*maxSfb+sfbNum]) {
+								for (w=startWindow;w<stopWindow;w++) {
+									for (lineNum=sfb_offset_table[leftChan][sfbNum];
+									lineNum<sfb_offset_table[leftChan][sfbNum+1];
+									lineNum++) {
+										line_offset = w*BLOCK_LEN_SHORT;
+										sum=spectrum[leftChan][line_offset+lineNum]+spectrum[rightChan][line_offset+lineNum];
+										diff=spectrum[leftChan][line_offset+lineNum]-spectrum[rightChan][line_offset+lineNum];
+										spectrum[leftChan][line_offset+lineNum] = 0.5 * sum;
+										spectrum[rightChan][line_offset+lineNum] = 0.5 * diff;
+									}  /* for (lineNum... */
+								}  /* for (w=... */
+							}
+						}  /* for (sfbNum... */
+						startWindow = stopWindow;
+					} /* for (g... */
+				}  /* if (block_type... */
+			}
+		}  /* if (channelInfo[chanNum].present */
+	}  /* for (chanNum... */
+}
+
+/* Perform MS encoding.  Spectrum is non-interleaved.  */
+/* This would be a lot simpler on interleaved spectral data */
+void MSEncodeSwitch(double *spectrum[MAX_TIME_CHANNELS],   /* array of pointers to spectral data */
 	      Ch_Info *channelInfo,                  /* Pointer to Ch_Info */
 	      int sfb_offset_table[][MAX_SCFAC_BANDS+1],
 	      enum WINDOW_TYPE block_type[MAX_TIME_CHANNELS], /* Block type */
