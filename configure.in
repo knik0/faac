@@ -1,3 +1,4 @@
+AC_PREREQ(2.50)
 AC_INIT()
 AM_INIT_AUTOMAKE(faac,1.0beta)
 
