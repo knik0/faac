@@ -16,7 +16,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: frame.c,v 1.38 2003/07/10 19:17:01 knik Exp $
+ * $Id: frame.c,v 1.39 2003/08/02 11:32:10 stux Exp $
  */
 
 /*
@@ -122,6 +122,19 @@ int FAACAPI faacEncSetConfiguration(faacEncHandle hEncoder,
 	hEncoder->config.outputFormat = config->outputFormat;
 
 	assert((hEncoder->config.outputFormat == 0) || (hEncoder->config.outputFormat == 1));
+
+	switch( hEncoder->config.inputFormat )
+	{
+		case FAAC_INPUT_16BIT:
+		//case FAAC_INPUT_24BIT:
+		case FAAC_INPUT_32BIT:
+		case FAAC_INPUT_FLOAT:
+			break;
+
+		default:
+			return 0;
+			break;
+	}
 
     /* No SSR supported for now */
     if (hEncoder->config.aacObjectType == SSR)
@@ -279,6 +292,11 @@ faacEncHandle FAACAPI faacEncOpen(unsigned long sampleRate,
 	*/
 	hEncoder->config.outputFormat = 1;
 
+	/*
+		be compatible with software which assumes 24bit in 32bit PCM
+	*/
+	hEncoder->config.inputFormat = FAAC_INPUT_32BIT;
+
     /* find correct sampling rate depending parameters */
     hEncoder->srInfo = &srInfo[hEncoder->sampleRateIdx];
 
@@ -422,13 +440,46 @@ int FAACAPI faacEncEncode(faacEncHandle hEncoder,
         hEncoder->next2SampleBuff[channel] = hEncoder->next3SampleBuff[channel];
 	hEncoder->next3SampleBuff[channel] = tmp;
 
-        if (samplesInput == 0) { /* start flushing*/
+        if (samplesInput == 0)
+		{ 
+			/* start flushing*/
             for (i = 0; i < FRAME_LEN; i++)
                 hEncoder->next3SampleBuff[channel][i] = 0.0;
-        } else {
-            for (i = 0; i < (int)(samplesInput/numChannels); i++)
-                hEncoder->next3SampleBuff[channel][i] =
-		(1.0/256) * (double)inputBuffer[(i*numChannels)+channel];
+        } 
+		else 
+		{ 
+			/* handle the various input formats */
+			switch( hEncoder->config.inputFormat )
+			{
+				case FAAC_INPUT_16BIT:
+					for (i = 0; i < (int)(samplesInput/numChannels); i++)
+					{
+						hEncoder->next3SampleBuff[channel][i] =
+							(double)((short*)inputBuffer)[(i*numChannels)+channel];
+					}
+					break;
+
+				case FAAC_INPUT_32BIT:
+					for (i = 0; i < (int)(samplesInput/numChannels); i++)
+					{
+						hEncoder->next3SampleBuff[channel][i] =
+							(1.0/256) *  (double)inputBuffer[(i*numChannels)+channel];
+					}
+					break;
+
+				case FAAC_INPUT_FLOAT:
+					for (i = 0; i < (int)(samplesInput/numChannels); i++)
+					{
+						hEncoder->next3SampleBuff[channel][i] =
+							((float*)inputBuffer)[(i*numChannels)+channel];
+					}
+					break;
+
+				default:
+					return -1; /* invalid input format */
+					break;
+			}
+
             for (i = (int)(samplesInput/numChannels); i < FRAME_LEN; i++)
                 hEncoder->next3SampleBuff[channel][i] = 0.0;
         }
@@ -777,6 +828,9 @@ static SR_INFO srInfo[12+1] =
 
 /*
 $Log: frame.c,v $
+Revision 1.39  2003/08/02 11:32:10  stux
+added config.inputFormat, and associated defines and code, faac now handles native endian 16bit, 24bit and float input. Added faacEncGetDecoderSpecificInfo to the dll exports, needed for MP4. Updated DLL .dsp to compile without error. Updated CFG_VERSION to 102. Version number might need to be updated as the API has technically changed. Did not update libfaac.pdf
+
 Revision 1.38  2003/07/10 19:17:01  knik
 24-bit input
 

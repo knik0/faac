@@ -16,7 +16,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: faac.h,v 1.28 2003/07/10 19:16:01 knik Exp $
+ * $Id: faac.h,v 1.29 2003/08/02 11:32:10 stux Exp $
  */
 
 #ifndef FAACLIB_H
@@ -37,7 +37,7 @@ extern "C" {
   #endif
 #endif
 
-#define FAAC_CFG_VERSION 101
+#define FAAC_CFG_VERSION 102
 
 /* MPEG ID's */
 #define MPEG2 1
@@ -48,6 +48,13 @@ extern "C" {
 #define LOW  1
 #define SSR  2
 #define LTP  3
+
+/* Input Formats */
+#define FAAC_INPUT_NULL		0
+#define FAAC_INPUT_16BIT	1
+#define FAAC_INPUT_24BIT	2
+#define FAAC_INPUT_32BIT	3
+#define FAAC_INPUT_FLOAT	4
 
 typedef struct faacEncConfiguration
 {
@@ -99,6 +106,16 @@ typedef struct faacEncConfiguration
 	} *psymodellist;
 	// selected index in psymodellist
 	unsigned int psymodelidx;
+
+	/* 
+		PCM Sample Input Format
+		0	FAAC_INPUT_NULL			invalid, signifies a misconfigured config
+		1	FAAC_INPUT_16BIT		native endian 16bit
+		2	FAAC_INPUT_24BIT		native endian 24bit in 24 bits		(not implemented)
+		3	FAAC_INPUT_32BIT		native endian 24bit in 32 bits		(DEFAULT)
+		4	FAAC_INPUT_FLOAT		32bit floating point
+	*/
+	unsigned int inputFormat;
 
 } faacEncConfiguration, *faacEncConfigurationPtr;
 

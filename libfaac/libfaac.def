@@ -8,3 +8,4 @@ faacEncGetCurrentConfiguration   @2
 faacEncSetConfiguration          @3
 faacEncEncode                    @4
 faacEncClose                     @5
+faacEncGetDecoderSpecificInfo	 @6

@@ -16,7 +16,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: frame.h,v 1.20 2003/07/10 19:17:44 knik Exp $
+ * $Id: frame.h,v 1.21 2003/08/02 11:32:10 stux Exp $
  */
 
 #ifndef FRAME_H
@@ -59,12 +59,19 @@ extern "C" {
   #endif
 #endif
 
-#define FAAC_CFG_VERSION 101
+#define FAAC_CFG_VERSION 102
 
 typedef struct {
   psymodel_t *model;
   char *name;
 } psymodellist_t;
+
+/* Input Formats */
+#define FAAC_INPUT_NULL		0
+#define FAAC_INPUT_16BIT	1
+#define FAAC_INPUT_24BIT	2
+#define FAAC_INPUT_32BIT	3
+#define FAAC_INPUT_FLOAT	4
 
 typedef struct faacEncConfiguration
 {
@@ -113,6 +120,16 @@ typedef struct faacEncConfiguration
 	const psymodellist_t *psymodellist;
 	// selected index in psymodellist
 	unsigned int psymodelidx;
+
+	/* 
+		PCM Sample Input Format
+		0	FAAC_INPUT_NULL			invalid, signifies a misconfigured config
+		1	FAAC_INPUT_16BIT		native endian 16bit
+		2	FAAC_INPUT_24BIT		native endian 24bit in 24 bits		(not implemented)
+		3	FAAC_INPUT_32BIT		native endian 24bit in 32 bits		(DEFAULT)
+		4	FAAC_INPUT_FLOAT		32bit floating point
+	*/
+	unsigned int inputFormat;
 
 } faacEncConfiguration, *faacEncConfigurationPtr;
 
