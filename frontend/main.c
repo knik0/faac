@@ -2,7 +2,7 @@
  * FAAC - Freeware Advanced Audio Coder
  * Copyright (C) 2001 Menno Bakker
  * Copyright (C) 2002-2004 Krzysztof Nikiel
- * Copyright (C) 2004 Dan Christiansen
+ * Copyright (C) 2004 Dan Villiom P. Christiansen
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -18,7 +18,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: main.c,v 1.68 2004/04/16 14:51:10 danchr Exp $
+ * $Id: main.c,v 1.69 2004/04/22 14:07:14 danchr Exp $
  */
 
 #ifdef _MSC_VER
@@ -1127,6 +1127,9 @@ int main(int argc, char *argv[])
 
 /*
 $Log: main.c,v $
+Revision 1.69  2004/04/22 14:07:14  danchr
+set copyright notice to my full name
+
 Revision 1.68  2004/04/16 14:51:10  danchr
 don't use stderr on Windows
 
