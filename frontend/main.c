@@ -16,14 +16,14 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: main.c,v 1.3 2001/02/04 17:50:47 oxygene2000 Exp $
+ * $Id: main.c,v 1.4 2001/02/05 21:47:49 menno Exp $
  */
 
 #ifdef _WIN32
 #include <windows.h>
 #endif
 
-#ifdef LINUX
+#ifdef __unix__
 #include <sys/time.h>
 #include <sys/resource.h>
 #include <unistd.h>
@@ -56,7 +56,7 @@ int main(int argc, char *argv[])
 
 	FILE *outfile;
 
-#ifdef LINUX
+#ifdef __unix__
 	struct rusage *usage;
 #endif
 #ifdef _WIN32
@@ -197,7 +197,7 @@ int main(int argc, char *argv[])
 		nSecs = nTotSecs - (60*nMins);
 		printf("Encoding %s took:\t%d:%.2d\t\n", argv[argc-2], nMins, nSecs);
 #else
-#ifdef LINUX
+#ifdef __unix__
 		usage=malloc(sizeof(struct rusage*));
 		getrusage(RUSAGE_SELF,usage);
 		totalSecs=usage->ru_utime.tv_sec;
