@@ -2,6 +2,7 @@
 // Copyright (C) 2003 Janne Hyvärinen
 //
 // Changes:
+//  0.4.1 (2003-12-13): Added ctts field writing for MP4 mode
 //  0.4   (2003-12-11): Added support for average bitrate controlling
 //  0.3.5 (2003-10-17): Changed way gapless encoding is handled (iTunes is buggy...)
 //  0.3.4 (2003-10-14): Fixed AAC object type selecting
@@ -35,7 +36,7 @@
 #include <faac.h>
 #include <version.h>
 
-#define FOO_FAAC_VERSION     "0.4"
+#define FOO_FAAC_VERSION     "0.4.1"
 
 #define FF_AAC  0
 #define FF_MP4  1
@@ -93,7 +94,7 @@ private:
     string8 path;
     file_info_i_full info;
     unsigned int srate, nch, bps;
-    unsigned __int64 total_samples, encoded_samples, delay_samples;
+    __int64 total_samples, encoded_samples, delay_samples;
     bool encode_error;
 
 public:
@@ -303,7 +304,7 @@ public:
                         }
 
                         if ( create_mp4 ) {
-                            MP4WriteSample ( MP4hFile, MP4track, (const unsigned __int8 *)bitbuf.get_ptr(), bytesWritten, frameSize );
+                            MP4WriteSample ( MP4hFile, MP4track, (const unsigned __int8 *)bitbuf.get_ptr(), bytesWritten, frameSize, 1024 );
                         } else {
                             m_reader->write ( bitbuf.get_ptr(), bytesWritten );
                         }
@@ -326,7 +327,9 @@ public:
                 chan_remap ( (int *)floatbuf.get_ptr(), nch, bufferedSamples/nch, chanmap );
             }
 
-            while ( encoded_samples < total_samples ) {
+            __int64 samples_left = total_samples - encoded_samples;
+
+            while ( samples_left > 0 ) {
                 if ( !bufferedSamples ) {
                     bufferedSamples = samplesInput;
                     memset ( floatbuf.get_ptr(), 0, samplesInput * sizeof(float) );
@@ -340,17 +343,19 @@ public:
                     break;
                 }
                 else if ( bytesWritten > 0 ) {
-                    MP4Duration dur = (MP4Duration) (((total_samples - encoded_samples) < frameSize) ? (total_samples - encoded_samples) : frameSize);
+                    MP4Duration dur = 0;
+                    if ( samples_left > frameSize + 1024 ) dur = frameSize;
+                    else if ( samples_left > 1024 ) dur = samples_left - 1024;
 
                     if ( create_mp4 ) {
-                        MP4WriteSample ( MP4hFile, MP4track, (const unsigned __int8 *)bitbuf.get_ptr(), bytesWritten, dur );
+                        MP4WriteSample ( MP4hFile, MP4track, (const unsigned __int8 *)bitbuf.get_ptr(), bytesWritten, dur, 1024 );
                     } else {
                         m_reader->write ( bitbuf.get_ptr(), bytesWritten );
                     }
 
-                    encoded_samples += dur;
+                    samples_left -= frameSize;
                 }
-            };
+            }
 
             faacEncClose ( hEncoder );
             hEncoder = 0;

@@ -16,7 +16,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: main.c,v 1.50 2003/11/24 18:11:14 knik Exp $
+ * $Id: main.c,v 1.51 2003/12/13 21:58:35 ca5e Exp $
  */
 
 #ifdef _MSC_VER
@@ -637,19 +637,17 @@ int main(int argc, char *argv[])
             if (bytesWritten > 0)
             {
 #ifdef HAVE_LIBMP4V2
-                u_int64_t samples = (total_samples - encoded_samples) < frameSize
-                    ? (total_samples - encoded_samples) : frameSize;
-
-                if (delay_samples > 0)
-                {
-                    samples = 0;
-                    delay_samples -= frameSize;
-                }
+                u_int64_t samples_left = total_samples - encoded_samples + delay_samples;
+                MP4Duration dur = 0;
+                if (samples_left > frameSize + delay_samples)
+                    dur = frameSize;
+                else if (samples_left > delay_samples)
+                    dur = samples_left - delay_samples;
 
                 if (mp4)
                 {
                     /* write bitstream to mp4 file */
-                    MP4WriteSample(MP4hFile, MP4track, bitbuf, bytesWritten, samples, 0, 1);
+                    MP4WriteSample(MP4hFile, MP4track, bitbuf, bytesWritten, dur, delay_samples, 1);
                 }
                 else
                 {
@@ -659,7 +657,7 @@ int main(int argc, char *argv[])
 #ifdef HAVE_LIBMP4V2
                 }
 
-                encoded_samples += samples;
+                encoded_samples += dur;
 #endif
             }
         }
@@ -686,6 +684,9 @@ int main(int argc, char *argv[])
 
 /*
 $Log: main.c,v $
+Revision 1.51  2003/12/13 21:58:35  ca5e
+Improved gapless encoding
+
 Revision 1.50  2003/11/24 18:11:14  knik
 using new version info interface
 
