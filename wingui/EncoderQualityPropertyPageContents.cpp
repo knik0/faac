@@ -39,6 +39,7 @@ CEncoderQualityPropertyPageContents& CEncoderQualityPropertyPageContents::operat
 	m_oUseLtp*=oRight.m_oUseLtp;
 	m_oUseLfe*=oRight.m_oUseLfe;
 	m_oAacProfile*=oRight.m_oAacProfile;
+	m_oMpegVersion*=oRight.m_oMpegVersion;
 
 	return *this;
 }

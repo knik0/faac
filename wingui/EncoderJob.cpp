@@ -25,6 +25,7 @@ CEncoderJob::CEncoderJob():
 	m_bUseTns(false),
 	m_bUseLtp(false),
 	m_bUseLfe(false),
+	m_eMpegVersion(eMpegVersion2),
 	m_eAacProfile(eAacProfileMain),
 	m_ulBitRate(128000),
 	m_ulBandwidth(22500)
@@ -79,7 +80,14 @@ CString CEncoderJob::DescribeJobTypeLong() const
 CString CEncoderJob::DescribeJob() const
 {
 	CString oToReturn;
-	oToReturn.Format("%s - %s - %.0f kbit/s - %.0f kHz", GetFiles().GetSourceFileName(), TranslateAacProfileToShortString(GetAacProfile()), (double)GetBitRate()/1000, (double)GetBandwidth()/1000);
+	oToReturn.Format(
+		"%s - %s - %s - %.0f kbit/s - %.0f kHz",
+		GetFiles().GetSourceFileName(),
+		TranslateMpegVersionToShortString(GetMpegVersion()),
+		TranslateAacProfileToShortString(GetAacProfile()),
+		(double)GetBitRate()/1000,
+		(double)GetBandwidth()/1000
+	);
 	if (GetAllowMidside())
 	{
 		CString oMidSide;
@@ -92,12 +100,12 @@ CString CEncoderJob::DescribeJob() const
 		oTns.LoadString(IDS_UseTns);
 		oToReturn+=CString(" - ")+oTns;
 	}
-	if (GetUseLtp())
-	{
-		CString oLtp;
-		oLtp.LoadString(IDS_UseLtp);
-		oToReturn+=CString(" - ")+oLtp;
-	}
+//	if (GetUseLtp())
+//	{
+//		CString oLtp;
+//		oLtp.LoadString(IDS_UseLtp);
+//		oToReturn+=CString(" - ")+oLtp;
+//	}
 	if (GetUseLfe())
 	{
 		CString oLfe;
@@ -328,7 +336,15 @@ bool CEncoderJob::ProcessJob(CJobProcessingDynamicUserInputInfo &oUserInputInfo)
 CString CEncoderJob::GetDetailedDescriptionForStatusDialog() const
 {
 	CString oToReturn;
-	oToReturn.Format(IDS_DetailedEncoderJobDescriptionString, GetFiles().GetCompleteSourceFilePath(), GetFiles().GetCompleteTargetFilePath(), TranslateAacProfileToShortString(GetAacProfile()), GetBitRate(), GetBandwidth());
+	oToReturn.Format(
+		IDS_DetailedEncoderJobDescriptionString,
+		GetFiles().GetCompleteSourceFilePath(),
+		GetFiles().GetCompleteTargetFilePath(),
+		TranslateMpegVersionToShortString(GetMpegVersion()),
+		TranslateAacProfileToShortString(GetAacProfile()),
+		GetBitRate(),
+		GetBandwidth()
+	);
 	if (GetAllowMidside())
 	{
 		CString oMidSide;
@@ -341,12 +357,12 @@ CString CEncoderJob::GetDetailedDescriptionForStatusDialog() const
 		oTns.LoadString(IDS_UseTns);
 		oToReturn+=CString(" - ")+oTns;
 	}
-	if (GetUseLtp())
-	{
-		CString oLtp;
-		oLtp.LoadString(IDS_UseLtp);
-		oToReturn+=CString(" - ")+oLtp;
-	}
+//	if (GetUseLtp())
+//	{
+//		CString oLtp;
+//		oLtp.LoadString(IDS_UseLtp);
+//		oToReturn+=CString(" - ")+oLtp;
+//	}
 	if (GetUseLfe())
 	{
 		CString oLfe;
@@ -429,6 +445,11 @@ CString CEncoderJob::TranslateAacProfileToShortString(EAacProfile eAacProfile)
 			iStringId=IDS_AacProfileSsr;
 			break;
 		}
+	case eAacProfileLtp:
+		{
+			iStringId=IDS_AacProfileLtp;
+			break;
+		}
 	default:
 		{
 			// unknown aac profile
@@ -440,6 +461,35 @@ CString CEncoderJob::TranslateAacProfileToShortString(EAacProfile eAacProfile)
 
 	CString oToReturn;
 	oToReturn.Format(iStringId);
+	return oToReturn;
+}
+
+CString CEncoderJob::TranslateMpegVersionToShortString(EMpegVersion eMpegVersion)
+{
+	int iStringId;
+	switch (eMpegVersion)
+	{
+	case eMpegVersion2:
+		{
+			iStringId=IDS_MpegVersion2;
+			break;
+		}
+	case eMpegVersion4:
+		{
+			iStringId=IDS_MpegVersion4;
+			break;
+		}
+	default:
+		{
+			// unknown mpeg version
+			ASSERT(false);
+			iStringId=0;
+			break;
+		}
+	}
+
+	CString oToReturn;
+	oToReturn.LoadString(iStringId);
 	return oToReturn;
 }
 
@@ -609,6 +659,7 @@ CEncoderQualityPropertyPageContents CEncoderJob::GetQualityPageContents() const
 	oToReturn.m_oUseLtp.SetCheckMark(GetUseLtp());
 	oToReturn.m_oUseLfe.SetCheckMark(GetUseLfe());
 	oToReturn.m_oAacProfile.SetContent(GetAacProfileL(), true);
+	oToReturn.m_oMpegVersion.SetContent(GetMpegVersionL(), true);
 
 	return oToReturn;
 }
@@ -627,6 +678,9 @@ void CEncoderJob::ApplyQualityPageContents(const CEncoderQualityPropertyPageCont
 	long lTemp=GetAacProfileL();
 	bModified=bModified || oPageContents.m_oAacProfile.ApplyToJob(lTemp);
 	SetAacProfile(lTemp);
+	lTemp=GetMpegVersionL();
+	bModified=bModified || oPageContents.m_oMpegVersion.ApplyToJob(lTemp);
+	SetMpegVersion(lTemp);
 
 	// when the job has been modified reset it to "unprocessed" state
 	if (bModified)

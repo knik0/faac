@@ -36,6 +36,7 @@ public:
 	CString	m_oEditBandwidth;
 	CString	m_oEditBitRate;
 	int		m_iRadioAacProfile;
+	int		m_iRadioMpegVersion;
 	//}}AFX_DATA
 
 
@@ -68,6 +69,9 @@ protected:
 	afx_msg void OnRadioAacProfileLc();
 	afx_msg void OnRadioAacProfileMain();
 	afx_msg void OnRadioAacProfileSsr();
+	afx_msg void OnRadioAacProfileLtp();
+	afx_msg void OnRadioMpegVersion2();
+	afx_msg void OnRadioMpegVersion4();
 	//}}AFX_MSG
 	DECLARE_MESSAGE_MAP()
 

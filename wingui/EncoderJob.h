@@ -28,11 +28,18 @@ public:
 	CEncoderJob(const CEncoderJob &oSource);		// copy constructor
 	virtual ~CEncoderJob();
 
+	enum EMpegVersion
+	{
+		eMpegVersion2=0,
+		eMpegVersion4=1
+	};
+
 	enum EAacProfile
 	{
-		eAacProfileLc=0,			// the values of the enumerated constants
-		eAacProfileMain=1,			// must reflect the order of the radio
+		eAacProfileMain=0,			// the values of the enumerated constants
+		eAacProfileLc=1,			// must reflect the order of the radio
 		eAacProfileSsr=2,			// controls on the property page, starting with 0
+		eAacProfileLtp=3
 	};
 
 	// property getters
@@ -53,6 +60,8 @@ public:
 	long GetBitRateL() const											{ return (long)m_ulBitRate; }
 	unsigned long GetBandwidth() const									{ return m_ulBandwidth; }
 	long GetBandwidthL() const											{ return (long)m_ulBandwidth; }
+	EMpegVersion GetMpegVersion() const									{ return m_eMpegVersion; }
+	long GetMpegVersionL() const										{ return m_eMpegVersion; }
 					
 	// property setters
 	void SetFiles(const CSourceTargetFilePair &oFiles)					{ m_oFiles=oFiles; }
@@ -68,6 +77,8 @@ public:
 	void SetBitRate(long lBitRate)										{ ASSERT(lBitRate>=0); m_ulBitRate=(unsigned long)lBitRate; }
 	void SetBandwidth(unsigned long ulBandwidth)						{ m_ulBandwidth=ulBandwidth; }
 	void SetBandwidth(long lBandwidth)									{ ASSERT(lBandwidth>=0); m_ulBandwidth=lBandwidth; }
+	void SetMpegVersion(EMpegVersion eMpegVersion)						{ m_eMpegVersion = eMpegVersion; }
+	void SetMpegVersion(long lMpegVersion)								{ m_eMpegVersion = (EMpegVersion)lMpegVersion; }
 
 	// no more up to date (also had to call base class version at least)
 	// CEncoderJob& operator=(const CEncoderJob &oRight);
@@ -95,6 +106,7 @@ public:
 	virtual bool GetFromArchive(CArchive &oArchive);
 
 	static CString TranslateAacProfileToShortString(EAacProfile eAacProfile);
+	static CString TranslateMpegVersionToShortString(EMpegVersion eMpegVersion);
 
 	// when <this> is an encoder job with a filter as source file this method expands
 	// this job to a list of single jobs to process;
@@ -110,6 +122,9 @@ private:
 	CSourceTargetFilePair m_oFiles;
 	bool m_bSourceFileFilterIsRecursive;
 	CId3TagInfo m_oTargetFileId3Info;
+
+	// MPEG version
+	EMpegVersion m_eMpegVersion;
 
 	/* AAC profile */
 	EAacProfile m_eAacProfile;

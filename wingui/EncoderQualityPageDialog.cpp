@@ -29,7 +29,8 @@ CEncoderQualityPageDialog::CEncoderQualityPageDialog(
 	//{{AFX_DATA_INIT(CEncoderQualityPageDialog)
 	m_oEditBandwidth = _T("");
 	m_oEditBitRate = _T("");
-	m_iRadioAacProfile = -1;
+	m_iRadioAacProfile = 1;
+	m_iRadioMpegVersion = 0;
 	//}}AFX_DATA_INIT
 
 	Create(CEncoderQualityPageDialog::IDD, pParent);
@@ -53,7 +54,8 @@ void CEncoderQualityPageDialog::DoDataExchange(CDataExchange* pDX)
 	DDX_Control(pDX, IDC_CHECKMIDSIDE, m_ctrlCheckMidSide);
 	DDX_Text(pDX, IDC_EDITBANDWIDTH, m_oEditBandwidth);
 	DDX_Text(pDX, IDC_EDITBITRATE, m_oEditBitRate);
-	DDX_Radio(pDX, IDC_RADIOAACPROFILELC, m_iRadioAacProfile);
+	DDX_Radio(pDX, IDC_RADIOMPEGVERSION2, m_iRadioMpegVersion);
+	DDX_Radio(pDX, IDC_RADIOAACPROFILEMAIN, m_iRadioAacProfile);
 	//}}AFX_DATA_MAP
 }
 
@@ -71,6 +73,9 @@ BEGIN_MESSAGE_MAP(CEncoderQualityPageDialog, CDialog)
 	ON_BN_CLICKED(IDC_RADIOAACPROFILELC, OnRadioAacProfileLc)
 	ON_BN_CLICKED(IDC_RADIOAACPROFILEMAIN, OnRadioAacProfileMain)
 	ON_BN_CLICKED(IDC_RADIOAACPROFILESSR, OnRadioAacProfileSsr)
+	ON_BN_CLICKED(IDC_RADIOAACPROFILELTP, OnRadioAacProfileLtp)
+	ON_BN_CLICKED(IDC_RADIOMPEGVERSION2, OnRadioMpegVersion2)
+	ON_BN_CLICKED(IDC_RADIOMPEGVERSION4, OnRadioMpegVersion4)
 	//}}AFX_MSG_MAP
 END_MESSAGE_MAP()
 
@@ -86,7 +91,10 @@ BOOL CEncoderQualityPageDialog::OnInitDialog()
 
 	// show our contents
 	ApplyPageContents(ParseJobs());
-	
+
+	if (IsDlgButtonChecked(IDC_RADIOMPEGVERSION2) == BST_CHECKED)
+		::EnableWindow(::GetDlgItem(m_hWnd, IDC_RADIOAACPROFILELTP), FALSE);
+
 	return TRUE;  // return TRUE unless you set the focus to a control
 	              // EXCEPTION: OCX Property Pages should return FALSE
 }
@@ -124,7 +132,8 @@ bool CEncoderQualityPageDialog::GetPageContents(CEncoderQualityPropertyPageConte
 	oTarget.m_oUseTns.SetCheckCode(m_ctrlCheckUseTns.GetCheck());
 	oTarget.m_oUseLtp.SetCheckCode(m_ctrlCheckUseLtp.GetCheck());
 	oTarget.m_oUseLfe.SetCheckCode(m_ctrlCheckUseLfe.GetCheck());
-	oTarget.m_oAacProfile.GetFromRadioGroupVariable(m_iRadioAacProfile, 3);
+	oTarget.m_oAacProfile.GetFromRadioGroupVariable(m_iRadioAacProfile, 4);
+	oTarget.m_oMpegVersion.GetFromRadioGroupVariable(m_iRadioMpegVersion, 2);
 
 	return true;
 }
@@ -141,6 +150,7 @@ void CEncoderQualityPageDialog::ApplyPageContents(const CEncoderQualityPropertyP
 	oPageContents.m_oUseLtp.ApplyCheckCodeToButton(&m_ctrlCheckUseLtp);
 	oPageContents.m_oUseLfe.ApplyCheckCodeToButton(&m_ctrlCheckUseLfe);
 	oPageContents.m_oAacProfile.ApplyToRadioGroupVariable(m_iRadioAacProfile);
+	oPageContents.m_oMpegVersion.ApplyToRadioGroupVariable(m_iRadioMpegVersion);
 
 	if (m_bInitialized)
 	{
@@ -352,3 +362,27 @@ void CEncoderQualityPageDialog::OnRadioAacProfileSsr()
 	UpdateJobs();
 }
 
+void CEncoderQualityPageDialog::OnRadioAacProfileLtp() 
+{
+	// TODO: Add your control notification handler code here
+	UpdateJobs();
+}
+
+void CEncoderQualityPageDialog::OnRadioMpegVersion2() 
+{
+	// LTP option is unavailable
+	if (IsDlgButtonChecked(IDC_RADIOAACPROFILELTP) == BST_CHECKED)
+	{
+		CheckDlgButton(IDC_RADIOAACPROFILELTP, BST_UNCHECKED);
+		CheckDlgButton(IDC_RADIOAACPROFILELC, BST_CHECKED);
+	}
+	::EnableWindow(::GetDlgItem(m_hWnd, IDC_RADIOAACPROFILELTP), FALSE);
+	UpdateJobs();
+}
+
+void CEncoderQualityPageDialog::OnRadioMpegVersion4()
+{
+	// LTP option is available
+	::EnableWindow(::GetDlgItem(m_hWnd, IDC_RADIOAACPROFILELTP), TRUE);
+	UpdateJobs();
+}

@@ -71,6 +71,9 @@
 #define IDS_ErrorCreatingTargetDiretory 155
 #define IDS_InvalidTargetDirectory      156
 #define IDS_HadUnsuccessfulJobs         157
+#define IDS_AacProfileLtp               158
+#define IDS_MpegVersion2                159
+#define IDS_MpegVersion4                160
 #define IDC_LISTJOBS                    1000
 #define IDC_BUTTONADDENCODERJOB         1001
 #define IDC_TAB1                        1002
@@ -116,6 +119,7 @@
 #define IDC_RADIOAACPROFILESSR          1047
 #define IDC_BUTTON1                     1048
 #define IDC_BUTTONSAVEJOBLIST           1049
+#define IDC_RADIOAACPROFILELTP          1049
 #define IDC_BUTTONLOADJOBLIST           1050
 #define IDC_BUTTONDUPLICATESELECTED     1051
 #define IDC_CHECKRECURSIVE              1052
@@ -130,6 +134,8 @@
 #define IDC_BUTTONNEVER                 1061
 #define IDC_BUTTONADDFILTERENCODERJOB   1062
 #define IDC_BUTTONADDEMPTYENCODERJOB    1063
+#define IDC_RADIOMPEGVERSION2           1064
+#define IDC_RADIOMPEGVERSION4           1065
 #define ID_BUTTON32771                  32771
 #define ID_BUTTON32772                  32772
 #define ID_BUTTON32773                  32773
@@ -141,7 +147,7 @@
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NEXT_RESOURCE_VALUE        140
 #define _APS_NEXT_COMMAND_VALUE         32775
-#define _APS_NEXT_CONTROL_VALUE         1064
+#define _APS_NEXT_CONTROL_VALUE         1065
 #define _APS_NEXT_SYMED_VALUE           101
 #endif
 #endif

@@ -67,6 +67,18 @@ END
 // Icon with lowest ID value placed first to ensure application icon
 // remains consistent on all systems.
 IDR_MAINFRAME           ICON    DISCARDABLE     "res\\faac_wingui.ico"
+#endif    // German (Germany) resources
+/////////////////////////////////////////////////////////////////////////////
+
+
+/////////////////////////////////////////////////////////////////////////////
+// English (U.S.) resources
+
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_ENU)
+#ifdef _WIN32
+LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
+#pragma code_page(1252)
+#endif //_WIN32
 
 /////////////////////////////////////////////////////////////////////////////
 //
@@ -98,71 +110,27 @@ BEGIN
                     BS_AUTOCHECKBOX | WS_TABSTOP,24,49,63,10
     CONTROL         "Use TNS",IDC_CHECKUSETNS,"Button",BS_AUTOCHECKBOX | 
                     WS_TABSTOP,24,60,45,10
-    CONTROL         "Use LTP",IDC_CHECKUSELTP,"Button",BS_AUTOCHECKBOX | 
-                    WS_TABSTOP,24,72,44,10
+    CONTROL         "Use LTP",IDC_CHECKUSELTP,"Button",BS_AUTOCHECKBOX | NOT 
+                    WS_VISIBLE | WS_DISABLED | WS_TABSTOP,24,72,44,10
     CONTROL         "Use LFE",IDC_CHECKUSELFE,"Button",BS_AUTOCHECKBOX | 
                     WS_DISABLED | WS_TABSTOP,24,83,43,10
-    GROUPBOX        "AAC Profile",IDC_STATIC,133,46,59,48
-    CONTROL         "LC",IDC_RADIOAACPROFILELC,"Button",BS_AUTORADIOBUTTON | 
-                    WS_GROUP | WS_TABSTOP,142,58,25,10
-    CONTROL         "Main LTP",IDC_RADIOAACPROFILEMAIN,"Button",
-                    BS_AUTORADIOBUTTON,142,69,47,10
+    GROUPBOX        "MPEG",IDC_STATIC,142,5,68,35
+    CONTROL         "Version 2",IDC_RADIOMPEGVERSION2,"Button",
+                    BS_AUTORADIOBUTTON | WS_GROUP | WS_TABSTOP,152,15,45,10
+    CONTROL         "Version 4",IDC_RADIOMPEGVERSION4,"Button",
+                    BS_AUTORADIOBUTTON,152,26,45,10
+    GROUPBOX        "AAC Object Type",IDC_STATIC,142,45,68,59,WS_GROUP
+    CONTROL         "Main",IDC_RADIOAACPROFILEMAIN,"Button",
+                    BS_AUTORADIOBUTTON | WS_GROUP | WS_TABSTOP,152,57,31,10
+    CONTROL         "LC",IDC_RADIOAACPROFILELC,"Button",BS_AUTORADIOBUTTON,
+                    152,68,25,10
     CONTROL         "SSR",IDC_RADIOAACPROFILESSR,"Button",BS_AUTORADIOBUTTON | 
-                    WS_DISABLED,142,79,31,10
+                    WS_DISABLED,152,79,31,10
+    CONTROL         "LTP",IDC_RADIOAACPROFILELTP,"Button",BS_AUTORADIOBUTTON,
+                    152,89,29,10
     DEFPUSHBUTTON   "Enter Attractor",IDC_BUTTON1,198,112,50,14,NOT 
                     WS_VISIBLE
 END
-
-
-/////////////////////////////////////////////////////////////////////////////
-//
-// DESIGNINFO
-//
-
-#ifdef APSTUDIO_INVOKED
-GUIDELINES DESIGNINFO DISCARDABLE 
-BEGIN
-    IDD_PROPERTIESDUMMYPARENTDIALOG, DIALOG
-    BEGIN
-        VERTGUIDE, 10
-        VERTGUIDE, 169
-    END
-
-    IDD_ENCODERQUALITYPAGEDIALOG, DIALOG
-    BEGIN
-        LEFTMARGIN, 5
-        RIGHTMARGIN, 248
-        VERTGUIDE, 24
-        VERTGUIDE, 64
-        VERTGUIDE, 116
-        VERTGUIDE, 119
-        VERTGUIDE, 142
-        TOPMARGIN, 5
-        BOTTOMMARGIN, 126
-        HORZGUIDE, 14
-        HORZGUIDE, 32
-        HORZGUIDE, 49
-    END
-END
-#endif    // APSTUDIO_INVOKED
-
-#endif    // German (Germany) resources
-/////////////////////////////////////////////////////////////////////////////
-
-
-/////////////////////////////////////////////////////////////////////////////
-// English (U.S.) resources
-
-#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_ENU)
-#ifdef _WIN32
-LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
-#pragma code_page(1252)
-#endif //_WIN32
-
-/////////////////////////////////////////////////////////////////////////////
-//
-// Dialog
-//
 
 IDD_ABOUTBOX DIALOG DISCARDABLE  0, 0, 244, 66
 STYLE DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
@@ -185,12 +153,12 @@ STYLE DS_MODALFRAME | WS_MINIMIZEBOX | WS_POPUP | WS_VISIBLE | WS_CAPTION |
     WS_SYSMENU
 EXSTYLE WS_EX_APPWINDOW
 CAPTION "winfaac"
-FONT 8, "MS Sans Serif", 0, 0, 0x1
+FONT 8, "MS Sans Serif"
 BEGIN
     DEFPUSHBUTTON   "Bye",IDOK,422,216,50,14
     CONTROL         "List1",IDC_LISTJOBS,"SysListView32",LVS_REPORT | 
-                    LVS_SHOWSELALWAYS | LVS_NOSORTHEADER | WS_BORDER | 
-                    WS_TABSTOP,7,7,465,167
+                    LVS_SINGLESEL | LVS_SHOWSELALWAYS | LVS_NOSORTHEADER | 
+                    WS_BORDER | WS_TABSTOP,7,7,465,167
     PUSHBUTTON      "&Add File Encoder Jobs...",IDC_BUTTONADDENCODERJOB,7,
                     180,104,14
     PUSHBUTTON      "&Delete Selection",IDC_BUTTONDELETEJOBS,117,198,63,14
@@ -199,8 +167,10 @@ BEGIN
     CONTROL         "Remove Processed Jobs From List",
                     IDC_CHECKREMOVEPROCESSEDJOBS,"Button",BS_AUTOCHECKBOX | 
                     WS_TABSTOP,249,215,125,10
-    PUSHBUTTON      "&Save Joblist...",IDC_BUTTONSAVEJOBLIST,359,180,54,14
-    PUSHBUTTON      "&Load Joblist...",IDC_BUTTONLOADJOBLIST,418,180,54,14
+    PUSHBUTTON      "&Save Joblist...",IDC_BUTTONSAVEJOBLIST,359,180,54,14,
+                    WS_DISABLED
+    PUSHBUTTON      "&Load Joblist...",IDC_BUTTONLOADJOBLIST,418,180,54,14,
+                    WS_DISABLED
     PUSHBUTTON      "D&uplicate Selection",IDC_BUTTONDUPLICATESELECTED,117,
                     216,69,14
     PUSHBUTTON      "Pro&cess All",IDC_BUTTONPROCESSALL,249,180,50,14
@@ -329,6 +299,28 @@ END
 #ifdef APSTUDIO_INVOKED
 GUIDELINES DESIGNINFO DISCARDABLE 
 BEGIN
+    IDD_PROPERTIESDUMMYPARENTDIALOG, DIALOG
+    BEGIN
+        VERTGUIDE, 10
+        VERTGUIDE, 169
+    END
+
+    IDD_ENCODERQUALITYPAGEDIALOG, DIALOG
+    BEGIN
+        LEFTMARGIN, 5
+        RIGHTMARGIN, 248
+        VERTGUIDE, 24
+        VERTGUIDE, 64
+        VERTGUIDE, 116
+        VERTGUIDE, 119
+        VERTGUIDE, 142
+        TOPMARGIN, 5
+        BOTTOMMARGIN, 126
+        HORZGUIDE, 14
+        HORZGUIDE, 32
+        HORZGUIDE, 49
+    END
+
     IDD_ABOUTBOX, DIALOG
     BEGIN
         LEFTMARGIN, 7
@@ -838,10 +830,10 @@ END
 STRINGTABLE DISCARDABLE 
 BEGIN
     IDS_AacProfileLc        "LC"
-    IDS_AacProfileMain      "Main LTP"
+    IDS_AacProfileMain      "Main"
     IDS_AacProfileSsr       "Ssr"
     IDS_DetailedEncoderJobDescriptionString 
-                            "%s -> %s\nProfile: %s\nParameters: %d bit/s - %d Hz"
+                            "%s -> %s\nProfile: %s - %s\nParameters: %d bit/s - %d Hz"
     IDS_JobListFileFilter   "Job List File (*.jbl)|*.jbl"
     IDS_JobListStandardExtension "jbl"
     IDS_ErrorWhileSavingJobList "Error while saving joblist."
@@ -878,6 +870,13 @@ BEGIN
     IDS_ErrorCreatingTargetDiretory "Error creating target directory"
     IDS_InvalidTargetDirectory "Invalid target directory!"
     IDS_HadUnsuccessfulJobs "There have been problems during job list processing. Refer to list column ""Last Processed"" for further information."
+    IDS_AacProfileLtp       "LTP"
+    IDS_MpegVersion2        "MPEG-2"
+END
+
+STRINGTABLE DISCARDABLE 
+BEGIN
+    IDS_MpegVersion4        "MPEG-4"
 END
 
 #endif    // English (U.S.) resources

@@ -32,6 +32,7 @@ public:
 	CPageCheckboxCtrlContent m_oUseLtp;
 	CPageCheckboxCtrlContent m_oUseLfe;
 	CPageRadioGroupCtrlContent m_oAacProfile;
+	CPageRadioGroupCtrlContent m_oMpegVersion;
 
 	// with this operator pages for several jobs can be "merged"
 	CEncoderQualityPropertyPageContents& operator*=(const CEncoderQualityPropertyPageContents &oRight);

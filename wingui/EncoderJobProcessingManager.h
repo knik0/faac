@@ -54,6 +54,7 @@ private:
 	void WriteProgress(long lOperationStartTickCount, long lMaxSteps, long lCurSteps);
 
 	static int GetAacProfileConstant(CEncoderJob::EAacProfile eAacProfile);
+	static int GetMpegVersionConstant(CEncoderJob::EMpegVersion eMpegVersion);
 
 	// opens an archive that writes in the specified file, 0 in
 	// case of errors;

@@ -267,11 +267,12 @@ bool CEncoderJobProcessingManager::DoProcessing()
 			pEncConfig->useLfe = poJob->GetUseLfe() ? 1 : 0;
 			pEncConfig->bitRate = poJob->GetBitRate();
 			pEncConfig->bandWidth = poJob->GetBandwidth();
+			pEncConfig->mpegVersion = GetMpegVersionConstant(poJob->GetMpegVersion());
 			pEncConfig->aacObjectType = GetAacProfileConstant(poJob->GetAacProfile());
 
 			/* temp fix for MPEG4 LTP object type */
-			if (pEncConfig->aacObjectType == 1)
-				pEncConfig->aacObjectType = 3;
+//			if (pEncConfig->aacObjectType == 1)
+//				pEncConfig->aacObjectType = 3;
 
 			if (!faacEncSetConfiguration(hEncoder, pEncConfig))
 			{
@@ -419,18 +420,35 @@ int CEncoderJobProcessingManager::GetAacProfileConstant(CEncoderJob::EAacProfile
 		{
 			return LOW;
 		}
-	default:
-		{
-			ASSERT(false);
-		}
 	case CEncoderJob::eAacProfileMain:
 		{
-			return LTP;
+			return MAIN;
 		}
 	case CEncoderJob::eAacProfileSsr:
 		{
 			return SSR;
 		}
+	case CEncoderJob::eAacProfileLtp:
+		{
+			return LTP;
+		}
+	default:
+		{
+			ASSERT(false);
+		}
+	}
+}
+
+int CEncoderJobProcessingManager::GetMpegVersionConstant(CEncoderJob::EMpegVersion eMpegVersion)
+{
+	switch (eMpegVersion)
+	{
+	case CEncoderJob::eMpegVersion2:
+		return MPEG2;
+	case CEncoderJob::eMpegVersion4:
+		return MPEG4;
+	default:
+		ASSERT(false);
 	}
 }
 
