@@ -31,7 +31,7 @@ ntnfrn_email-temp@yahoo.it
 
 #include <commctrl.h>
 #include <id3v2tag.h>
-//#include <id3\globals.h> // ID3LIB_RELEASE
+#include <..\..\common\id3lib\win32\config.h> // ID3LIB_FULLNAME
 
 // *********************************************************************************************
 
@@ -211,13 +211,12 @@ BOOL DialogMsgProcAbout(HWND hWndDlg, UINT Message, WPARAM wParam, LPARAM lParam
 					"\tlibfaac v%s\n"
 					"\tFAAD2 v" FAAD2_VERSION "\n"
 					"\t" MPEG4IP_PACKAGE " v" MPEG4IP_VERSION "\n"
-					"\tid3v2 \n\n" //"\t %s v %s \n\n"
+					"\t" ID3LIB_FULLNAME "\n\n"
 					"This code is given with FAAC package and does not contain executables.\n"
 					"This program is free software and can be distributed/modifyed under the terms of the GNU General Public License.\n"
 					"This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY.\n\n"
 					"Compiled on %s\n",
 				(faacEncGetVersion(&faac_id_string, &faac_copyright_string)==FAAC_CFG_VERSION) ? faac_id_string : " wrong libfaac version",
-//					ID3LIB_FULL_NAME, ID3LIB_RELEASE,
 					__DATE__
 					);
 			SetDlgItemText(hWndDlg, IDC_L_ABOUT, buf);

@@ -295,7 +295,7 @@ IDI_ID3                 ICON                    "id3v2.ico"
 //
 
 VS_VERSION_INFO VERSIONINFO
- FILEVERSION 1,0,0,0
+ FILEVERSION 1,3,0,0
  PRODUCTVERSION 1,0,0,0
  FILEFLAGSMASK 0x17L
 #ifdef _DEBUG
@@ -311,8 +311,8 @@ BEGIN
     BEGIN
         BLOCK "041004b0"
         BEGIN
-            VALUE "FileDescription", "FAAC plugin"
-            VALUE "FileVersion", "1, 0, 0, 0"
+            VALUE "FileDescription", "CFAAC"
+            VALUE "FileVersion", "1, 3, 0, 0"
             VALUE "InternalName", "FAAC"
             VALUE "LegalCopyright", "Copyright (C) 2004"
             VALUE "OriginalFilename", "FAAC.dll"

@@ -20,7 +20,7 @@ ntnfrn_email-temp@yahoo.it
 */
 
 #define APP_NAME "MPEG4-AAC encoder"
-#define APP_VER "v1.6"
+#define APP_VER "v1.7"
 #define REGISTRY_PROGRAM_NAME "SOFTWARE\\4N\\Winamp\\Out_AAC"
 
 #define USE_OUTPUT_FOLDER

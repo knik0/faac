@@ -20,7 +20,7 @@ ntnfrn_email-temp@yahoo.it
 */
 
 #define APP_NAME "MPEG4-AAC"
-#define APP_VER "v2.5"
+#define APP_VER "v2.6"
 #define REGISTRY_PROGRAM_NAME "SOFTWARE\\4N\\CoolEdit\\AAC-MPEG4"
 
 //#define USE_OUTPUT_FOLDER
