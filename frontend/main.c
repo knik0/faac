@@ -16,7 +16,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: main.c,v 1.28 2002/08/30 16:20:45 knik Exp $
+ * $Id: main.c,v 1.29 2002/11/23 17:34:59 knik Exp $
  */
 
 #ifdef _WIN32
@@ -32,12 +32,18 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <ctype.h>
+#include <math.h>
 
-#include <sndfile.h>
-#include <getopt.h>
+#ifdef HAVE_GETOPT_H
+# include <getopt.h>
+#else
+# include "getopt.h"
+# include "getopt.c"
+#endif
 
 #include <faac.h>
 
+#include "input.h"
 
 #ifndef min
 #define min(a,b) ( (a) < (b) ? (a) : (b) )
@@ -65,8 +71,7 @@ int main(int argc, char *argv[])
 {
     int frames, currentFrame;
     faacEncHandle hEncoder;
-    SNDFILE *infile;
-    SF_INFO sfinfo;
+    pcmfile_t *infile;
 
     unsigned int sr, chan;
     unsigned long samplesInput, maxBytesOutput;
@@ -80,6 +85,8 @@ int main(int argc, char *argv[])
     int cutOff = -1;
     unsigned long bitRate = 0;
     int psymodelidx = -1;
+    const double bwbrfac = 1.3;
+    const int bwdefault = 16000;
 
     char *audioFileName;
     char *aacFileName;
@@ -230,7 +237,7 @@ int main(int argc, char *argv[])
     aacFileName = argv[optind++];
 
     /* open the audio input file */
-    infile = sf_open_read(audioFileName, &sfinfo);
+    infile = wav_open_read(audioFileName);
     if (infile == NULL)
     {
         fprintf(stderr, "Couldn't open input file %s\n", audioFileName);
@@ -246,8 +253,8 @@ int main(int argc, char *argv[])
     }
 
     /* determine input file parameters */
-    sr = sfinfo.samplerate;
-    chan = sfinfo.channels;
+    sr = infile->samplerate;
+    chan = infile->channels;
 
     /* open the encoder library */
     hEncoder = faacEncOpen(sr, chan, &samplesInput, &maxBytesOutput);
@@ -257,14 +264,15 @@ int main(int argc, char *argv[])
 
     if (!bitRate)
     {
-      bitRate = ((sr * 2) / 1000) * 1000;
+      bitRate = pow((double)(sr / 2) / bwdefault, 1.0 / bwbrfac) * 64000;
+      bitRate = ((bitRate + 500) / 500) * 500;
       if (bitRate > 64000)
 	bitRate = 64000;
     }
     if (cutOff <= 0)
     {
       if (cutOff < 0) // default
-	cutOff = bitRate / 4;
+	cutOff = pow((double)bitRate / 64000, bwbrfac) * bwdefault;
       else // disabled
 	cutOff = sr / 2;
     }
@@ -299,7 +307,7 @@ int main(int argc, char *argv[])
 #ifdef _WIN32
 	long begin = GetTickCount();
 #endif
-	frames = (int)sfinfo.samples / 1024 + 2;
+	frames = (int)infile->samples / 1024 + 2;
         currentFrame = 0;
 
 	fprintf(stderr, "Encoding %s\n", audioFileName);
@@ -310,7 +318,7 @@ int main(int argc, char *argv[])
         {
             int bytesWritten;
 
-            bytesInput = sf_read_short(infile, pcmbuf, samplesInput) * sizeof(short);
+            bytesInput = wav_read_short(infile, pcmbuf, samplesInput) * sizeof(short);
 
             /* call the actual encoding routine */
             bytesWritten = faacEncEncode(hEncoder,
@@ -388,7 +396,7 @@ int main(int argc, char *argv[])
 
     faacEncClose(hEncoder);
 
-    sf_close(infile);
+    wav_close(infile);
 
     if (pcmbuf) free(pcmbuf);
     if (bitbuf) free(bitbuf);
@@ -398,6 +406,10 @@ int main(int argc, char *argv[])
 
 /*
 $Log: main.c,v $
+Revision 1.29  2002/11/23 17:34:59  knik
+replaced libsndfile with input.c
+improved bandwidth/bitrate calculation formula
+
 Revision 1.28  2002/08/30 16:20:45  knik
 misplaced #endif
 
