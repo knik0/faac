@@ -138,13 +138,13 @@ void CRegistry::DeleteKey(char *SubKey)
 //************************************************************************************************
 //************************************************************************************************
 
-void CRegistry::SetBool(char *keyStr, BOOL val)
+void CRegistry::SetBool(char *keyStr, bool val)
 {
-BOOL tempVal;
-DWORD len;
+bool tempVal;
+DWORD len=sizeof(bool);
 	if(RegQueryValueEx(regKey, keyStr, NULL, NULL, (BYTE *)&tempVal, &len )!=ERROR_SUCCESS ||
 		tempVal!=val)
-		RegSetValueEx(regKey, keyStr, 0, REG_BINARY, (BYTE *)&val, sizeof(BOOL));
+		RegSetValueEx(regKey, keyStr, 0, REG_BINARY, (BYTE *)&val, sizeof(bool));
 }
 //************************************************************************************************
 

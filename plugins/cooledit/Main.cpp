@@ -28,7 +28,7 @@ ntnfrn_email-temp@yahoo.it
 // Plugins of CoolEdit can be unloaded between each call of its exported funcs,
 // that's why no global variables can be used
 
-HINSTANCE hInst=NULL;
+HINSTANCE hInstance=NULL;
 HBITMAP hBmBrowse=NULL;
 
 BOOL WINAPI DllMain (HANDLE hModule, DWORD fdwReason, LPVOID lpReserved)
@@ -36,9 +36,9 @@ BOOL WINAPI DllMain (HANDLE hModule, DWORD fdwReason, LPVOID lpReserved)
 	switch (fdwReason)
 	{
 	case DLL_PROCESS_ATTACH:
-		hInst=(HINSTANCE)hModule;
+		hInstance=(HINSTANCE)hModule;
 		if(!hBmBrowse)
-			hBmBrowse=(HBITMAP)LoadImage(hInst,MAKEINTRESOURCE(IDB_BROWSE),IMAGE_BITMAP,0,0,/*LR_CREATEDIBSECTION|*/LR_LOADTRANSPARENT|LR_LOADMAP3DCOLORS);
+			hBmBrowse=(HBITMAP)LoadImage(hInstance,MAKEINTRESOURCE(IDB_BROWSE),IMAGE_BITMAP,0,0,/*LR_CREATEDIBSECTION|*/LR_LOADTRANSPARENT|LR_LOADMAP3DCOLORS);
         /*	Code from LibMain inserted here.  Return TRUE to keep the
 			DLL loaded or return FALSE to fail loading the DLL.
 
@@ -80,7 +80,7 @@ BOOL WINAPI DllMain (HANDLE hModule, DWORD fdwReason, LPVOID lpReserved)
 			LibMain) not be necessary.  Check to make certain that the
 			operating system is not doing it for you.
 			*/
-		hInst=NULL;
+		hInstance=NULL;
 		if(hBmBrowse)
 		{
             DeleteObject(hBmBrowse);
@@ -102,6 +102,7 @@ short FAR PASCAL QueryCoolFilter(COOLQUERY far * cq)
 	lstrcpy(cq->szCopyright, APP_NAME " codec");
 	lstrcpy(cq->szExt,"AAC");
 	lstrcpy(cq->szExt2,"MP4"); 
+	lstrcpy(cq->szExt3,"M4A"); 
 	cq->lChunkSize=16384; 
 	cq->dwFlags=QF_RATEADJUSTABLE|QF_CANLOAD|QF_CANSAVE|QF_HASOPTIONSBOX|QF_CANDO32BITFLOATS;
  	cq->Mono8=R_5500|R_11025|R_22050|R_32075|R_44100|R_48000;

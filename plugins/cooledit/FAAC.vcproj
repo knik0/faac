@@ -138,10 +138,19 @@
 				RelativePath=".\CRegistry.cpp">
 			</File>
 			<File
+				RelativePath="CTag.cpp">
+			</File>
+			<File
 				RelativePath=".\Cfaac.cpp">
 			</File>
 			<File
 				RelativePath=".\Cfaad.cpp">
+			</File>
+			<File
+				RelativePath="DecDialog.cpp">
+			</File>
+			<File
+				RelativePath="EncDialog.cpp">
 			</File>
 			<File
 				RelativePath=".\FAAC.def">
@@ -166,13 +175,22 @@
 				RelativePath=".\CRegistry.h">
 			</File>
 			<File
+				RelativePath="CTag.h">
+			</File>
+			<File
 				RelativePath=".\Cfaac.h">
 			</File>
 			<File
 				RelativePath=".\Cfaad.h">
 			</File>
 			<File
+				RelativePath="DecDialog.h">
+			</File>
+			<File
 				RelativePath=".\Defines.h">
+			</File>
+			<File
+				RelativePath="EncDialog.h">
 			</File>
 			<File
 				RelativePath=".\Filters.h">
@@ -201,6 +219,9 @@
 			</File>
 			<File
 				RelativePath="Open.bmp">
+			</File>
+			<File
+				RelativePath="id3v2.ico">
 			</File>
 			<File
 				RelativePath=".\mpeg4ip-v.bmp">

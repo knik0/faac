@@ -29,6 +29,9 @@ ntnfrn_email-temp@yahoo.it
 
 Cfaad::Cfaad(HANDLE hIn)
 {
+	ShowDlg4RawAAC=NULL;
+	pCfg=NULL;
+
 	if(hIn)
 	{
 		hInput=hIn;
@@ -48,11 +51,11 @@ MYINPUT *mi;
     mi->buffer=0;
 	mi->bytes_read=0;*/
 	mi->BitsPerSample=16;
-//	newpos_ms=-1;
-//	seek_table=0;
-//	seek_table_length=0;
 	mi->FindBitrate=FALSE;
-//	BlockSeeking=false;
+	newpos_ms=-1;
+	mi->seek_table=NULL;
+	mi->seek_table_length=0;
+	mi->LockSeeking=false;
 	GlobalUnlock(hInput);
 }
 // -----------------------------------------------------------------------------------------------
@@ -73,7 +76,7 @@ MYINPUT *mi;
 	if(mi->hDecoder)
 		faacDecClose(mi->hDecoder);
 	FREE_ARRAY(mi->buffer);
-//	FREE_ARRAY(mi->seek_table);
+	FREE_ARRAY(mi->seek_table);
 
 	GlobalUnlock(hInput);
 	GlobalFree(hInput);
@@ -134,13 +137,27 @@ BYTE	header[8];
 	return 0;
 }
 // *********************************************************************************************
+long Cfaad::id3v2_TagSize(unsigned char *buffer)
+{
+	if(StringComp((const char *)buffer, "ID3", 3) == 0)
+	{
+	unsigned long tagsize;
 
+	// high bit is not used
+		tagsize =	(buffer[6] << 21) | (buffer[7] << 14) |
+					(buffer[8] <<  7) | (buffer[9] <<  0);
+		tagsize += 10;
+		return tagsize;
+	}
+	return 0;
+}
+/*
 long Cfaad::id3v2_TagSize(aac_buffer *b)
 {
 DWORD    tagsize = 0;
     if (!memcmp(b->buffer, "ID3", 3))
     {
-        /* high bit is not used */
+        // high bit is not used
         tagsize = (b->buffer[6] << 21) | (b->buffer[7] << 14) |
             (b->buffer[8] <<  7) | (b->buffer[9] <<  0);
 
@@ -215,14 +232,14 @@ int Cfaad::adts_parse(aac_buffer *b, int *bitrate, float *length)
     int samplerate;
     float frames_per_sec, bytes_per_frame;
 
-    /* Read all frames to ensure correct time and bitrate */
-    for (frames = 0; /* */; frames++)
+    // Read all frames to ensure correct time and bitrate
+    for (frames = 0; ; frames++)
     {
         fill_buffer(b);
 
         if (b->bytes_into_buffer > 7)
         {
-            /* check syncword */
+            // check syncword 
             if (!((b->buffer[0] == 0xFF)&&((b->buffer[1] & 0xF6) == 0xF0)))
                 break;
 
@@ -258,11 +275,11 @@ int Cfaad::adts_parse(aac_buffer *b, int *bitrate, float *length)
 }
 // *********************************************************************************************
 
-/* get AAC infos for printing */
+// get AAC infos for printing 
 void Cfaad::GetAACInfos(aac_buffer *b, DWORD *header_type, float *song_length, int *pbitrate, long filesize)
 {
-int		bitrate;
-float	length;
+int		bitrate=0;
+float	length=0;
 int		bread;
 long	tagsize=id3v2_TagSize(b);
 
@@ -306,23 +323,59 @@ long	tagsize=id3v2_TagSize(b);
 	*pbitrate=bitrate;
 }
 
+void Cfaad::GetAACInfos(char *Filename, aac_buffer *b, DWORD *header_type, float *song_length, int *pbitrate)
+{
+	if(!(b->infile=fopen(Filename,"rb")))
+	{
+		MessageBox(NULL,"Error opening file",NULL,MB_OK);
+		return;
+	}
+	fseek(b->infile, 0, SEEK_END);
+long	src_size=ftell(b->infile);
+	fseek(b->infile, 0, SEEK_SET);
+	if(!(b->buffer=(BYTE *)malloc(FAAD_STREAMSIZE)))
+	{
+		MessageBox(NULL,"Memory allocation error: b->buffer",NULL,MB_OK);
+		return;
+	}
+
+int	tread=src_size<FAAD_STREAMSIZE ? src_size : FAAD_STREAMSIZE;
+	b->bytes_into_buffer=fread(b->buffer, 1, tread, b->infile);
+	if(b->bytes_into_buffer!=tread)
+	{
+		MessageBox(NULL,"Read failed!",NULL,MB_OK);
+		return;
+	}
+	b->bytes_consumed=0;
+	b->file_offset=0;
+	b->at_eof=(b->bytes_into_buffer!=tread) ? 1 : 0;
+
+	*header_type = 0;
+	b->file_offset=0;
+
+	GetAACInfos(b,header_type,song_length,pbitrate,src_size);
+
+	free(b->buffer);
+	fclose(b->infile);
+}
+*/
 // *********************************************************************************************
 //									Main functions
 // *********************************************************************************************
 
-void Cfaad::ReadCfgDec(MY_DEC_CFG *cfg) 
+void CMyDecCfg::getCfg(CMyDecCfg *cfg) 
 { 
 CRegistry reg;
 
-if(reg.OpenCreate(HKEY_LOCAL_MACHINE, REGISTRY_PROGRAM_NAME "\\FAAD"))
+if(reg.OpenCreate(HKEY_CURRENT_USER, REGISTRY_PROGRAM_NAME "\\FAAD"))
 	{
-		cfg->DefaultCfg=reg.GetSetBool("Default",true);
-		cfg->DecCfg.defObjectType=reg.GetSetByte("Profile",LC);
-		cfg->DecCfg.defSampleRate=reg.GetSetDword("SampleRate",44100);
-		cfg->DecCfg.outputFormat=reg.GetSetByte("Bps",FAAD_FMT_16BIT);
-		cfg->DecCfg.downMatrix=reg.GetSetByte("Downmatrix",0);
-		cfg->DecCfg.useOldADTSFormat=reg.GetSetByte("Old ADTS",0);
-		cfg->DecCfg.dontUpSampleImplicitSBR=reg.GetSetByte("Don\'t upsample implicit SBR",1);
+		cfg->DefaultCfg=reg.GetSetBool(REG_DEFAULT,true);
+		cfg->DecCfg.defObjectType=reg.GetSetByte(REG_PROFILE,LC);
+		cfg->DecCfg.defSampleRate=reg.GetSetDword(REG_SAMPLERATE,44100);
+		cfg->DecCfg.outputFormat=reg.GetSetByte(REG_BPS,FAAD_FMT_16BIT);
+		cfg->DecCfg.downMatrix=reg.GetSetByte(REG_DOWNMATRIX,0);
+		cfg->DecCfg.useOldADTSFormat=reg.GetSetByte(REG_OLDADTS,0);
+		cfg->DecCfg.dontUpSampleImplicitSBR=reg.GetSetByte(REG_DONTUPSAMPLESBR,1);
 //		cfg->Channels=reg.GetSetByte("Channels",2);
 	}
 	else
@@ -330,19 +383,19 @@ if(reg.OpenCreate(HKEY_LOCAL_MACHINE, REGISTRY_PROGRAM_NAME "\\FAAD"))
 }
 // -----------------------------------------------------------------------------------------------
 
-void Cfaad::WriteCfgDec(MY_DEC_CFG *cfg)
+void CMyDecCfg::setCfg(CMyDecCfg *cfg)
 { 
 CRegistry reg;
 
-	if(reg.OpenCreate(HKEY_LOCAL_MACHINE, REGISTRY_PROGRAM_NAME "\\FAAD"))
+	if(reg.OpenCreate(HKEY_CURRENT_USER, REGISTRY_PROGRAM_NAME "\\FAAD"))
 	{
-		reg.SetBool("Default",cfg->DefaultCfg);
-		reg.SetByte("Profile",cfg->DecCfg.defObjectType);
-		reg.SetDword("SampleRate",cfg->DecCfg.defSampleRate);
-		reg.SetByte("Bps",cfg->DecCfg.outputFormat);
-		reg.SetByte("Downmatrix",cfg->DecCfg.downMatrix);
-		reg.SetByte("Old ADTS",cfg->DecCfg.useOldADTSFormat);
-		reg.SetByte("Don\'t upsample implicit SBR",cfg->DecCfg.dontUpSampleImplicitSBR);
+		reg.SetBool(REG_DEFAULT,cfg->DefaultCfg);
+		reg.SetByte(REG_PROFILE,cfg->DecCfg.defObjectType);
+		reg.SetDword(REG_SAMPLERATE,cfg->DecCfg.defSampleRate);
+		reg.SetByte(REG_BPS,cfg->DecCfg.outputFormat);
+		reg.SetByte(REG_DOWNMATRIX,cfg->DecCfg.downMatrix);
+		reg.SetByte(REG_OLDADTS,cfg->DecCfg.useOldADTSFormat);
+		reg.SetByte(REG_DONTUPSAMPLESBR,cfg->DecCfg.dontUpSampleImplicitSBR);
 //		reg.SetByte("Channels",cfg->Channels);
 	}
 	else
@@ -350,33 +403,39 @@ CRegistry reg;
 }
 // *********************************************************************************************
 
-void Cfaad::setFaadCfg(faacDecHandle hDecoder)
+void Cfaad::setFaadCfg(faacDecHandle hDecoder, CMyDecCfg Cfg)
 {
-faacDecConfigurationPtr	config;
+faacDecConfigurationPtr	config=faacDecGetCurrentConfiguration(hDecoder);
 
-	config=faacDecGetCurrentConfiguration(hDecoder);
-	config->outputFormat = FAAD_FMT_16BIT;
-	config->downMatrix = 0;
-	config->useOldADTSFormat = 0;
-	config->dontUpSampleImplicitSBR = 1;
-	faacDecSetConfiguration(hDecoder, config);
-/*
-	ReadCfgDec(&Cfg);
-	if(!Bitrate4RawAAC)
-		DialogBoxParam((HINSTANCE)hInst,(LPCSTR)MAKEINTRESOURCE(IDD_DECODER),(HWND)hWnd, (DLGPROC)DialogMsgProcDecoder, (DWORD)&Cfg);
-	config=faacDecGetCurrentConfiguration(mi->hDecoder);
-	if(Cfg.DefaultCfg)
+	if(!Cfg.DefaultCfg)
 	{
-		config->defObjectType=mi->file_info.object_type;
-		config->defSampleRate=mi->file_info.sampling_rate;//*lSamprate; // doesn't work!
+		config->defObjectType=Cfg.DecCfg.defObjectType;
+		config->outputFormat=Cfg.DecCfg.outputFormat;
+		config->defSampleRate=Cfg.DecCfg.defSampleRate;
+		config->downMatrix=Cfg.DecCfg.downMatrix;
+		config->useOldADTSFormat=Cfg.DecCfg.useOldADTSFormat;
+		config->dontUpSampleImplicitSBR=1;
 	}
 	else
 	{
-		config->defObjectType=Cfg.DecCfg.defObjectType;
-		config->defSampleRate=Cfg.DecCfg.defSampleRate;
+		config->defObjectType=LC;
+		config->outputFormat=FAAD_FMT_16BIT;
+		config->defSampleRate=44100;
+		config->downMatrix=0;
+		config->useOldADTSFormat=0;
+		config->dontUpSampleImplicitSBR=1;
 	}
-	config->outputFormat=FAAD_FMT_16BIT;
-	faacDecSetConfiguration(mi->hDecoder, config);*/
+	faacDecSetConfiguration(hDecoder, config);
+}
+// -----------------------------------------------------------------------------------------------
+
+void Cfaad::setDefaultFaadCfg(faacDecHandle hDecoder, BOOL showDlg)
+{
+	if(showDlg && ShowDlg4RawAAC)
+		ShowDlg4RawAAC();
+
+CMyDecCfg Cfg(false);
+	setFaadCfg(hDecoder,Cfg);
 }
 // -----------------------------------------------------------------------------------------------
 
@@ -404,7 +463,11 @@ HANDLE Cfaad::getInfos(LPSTR lpstrFilename)
 {
 MYINPUT *mi;
 
-	GLOBALLOCK(mi,hInput,MYINPUT,return 0);
+// test tags
+//CMyDecCfg cfg;	cfg.Tag.ReadMp4Tag(lpstrFilename);
+//CMyDecCfg cfg;	cfg.Tag.ReadAacTag(lpstrFilename);
+
+	GLOBALLOCK(mi,hInput,MYINPUT,return NULL);
 
 //	mi->IsAAC=strcmpi(lpstrFilename+lstrlen(lpstrFilename)-4,".aac")==0;
 	if((mi->IsMP4=IsMP4(lpstrFilename))==-1)
@@ -429,7 +492,7 @@ MYINPUT *mi;
 
 		MP4GetTrackESConfiguration(mi->mp4File, mi->track, (unsigned __int8 **)&mi->buffer, &buffer_size);
 		if(!mi->buffer)
-			return ERROR_getInfos("MP4GetTrackESConfiguration");
+			return ERROR_getInfos("MP4GetTrackESConfiguration()");
 		AudioSpecificConfig(mi->buffer, buffer_size, &mp4ASC);
 
         timeScale = mp4ASC.samplingFrequency;
@@ -448,6 +511,9 @@ MYINPUT *mi;
 		mi->file_info.version=MP4GetTrackAudioType(mi->mp4File, mi->track)==MP4_MPEG4_AUDIO_TYPE ? 4 : 2;
 		mi->numSamples=MP4GetTrackNumberOfSamples(mi->mp4File, mi->track);
 		mi->sampleId=1;
+
+		mi->IsSeekable=true;
+		mi->LockSeeking=!mi->IsSeekable;
 	}
 	else // AAC file ------------------------------------------------------------------------------
 	{   
@@ -479,84 +545,118 @@ MYINPUT *mi;
 		else
 			return ERROR_getInfos("Read failed!");
 
-aac_buffer	b;
-float		fLength;
-DWORD		headertype;
+		// skip Tag
+	long tagsize;
+		if(tagsize=id3v2_TagSize(mi->buffer))
+		{
+			if(tagsize>(long)mi->src_size)
+				ERROR_getInfos("Corrupt stream!");
+			if(tagsize<mi->bytes_into_buffer)
+			{
+				mi->bytes_into_buffer-=tagsize;
+				memcpy(mi->buffer,mi->buffer+tagsize,mi->bytes_into_buffer);
+			}
+			else
+			{
+				mi->bytes_read=tagsize;
+				mi->bytes_into_buffer=0;
+				if(tagsize>mi->bytes_into_buffer)
+					fseek(mi->aacFile, tagsize, SEEK_SET);
+			}
+			if(mi->src_size<mi->bytes_read+FAAD_STREAMSIZE-mi->bytes_into_buffer)
+				tmp=mi->src_size-mi->bytes_read;
+			else
+				tmp=FAAD_STREAMSIZE-mi->bytes_into_buffer;
+			read=fread(mi->buffer+mi->bytes_into_buffer, 1, tmp, mi->aacFile);
+			if(read==tmp)
+			{
+				mi->bytes_read+=read;
+				mi->bytes_into_buffer+=read;
+			}
+			else
+				ERROR_getInfos("Read failed!");
+		}
+
+		if(get_AAC_format(lpstrFilename, &mi->file_info, &mi->seek_table, &mi->seek_table_length, 0))
+			ERROR_getInfos("get_AAC_format()");
+		mi->IsSeekable=mi->file_info.headertype==ADTS && mi->seek_table && mi->seek_table_length>0;
+		mi->LockSeeking=!mi->IsSeekable;
+/*
+	aac_buffer	b;
+	float		fLength;
+	DWORD		headertype;
 		b.infile=mi->aacFile;
 		b.buffer=mi->buffer;
 	    b.bytes_into_buffer=read;
 		b.bytes_consumed=mi->bytes_consumed;
-//		b.file_offset=mi->tagsize;
+		b.file_offset=0;
 		b.at_eof=(read!=tmp) ? 1 : 0;
 		GetAACInfos(&b,&headertype,&fLength,&mi->file_info.bitrate,mi->src_size);
 		mi->file_info.bitrate*=1024;
 		mi->file_info.headertype=headertype;
         mi->bytes_into_buffer=b.bytes_into_buffer;
         mi->bytes_consumed=b.bytes_consumed;
-//		mi->bytes_read=b.file_offset;
-
-/*		IsSeekable=mi->file_info.headertype==ADTS && fLength>0;
-		BlockSeeking=!IsSeekable;
+		IsSeekable=false; // only mp4 can be seeked
 */
+		if(!mi->FindBitrate) // open a new instance to get info from decoder
+		{
+		MYINPUT *miTmp;
+		Cfaad	*NewInst;
+			if(!(NewInst=new Cfaad()))
+				return ERROR_getInfos("Memory allocation error: NewInst");
+
+			GLOBALLOCK(miTmp,NewInst->hInput,MYINPUT,return 0);
+			miTmp->FindBitrate=TRUE;
+			NewInst->ShowDlg4RawAAC=ShowDlg4RawAAC;
+			NewInst->pCfg=pCfg;
+			if(!NewInst->getInfos(lpstrFilename))
+				return ERROR_getInfos(0);
+			mi->Channels=miTmp->frameInfo.channels;
+			if(mi->file_info.headertype==RAW)
+				mi->file_info.bitrate=miTmp->file_info.bitrate;//*mi->Channels;
+			mi->Samprate=miTmp->Samprate;
+			mi->file_info.headertype=miTmp->file_info.headertype;
+			mi->file_info.object_type=miTmp->file_info.object_type;
+			mi->file_info.version=miTmp->file_info.version;
+			GlobalUnlock(NewInst->hInput);
+			delete NewInst;
+		}
+
 		if(!(mi->hDecoder=faacDecOpen()))
 			return ERROR_getInfos("Can't open library");
-
 		if(mi->file_info.headertype==RAW)
-			setFaadCfg(mi->hDecoder);
-		if((mi->bytes_consumed=faacDecInit(mi->hDecoder, mi->buffer, mi->bytes_into_buffer, &mi->Samprate, &mi->Channels))<0)
-			return ERROR_getInfos("faacDecInit failed!");
+			if(pCfg)
+				setFaadCfg(mi->hDecoder,*pCfg);
+			else
+				setDefaultFaadCfg(mi->hDecoder,mi->FindBitrate);
+	BYTE Channels; // faacDecInit doesn't report correctly the number of channels in raw aac files
+		if((mi->bytes_consumed=faacDecInit(mi->hDecoder, mi->buffer, mi->bytes_into_buffer, &mi->Samprate, &Channels))<0)
+			return ERROR_getInfos("faacDecInit()");
 		mi->bytes_into_buffer-=mi->bytes_consumed;
 
-//		if(mi->file_info.headertype==RAW)
-			if(!mi->FindBitrate)
-			{
-			MYINPUT *miTmp;
-			Cfaad	*NewInst;
-				if(!(NewInst=new Cfaad()))
-					return ERROR_getInfos("Memory allocation error: NewInst");
+		if(mi->FindBitrate) // get info from decoder
+		{
+		DWORD	Samples,
+				BytesConsumed;
 
-				GLOBALLOCK(miTmp,NewInst->hInput,MYINPUT,return 0);
-				miTmp->FindBitrate=TRUE;
-				if(!NewInst->getInfos(lpstrFilename))
-					return ERROR_getInfos(0);
-				mi->Channels=miTmp->frameInfo.channels;
-				if(mi->file_info.headertype==RAW)
-					mi->file_info.bitrate=miTmp->file_info.bitrate*mi->Channels;
-				mi->Samprate=miTmp->Samprate;
-				mi->file_info.headertype=miTmp->file_info.headertype;
-				mi->file_info.object_type=miTmp->file_info.object_type;
-				mi->file_info.version=miTmp->file_info.version;
-				GlobalUnlock(NewInst->hInput);
-				delete NewInst;
-			}
-			else
-			{
-			DWORD	Samples,
-					BytesConsumed;
+			if(!processData(hInput,0,0))
+				return ERROR_getInfos(0);
+			Samples=mi->frameInfo.samples/sizeof(short);
+			BytesConsumed=mi->frameInfo.bytesconsumed;
+			if(mi->file_info.headertype==RAW || !mi->file_info.bitrate)
+				mi->file_info.bitrate=(BytesConsumed*8*mi->Samprate)/(Samples*2);
+			if(!mi->file_info.bitrate)
+				return ERROR_getInfos("Can't determine the bitrate");
+		}
 
-//				if((mi->bytes_consumed=faacDecInit(mi->hDecoder,mi->buffer,mi->bytes_into_buffer,&mi->Samprate,&mi->Channels))<0)
-//					return ERROR_getInfos("Can't init library");
-//				mi->bytes_into_buffer-=mi->bytes_consumed;
-				if(!processData(hInput,0,0))
-					return ERROR_getInfos(0);
-				Samples=mi->frameInfo.samples/sizeof(short);
-				BytesConsumed=mi->frameInfo.bytesconsumed;
-				processData(hInput,0,0);
-				if(BytesConsumed<mi->frameInfo.bytesconsumed)
-					BytesConsumed=mi->frameInfo.bytesconsumed;
-				if(mi->file_info.headertype==RAW)
-					mi->file_info.bitrate=(BytesConsumed*8*mi->Samprate)/Samples;
-				if(!mi->file_info.bitrate)
-					mi->file_info.bitrate=1000; // try to continue decoding
-			}
-
-		mi->len_ms=(DWORD)((1000*((float)mi->src_size*8))/mi->file_info.bitrate);
+		mi->len_ms=(DWORD)((mi->src_size<<3)/(mi->file_info.bitrate>>10));
+//		mi->len_ms=(DWORD)((1000*((float)mi->src_size*8))/mi->file_info.bitrate);
 	}
 
 	if(mi->len_ms)
 		mi->dst_size=(DWORD)(mi->len_ms*((float)mi->Samprate/1000)*mi->Channels*(mi->BitsPerSample/8));
 	else
-		mi->dst_size=mi->src_size; // corrupt stream?
+		return ERROR_getInfos("Can't determine the length");
 
 	showInfo(mi);
 
@@ -575,11 +675,26 @@ MYINPUT	*mi;
 
 	GLOBALLOCK(mi,hInput,MYINPUT,return 0);
 
+	if(mi->LockSeeking)
+	{
+		NoSeek();
+		mi->LockSeeking=false;
+	}
+
 	if(mi->IsMP4) // MP4 file --------------------------------------------------------------------------
 	{   
 	unsigned __int32 buffer_size=0;
     int rc;
 
+		if(newpos_ms>-1)
+		{
+		MP4Duration duration=MP4ConvertToTrackDuration(mi->mp4File,mi->track,newpos_ms,MP4_MSECS_TIME_SCALE);
+		MP4SampleId sampleId=MP4GetSampleIdFromTime(mi->mp4File,mi->track,duration,0);
+			mi->bytes_read=(DWORD)(((float)newpos_ms*mi->file_info.bitrate)/(8*1000));
+			if(seek(mi->bytes_read))  // update the slider
+				return ERROR_processData(0);
+			newpos_ms=-1;
+		}
 		do
 		{
 			buffer=NULL;
@@ -590,19 +705,39 @@ MYINPUT	*mi;
 			if(rc==0 || buffer==NULL)
 			{
 				FREE_ARRAY(buffer);
-				return ERROR_processData("MP4ReadSample");
+				return ERROR_processData("MP4ReadSample()");
 			}
 
 			sample_buffer=(char *)faacDecDecode(mi->hDecoder,&mi->frameInfo,buffer,buffer_size);
 			BytesDecoded=mi->frameInfo.samples*sizeof(short);
 			if(BytesDecoded>(DWORD)lBytes)
 				BytesDecoded=lBytes;
-			memcpy(bufout,sample_buffer,BytesDecoded);
+			memmove(bufout,sample_buffer,BytesDecoded);
 			FREE_ARRAY(buffer);
+			// to update the slider
+			mi->bytes_read+=buffer_size;
+			if(seek(mi->bytes_read))
+				return ERROR_processData(0);
 		}while(!BytesDecoded && !mi->frameInfo.error);
 	}
 	else // AAC file --------------------------------------------------------------------------
 	{   
+		if(newpos_ms>-1)
+		{
+			if(mi->IsSeekable)
+			{
+			DWORD normalized=mi->len_ms/(mi->seek_table_length-1);
+				if(normalized<1000)
+					normalized=1000;
+				mi->bytes_read=mi->seek_table[newpos_ms/normalized];
+				fseek(mi->aacFile, mi->bytes_read, SEEK_SET);
+				if(seek(mi->bytes_read))  // update the slider
+					return ERROR_processData(0);
+				mi->bytes_into_buffer=0;
+				mi->bytes_consumed=FAAD_STREAMSIZE;
+			}
+			newpos_ms=-1;
+		}
 		buffer=mi->buffer;
 		do
 		{
@@ -639,7 +774,7 @@ MYINPUT	*mi;
 
 			if(mi->bytes_into_buffer<1)
 				if(mi->bytes_read<mi->src_size)
-					return ERROR_processData("ReadFilterInput: buffer empty!");
+					return ERROR_processData("Buffer empty!");
 				else
 					return ERROR_processData(0);
 
@@ -650,11 +785,10 @@ MYINPUT	*mi;
 				if(BytesDecoded>(DWORD)lBytes)
 					BytesDecoded=lBytes;
 				if(sample_buffer && BytesDecoded && !mi->frameInfo.error)
-					memcpy(bufout,sample_buffer,BytesDecoded);
+					memmove(bufout,sample_buffer,BytesDecoded);
 			}
 			else // Data needed to decode Raw files
 			{
-				mi->bytesconsumed=mi->frameInfo.bytesconsumed;
 				mi->Channels=mi->frameInfo.channels;
 				mi->file_info.object_type=mi->frameInfo.object_type;
 			}

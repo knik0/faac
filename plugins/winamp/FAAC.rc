@@ -59,7 +59,7 @@ BEGIN
     CONTROL         "Bitrate per channel",IDC_RADIO_BITRATE,"Button",
                     BS_AUTORADIOBUTTON,9,105,75,10
     COMBOBOX        IDC_CB_QUALITY,102,86,48,97,CBS_DROPDOWN | WS_VSCROLL | 
-                    WS_TABSTOP
+                    WS_GROUP | WS_TABSTOP
     COMBOBOX        IDC_CB_BITRATE,102,102,48,86,CBS_DROPDOWN | WS_VSCROLL | 
                     WS_TABSTOP
     LTEXT           "Bandwidth",IDC_STATIC,21,126,34,8
@@ -78,16 +78,21 @@ BEGIN
     PUSHBUTTON      "Browse",IDC_BTN_BROWSE,137,167,18,14,BS_BITMAP | 
                     BS_FLAT
     GROUPBOX        "",IDC_GRP_TAG,160,4,174,200
-    CONTROL         "Tag (write .mp4)",IDC_CHK_TAG,"Button",BS_AUTOCHECKBOX | 
-                    WS_TABSTOP,165,3,67,10
+    CONTROL         "Tag",IDC_CHK_TAG,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,
+                    165,3,29,10
     EDITTEXT        IDC_E_ARTIST,207,20,121,14,ES_AUTOHSCROLL
     EDITTEXT        IDC_E_TITLE,207,35,121,14,ES_AUTOHSCROLL
     EDITTEXT        IDC_E_ALBUM,207,50,121,14,ES_AUTOHSCROLL
     EDITTEXT        IDC_E_YEAR,207,65,121,14,ES_AUTOHSCROLL
+    COMBOBOX        IDC_CB_GENRE,207,80,121,161,CBS_DROPDOWN | WS_VSCROLL | 
+                    WS_TABSTOP
     EDITTEXT        IDC_E_WRITER,207,94,121,14,ES_AUTOHSCROLL
     EDITTEXT        IDC_E_COMMENT,207,109,121,29,ES_MULTILINE | 
                     ES_AUTOHSCROLL
-    EDITTEXT        IDC_E_COMPILATION,207,139,121,14,ES_AUTOHSCROLL
+    EDITTEXT        IDC_E_COMPILATION,207,139,121,14,ES_AUTOHSCROLL | NOT 
+                    WS_VISIBLE
+    CONTROL         "Part of a compilation",IDC_CHK_COMPILATION,"Button",
+                    BS_AUTOCHECKBOX | WS_TABSTOP,165,141,80,10
     EDITTEXT        IDC_E_TRACK,233,155,40,14,ES_AUTOHSCROLL
     EDITTEXT        IDC_E_NTRACKS,288,155,40,14,ES_AUTOHSCROLL
     EDITTEXT        IDC_E_DISK,233,170,40,14,ES_AUTOHSCROLL
@@ -103,18 +108,15 @@ BEGIN
     LTEXT           "Album",IDC_STATIC,165,52,20,8
     LTEXT           "Year",IDC_STATIC,165,67,16,8
     LTEXT           "Genre",IDC_STATIC,165,82,20,8
-    LTEXT           "Writer",IDC_STATIC,165,97,20,8
-    LTEXT           "Comment\n(ctrl-Enter\nto go down)",IDC_STATIC,165,113,
+    LTEXT           "Writer",IDC_STATIC,165,96,20,8
+    LTEXT           "Comment\n(ctrl-Enter\nto go down)",IDC_STATIC,165,111,
                     37,26
     LTEXT           "Track",IDC_STATIC,165,159,20,8
     LTEXT           "/",IDC_STATIC,277,159,8,8
     LTEXT           "Disk",IDC_STATIC,165,173,15,8
     LTEXT           "/",IDC_STATIC,277,173,8,8
-    LTEXT           "Compilation",IDC_STATIC,165,143,37,8
     LTEXT           "Cover art file",IDC_STATIC,165,188,40,8
     LTEXT           "Output folder",IDC_STATIC,4,169,42,8
-    COMBOBOX        IDC_CB_GENRE,207,80,121,161,CBS_DROPDOWN | WS_VSCROLL | 
-                    WS_TABSTOP
 END
 
 IDD_DECODER DIALOG  0, 0, 141, 105
@@ -219,19 +221,20 @@ LANGUAGE LANG_ITALIAN, SUBLANG_ITALIAN
 // Dialog
 //
 
-IDD_ABOUT DIALOG  0, 0, 191, 230
+IDD_ABOUT DIALOGEX 0, 0, 191, 230
 STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_VISIBLE | WS_CAPTION
 CAPTION "About"
-FONT 8, "MS Sans Serif"
+FONT 8, "MS Sans Serif", 0, 0, 0x0
 BEGIN
-    DEFPUSHBUTTON   "&OK",IDOK,134,208,50,14
+    DEFPUSHBUTTON   "&OK",IDOK,142,208,42,14
     CONTROL         104,IDC_AUDIOCODING,"Static",SS_BITMAP | SS_NOTIFY | 
                     SS_SUNKEN,7,7,178,69
     CONTROL         107,IDC_MPEG4IP,"Static",SS_BITMAP | SS_NOTIFY | 
-                    SS_SUNKEN,7,203,59,19
-    CONTROL         106,IDC_EMAIL,"Static",SS_BITMAP | SS_NOTIFY,77,204,43,
+                    SS_SUNKEN,7,202,59,20
+    CONTROL         106,IDC_EMAIL,"Static",SS_BITMAP | SS_NOTIFY,94,204,43,
                     18
     LTEXT           "Text",IDC_L_ABOUT,7,55,177,142
+    ICON            IDI_ID3,IDC_ID3,70,202,20,20,SS_NOTIFY | SS_SUNKEN
 END
 
 
@@ -263,6 +266,53 @@ IDB_AUDIOCODING         BITMAP                  "AudioCoding.bmp"
 IDB_EMAIL               BITMAP                  "Email.bmp"
 IDB_MPEG4IP             BITMAP                  "mpeg4ip-v.bmp"
 IDB_BROWSE              BITMAP                  "Open.bmp"
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Icon
+//
+
+// Icon with lowest ID value placed first to ensure application icon
+// remains consistent on all systems.
+IDI_ID3                 ICON                    "id3v2.ico"
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Version
+//
+
+VS_VERSION_INFO VERSIONINFO
+ FILEVERSION 1,5,0,0
+ PRODUCTVERSION 1,5,0,0
+ FILEFLAGSMASK 0x17L
+#ifdef _DEBUG
+ FILEFLAGS 0x1L
+#else
+ FILEFLAGS 0x0L
+#endif
+ FILEOS 0x4L
+ FILETYPE 0x2L
+ FILESUBTYPE 0x0L
+BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+        BLOCK "041004b0"
+        BEGIN
+            VALUE "FileDescription", "Winamp FAAC"
+            VALUE "FileVersion", "1, 5, 0, 0"
+            VALUE "InternalName", "Out_FAAC"
+            VALUE "LegalCopyright", "Copyright (C) 2004"
+            VALUE "OriginalFilename", "Out_FAAC.dll"
+            VALUE "ProductName", " Out_FAAC Dynamic Link Library"
+            VALUE "ProductVersion", "1, 5, 0, 0"
+        END
+    END
+    BLOCK "VarFileInfo"
+    BEGIN
+        VALUE "Translation", 0x410, 1200
+    END
+END
+
 #endif    // Italian (Italy) resources
 /////////////////////////////////////////////////////////////////////////////
 

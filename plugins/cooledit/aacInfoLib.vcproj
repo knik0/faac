@@ -3,6 +3,7 @@
 	ProjectType="Visual C++"
 	Version="7.00"
 	Name="aacInfoLib"
+	ProjectGUID="{7EFB2D8D-844F-416A-8D08-DA685C160058}"
 	SccProjectName=""
 	SccLocalPath="">
 	<Platforms>
@@ -24,7 +25,7 @@
 				AdditionalIncludeDirectories="../../../faad2/common/faad"
 				PreprocessorDefinitions="WIN32,_DEBUG,_LIB"
 				BasicRuntimeChecks="3"
-				RuntimeLibrary="5"
+				RuntimeLibrary="3"
 				UsePrecompiledHeader="2"
 				PrecompiledHeaderFile=".\Debug/aacInfoLib.pch"
 				AssemblerListingLocation=".\Debug/"
@@ -69,7 +70,7 @@
 				AdditionalIncludeDirectories="../../../faad2/common/faad"
 				PreprocessorDefinitions="WIN32,NDEBUG,_LIB"
 				StringPooling="TRUE"
-				RuntimeLibrary="0"
+				RuntimeLibrary="2"
 				EnableFunctionLevelLinking="TRUE"
 				UsePrecompiledHeader="2"
 				PrecompiledHeaderFile=".\Release/aacInfoLib.pch"
@@ -107,19 +108,43 @@
 			Filter="cpp;c;cxx;rc;def;r;odl;idl;hpj;bat">
 			<File
 				RelativePath="..\..\..\faad2\common\faad\aacinfo.c">
+				<FileConfiguration
+					Name="Debug|Win32">
+					<Tool
+						Name="VCCLCompilerTool"
+						ObjectFile="$(IntDir)/$(InputName)1.obj"/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|Win32">
+					<Tool
+						Name="VCCLCompilerTool"
+						ObjectFile="$(IntDir)/$(InputName)1.obj"/>
+				</FileConfiguration>
 			</File>
 			<File
 				RelativePath="..\..\..\faad2\common\faad\filestream.c">
+				<FileConfiguration
+					Name="Debug|Win32">
+					<Tool
+						Name="VCCLCompilerTool"
+						ObjectFile="$(IntDir)/$(InputName)1.obj"/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|Win32">
+					<Tool
+						Name="VCCLCompilerTool"
+						ObjectFile="$(IntDir)/$(InputName)1.obj"/>
+				</FileConfiguration>
 			</File>
 		</Filter>
 		<Filter
 			Name="Header Files"
 			Filter="h;hpp;hxx;hm;inl">
 			<File
-				RelativePath="..\..\..\faad2\common\faad\aacinfo.h">
+				RelativePath="..\..\common\faad\aacinfo.h">
 			</File>
 			<File
-				RelativePath="..\..\..\faad2\common\faad\filestream.h">
+				RelativePath="..\..\common\faad\filestream.h">
 			</File>
 		</Filter>
 	</Files>

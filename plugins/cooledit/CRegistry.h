@@ -41,7 +41,7 @@ public:
 	void	DeleteVal(char *SubKey);
 	void	DeleteKey(char *SubKey);
 
-	void	SetBool(char *keyStr , BOOL val);
+	void	SetBool(char *keyStr , bool val);
 	void	SetByte(char *keyStr , BYTE val);
 	void	SetWord(char *keyStr , WORD val);
 	void	SetDword(char *keyStr , DWORD val);

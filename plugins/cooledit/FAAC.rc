@@ -59,7 +59,7 @@ BEGIN
     CONTROL         "Bitrate per channel",IDC_RADIO_BITRATE,"Button",
                     BS_AUTORADIOBUTTON,9,105,75,10
     COMBOBOX        IDC_CB_QUALITY,102,86,48,97,CBS_DROPDOWN | WS_VSCROLL | 
-                    WS_TABSTOP
+                    WS_GROUP | WS_TABSTOP
     COMBOBOX        IDC_CB_BITRATE,102,102,48,86,CBS_DROPDOWN | WS_VSCROLL | 
                     WS_TABSTOP
     LTEXT           "Bandwidth",IDC_STATIC,21,126,34,8
@@ -68,80 +68,86 @@ BEGIN
     CONTROL         "Allow Mid/Side",IDC_CHK_ALLOWMIDSIDE,"Button",
                     BS_AUTOCHECKBOX | WS_TABSTOP,9,143,63,10
     CONTROL         "Use TNS",IDC_CHK_USETNS,"Button",BS_AUTOCHECKBOX | 
-                    WS_TABSTOP,9,155,45,10
+                    WS_TABSTOP,9,156,45,10
     CONTROL         "Use LFE channel",IDC_CHK_USELFE,"Button",
                     BS_AUTOCHECKBOX | NOT WS_VISIBLE | WS_DISABLED | 
-                    WS_TABSTOP,79,143,67,10
+                    WS_TABSTOP,71,59,67,10
     CONTROL         "Write .mp4",IDC_CHK_WRITEMP4,"Button",BS_AUTOCHECKBOX | 
-                    WS_TABSTOP,9,168,50,10
+                    WS_TABSTOP,9,169,50,10
+    GROUPBOX        "",IDC_GRP_TAG,160,4,174,200
+    CONTROL         "Tag",IDC_CHK_TAG,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,
+                    165,3,29,10
+    EDITTEXT        IDC_E_ARTIST,207,20,121,14,ES_AUTOHSCROLL
+    EDITTEXT        IDC_E_TITLE,207,35,121,14,ES_AUTOHSCROLL
+    EDITTEXT        IDC_E_ALBUM,207,50,121,14,ES_AUTOHSCROLL
+    EDITTEXT        IDC_E_YEAR,207,65,121,14,ES_AUTOHSCROLL
+    COMBOBOX        IDC_CB_GENRE,207,80,121,161,CBS_DROPDOWN | WS_VSCROLL | 
+                    WS_TABSTOP
+    EDITTEXT        IDC_E_WRITER,207,94,121,14,ES_AUTOHSCROLL
+    EDITTEXT        IDC_E_COMMENT,207,109,121,29,ES_MULTILINE | 
+                    ES_AUTOHSCROLL
+    EDITTEXT        IDC_E_COMPILATION,207,139,121,14,ES_AUTOHSCROLL | NOT 
+                    WS_VISIBLE
+    CONTROL         "Part of a compilation",IDC_CHK_COMPILATION,"Button",
+                    BS_AUTOCHECKBOX | WS_TABSTOP,165,141,80,10
+    EDITTEXT        IDC_E_TRACK,233,155,40,14,ES_AUTOHSCROLL
+    EDITTEXT        IDC_E_NTRACKS,288,155,40,14,ES_AUTOHSCROLL
+    EDITTEXT        IDC_E_DISK,233,170,40,14,ES_AUTOHSCROLL
+    EDITTEXT        IDC_E_NDISKS,288,170,40,14,ES_AUTOHSCROLL
+    EDITTEXT        IDC_E_ARTFILE,207,185,98,14,ES_AUTOHSCROLL
+    PUSHBUTTON      "&...",IDC_BTN_ARTFILE,311,185,17,14,BS_BITMAP | BS_FLAT
     GROUPBOX        "AAC type",IDC_STATIC,56,16,48,38
     GROUPBOX        "Profile",IDC_STATIC,4,16,48,59
     GROUPBOX        "Header",IDC_STATIC,108,16,48,38
     GROUPBOX        "Encoding mode",IDC_STATIC,4,78,152,42
-    GROUPBOX        "",IDC_GRP_TAG,160,4,174,200
-    CONTROL         "Tag",IDC_CHK_TAG,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,
-                    165,4,29,10
-    EDITTEXT        IDC_E_ARTIST,207,22,121,14,ES_AUTOHSCROLL
-    EDITTEXT        IDC_E_TITLE,207,36,121,14,ES_AUTOHSCROLL
-    EDITTEXT        IDC_E_ALBUM,207,51,121,14,ES_AUTOHSCROLL
-    EDITTEXT        IDC_E_YEAR,207,66,121,14,ES_AUTOHSCROLL
-    EDITTEXT        IDC_E_WRITER,207,95,121,14,ES_AUTOHSCROLL
-    EDITTEXT        IDC_E_COMMENT,207,110,121,29,ES_MULTILINE | 
-                    ES_AUTOHSCROLL
-    EDITTEXT        IDC_E_COMPILATION,207,140,121,14,ES_AUTOHSCROLL
-    EDITTEXT        IDC_E_TRACK,233,156,40,14,ES_AUTOHSCROLL
-    EDITTEXT        IDC_E_NTRACKS,288,156,40,14,ES_AUTOHSCROLL
-    EDITTEXT        IDC_E_DISK,233,171,40,14,ES_AUTOHSCROLL
-    EDITTEXT        IDC_E_NDISKS,288,171,40,14,ES_AUTOHSCROLL
-    EDITTEXT        IDC_E_ARTFILE,207,186,98,14,ES_AUTOHSCROLL
-    PUSHBUTTON      "&...",IDC_BTN_ARTFILE,311,186,17,14,BS_BITMAP | BS_FLAT
-    LTEXT           "Artist",IDC_STATIC,165,23,16,8
-    LTEXT           "Title",IDC_STATIC,165,38,14,8
-    LTEXT           "Album",IDC_STATIC,165,54,20,8
-    LTEXT           "Year",IDC_STATIC,165,68,16,8
-    LTEXT           "Genre",IDC_STATIC,165,83,20,8
-    LTEXT           "Writer",IDC_STATIC,165,98,20,8
-    LTEXT           "Comment\n(ctrl-Enter\nto go down)",IDC_STATIC,165,114,
+    LTEXT           "Artist",IDC_STATIC,165,22,16,8
+    LTEXT           "Title",IDC_STATIC,165,37,14,8
+    LTEXT           "Album",IDC_STATIC,165,52,20,8
+    LTEXT           "Year",IDC_STATIC,165,67,16,8
+    LTEXT           "Genre",IDC_STATIC,165,82,20,8
+    LTEXT           "Writer",IDC_STATIC,165,96,20,8
+    LTEXT           "Comment\n(ctrl-Enter\nto go down)",IDC_STATIC,165,111,
                     37,26
-    LTEXT           "Track",IDC_STATIC,165,160,20,8
-    LTEXT           "/",IDC_STATIC,277,160,8,8
-    LTEXT           "Disk",IDC_STATIC,165,174,15,8
-    LTEXT           "/",IDC_STATIC,277,174,8,8
-    LTEXT           "Compilation",IDC_STATIC,165,144,37,8
+    LTEXT           "Track",IDC_STATIC,165,159,20,8
+    LTEXT           "/",IDC_STATIC,277,159,8,8
+    LTEXT           "Disk",IDC_STATIC,165,173,15,8
+    LTEXT           "/",IDC_STATIC,277,173,8,8
     LTEXT           "Cover art file",IDC_STATIC,165,188,40,8
-    COMBOBOX        IDC_CB_GENRE,207,81,121,161,CBS_DROPDOWN | WS_VSCROLL | 
-                    WS_TABSTOP
 END
 
-IDD_DECODER DIALOG  0, 0, 141, 105
+IDD_DECODER DIALOGEX 0, 0, 162, 153
 STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_VISIBLE | WS_CAPTION | 
     WS_SYSMENU
 CAPTION "Raw .AAC options"
-FONT 8, "MS Sans Serif"
+FONT 8, "MS Sans Serif", 0, 0, 0x0
 BEGIN
-    DEFPUSHBUTTON   "&OK",IDOK,24,84,36,14
-    PUSHBUTTON      "&Cancel",IDCANCEL,61,84,36,14
-    PUSHBUTTON      "&About",IDC_BTN_ABOUT,97,84,36,14
+    DEFPUSHBUTTON   "&OK",IDOK,47,132,36,14
+    PUSHBUTTON      "&Cancel",IDCANCEL,83,132,36,14
+    PUSHBUTTON      "&About",IDC_BTN_ABOUT,119,132,36,14
     CONTROL         "Main",IDC_RADIO_MAIN,"Button",BS_AUTORADIOBUTTON | 
-                    WS_GROUP,93,17,31,10
-    CONTROL         "Low",IDC_RADIO_LOW,"Button",BS_AUTORADIOBUTTON,93,28,29,
+                    WS_GROUP,19,33,31,10
+    CONTROL         "Low",IDC_RADIO_LOW,"Button",BS_AUTORADIOBUTTON,19,44,29,
                     10
     CONTROL         "SSR",IDC_RADIO_SSR,"Button",BS_AUTORADIOBUTTON | 
-                    WS_DISABLED,93,40,31,10
-    CONTROL         "LTP",IDC_RADIO_LTP,"Button",BS_AUTORADIOBUTTON,93,52,29,
+                    WS_DISABLED,19,56,31,10
+    CONTROL         "LTP",IDC_RADIO_LTP,"Button",BS_AUTORADIOBUTTON,19,68,29,
                     10
-    GROUPBOX        "Profile",IDC_STATIC,85,7,48,70
-    COMBOBOX        IDC_CB_SAMPLERATE,13,57,62,87,CBS_DROPDOWN | WS_VSCROLL | 
-                    WS_TABSTOP
+    GROUPBOX        "Profile",IDC_STATIC,13,23,48,70
+    COMBOBOX        IDC_CB_SAMPLERATE,72,74,69,87,CBS_DROPDOWN | WS_DISABLED | 
+                    WS_VSCROLL | WS_TABSTOP
     CONTROL         "Default settings",IDC_CHK_DEFAULTCFG,"Button",
-                    BS_AUTOCHECKBOX | WS_TABSTOP,7,11,64,10
-    GROUPBOX        "Sample rate",IDC_STATIC,7,46,73,31
-    CONTROL         "HE",IDC_RADIO_HE,"Button",BS_AUTORADIOBUTTON,93,64,26,
-                    10
-    CONTROL         "Downmatrix",IDC_CHK_DOWNMATRIX,"Button",BS_AUTOCHECKBOX | 
-                    WS_TABSTOP,7,24,53,10
-    CONTROL         "Old ADTS",IDC_CHK_OLDADTS,"Button",BS_AUTOCHECKBOX | 
-                    WS_TABSTOP,7,36,48,10
+                    BS_AUTOCHECKBOX | WS_TABSTOP,13,7,64,10
+    GROUPBOX        "Sample rate",IDC_STATIC,66,61,81,32
+    CONTROL         "HE",IDC_RADIO_HE,"Button",BS_AUTORADIOBUTTON | 
+                    WS_DISABLED,19,80,26,10
+    CONTROL         "Down matrix 5.1 to 2 channels",IDC_CHK_DOWNMATRIX,
+                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,13,98,111,10
+    CONTROL         "Assume old ADTS format",IDC_CHK_OLDADTS,"Button",
+                    BS_AUTOCHECKBOX | WS_TABSTOP,13,110,95,10
+    COMBOBOX        IDC_CB_BITSPERSAMPLE,72,35,69,87,CBS_DROPDOWNLIST | 
+                    WS_DISABLED | WS_VSCROLL | WS_TABSTOP
+    GROUPBOX        "Output bits per sample",IDC_STATIC,66,23,81,32
+    GROUPBOX        "",IDC_GRP_DEFAULT,7,8,147,118
 END
 
 
@@ -190,9 +196,9 @@ BEGIN
     IDD_DECODER, DIALOG
     BEGIN
         LEFTMARGIN, 7
-        RIGHTMARGIN, 133
+        RIGHTMARGIN, 154
         TOPMARGIN, 7
-        BOTTOMMARGIN, 98
+        BOTTOMMARGIN, 146
     END
 END
 #endif    // APSTUDIO_INVOKED
@@ -215,19 +221,20 @@ LANGUAGE LANG_ITALIAN, SUBLANG_ITALIAN
 // Dialog
 //
 
-IDD_ABOUT DIALOG  0, 0, 191, 230
+IDD_ABOUT DIALOGEX 0, 0, 191, 230
 STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_VISIBLE | WS_CAPTION
 CAPTION "About"
-FONT 8, "MS Sans Serif"
+FONT 8, "MS Sans Serif", 0, 0, 0x0
 BEGIN
-    DEFPUSHBUTTON   "&OK",IDOK,134,208,50,14
+    DEFPUSHBUTTON   "&OK",IDOK,145,208,39,14
     CONTROL         104,IDC_AUDIOCODING,"Static",SS_BITMAP | SS_NOTIFY | 
                     SS_SUNKEN,7,7,178,69
     CONTROL         107,IDC_MPEG4IP,"Static",SS_BITMAP | SS_NOTIFY | 
-                    SS_SUNKEN,7,203,59,19
-    CONTROL         106,IDC_EMAIL,"Static",SS_BITMAP | SS_NOTIFY,77,204,43,
+                    SS_SUNKEN,7,202,59,20
+    CONTROL         106,IDC_EMAIL,"Static",SS_BITMAP | SS_NOTIFY,96,204,43,
                     18
     LTEXT           "Text",IDC_L_ABOUT,7,55,177,142
+    ICON            IDI_ID3,IDC_ID3,70,202,20,20,SS_NOTIFY | SS_SUNKEN
 END
 
 
@@ -259,6 +266,53 @@ IDB_AUDIOCODING         BITMAP                  "AudioCoding.bmp"
 IDB_EMAIL               BITMAP                  "Email.bmp"
 IDB_MPEG4IP             BITMAP                  "mpeg4ip-v.bmp"
 IDB_BROWSE              BITMAP                  "Open.bmp"
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Icon
+//
+
+// Icon with lowest ID value placed first to ensure application icon
+// remains consistent on all systems.
+IDI_ID3                 ICON                    "id3v2.ico"
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Version
+//
+
+VS_VERSION_INFO VERSIONINFO
+ FILEVERSION 2,4,0,0
+ PRODUCTVERSION 2,4,0,0
+ FILEFLAGSMASK 0x17L
+#ifdef _DEBUG
+ FILEFLAGS 0x1L
+#else
+ FILEFLAGS 0x0L
+#endif
+ FILEOS 0x4L
+ FILETYPE 0x2L
+ FILESUBTYPE 0x0L
+BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+        BLOCK "041004b0"
+        BEGIN
+            VALUE "FileDescription", "Cool FAAC"
+            VALUE "FileVersion", "2, 4, 0, 0"
+            VALUE "InternalName", "FAAC"
+            VALUE "LegalCopyright", "Copyright (C) 2004"
+            VALUE "OriginalFilename", "FAAC.dll"
+            VALUE "ProductName", " FAAC Dynamic Link Library"
+            VALUE "ProductVersion", "2, 4, 0, 0"
+        END
+    END
+    BLOCK "VarFileInfo"
+    BEGIN
+        VALUE "Translation", 0x410, 1200
+    END
+END
+
 #endif    // Italian (Italy) resources
 /////////////////////////////////////////////////////////////////////////////
 

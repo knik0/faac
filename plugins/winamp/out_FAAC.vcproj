@@ -16,14 +16,12 @@
 			IntermediateDirectory=".\Release"
 			ConfigurationType="2"
 			UseOfMFC="0"
-			ATLMinimizesCRunTimeLibraryUsage="FALSE"
-			CharacterSet="2">
+			ATLMinimizesCRunTimeLibraryUsage="FALSE">
 			<Tool
 				Name="VCCLCompilerTool"
-				AdditionalOptions=""
 				InlineFunctionExpansion="1"
-				AdditionalIncludeDirectories="..\..\include"
-				PreprocessorDefinitions="WIN32;NDEBUG;_WINDOWS;_USRDLL;OUT_FAAC_EXPORTS"
+				AdditionalIncludeDirectories="..\..\include,../../../faad2/common/mp4v2"
+				PreprocessorDefinitions="WIN32;NDEBUG;_WINDOWS;WIN32_LEAN_AND_MEAN"
 				StringPooling="TRUE"
 				RuntimeLibrary="2"
 				EnableFunctionLevelLinking="TRUE"
@@ -75,11 +73,9 @@
 			IntermediateDirectory=".\Debug"
 			ConfigurationType="2"
 			UseOfMFC="0"
-			ATLMinimizesCRunTimeLibraryUsage="FALSE"
-			CharacterSet="0">
+			ATLMinimizesCRunTimeLibraryUsage="FALSE">
 			<Tool
 				Name="VCCLCompilerTool"
-				AdditionalOptions=""
 				Optimization="0"
 				AdditionalIncludeDirectories="../../include,../../../faad2/include,../../../faad2/common/faad,../../../faad2/common/mp4v2,../../../faad2/common/id3lib/include"
 				PreprocessorDefinitions="WIN32;_DEBUG;_WINDOWS;WIN32_LEAN_AND_MEAN"
@@ -98,7 +94,7 @@
 				Name="VCCustomBuildTool"/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalOptions="/MACHINE:I386 &quot;c:\CPP\faad2-2.0\faad2\common\mp4v2\ST_Debug\libmp4v2_st60.lib&quot; &quot;c:\CPP\faad2-2.0\faac\libfaac\Debug\libfaac.lib&quot;"
+				AdditionalOptions="/MACHINE:I386"
 				AdditionalDependencies="ws2_32.lib odbc32.lib odbccp32.lib"
 				OutputFile="C:\Program Files\Audio\Gen\Winamp\Plugins\Out_AAC.dll"
 				LinkIncremental="2"
@@ -138,7 +134,13 @@
 				RelativePath=".\CRegistry.cpp">
 			</File>
 			<File
-				RelativePath="Cfaac.cpp">
+				RelativePath="CTag.cpp">
+			</File>
+			<File
+				RelativePath=".\Cfaac.cpp">
+			</File>
+			<File
+				RelativePath="EncDialog.cpp">
 			</File>
 			<File
 				RelativePath=".\FAAC.rc">
@@ -157,7 +159,13 @@
 				RelativePath=".\CRegistry.h">
 			</File>
 			<File
-				RelativePath="Cfaac.h">
+				RelativePath="CTag.h">
+			</File>
+			<File
+				RelativePath=".\Cfaac.h">
+			</File>
+			<File
+				RelativePath="EncDialog.h">
 			</File>
 			<File
 				RelativePath=".\FILTERS.H">
@@ -169,6 +177,9 @@
 				RelativePath=".\defines.h">
 			</File>
 			<File
+				RelativePath="..\..\include\faac.h">
+			</File>
+			<File
 				RelativePath=".\resource.h">
 			</File>
 		</Filter>
@@ -176,16 +187,19 @@
 			Name="Resource Files"
 			Filter="ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe">
 			<File
-				RelativePath="AudioCoding.bmp">
+				RelativePath=".\AudioCoding.bmp">
 			</File>
 			<File
-				RelativePath="Email.bmp">
+				RelativePath=".\Email.bmp">
 			</File>
 			<File
 				RelativePath=".\Open.bmp">
 			</File>
 			<File
-				RelativePath="mpeg4ip-v.bmp">
+				RelativePath=".\Open.ico">
+			</File>
+			<File
+				RelativePath=".\mpeg4ip-v.bmp">
 			</File>
 		</Filter>
 	</Files>
