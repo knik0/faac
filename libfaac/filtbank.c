@@ -16,7 +16,13 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: filtbank.c,v 1.1 2001/01/17 11:21:40 menno Exp $
+ * $Id: filtbank.c,v 1.2 2001/01/17 15:51:15 menno Exp $
+ */
+
+/*
+ * CHANGES:
+ *  2001/01/17: menno: Added frequency cut off filter.
+ *
  */
 
 #include <math.h>
@@ -166,6 +172,21 @@ void FilterBank(faacEncHandle hEncoder,
 	}
 
 	if (transf_buf) free(transf_buf);
+}
+
+void specFilter(double *freqBuff,
+				int sampleRate,
+				int lowpassFreq,
+				int specLen
+				)
+{
+	int lowpass,xlowpass;
+
+	/* calculate the last line which is not zero */
+	lowpass = (lowpassFreq * specLen) / (sampleRate>>1) + 1;
+	xlowpass = (lowpass < specLen) ? lowpass : specLen ;
+
+	memset(freqBuff+xlowpass,0,(specLen-xlowpass)*sizeof(double));
 }
 
 static void MDCT(double *data, int N)

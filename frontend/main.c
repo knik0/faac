@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: main.c,v 1.1 2001/01/17 11:21:40 menno Exp $
+ * $Id: main.c,v 1.2 2001/01/17 15:51:15 menno Exp $
  */
 
 #ifdef _WIN32
@@ -69,6 +69,7 @@ int main(int argc, char *argv[])
 		printf("USAGE: %s -options infile outfile\n", argv[0]);
 		printf("Options:\n");
 		printf("  -nm   Don\'t use mid/side coding\n");
+		printf("  -bwX  Set the bandwidth, X in Hz\n");
 		printf("  -brX  Set the bitrate per channel, X in bps\n\n");
 		return 1;
 	}
@@ -119,6 +120,12 @@ int main(int argc, char *argv[])
 						if (bitrate)
 						{
 							myFormat->bitRate = bitrate;
+						}
+					} else if ((argv[i][2] == 'w') || (argv[i][2] == 'W')) {
+						unsigned int bandwidth = atol(&argv[i][3]);
+						if (bandwidth)
+						{
+							myFormat->bandWidth = bandwidth;
 						}
 					}
 				break;

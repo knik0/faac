@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: filtbank.h,v 1.1 2001/01/17 11:21:40 menno Exp $
+ * $Id: filtbank.h,v 1.2 2001/01/17 15:51:15 menno Exp $
  */
 
 #ifndef FILTBANK_H
@@ -51,6 +51,12 @@ void FilterBank(faacEncHandle hEncoder,
 				double *p_in_data,
 				double *p_out_mdct,
 				double *p_overlap);
+
+void specFilter(double *freqBuff,
+				int sampleRate,
+				int lowpassFreq,
+				int specLen
+				);
 
 static void MDCT(double *data, int N);
 static void IMDCT(double *data, int N);

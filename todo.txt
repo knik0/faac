@@ -2,8 +2,8 @@ TODO: In any order
 Big list, but a lot of it can be done fairly easily with some old code
 
 
+- DONE: Add frequency cutoff filter
 - Add ADTS headers
-- Add frequency cutoff filter
 - Add TNS
 - Add PNS
 - Add LTP

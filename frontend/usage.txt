@@ -7,4 +7,5 @@ libsndfile (http://www.zip.com.au/~erikd/libsndfile/)
 
 options:
 -nm   Don't use mid/side coding
+-bwX  Use bandwidth X, this is in Hz
 -brX  Use bitrate X, this is in bps/channel

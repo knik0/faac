@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: frame.h,v 1.1 2001/01/17 11:21:40 menno Exp $
+ * $Id: frame.h,v 1.2 2001/01/17 15:51:15 menno Exp $
  */
 
 #ifndef FRAME_H
@@ -53,6 +53,9 @@ typedef struct faacEncConfiguration
 
 	/* bitrate / channel of AAC file */
 	unsigned long bitRate;
+
+	/* AAC file frequency bandwidth */
+	unsigned int bandWidth;
 
 } faacEncConfiguration, *faacEncConfigurationPtr;
 

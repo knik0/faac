@@ -16,7 +16,13 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: frame.c,v 1.1 2001/01/17 11:21:40 menno Exp $
+ * $Id: frame.c,v 1.2 2001/01/17 15:51:15 menno Exp $
+ */
+
+/*
+ * CHANGES:
+ *  2001/01/17: menno: Added frequency cut off filter.
+ *
  */
 
 #include <stdio.h>
@@ -71,6 +77,7 @@ faacEncHandle FAACAPI faacEncOpen(unsigned long sampleRate,
 	hEncoder->config.allowMidside = 1;
 	hEncoder->config.useLfe = 0;
 	hEncoder->config.bitRate = 64000; /* default bitrate / channel */
+	hEncoder->config.bandWidth = 18000; /* default bandwidth */
 
 	/* find correct sampling rate depending parameters */
 	hEncoder->srInfo = &srInfo[hEncoder->sampleRateIdx];
@@ -140,6 +147,7 @@ int FAACAPI faacEncEncode(faacEncHandle hEncoder,
 	unsigned int useLfe = hEncoder->config.useLfe;
 	unsigned int allowMidside = hEncoder->config.allowMidside;
 	unsigned int bitRate = hEncoder->config.bitRate;
+	unsigned int bandWidth = hEncoder->config.bandWidth;
 
 	/* Increase frame number */
 	hEncoder->frameNum++;
@@ -194,11 +202,23 @@ int FAACAPI faacEncEncode(faacEncHandle hEncoder,
 
 	/* AAC Filterbank, MDCT with overlap and add */
 	for (channel = 0; channel < numChannels; channel++) {
+		int k;
+
 		FilterBank(hEncoder,
 			&coderInfo[channel],
 			hEncoder->sampleBuff[channel],
 			hEncoder->freqBuff[channel],
 			hEncoder->overlapBuff[channel]);
+
+		if (coderInfo[channel].block_type == ONLY_SHORT_WINDOW) {
+			for (k = 0; k < 8; k++) {
+				specFilter(hEncoder->freqBuff[channel]+k*BLOCK_LEN_SHORT,
+					sampleRate, bandWidth, BLOCK_LEN_SHORT);
+			}
+		} else {
+			specFilter(hEncoder->freqBuff[channel], sampleRate,
+				bandWidth, BLOCK_LEN_LONG);
+		}
 	}
 
 	/* TMP: Build sfb offset table and other stuff */
