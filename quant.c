@@ -21,8 +21,8 @@
 /**************************************************************************
   Version Control Information			Method: CVS
   Identifiers:
-  $Revision: 1.12 $
-  $Date: 2000/11/01 14:05:32 $ (check in)
+  $Revision: 1.13 $
+  $Date: 2000/11/07 20:03:18 $ (check in)
   $Author: menno $
   *************************************************************************/
 
@@ -116,69 +116,6 @@ void tf_init_encode_spectrum_aac( int quality )
 }
 
 
-#if 0
-
-#define XRPOW_FTOI(src,dest) ((dest) = (int)(src))
-#define QUANTFAC(rx)  adj_quant[rx]
-#define ROUNDFAC 0.4054
-
-
-void quantize(AACQuantInfo *quantInfo,
-			  double *pow_spectrum,
-			  int *quant)
-{
-    int j, i;
-	double istep = pow(2.0,-((double)(quantInfo->common_scalefac)-210)*.1875);
-	double w = 8192 / pow(2.0,-((double)(quantInfo->common_scalefac)-210)*.1875);
-
-	for ( i = 0; i < 1024; i++ )  {
-		if (pow_spectrum[i] > w)
-		{
-			for (j = 0; j < 1024; j++)
-				quant[j] = 8192;
-			return;
-		}
-	}
-
-    for ( j = 1024/8; j > 0; --j) {
-	double	x1, x2, x3, x4, x5, x6, x7, x8;
-	int	rx1, rx2, rx3, rx4, rx5, rx6, rx7, rx8;
-	x1 = *pow_spectrum++ * istep;
-	x2 = *pow_spectrum++ * istep;
-	XRPOW_FTOI(x1, rx1);
-	x3 = *pow_spectrum++ * istep;
-	XRPOW_FTOI(x2, rx2);
-	x4 = *pow_spectrum++ * istep;
-	XRPOW_FTOI(x3, rx3);
-	x5 = *pow_spectrum++ * istep;
-	XRPOW_FTOI(x4, rx4);
-	x6 = *pow_spectrum++ * istep;
-	XRPOW_FTOI(x5, rx5);
-	x7 = *pow_spectrum++ * istep;
-	XRPOW_FTOI(x6, rx6);
-	x8 = *pow_spectrum++ * istep;
-	XRPOW_FTOI(x7, rx7);
-	x1 += QUANTFAC(rx1);
-	XRPOW_FTOI(x8, rx8);
-	x2 += QUANTFAC(rx2);
-	XRPOW_FTOI(x1,*quant++);
-	x3 += QUANTFAC(rx3);
-	XRPOW_FTOI(x2,*quant++);
-	x4 += QUANTFAC(rx4);
-	XRPOW_FTOI(x3,*quant++);
-	x5 += QUANTFAC(rx5);
-	XRPOW_FTOI(x4,*quant++);
-	x6 += QUANTFAC(rx6);
-	XRPOW_FTOI(x5,*quant++);
-	x7 += QUANTFAC(rx7);
-	XRPOW_FTOI(x6,*quant++);
-	x8 += QUANTFAC(rx8);
-	XRPOW_FTOI(x7,*quant++);
-	XRPOW_FTOI(x8,*quant++);
-    }
-}
-
-#else
 
 #if (defined(__GNUC__) && defined(__i386__))
 #define USE_GNUC_ASM
@@ -341,29 +278,6 @@ loop1:
         : "%eax", "%ebx", "memory", "cc"
       );
   }
-#elif 0
-	{
-		double x;
-		int j, rx;
-		for (j = 1024 / 4; j > 0; --j) {
-			x = *pow_spectrum++ * istep;
-			XRPOW_FTOI(x, rx);
-			XRPOW_FTOI(x + QUANTFAC(rx), *quant++);
-
-			x = *pow_spectrum++ * istep;
-			XRPOW_FTOI(x, rx);
-			XRPOW_FTOI(x + QUANTFAC(rx), *quant++);
-
-			x = *pow_spectrum++ * istep;
-			XRPOW_FTOI(x, rx);
-			XRPOW_FTOI(x + QUANTFAC(rx), *quant++);
-
-			x = *pow_spectrum++ * istep;
-			XRPOW_FTOI(x, rx);
-			XRPOW_FTOI(x + QUANTFAC(rx), *quant++);
-		}
-	}
-#else
   {/* from Wilfried.Behne@t-online.de.  Reported to be 2x faster than
       the above code (when not using ASM) on PowerPC */
      	int j;
@@ -405,10 +319,9 @@ loop1:
 			XRPOW_FTOI(x7,*quant++);
 			XRPOW_FTOI(x8,*quant++);
      	}
-  }
+	}
 #endif
 }
-#endif
 
 int inner_loop(AACQuantInfo *quantInfo,
 			   double *pow_spectrum,
@@ -417,16 +330,18 @@ int inner_loop(AACQuantInfo *quantInfo,
 {
 	int bits;
 
-	quantInfo->common_scalefac -= 1;
-	do
-	{
+	/*  count bits */
+	bits = count_bits(quantInfo, pow_spectrum, quant);
+
+	/*  increase quantizer stepsize until needed bits are below maximum */
+	while (bits > max_bits) {
 		quantInfo->common_scalefac += 1;
-		quantize(quantInfo, pow_spectrum, quant);
-		bits = count_bits(quantInfo, quant);
-	} while ( bits > max_bits );
+		bits = count_bits(quantInfo, pow_spectrum, quant);
+	}
 
 	return bits;
 }
+
 
 int search_common_scalefac(AACQuantInfo *quantInfo,
 						   double *pow_spectrum,
@@ -441,9 +356,7 @@ int search_common_scalefac(AACQuantInfo *quantInfo,
 	do
 	{
 		quantInfo->common_scalefac = StepSize;
-		quantize(quantInfo, pow_spectrum, quant);
-//		nBits = count_bits(quantInfo, quant, quantInfo->book_vector);
-		nBits = count_bits(quantInfo, quant);
+		nBits = count_bits(quantInfo, pow_spectrum, quant);
 
 		if (CurrentStep == 1 ) {
 			break; /* nothing to adjust anymore */
@@ -583,7 +496,7 @@ int quant_compare(int best_over, double best_tot_noise, double best_over_noise,
 }
 
 
-int count_bits(AACQuantInfo* quantInfo,
+int count_bits_long(AACQuantInfo* quantInfo,
 			   int quant[BLOCK_LEN_LONG]
 			   )
 {
@@ -633,6 +546,25 @@ int count_bits(AACQuantInfo* quantInfo,
 		);
 
 	/* the total amount of bits required */
+	return bits;
+}
+
+int count_bits(AACQuantInfo* quantInfo,
+			   double *pow_spectrum,
+			   int quant[BLOCK_LEN_LONG])
+{
+	int bits = 0, i;
+	double w = 8192 / pow(2.0, (double)quantInfo->common_scalefac * -0.1875);
+
+	for ( i = 0; i < BLOCK_LEN_LONG; i++ )  {
+		if (pow_spectrum[i] > w)
+			return LARGE_BITS;
+	}
+
+	quantize(quantInfo, pow_spectrum, quant);
+
+	bits = count_bits_long(quantInfo, quant);
+
 	return bits;
 }
 
@@ -946,8 +878,7 @@ int tf_encode_spectrum_aac(
 
 	calc_noise(quantInfo, p_spectrum[0], quant, requant, noise, allowed_dist[0],
 			&over_noise, &tot_noise, &max_noise);
-//	count_bits(quantInfo, quant, output_book_vector);
-	count_bits(quantInfo, quant);
+	count_bits_long(quantInfo, quant);
 	if (quantInfo->block_type!=ONLY_SHORT_WINDOW)
 		PulseDecoder(quantInfo, quant);
 

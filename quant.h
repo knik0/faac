@@ -21,8 +21,8 @@
 /**************************************************************************
   Version Control Information			Method: CVS
   Identifiers:
-  $Revision: 1.7 $
-  $Date: 2000/11/01 14:05:32 $ (check in)
+  $Revision: 1.8 $
+  $Date: 2000/11/07 20:03:18 $ (check in)
   $Author: menno $
   *************************************************************************/
 
@@ -53,6 +53,7 @@ extern "C" {
 #define MAXFAC 121   /* maximum scale factor */
 #define MIDFAC (MAXFAC-1)/2
 #define SF_OFFSET 100   /* global gain must be positive */
+#define LARGE_BITS 100000
 
 #define INTENSITY_HCB 15
 #define INTENSITY_HCB2 14
@@ -106,10 +107,12 @@ void dequantize(AACQuantInfo *quantInfo,
 				double requant[BLOCK_LEN_LONG],
 				double error_energy[MAX_SCFAC_BANDS]
 				);
+int count_bits_long(AACQuantInfo* quantInfo,
+					int quant[BLOCK_LEN_LONG]
+					);
 int count_bits(AACQuantInfo* quantInfo,
-			   int quant[BLOCK_LEN_LONG]
-//			   ,int output_book_vector[MAX_SCFAC_BANDS*2]
-                           );
+			   double *pow_spectrum,
+			   int quant[BLOCK_LEN_LONG]);
 
 
 /*********************************************************/

@@ -21,8 +21,8 @@
 /**************************************************************************
   Version Control Information			Method: CVS
   Identifiers:
-  $Revision: 1.67 $
-  $Date: 2000/11/01 14:05:32 $ (check in)
+  $Revision: 1.68 $
+  $Date: 2000/11/07 20:03:18 $ (check in)
   $Author: menno $
   *************************************************************************/
 
@@ -476,15 +476,15 @@ int EncTfFrame (faacAACStream *as, BsBitStream  *fixed_stream)
         quantInfo[chanNum].window_group_length[2] = 3;
         quantInfo[chanNum].window_group_length[3] = 2;
 #else
-        quantInfo[chanNum].num_window_groups = 1;
-        quantInfo[chanNum].window_group_length[0] = 8;
-        quantInfo[chanNum].window_group_length[1] = 0;
-        quantInfo[chanNum].window_group_length[2] = 0;
-        quantInfo[chanNum].window_group_length[3] = 0;
-        quantInfo[chanNum].window_group_length[4] = 0;
-        quantInfo[chanNum].window_group_length[5] = 0;
-        quantInfo[chanNum].window_group_length[6] = 0;
-        quantInfo[chanNum].window_group_length[7] = 0;
+        quantInfo[chanNum].num_window_groups = 8;
+        quantInfo[chanNum].window_group_length[0] = 1;
+        quantInfo[chanNum].window_group_length[1] = 1;
+        quantInfo[chanNum].window_group_length[2] = 1;
+        quantInfo[chanNum].window_group_length[3] = 1;
+        quantInfo[chanNum].window_group_length[4] = 1;
+        quantInfo[chanNum].window_group_length[5] = 1;
+        quantInfo[chanNum].window_group_length[6] = 1;
+        quantInfo[chanNum].window_group_length[7] = 1;
 #endif
         break;
 
