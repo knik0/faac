@@ -16,75 +16,58 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: input.c,v 1.2 2002/12/15 15:16:55 menno Exp $
+ * $Id: input.c,v 1.3 2002/12/23 19:02:05 knik Exp $
  */
+
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <sys/types.h>
 #ifdef WIN32
 #include <fcntl.h>
 #endif
 
 #include "input.h"
 
-typedef unsigned long u_long;
-typedef unsigned short u_short;
+#ifdef WORDS_BIGENDIAN
+# define UINT32(x) (((x & 0xff) << 24) | ((x & 0xff00) << 8) \
+	| ((x & 0xff0000) >> 8) | ((x & 0xff000000) >> 24))
+# define UINT16(x) (((x & 0xff) << 8) | ((x & 0xff00) >> 8))
+#else
+# define UINT32(x) (x)
+# define UINT16(x) (x)
+#endif
 
 typedef struct
 {
-  u_int_32 label;           /* 'RIFF' */
-  u_int_32 length;        /* Length of rest of file */
-  u_int_32 chunk_type;      /* 'WAVE' */
+  u_int32_t label;           /* 'RIFF' */
+  u_int32_t length;        /* Length of rest of file */
+  u_int32_t chunk_type;      /* 'WAVE' */
 }
 riff_t;
 
 typedef struct
 {
-  u_int_32 label;
-  u_int_32 len;
+  u_int32_t label;
+  u_int32_t len;
 }
 riffsub_t;
 
 #define WAVE_FORMAT_PCM 1
 typedef struct
 {
-  u_int_16 wFormatTag;
-  u_int_16 nChannels;
-  u_int_32 nSamplesPerSec;
-  u_int_32 nAvgBytesPerSec;
-  u_int_16 nBlockAlign;
-  u_int_16 wBitsPerSample;
-  u_int_16 cbSize;
+  u_int16_t wFormatTag;
+  u_int16_t nChannels;
+  u_int32_t nSamplesPerSec;
+  u_int32_t nAvgBytesPerSec;
+  u_int16_t nBlockAlign;
+  u_int16_t wBitsPerSample;
+  u_int16_t cbSize;
 }
 WAVEFORMATEX;
-
-u_int32_t little32(u_int32_t l32)
-{
-  unsigned char *s;
-  u_int32_t u32;
-
-  s = (unsigned char*)&l32;
-  u32 = s[3];
-  u32 <<= 8;
-  u32 |= s[2];
-  u32 <<= 8;
-  u32 |= s[1];
-  u32 <<= 8;
-  u32 |= s[0];
-  return u32;
-}
-
-u_int16_t little16(u_int16_t l16)
-{
-  unsigned char *s;
-  u_int16_t u16;
-
-  s = (unsigned char*)&l16;
-  u16 = s[1];
-  u16 <<= 8;
-  u16 |= s[0];
-  return u16;
-}
 
 pcmfile_t *wav_open_read(const char *name)
 {
@@ -123,7 +106,7 @@ pcmfile_t *wav_open_read(const char *name)
 
   if (fread(&riffsub, 1, sizeof(riffsub), wave_f) != sizeof(riffsub))
     return NULL;
-  riffsub.len = little32(riffsub.len);
+  riffsub.len = UINT32(riffsub.len);
   if (memcmp(&(riffsub.label), fmtl, 4))
     return NULL;
   memset(&wave, 0, sizeof(wave));
@@ -138,7 +121,7 @@ pcmfile_t *wav_open_read(const char *name)
   {
     if (fread(&riffsub, 1, sizeof(riffsub), wave_f) != sizeof(riffsub))
       return NULL;
-    riffsub.len = little32(riffsub.len);
+    riffsub.len = UINT32(riffsub.len);
     if (!memcmp(&(riffsub.label), datal, 4))
       break;
     if (i > 10)
@@ -147,16 +130,16 @@ pcmfile_t *wav_open_read(const char *name)
     for (skip = riffsub.len; skip > 0; skip--)
       fgetc(wave_f);
   }
-  if (little16(wave.wFormatTag) != WAVE_FORMAT_PCM)
+  if (UINT16(wave.wFormatTag) != WAVE_FORMAT_PCM)
     return NULL;
 
   sndf = malloc(sizeof(*sndf));
   sndf->f = wave_f;
-  sndf->channels = little16(wave.nChannels);
-  sndf->samplebits = little16(wave.wBitsPerSample);
-  sndf->samplerate = little32(wave.nSamplesPerSec);
+  sndf->channels = UINT16(wave.nChannels);
+  sndf->samplebits = UINT16(wave.wBitsPerSample);
+  sndf->samplerate = UINT32(wave.nSamplesPerSec);
   sndf->samples = riffsub.len /
-    (((little16(wave.wBitsPerSample) > 8) ? 2 : 1) * sndf->channels);
+    (((UINT16(wave.wBitsPerSample) > 8) ? 2 : 1) * sndf->channels);
   return sndf;
 }
 
@@ -169,7 +152,7 @@ size_t wav_read_short(pcmfile_t *sndf, short *buf, size_t num)
     size = fread(buf, 2, num, sndf->f);
     for (i = 0; i < size; i++) {
       /* change endianess for big endian (ppc, sparc) machines */
-      buf[i] = little16(buf[i]);
+      buf[i] = UINT16(buf[i]);
     }
     return size;
   }
