@@ -1,6 +1,7 @@
-prefix=/usr/local/lib
+prefix = /usr/local
 
-CFLAGS=-ansi -pedantic
+#CFLAGS := -ansi -pedantic $(CFLAGS)
+CFLAGS := -DHAS_ULONG $(CFLAGS)
 
 SRC= \
 aacquant.c\
@@ -14,7 +15,7 @@ joint.c\
 psych.c\
 util.c
 
-OBJ := $(SRC:.c=.o)
+OBJ = $(SRC:.c=.o)
 
 all: libfaac.a libfaac.so
 
@@ -28,9 +29,14 @@ libfaac.a: $(OBJ)
 install: libfaac.so libfaac.a
 	mkdir -p $(prefix)/include
 	mkdir -p $(prefix)/lib
-	cp ../include/faac.h $(prefix)/include/faac.h
-	cp libfaac.so $(prefix)/lib/libfaac.so
-	cp libfaac.a $(prefix)/lib/libfaac.a
+	cp ../include/faac.h $(prefix)/include
+	cp libfaac.so $(prefix)/lib
+	cp libfaac.a $(prefix)/lib
+
+uninstall:
+	rm -f $(prefix)/include/faac.h
+	rm -f $(prefix)/lib/libfaac.so
+	rm -f $(prefix)/lib/libfaac.a
 
 clean:
 	rm -f $(OBJ)
