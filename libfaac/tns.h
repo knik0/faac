@@ -24,7 +24,7 @@ copyright notice must be included in all copies or derivative works.
 Copyright (c) 1997.
 **********************************************************************/
 /*
- * $Id: tns.h,v 1.4 2001/09/04 18:39:36 menno Exp $
+ * $Id: tns.h,v 1.5 2003/11/24 18:08:28 knik Exp $
  */
 
 #ifndef TNS_H
@@ -35,25 +35,6 @@ extern "C" {
 #endif /* __cplusplus */
 
 
-/*************************/
-/* Function prototypes   */
-/*************************/
-static void Autocorrelation(int maxOrder,        /* Maximum autocorr order */
-                     int dataSize,        /* Size of the data array */
-                     double* data,        /* Data array */
-                     double* rArray);     /* Autocorrelation array */
-
-static double LevinsonDurbin(int maxOrder,        /* Maximum filter order */
-                      int dataSize,        /* Size of the data array */
-                      double* data,        /* Data array */
-                      double* kArray);     /* Reflection coeff array */
-
-static void StepUp(int fOrder, double* kArray, double* aArray);
-
-static void QuantizeReflectionCoeffs(int fOrder,int coeffRes,double* rArray,int* indexArray);
-static int TruncateCoeffs(int fOrder,double threshold,double* kArray);
-static void TnsFilter(int length,double* spec,TnsFilterData* filter);
-static void TnsInvFilter(int length,double* spec,TnsFilterData* filter);
 void TnsInit(faacEncHandle hEncoder);
 void TnsEncode(TnsInfo* tnsInfo, int numberOfBands,int maxSfb,enum WINDOW_TYPE blockType,
                int* sfbOffsetTable,double* spec);

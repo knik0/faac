@@ -16,7 +16,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: filtbank.h,v 1.9 2003/11/16 05:02:52 stux Exp $
+ * $Id: filtbank.h,v 1.10 2003/11/24 18:06:57 knik Exp $
  */
 
 #ifndef FILTBANK_H
@@ -60,12 +60,6 @@ void			specFilter(	double *freqBuff,
 						int sampleRate,
 						int lowpassFreq,
 						int specLen );
-
-static void		CalculateKBDWindow	( double* win, double alpha, int length );
-static double	Izero				( double x);
-static void		MDCT				( FFT_Tables *fft_tables, double *data, int N );
-static void		IMDCT				( FFT_Tables *fft_tables, double *data, int N );
-
 
 #ifdef __cplusplus
 }

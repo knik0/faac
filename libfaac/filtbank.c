@@ -22,7 +22,7 @@ Copyright(c)1996.
  *                                                                           *
  ****************************************************************************/
 /*
- * $Id: filtbank.c,v 1.11 2003/11/16 05:02:52 stux Exp $
+ * $Id: filtbank.c,v 1.12 2003/11/24 18:06:57 knik Exp $
  */
 
 /*
@@ -42,6 +42,13 @@ Copyright(c)1996.
 #include "util.h"
 
 #define  TWOPI       2*M_PI
+
+
+static void		CalculateKBDWindow	( double* win, double alpha, int length );
+static double	Izero				( double x);
+static void		MDCT				( FFT_Tables *fft_tables, double *data, int N );
+static void		IMDCT				( FFT_Tables *fft_tables, double *data, int N );
+
 
 
 void FilterBankInit(faacEncHandle hEncoder)
