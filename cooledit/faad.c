@@ -12,6 +12,7 @@ typedef struct input_tag // any special vars associated with input file
 {
  FILE  *fFile;
  DWORD lSize;    
+ DWORD len_ms;
  WORD  wChannels;
  DWORD dwSamprate;
  WORD  wBitsPerSample;
@@ -174,13 +175,13 @@ __declspec(dllexport) HANDLE FAR PASCAL OpenFilterInput( LPSTR lpstrFilename,
 HANDLE hInput;
 faacDecHandle hDecoder;
 DWORD  k,tmp;
-int    shift;
+//int    shift;
 FILE   *infile;
 DWORD  samplerate, channels;
 DWORD  pos; // into the file. Needed to obtain length of file
 DWORD  read;
 int    *seek_table;
-faadAACInfo file_info;
+//faadAACInfo file_info;
 unsigned char *buffer;
 long tagsize;
 
@@ -320,10 +321,17 @@ long tagsize;
     return 0;
    }
 
+  mi->len_ms=1000*(mi->lSize*8)/mi->file_info.bitrate;
+  if(mi->len_ms)
+   mi->full_size=(DWORD)(mi->len_ms*((float)mi->dwSamprate/1000)*mi->wChannels*(16/8));
+  else
+   mi->full_size=mi->lSize; // corrupted stream?
+/*
   if(mi->file_info.length)
    mi->full_size=(DWORD)(mi->file_info.length*((float)samplerate/1000)*channels*(16/8));
   else
    mi->full_size=mi->lSize; // corrupted stream?
+*/
 /*  {
    fclose(mi->fFile);
    free(mi->buffer);

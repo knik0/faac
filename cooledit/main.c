@@ -2,6 +2,7 @@
 #include "filters.h" //CoolEdit
 
 
+
 BOOL WINAPI DllMain (HANDLE hModule, DWORD fdwReason, LPVOID lpReserved)
 {
    switch (fdwReason)
