@@ -113,7 +113,7 @@ int faacEncodeFrame(faacAACStream *as, short *Buffer, int Samples, unsigned char
 {
 	int i, j, error;
 	int usedNumBit, usedBytes;
-	int savedSamplesOut, samplesOut, curSample = 0;
+	int samplesOut, curSample = 0;
 	BsBitStream *bitBuf;
 	float *dataOut;
 	float *data = NULL;
@@ -126,7 +126,7 @@ int faacEncodeFrame(faacAACStream *as, short *Buffer, int Samples, unsigned char
 	}
 
 	if (as->rc_needed && (Samples > 0)) {
-		savedSamplesOut = samplesOut = as->savedSize + RateConv (
+		samplesOut = as->savedSize + RateConv (
 			as->rc_buf,			/* in: buffer (handle) */
 			Buffer,		/* in: input data[] */
 			as->samplesToRead,		/* in: number of input samples */
@@ -424,7 +424,7 @@ int main(int argc, char *argv[])
 	int readNumSample;
 
 	short *sampleBuffer;
-	unsigned char *bitBuffer = NULL;
+	unsigned char *bitBuffer;
 	FILE *aacfile;
 	SNDFILE *sndfile;
 	SF_INFO sf_info;
@@ -455,7 +455,6 @@ int main(int argc, char *argv[])
 	int nTotSecs, nSecs;
 	int nMins;
 
-	faacv = NULL;
 	faacv = faacEncodeVersion();
 	printf("FAAC cl (Freeware AAC Encoder)\n");
 	printf("FAAC homepage: %s\n", faacv->HomePage);
@@ -704,9 +703,8 @@ int main(int argc, char *argv[])
 		}
 
 		fclose(aacfile);
-		if (bitBuffer) { free(bitBuffer); bitBuffer = NULL; }
-		if (sampleBuffer) { free(sampleBuffer); sampleBuffer = NULL; }
-
+		if (bitBuffer)  free(bitBuffer);
+		if (sampleBuffer)  free(sampleBuffer);
 #ifdef WIN32
 		end = GetTickCount();
 #else
