@@ -18,7 +18,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: main.c,v 1.76 2004/08/19 13:18:44 menno Exp $
+ * $Id: main.c,v 1.77 2004/08/19 15:33:30 menno Exp $
  */
 
 #ifdef _MSC_VER
@@ -204,7 +204,7 @@ const char *long_help =
   "  --shortctl X\tEnforce block type (0 = both (default); 1 = no short; 2 = no\n"
   "\t\tlong).\n"
   "  -r\t\tGenerate raw AAC bitstream (i.e. without any headers).\n"
-  "\t\tNot adviced!!!, RAW AAC files are practically useless!!!\n"
+  "\t\tNot advised!!!, RAW AAC files are practically useless!!!\n"
   "\n"
   "Documentation:\n"
   "  --license\tShow the FAAC license.\n"
@@ -1144,6 +1144,10 @@ int main(int argc, char *argv[])
 
 /*
 $Log: main.c,v $
+Revision 1.77  2004/08/19 15:33:30  menno
+typo
+it's not bad to have this option, but people should be warned that they can get severe playback problems with RAW AAC files (anything other then 44100 will not be decoded properly unless you know that it has that samplerate). Seeking is also not possible on these files.
+
 Revision 1.76  2004/08/19 13:18:44  menno
 Removed stupid comment in help of FAAC. RAW AAC files are USELESS, it seems that already some people encoded their collection using the -r option.
 
