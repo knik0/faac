@@ -1,6 +1,6 @@
 prefix = /usr/local
 
-CFLAGS := -L../libfaad -I../include $(CFLAGS)
+CFLAGS := -L../libfaac -I../include $(CFLAGS)
 
 faac: main.c
 	gcc $(CFLAGS) -o faac -lfaac -lsndfile main.c

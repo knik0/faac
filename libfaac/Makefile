@@ -1,18 +1,22 @@
 prefix = /usr/local
 
+MIN = 'min(a,b)=( (a) < (b) ? (a) : (b) )'
+MAX = 'max(a,b)=( (a) > (b) ? (a) : (b) )'
+
 #CFLAGS := -ansi -pedantic $(CFLAGS)
-CFLAGS := -DHAS_ULONG $(CFLAGS)
+CFLAGS := -DHAS_ULONG -D$(MIN) -D$(MAX) $(CFLAGS)
 
 SRC= \
-aacquant.c\
-bitstream.c\
-channels.c\
-fft.c\
-filtbank.c\
-frame.c\
-huffman.c\
-joint.c\
-psych.c\
+aacquant.c \
+bitstream.c \
+channels.c \
+fft.c \
+filtbank.c \
+frame.c \
+huffman.c \
+joint.c \
+psych.c \
+tns.c \
 util.c
 
 OBJ = $(SRC:.c=.o)
