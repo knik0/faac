@@ -84,6 +84,8 @@ void EncTfFree (void)
 
 		if (reconstructed_spectrum[chanNum]) free(reconstructed_spectrum[chanNum]);
 		if (overlap_buffer[chanNum]) free(overlap_buffer[chanNum]);
+		if (nok_lt_status[chanNum].delay) free(nok_lt_status[chanNum].delay);
+		if (nok_tmp_DTimeSigBuf[chanNum]) free(nok_tmp_DTimeSigBuf[chanNum]);
 	}
 	for (chanNum=0;chanNum<MAX_TIME_CHANNELS+2;chanNum++) {
 		if (DTimeSigLookAheadBuf[chanNum]) free(DTimeSigLookAheadBuf[chanNum]);
@@ -423,7 +425,7 @@ int EncTfFrame (faacAACStream *as, BsBitStream  *fixed_stream)
 				);
 
 			if (block_type[chanNum] == ONLY_SHORT_WINDOW) {  
-				for( k=0; k<8; k++ ) {
+				for (k = 0; k < 8; k++) {
 					specFilter(spectral_line_vector[chanNum]+k*BLOCK_LEN_SHORT, spectral_line_vector[chanNum]+k*BLOCK_LEN_SHORT, as->out_sampling_rate, as->cut_off, BLOCK_LEN_SHORT); 
 				}
 			} else {
@@ -550,7 +552,7 @@ int EncTfFrame (faacAACStream *as, BsBitStream  *fixed_stream)
 						int i;
 						int leftChan=chanNum;
 						int rightChan=channelInfo[chanNum].paired_ch;
-                        
+                   
 						nok_ltp_enc(spectral_line_vector[leftChan], 
 							nok_tmp_DTimeSigBuf[leftChan], 
 							block_type[leftChan], 
@@ -572,11 +574,8 @@ int EncTfFrame (faacAACStream *as, BsBitStream  *fixed_stream)
 							nok_lt_status[leftChan].sfb_prediction_used[i];
 						nok_lt_status[rightChan].weight = nok_lt_status[leftChan].weight;
 						nok_lt_status[rightChan].delay[0] = nok_lt_status[leftChan].delay[0];
-//						for(i = 0; i < NOK_MAX_BLOCK_LEN_LONG; i++)
-//							spectral_line_vector[rightChan][i] -=
-//							nok_lt_status[rightChan].pred_mdct[i];
 
-						if(block_type[leftChan] != block_type[rightChan])
+						if (!channelInfo[leftChan].common_window) {
 							nok_ltp_enc(spectral_line_vector[rightChan],
 							nok_tmp_DTimeSigBuf[rightChan], 
 							block_type[rightChan], 
@@ -587,7 +586,7 @@ int EncTfFrame (faacAACStream *as, BsBitStream  *fixed_stream)
 							&sfb_offset_table[rightChan][0], 
 							nr_of_sfb[rightChan],
 							&nok_lt_status[rightChan]);
-
+						}
 					} /* if(channelInfo[chanNum].ch_is_left) */
 				} /* if(channelInfo[chanNum].cpe) */
 				else
@@ -695,16 +694,6 @@ int EncTfFrame (faacAACStream *as, BsBitStream  *fixed_stream)
 				&sfb_offset_table[chanNum][0], 
 				nr_of_sfb[chanNum],
 				&nok_lt_status[chanNum]);
-		}
-
-		/* If short window, reconstruction not needed for prediction */
-		for (chanNum=0;chanNum<max_ch;chanNum++) {
-			if ((block_type[chanNum]==ONLY_SHORT_WINDOW)) {
-				int sind;
-				for (sind=0;sind<1024;sind++) {
-					reconstructed_spectrum[chanNum][sind]=0.0;
-				}
-			}
 		}
 
 		/**********************************/

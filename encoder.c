@@ -36,8 +36,6 @@ faacAACStream *faacEncodeInit(faacAACConfig *ac, int *samplesToRead, int *bitBuf
 			return NULL;
 	}
 
-//	if (ac->sampling_rate != 44100)
-//		return NULL;
 	if((ac->bit_rate % 1000)||(ac->bit_rate < 16000)) {
 		return NULL;
 	}
@@ -142,7 +140,8 @@ int faacEncodeFrame(faacAACStream *as, short *Buffer, int Samples, unsigned char
 		data = malloc((samplesOut)*sizeof(float));
 		for (i = 0; i < samplesOut; i++)
 			data[i] = Buffer[i];
-	}
+	} else
+		samplesOut = 1024*as->channels;
 
 	while(samplesOut >= 1024*as->channels)
 	{
@@ -157,12 +156,12 @@ int faacEncodeFrame(faacAACStream *as, short *Buffer, int Samples, unsigned char
 						as->inputBuffer[0][i] = data[curSample+(i*2)];
 						as->inputBuffer[1][i] = data[curSample+(i*2)+1];
 					}
-					else // (Samples == 0) when called by faacEncodeFinish
-						for (i = 0; i < 1024; i++)
-						{
-							as->inputBuffer[0][i] = 0;
-							as->inputBuffer[1][i] = 0;
-						}
+				else // (Samples == 0) when called by faacEncodeFinish
+					for (i = 0; i < 1024; i++)
+					{
+						as->inputBuffer[0][i] = 0;
+						as->inputBuffer[1][i] = 0;
+					}
 			} else {
 				// No mono supported yet (basically only a problem with decoder
 				// the encoder in fact supports it).
@@ -170,7 +169,6 @@ int faacEncodeFrame(faacAACStream *as, short *Buffer, int Samples, unsigned char
 			}
 		}
 
-#if 0
 		if (as->is_first_frame) {
 			EncTfFrame(as, (BsBitStream*)NULL);
 
@@ -179,9 +177,11 @@ int faacEncodeFrame(faacAACStream *as, short *Buffer, int Samples, unsigned char
 
 			*bitBufSize = 0;
 
-			return FNO_ERROR;
+			samplesOut -= (as->channels*1024);
+			curSample  += (as->channels*1024);
+
+			continue;
 		}
-#endif
 
 		bitBuf = BsOpenWrite(as->frame_bits * 10);
 
