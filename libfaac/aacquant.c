@@ -16,7 +16,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: aacquant.c,v 1.10 2001/09/28 18:36:06 menno Exp $
+ * $Id: aacquant.c,v 1.11 2001/12/06 19:11:04 menno Exp $
  */
 
 #include <math.h>
@@ -136,6 +136,7 @@ int AACQuantize(CoderInfo *coderInfo,
         for ( i = 0; i < FRAME_LEN; i++ )  {
             sign = (xr[i] < 0) ? -1 : 1;
             xi[i] *= sign;
+            coderInfo->requantFreq[i] *= sign;
         }
     } else {
         coderInfo->global_gain = 0;

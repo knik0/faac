@@ -24,7 +24,7 @@ Copyright (c)1997.
 
 ***************************************************************************/
 /*
- * $Id: ltp.c,v 1.7 2001/09/04 18:39:36 menno Exp $
+ * $Id: ltp.c,v 1.8 2001/12/06 19:11:04 menno Exp $
  */
 
 #include <stdio.h>
@@ -37,11 +37,13 @@ Copyright (c)1997.
 #include "filtbank.h"
 #include "util.h"
 
+
 /* short double_to_int(double sig_in); */
 #define double_to_int(sig_in) \
    ((sig_in) > 32767 ? 32767 : ( \
        (sig_in) < -32768 ? -32768 : (sig_in)))
 
+#define _MDCT_SCALE		512
 
 /*  Purpose:    Codebook for LTP weight coefficients.  */
 static double codebook[CODESIZE] =
@@ -65,7 +67,6 @@ static double snr_pred(double *mdct_in, double *mdct_pred, int *sfb_flag, int *s
     double num_bit, snr[NSFB_LONG];
     double temp1, temp2;
     double energy[BLOCK_LEN_LONG], snr_p[BLOCK_LEN_LONG];
-
 
     if (block_type != ONLY_SHORT_WINDOW)
     {
@@ -119,6 +120,7 @@ static double snr_pred(double *mdct_in, double *mdct_pred, int *sfb_flag, int *s
 
     if (num_bit < side_info)
     {
+//      printf("LTP not used!, num_bit: %f    ", num_bit);
         num_bit = 0.0;
         for (j = 0; j < flen; j++)
             mdct_pred[j] = 0.0;
@@ -126,6 +128,7 @@ static double snr_pred(double *mdct_in, double *mdct_pred, int *sfb_flag, int *s
             sfb_flag[i] = 0;
     } else {
         num_bit -= side_info;
+//      printf("LTP used!, num_bit: %f    ", num_bit);
     }
 
     return (num_bit);
@@ -144,9 +147,11 @@ static void prediction(double *buffer, double *predicted_samples, double *weight
         num_samples = NOK_LT_BLEN - offset;
 
     for(i = 0; i < num_samples; i++)
-        predicted_samples[i] = *weight * buffer[offset++];
+        predicted_samples[i] = *weight * _MDCT_SCALE*buffer[offset++];
     for( ; i < flen; i++)
         predicted_samples[i] = 0.0;
+
+	
 }
 
 static void w_quantize(double *freq, int *ltp_idx)
@@ -173,7 +178,7 @@ static int pitch(double *sb_samples, double *x_buffer, int flen, int lag0, int l
           double *predicted_samples, double *gain, int *cb_idx)
 {
     int i, j, delay;
-    double corr1, corr2, lag_corr, corrtmp;
+    double corr1, corr2, lag_corr;
     double p_max, energy, lag_energy;
 
     /*
@@ -203,42 +208,24 @@ static int pitch(double *sb_samples, double *x_buffer, int flen, int lag0, int l
     lag_corr = lag_energy = 0.0;
     delay = lag0;
 
-    energy = 0.0;
-    corr1 = 0.0;
-    for (j = lag0; j < lag1; j++)
-    {
-        corr1 += x_buffer[NOK_LT_BLEN - j - 1] * sb_samples[flen - j - 1];
-        energy += x_buffer[NOK_LT_BLEN - j - 1] * x_buffer[NOK_LT_BLEN - j - 1];
-    }
-    corrtmp=corr1;
-    if (energy != 0.0)
-        corr2 = corr1 / sqrt(energy);
-    else
-        corr2 = 0.0;
 
-    if (p_max < corr2)
-    {
-        p_max = corr2;
-        delay = 0;
-        lag_corr = corr1;
-        lag_energy = energy;
-    }
-
-    /* Find the lag. */
-    for (i = lag0 + 1; i < lag1; i++)
-    {
-        energy -= x_buffer[NOK_LT_BLEN - i] * x_buffer[NOK_LT_BLEN - i];
-        energy += x_buffer[NOK_LT_BLEN - i - flen] * x_buffer[NOK_LT_BLEN - i - flen];
-        corr1 = corrtmp;
-        corr1 -= x_buffer[NOK_LT_BLEN - i] * sb_samples[flen - 1];
-        corr1 += x_buffer[NOK_LT_BLEN - i - flen] * sb_samples[0];
-        corrtmp = corr1;
-
+	for (i = lag0; i<lag1; i++)
+	{
+		energy	= 0.0;
+		corr1	= 0.0;
+		for (j=0; j < flen; j++)
+		{
+			if (j < i+BLOCK_LEN_LONG)
+			{
+				corr1  += sb_samples[j] * _MDCT_SCALE * x_buffer[NOK_LT_BLEN - flen/2 - i + j];
+				energy += _MDCT_SCALE * x_buffer[NOK_LT_BLEN - flen/2 - i + j] * _MDCT_SCALE * x_buffer[NOK_LT_BLEN - flen/2 - i + j];
+			}
+		}
         if (energy != 0.0)
             corr2 = corr1 / sqrt(energy);
         else
             corr2 = 0.0;
-
+		
         if (p_max < corr2)
         {
             p_max = corr2;
@@ -246,8 +233,7 @@ static int pitch(double *sb_samples, double *x_buffer, int flen, int lag0, int l
             lag_corr = corr1;
             lag_energy = energy;
         }
-    }
-
+	}		
     /* Compute the gain. */
     if(lag_energy != 0.0)
         *gain =  lag_corr / (1.010 * lag_energy);
@@ -256,10 +242,12 @@ static int pitch(double *sb_samples, double *x_buffer, int flen, int lag0, int l
 
     /* Quantize the gain. */
     w_quantize(gain, cb_idx);
-
+//  printf("Delay: %d, Coeff: %f", delay, *gain);
+	
     /* Get the predicted signal. */
     prediction(x_buffer, predicted_samples, gain, delay, flen);
 
+	
     return (delay);
 }
 
@@ -274,12 +262,12 @@ static double ltp_enc_tf(faacEncHandle hEncoder,
     /* Transform prediction to frequency domain. */
     FilterBank(hEncoder, coderInfo, predicted_samples, mdct_predicted,
         NULL, MNON_OVERLAPPED);
-
+	
     /* Apply TNS analysis filter to the predicted spectrum. */
     if(tnsInfo != NULL)
         TnsEncodeFilterOnly(tnsInfo, num_of_sfb, num_of_sfb, coderInfo->block_type, sfb_offset,
         mdct_predicted);
-
+	
     /* Get the prediction gain. */
     bit_gain = snr_pred(p_spectrum, mdct_predicted, sfb_prediction_used,
         sfb_offset, side_info, last_band, coderInfo->nr_of_sfb);
@@ -314,7 +302,8 @@ void LtpInit(faacEncHandle hEncoder)
 
         for(i = 0; i < 2 * BLOCK_LEN_LONG; i++)
             ltpInfo->mdct_predicted[i] = 0.0;
-    }
+
+	}
 }
 
 void LtpEnd(faacEncHandle hEncoder)
@@ -357,6 +346,7 @@ int LtpEncode(faacEncHandle hEncoder,
                 0, 2 * BLOCK_LEN_LONG, predicted_samples, &ltpInfo->weight,
                 &ltpInfo->weight_idx);
 
+		
         num_bit[0] =
             ltp_enc_tf(hEncoder, coderInfo, p_spectrum, predicted_samples,
                 ltpInfo->mdct_predicted,
@@ -364,7 +354,8 @@ int LtpEncode(faacEncHandle hEncoder,
                 last_band, ltpInfo->side_info, ltpInfo->sfb_prediction_used,
                 tnsInfo);
 
-        ltpInfo->global_pred_flag = (num_bit[0] == 0.0) ? 0 : 1;
+
+		ltpInfo->global_pred_flag = (num_bit[0] == 0.0) ? 0 : 1;
 
         if(ltpInfo->global_pred_flag)
             for (i = 0; i < coderInfo->sfb_offset[last_band]; i++)
