@@ -193,35 +193,6 @@ void EncTfInit (faacAACStream *as)
 }
 
 
-#define NZEROS 10
-#define NPOLES 10
-#define GAIN   1.769346444e+01
-
-static float xv1[NZEROS+1], yv1[NPOLES+1];
-static float xv2[NZEROS+1], yv2[NPOLES+1];
-
-static double filter(double in, int ch)
-  {
-	float *xv, *yv;
-	if (ch == 0) { xv = xv1; yv = yv1; }
-	else {xv = xv2; yv = yv2; }
-      { xv[0] = xv[1]; xv[1] = xv[2]; xv[2] = xv[3]; xv[3] = xv[4]; xv[4] = xv[5]; xv[5] = xv[6]; xv[6] = xv[7]; xv[7] = xv[8]; xv[8] = xv[9]; xv[9] = xv[10]; 
-        xv[10] = in / GAIN;
-        yv[0] = yv[1]; yv[1] = yv[2]; yv[2] = yv[3]; yv[3] = yv[4]; yv[4] = yv[5]; yv[5] = yv[6]; yv[6] = yv[7]; yv[7] = yv[8]; yv[8] = yv[9]; yv[9] = yv[10]; 
-        yv[10] =   (xv[0] + xv[10]) + 10 * (xv[1] + xv[9]) + 45 * (xv[2] + xv[8])
-                     + 120 * (xv[3] + xv[7]) + 210 * (xv[4] + xv[6]) + 252 * xv[5]
-                     + ( -0.0031942899 * yv[0]) + ( -0.0495126652 * yv[1])
-                     + ( -0.3523340657 * yv[2]) + ( -1.5191103652 * yv[3])
-                     + ( -4.4065847179 * yv[4]) + ( -9.0160440949 * yv[5])
-                     + (-13.2344234780 * yv[6]) + (-13.8407183240 * yv[7])
-                     + ( -9.9529291465 * yv[8]) + ( -4.4996258124 * yv[9]);
-        return yv[10];
-      }
-}
-
-
-
-
 
 /*******************************************************************************
  ***
