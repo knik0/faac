@@ -16,7 +16,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: faac.h,v 1.18 2001/09/21 12:59:29 eraser Exp $
+ * $Id: faac.h,v 1.19 2002/08/07 18:18:49 knik Exp $
  */
 
 #ifndef FAACLIB_H
@@ -85,6 +85,26 @@ typedef struct faacEncConfiguration
 
 typedef void *faacEncHandle;
 
+typedef struct {
+  void (*PsyInit) (void *gpsyInfo, void *psyInfo,
+		   unsigned int numChannels, unsigned int sampleRate,
+		   int *cb_width_long, int num_cb_long,
+		   int *cb_width_short, int num_cb_short);
+  void (*PsyEnd) (void *gpsyInfo, void *psyInfo,
+		  unsigned int numChannels);
+  void (*PsyCalculate) (void *channelInfo, void *gpsyInfo,
+			void *psyInfo, int *cb_width_long, int num_cb_long,
+			int *cb_width_short, int num_cb_short,
+			unsigned int numChannels);
+  void (*PsyBufferUpdate) (void *gpsyInfo, void *psyInfo,
+			   double *newSamples, unsigned int bandwidth);
+  void (*BlockSwitch) (void *coderInfo, void *psyInfo,
+		       unsigned int numChannels);
+} psymodel_t;
+
+extern psymodel_t *psymodel;
+extern psymodel_t psymodel1;
+extern psymodel_t psymodel2;
 
 faacEncConfigurationPtr FAACAPI faacEncGetCurrentConfiguration(faacEncHandle hEncoder);
 int FAACAPI faacEncSetConfiguration (faacEncHandle hEncoder, faacEncConfigurationPtr config);
