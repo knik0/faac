@@ -18,7 +18,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: main.c,v 1.70 2004/05/03 11:39:05 danchr Exp $
+ * $Id: main.c,v 1.71 2004/07/28 08:18:21 danchr Exp $
  */
 
 #ifdef _MSC_VER
@@ -42,7 +42,11 @@
 #include <signal.h>
 #endif
 
-#if defined(__unix__) || defined(__APPLE__)
+#ifdef __APPLE__
+#define __unix__
+#endif
+
+#ifdef __unix__
 #include <sys/time.h>
 #include <sys/resource.h>
 #include <unistd.h>
@@ -1136,6 +1140,9 @@ int main(int argc, char *argv[])
 
 /*
 $Log: main.c,v $
+Revision 1.71  2004/07/28 08:18:21  danchr
+Darwin portability fixes, should help on Linux too
+
 Revision 1.70  2004/05/03 11:39:05  danchr
 fix documentation bugs (per Hans-Jürgen's suggestions)
 enable (preliminary) multiple output file support

@@ -1,12 +1,10 @@
-SUBDIRS = . test util
-
 INCLUDES = -I$(top_srcdir)/include
 
-AM_CXXFLAGS = @BILLS_CPPWARNINGS@
+AM_CXXFLAGS = -Wall
 
 lib_LTLIBRARIES = libmp4v2.la 
 
-include_HEADERS = mp4.h
+include_HEADERS = mp4.h mpeg4ip.h mpeg4ip_version.h mpeg4ip_config.h
 
 libmp4v2_la_SOURCES = \
 	3gp.cpp \

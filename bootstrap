@@ -2,6 +2,10 @@
 
 aclocal -I .
 autoheader
-libtoolize --automake
+if test "`uname -s`" = Darwin; then
+    glibtoolize --automake
+else
+    libtoolize --automake
+fi
 automake --add-missing
 autoconf

@@ -1,9 +1,11 @@
 AC_PREREQ(2.50)
-AC_INIT()
+AC_INIT(FAAC, 1.24+, faac-dev@lists.sourceforge.net)
 AC_CONFIG_AUX_DIR(.)
-AM_INIT_AUTOMAKE(faac,1.0beta)
+AM_INIT_AUTOMAKE
 
 AM_CONFIG_HEADER(config.h)
+
+AC_ARG_WITH( mp4v2,  [  --with-mp4v2            compile libmp4v2],WITHMP4V2=$withval, WITHMP4V2=yes)
 
 AC_DEFUN(MY_DEFINE, [ AC_DEFINE($1, 1, [define if needed]) ])
 
@@ -22,12 +24,27 @@ AC_CHECK_TYPES(int16_t)
 AC_CHECK_DECL(strcasecmp, MY_DEFINE(HAVE_STRCASECMP))
 
 AC_CHECK_LIB(gnugetopt, getopt_long)
-AC_CHECK_LIB(mp4v2, MP4MetadataDelete,
-            [AC_MSG_NOTICE([*** Building with MP4 support ***])
-             MY_DEFINE([HAVE_LIBMP4V2])
-             LIBS="$LIBS -lstdc++ -lmp4v2"],
-             [AC_MSG_NOTICE([*** Building without MP4 support ***])],
-             -lstdc++)
+
+AM_CONDITIONAL(WITH_MP4V2, false)
+
+AC_CHECK_DECLS([MP4Create, MP4MetadataDelete],
+               AC_CHECK_LIB(mp4v2, MP4MetadataDelete, external_mp4v2=yes,
+                            external_mp4v2=no, -lstdc++),
+               external_mp4v2=no, [#include <mp4.h>])
+
+if test x$external_mp4v2 = xyes; then
+  AC_MSG_NOTICE([*** Building with external mp4v2 ***])
+else
+  if test x$WITHMP4V2 = xyes; then
+     AC_MSG_NOTICE([*** Building with internal mp4v2 ***])
+     AM_CONDITIONAL(WITH_MP4V2, true)
+     AC_CONFIG_LINKS(common/mp4v2/mpeg4ip_config.h:config.h)
+     MY_DEFINE(HAVE_LIBMP4V2)
+  else
+     AC_MSG_NOTICE([*** Building WITHOUT mp4v2 ***])
+  fi
+fi
+
 AC_C_BIGENDIAN
 
 dnl Checks for header files required for mp4.h
@@ -59,4 +76,6 @@ AC_CHECK_MEMBER(struct fpos_t.__pos,
     [MY_DEFINE(HAVE_FPOS_T_POS)],,
      [#include <stdio.h>])
 
-AC_OUTPUT(libfaac/Makefile frontend/Makefile include/Makefile Makefile)
+AC_OUTPUT(common/Makefile common/mp4v2/Makefile \
+          libfaac/Makefile frontend/Makefile \
+          include/Makefile Makefile)
