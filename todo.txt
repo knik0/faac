@@ -10,6 +10,7 @@ Big list, but a lot of it can be done fairly easily with some old code
 - DONE: Add backward prediction (MPEG2-AAC)????
 - DONE: Test (and maybe fix) sample rates other than 44100 Hz
 - DONE: Test (and maybe fix) multichannel and mono support
+- DONE: Figure out how to read and write ".mp4" format
 - Add PNS
 - Add IS
 - Add bit reservoir control
@@ -23,4 +24,3 @@ Big list, but a lot of it can be done fairly easily with some old code
 - Improve command line tool (wildcards)
 - Write documentation for library interface
 - Speedup?? (no priority)
-- Figure out how to read and write ".mp4" format

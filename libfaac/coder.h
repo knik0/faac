@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: coder.h,v 1.6 2001/05/02 05:39:14 menno Exp $
+ * $Id: coder.h,v 1.7 2001/05/18 13:38:19 menno Exp $
  */
 
 #ifndef CODER_H
@@ -67,6 +67,8 @@ enum WINDOW_TYPE {
 #define CODESIZE 8
 #define NOK_LT_BLEN (3 * BLOCK_LEN_LONG)
 
+#define SBMAX_L 49
+#define LPC 2
 
 typedef struct {
 	int order;                           /* Filter order */
@@ -111,6 +113,18 @@ typedef struct
 	double *ltp_overlap_buffer;
 } LtpInfo;
 
+typedef struct
+{
+	int psy_init_mc;
+	double dr_mc[LPC][BLOCK_LEN_LONG],e_mc[LPC+1+1][BLOCK_LEN_LONG];
+	double K_mc[LPC+1][BLOCK_LEN_LONG], R_mc[LPC+1][BLOCK_LEN_LONG];
+	double VAR_mc[LPC+1][BLOCK_LEN_LONG], KOR_mc[LPC+1][BLOCK_LEN_LONG];
+	double sb_samples_pred_mc[BLOCK_LEN_LONG];
+	int thisLineNeedsResetting_mc[BLOCK_LEN_LONG];
+	int reset_count_mc;
+} BwpInfo;
+
+
 typedef struct {
 	int window_shape;
 	int prev_window_shape;
@@ -145,6 +159,7 @@ typedef struct {
 
 	TnsInfo tnsInfo;
 	LtpInfo ltpInfo;
+	BwpInfo bwpInfo;
 
 	int max_pred_sfb;
 	int pred_global_flag;

@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: util.c,v 1.6 2001/02/28 18:39:34 menno Exp $
+ * $Id: util.c,v 1.7 2001/05/18 13:38:19 menno Exp $
  */
 
 #include <math.h>
@@ -55,6 +55,17 @@ unsigned int MinBitrate()
 {
 	return 8000;
 }
+
+
+/* Max prediction band for backward predictionas function of fs index */
+const int MaxPredSfb[] = { 33, 33, 38, 40, 40, 40, 41, 41, 37, 37, 37, 34, 0 };
+
+int GetMaxPredSfb(int samplingRateIdx)
+{
+	return MaxPredSfb[samplingRateIdx];
+}
+
+
 
 /* Calculate bit_allocation based on PE */
 unsigned int BitAllocation(double pe, int short_block)
