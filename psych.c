@@ -52,9 +52,9 @@ Copyright (c) 1997.
 
 Source file:
 
-$Id: psych.c,v 1.30 2000/02/04 16:26:03 menno Exp $
-$Id: psych.c,v 1.30 2000/02/04 16:26:03 menno Exp $
-$Id: psych.c,v 1.30 2000/02/04 16:26:03 menno Exp $
+$Id: psych.c,v 1.31 2000/02/04 17:03:55 menno Exp $
+$Id: psych.c,v 1.31 2000/02/04 17:03:55 menno Exp $
+$Id: psych.c,v 1.31 2000/02/04 17:03:55 menno Exp $
 
 **********************************************************************/
 
@@ -695,7 +695,7 @@ void psy_step3(PSY_STATVARIABLE_LONG *psy_stvar_long,
     }
 
 	/* added by T. Araki (1997.10.16) */
-    for(w = 0; w < 60; w++){
+    for(w = 0; w < BLOCK_LEN_SHORT; w++){
         psy_var_short->r_pred[0][w] = 2.0 * psy_stvar_short->last7_fft_r[w] - psy_stvar_short->last6_fft_r[w];
         psy_var_short->f_pred[0][w] = 2.0 * psy_stvar_short->last7_fft_f[w] - psy_stvar_short->last6_fft_f[w];
         psy_var_short->r_pred[1][w] = 2.0 * psy_stvar_short->fft_r[0][w] - psy_stvar_short->last7_fft_r[w];
@@ -703,13 +703,13 @@ void psy_step3(PSY_STATVARIABLE_LONG *psy_stvar_long,
     }
 
     for(i = 2; i < MAX_SHORT_WINDOWS; i++){
-        for(w = 0; w < 60; w++){
+        for(w = 0; w < BLOCK_LEN_SHORT; w++){
 			psy_var_short->r_pred[i][w] = 2.0 * psy_stvar_short->fft_r[i - 1][w] - psy_stvar_short->fft_r[i - 2][w];
 			psy_var_short->f_pred[i][w] = 2.0 * psy_stvar_short->fft_f[i - 1][w] - psy_stvar_short->fft_f[i - 2][w];
 		}
     }
 
-    for(w = 0; w < 60; w++){
+    for(w = 0; w < BLOCK_LEN_SHORT; w++){
         psy_stvar_short->last6_fft_r[w] = psy_stvar_short->fft_r[6][w];
 		psy_stvar_short->last6_fft_f[w] = psy_stvar_short->fft_f[6][w];
         psy_stvar_short->last7_fft_r[w] = psy_stvar_short->fft_r[7][w];
@@ -746,7 +746,7 @@ void psy_step4(PSY_STATVARIABLE_LONG *psy_stvar_long,
 
 	/* added by T. Araki (1997.10.16) */
     for(i = 0; i < MAX_SHORT_WINDOWS; i++){
-        for(w = 0; w < 60; w++){
+        for(w = 0; w < BLOCK_LEN_SHORT; w++){
 			r = psy_stvar_short->fft_r[i][w];
 			f = psy_stvar_short->fft_f[i][w];
 			rp = psy_var_short->r_pred[i][w];
@@ -761,7 +761,7 @@ void psy_step4(PSY_STATVARIABLE_LONG *psy_stvar_long,
     }
 	for(i = 0; i < MAX_SHORT_WINDOWS; i++){
 		for(w = 60; w < BLOCK_LEN_SHORT; w++){
-			psy_var_short->c[i][w] = 0.4;
+//			psy_var_short->c[i][w] = 0.4;
 		}
 	}
 	/* added by T. Araki (1997.10.16) end */
@@ -1042,12 +1042,12 @@ void psy_step11andahalf(PARTITION_TABLE_LONG *part_tbl_long,
 			tempM = min(t, max(psy_stvar_long[2].nb[p1+b], min(part_tbl_long->dyn->bmax[b]*psy_stvar_long[3].en[b], psy_stvar_long[3].nb[p1+b])));
 			tempS = min(t, max(psy_stvar_long[3].nb[p1+b], min(part_tbl_long->dyn->bmax[b]*psy_stvar_long[2].en[b], psy_stvar_long[2].nb[p1+b])));
 
-//			if ((psy_stvar_long[0].nb[p1+b] <= 1.58*psy_stvar_long[1].nb[p1+b])&&(psy_stvar_long[1].nb[p1+b] <= 1.58*psy_stvar_long[0].nb[p1+b])) {
+			if ((psy_stvar_long[0].nb[p1+b] >= 1.58*psy_stvar_long[1].nb[p1+b])&&(psy_stvar_long[1].nb[p1+b] >= 1.58*psy_stvar_long[0].nb[p1+b])) {
 				psy_stvar_long[2].nb[p1+b] = tempM;
 				psy_stvar_long[3].nb[p1+b] = tempS;
 				psy_stvar_long[0].nb[p1+b] = tempL;
 				psy_stvar_long[1].nb[p1+b] = tempR;
-//			}
+			}
 		}
 
 		for (i = 0; i < MAX_SHORT_WINDOWS; i++) {
@@ -1065,12 +1065,12 @@ void psy_step11andahalf(PARTITION_TABLE_LONG *part_tbl_long,
 				tempM = min(t, max(psy_stvar_short[2].nb[i][b], min(part_tbl_short->dyn->bmax[b]*psy_stvar_short[3].en[i][b], psy_stvar_short[3].nb[i][b])));
 				tempS = min(t, max(psy_stvar_short[3].nb[i][b], min(part_tbl_short->dyn->bmax[b]*psy_stvar_short[2].en[i][b], psy_stvar_short[2].nb[i][b])));
 
-//				if ((psy_stvar_short[0].nb[i][b] <= 1.58*psy_stvar_short[1].nb[i][b])&&(psy_stvar_short[1].nb[i][b] <= 1.58*psy_stvar_short[0].nb[i][b])) {
+				if ((psy_stvar_short[0].nb[i][b] >= 1.58*psy_stvar_short[1].nb[i][b])&&(psy_stvar_short[1].nb[i][b] >= 1.58*psy_stvar_short[0].nb[i][b])) {
 					psy_stvar_short[2].nb[i][b] = tempM;
 					psy_stvar_short[3].nb[i][b] = tempS;
 					psy_stvar_short[0].nb[i][b] = tempL;
 					psy_stvar_short[1].nb[i][b] = tempR;
-//				}
+				}
 			}
 		}
 	}
