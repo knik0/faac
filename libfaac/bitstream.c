@@ -24,7 +24,7 @@ copyright notice must be included in all copies or derivative works.
 Copyright (c) 1997.
 **********************************************************************/
 /*
- * $Id: bitstream.c,v 1.32 2006/07/07 12:20:51 sur Exp $
+ * $Id: bitstream.c,v 1.33 2006/07/10 12:04:47 sur Exp $
  */
 
 #include <stdio.h>
@@ -391,6 +391,7 @@ static int WriteCPE(CoderInfo *coderInfoL,
 {
     int bits = 0;
 
+#ifndef DRM
     if (writeFlag) {
         /* write ID_CPE, single_element_channel() identifier */
         PutBit(bitStream, ID_CPE, LEN_SE_ID);
@@ -405,6 +406,7 @@ static int WriteCPE(CoderInfo *coderInfoL,
     bits += LEN_SE_ID;
     bits += LEN_TAG;
     bits += LEN_COM_WIN;
+#endif
 
     /* if common_window, write ics_info */
     if (channelInfo->common_window) {
