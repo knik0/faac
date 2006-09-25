@@ -18,7 +18,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: main.c,v 1.78 2004/12/08 11:07:17 menno Exp $
+ * $Id: main.c,v 1.79 2006/09/25 19:53:36 menno Exp $
  */
 
 #ifdef _MSC_VER
@@ -619,10 +619,10 @@ int main(int argc, char *argv[])
         album = optarg;
         break;
     case TRACK_FLAG:
-        sscanf(optarg, "%u/%u", &trackno, &ntracks);
+        sscanf(optarg, "%d/%d", &trackno, &ntracks);
         break;
     case DISC_FLAG:
-        sscanf(optarg, "%u/%u", &discno, &ndiscs);
+        sscanf(optarg, "%d/%d", &discno, &ndiscs);
         break;
     case COMPILATION_FLAG:
         compilation = 0x1;
@@ -1143,6 +1143,9 @@ int main(int argc, char *argv[])
 
 /*
 $Log: main.c,v $
+Revision 1.79  2006/09/25 19:53:36  menno
+Fixed track and disk number reading from command line
+
 Revision 1.78  2004/12/08 11:07:17  menno
 Make long help work again
 
