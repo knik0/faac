@@ -16,7 +16,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: maingui.c,v 1.20 2003/03/27 17:11:33 knik Exp $
+ * $Id: maingui.c,v 1.21 2007/03/19 19:57:40 menno Exp $
  */
 
 #include <windows.h>
@@ -93,7 +93,7 @@ static void AwakeDialogControls(HWND hWnd)
     unsigned int sampleRate, numChannels;
     char *pExt;
 
-    if ((infile = wav_open_read(inputFilename)) == NULL)
+    if ((infile = wav_open_read(inputFilename, 0)) == NULL)
         return;
 
     /* determine input file parameters */
@@ -131,7 +131,7 @@ static DWORD WINAPI EncodeFile(LPVOID pParam)
     GetDlgItemText(hWnd, IDC_OUTPUTFILENAME, outputFilename, sizeof(outputFilename));
 
     /* open the input file */
-    if ((infile = wav_open_read(inputFilename)) != NULL)
+    if ((infile = wav_open_read(inputFilename, 0)) != NULL)
     {
         /* determine input file parameters */
         unsigned int sampleRate = infile->samplerate;
@@ -203,12 +203,12 @@ static DWORD WINAPI EncodeFile(LPVOID pParam)
 
                 unsigned int bytesInput = 0;
                 DWORD numberOfBytesWritten = 0;
-                short *pcmbuf;
+                int *pcmbuf;
                 unsigned char *bitbuf;
                 char HeaderText[50];
                 char Percentage[5];
 
-                pcmbuf = (short*)LocalAlloc(0, inputSamples*sizeof(short));
+                pcmbuf = (short*)LocalAlloc(0, inputSamples*sizeof(int));
                 bitbuf = (unsigned char*)LocalAlloc(0, maxOutputBytes*sizeof(unsigned char));
 
                 SendDlgItemMessage(hWnd, IDC_PROGRESS, PBM_SETRANGE, 0, MAKELPARAM(0, 1024));
@@ -219,12 +219,12 @@ static DWORD WINAPI EncodeFile(LPVOID pParam)
                     int bytesWritten;
                     UINT timeElapsed, timeEncoded;
 
-                    bytesInput = wav_read_short(infile, pcmbuf, inputSamples) * sizeof(short);
+                    bytesInput = wav_read_int24(infile, pcmbuf, inputSamples, NULL) * sizeof(int);
 
-                    SendDlgItemMessage (hWnd, IDC_PROGRESS, PBM_SETPOS, (unsigned long)((float)totalBytesRead * 1024.0f / (infile->samples*2*numChannels)), 0);
+                    SendDlgItemMessage (hWnd, IDC_PROGRESS, PBM_SETPOS, (unsigned long)((float)totalBytesRead * 1024.0f / (infile->samples*sizeof(int)*numChannels)), 0);
 
                     /* Percentage for Dialog Output */
-                    _itoa((int)((float)totalBytesRead * 100.0f / (infile->samples*2*numChannels)),Percentage,10);
+                    _itoa((int)((float)totalBytesRead * 100.0f / (infile->samples*sizeof(int)*numChannels)),Percentage,10);
                     lstrcpy(HeaderText,"FAAC GUI: ");
                     lstrcat(HeaderText,Percentage);
                     lstrcat(HeaderText,"%");
@@ -233,7 +233,7 @@ static DWORD WINAPI EncodeFile(LPVOID pParam)
                     totalBytesRead += bytesInput;
 
                     timeElapsed = (GetTickCount () - startTime) / 10;
-                    timeEncoded = 100.0 * totalBytesRead / (sampleRate * numChannels * sizeof (short));
+                    timeEncoded = 100.0 * totalBytesRead / (sampleRate * numChannels * sizeof (int));
 
                     if (timeElapsed > (lastUpdated + 20))
                     {
@@ -259,7 +259,7 @@ static DWORD WINAPI EncodeFile(LPVOID pParam)
                     /* call the actual encoding routine */
                     bytesWritten = faacEncEncode(hEncoder,
                         pcmbuf,
-                        bytesInput/2,
+                        bytesInput/sizeof(int),
                         bitbuf,
                         maxOutputBytes);
 
@@ -334,12 +334,12 @@ static BOOL WINAPI DialogProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 
         SendMessage(GetDlgItem(hWnd, IDC_MPEGVERSION), CB_ADDSTRING, 0, (LPARAM)(LPCTSTR)"MPEG4");
         SendMessage(GetDlgItem(hWnd, IDC_MPEGVERSION), CB_ADDSTRING, 0, (LPARAM)(LPCTSTR)"MPEG2");
-        SendMessage(GetDlgItem(hWnd, IDC_MPEGVERSION), CB_SETCURSEL, 1, 0);
+        SendMessage(GetDlgItem(hWnd, IDC_MPEGVERSION), CB_SETCURSEL, 0, 0);
 
-        SendMessage(GetDlgItem(hWnd, IDC_OBJECTTYPE), CB_ADDSTRING, 0, (LPARAM)(LPCTSTR)"Main");
+//        SendMessage(GetDlgItem(hWnd, IDC_OBJECTTYPE), CB_ADDSTRING, 0, (LPARAM)(LPCTSTR)"Main");
         SendMessage(GetDlgItem(hWnd, IDC_OBJECTTYPE), CB_ADDSTRING, 0, (LPARAM)(LPCTSTR)"Low Complexity");
-        SendMessage(GetDlgItem(hWnd, IDC_OBJECTTYPE), CB_ADDSTRING, 0, (LPARAM)(LPCTSTR)"LTP");
-        SendMessage(GetDlgItem(hWnd, IDC_OBJECTTYPE), CB_SETCURSEL, 1, 0);
+//        SendMessage(GetDlgItem(hWnd, IDC_OBJECTTYPE), CB_ADDSTRING, 0, (LPARAM)(LPCTSTR)"LTP");
+        SendMessage(GetDlgItem(hWnd, IDC_OBJECTTYPE), CB_SETCURSEL, 0, 0);
 
         CheckDlgButton(hWnd, IDC_ALLOWMIDSIDE, TRUE);
         CheckDlgButton(hWnd, IDC_USELFE, FALSE);

@@ -18,7 +18,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: main.c,v 1.79 2006/09/25 19:53:36 menno Exp $
+ * $Id: main.c,v 1.80 2007/03/19 19:57:40 menno Exp $
  */
 
 #ifdef _MSC_VER
@@ -694,6 +694,7 @@ int main(int argc, char *argv[])
             dieMessage = "Unrecognised MPEG version!\n";
             }
             break;
+#if 0
     case OBJTYPE_FLAG:
         if (!strcasecmp(optarg, "LC"))
                 objectType = LOW;
@@ -705,6 +706,7 @@ int main(int argc, char *argv[])
         } else
             dieMessage = "Unrecognised object type!\n";
         break;
+#endif
         case 'L':
         fprintf(stderr, faac_copyright_string);
         dieMessage = license;
@@ -918,7 +920,14 @@ int main(int argc, char *argv[])
     {
 #endif
         /* open the aac output file */
-        outfile = fopen(aacFileName, "wb");
+        if (!strcmp(aacFileName, "-"))
+        {
+            outfile = stdout;
+        }
+        else
+        {
+            outfile = fopen(aacFileName, "wb");
+        }
         if (!outfile)
         {
             fprintf(stderr, "Couldn't create output file %s\n", aacFileName);
@@ -1143,6 +1152,12 @@ int main(int argc, char *argv[])
 
 /*
 $Log: main.c,v $
+Revision 1.80  2007/03/19 19:57:40  menno
+Made faacgui buildable again
+Made stdout as output possible (use - as output filename)
+Disabled MAIN and LTP encoding
+Increase version number
+
 Revision 1.79  2006/09/25 19:53:36  menno
 Fixed track and disk number reading from command line
 
