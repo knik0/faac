@@ -16,7 +16,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: input.c,v 1.12 2004/03/03 15:54:50 knik Exp $
+ * $Id: input.c,v 1.13 2007/06/05 18:59:47 menno Exp $
  */
 
 #ifdef HAVE_CONFIG_H
@@ -140,15 +140,26 @@ pcmfile_t *wav_open_read(const char *name, int rawinput)
     if (memcmp(&(riff.chunk_type), wavel, 4))
       return NULL;
 
+    // handle broadcast extensions. added by pro-tools,otherwise it must be fmt chunk.
     if (fread(&riffsub, 1, sizeof(riffsub), wave_f) != sizeof(riffsub))
-      return NULL;
+        return NULL;
     riffsub.len = UINT32(riffsub.len);
+
+    if (!memcmp(&(riffsub.label), bextl, 4))
+    {
+        fseek(wave_f, riffsub.len, SEEK_CUR);
+
+        if (fread(&riffsub, 1, sizeof(riffsub), wave_f) != sizeof(riffsub))
+            return NULL;
+        riffsub.len = UINT32(riffsub.len);
+    }
+
     if (memcmp(&(riffsub.label), fmtl, 4))
-      return NULL;
+        return NULL;
     memset(&wave, 0, sizeof(wave));
     fmtsize = (riffsub.len < sizeof(wave)) ? riffsub.len : sizeof(wave);
     if (fread(&wave, 1, fmtsize, wave_f) != fmtsize)
-      return NULL;
+        return NULL;
 
     for (skip = riffsub.len - fmtsize; skip > 0; skip--)
       fgetc(wave_f);

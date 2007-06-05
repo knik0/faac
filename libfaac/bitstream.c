@@ -24,7 +24,7 @@ copyright notice must be included in all copies or derivative works.
 Copyright (c) 1997.
 **********************************************************************/
 /*
- * $Id: bitstream.c,v 1.33 2006/07/10 12:04:47 sur Exp $
+ * $Id: bitstream.c,v 1.34 2007/06/05 18:59:47 menno Exp $
  */
 
 #include <stdio.h>
@@ -98,7 +98,7 @@ static int WriteByte(BitStream *bitStream,
                      unsigned long data,
                      int numBit);
 static int ByteAlign(BitStream* bitStream,
-                     int writeFlag);
+                     int writeFlag, int bitsSoFar);
 #ifdef DRM
 static int PutBitHcr(BitStream *bitStream,
                      unsigned long curpos,
@@ -238,7 +238,7 @@ int WriteBitstream(faacEncHandle hEncoder,
      * in MPEG4 the byte_alignment() is officially done before the new frame
      * instead of at the end. But this is basically the same.
      */
-    bits += ByteAlign(bitStream, 1);
+    bits += ByteAlign(bitStream, 1, bits);
 
     return bits;
 }
@@ -322,7 +322,7 @@ static int CountBitstream(faacEncHandle hEncoder,
     bits += LEN_SE_ID;
 
     /* Now byte align the bitstream */
-    bits += ByteAlign(bitStream, 0);
+    bits += ByteAlign(bitStream, 0, bits);
 
     hEncoder->usedBytes = bit2byte(bits);
 
@@ -1010,11 +1010,16 @@ int PutBit(BitStream *bitStream,
     return 0;
 }
 
-static int ByteAlign(BitStream *bitStream, int writeFlag)
+static int ByteAlign(BitStream *bitStream, int writeFlag, int bitsSoFar)
 {
     int len, i,j;
 
-    len = BufferNumBit(bitStream);
+    if (writeFlag)
+    {
+        len = BufferNumBit(bitStream);
+    } else {
+        len = bitsSoFar;
+    }
 
     j = (8 - (len%8))%8;
 
