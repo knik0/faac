@@ -16,7 +16,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: input.c,v 1.13 2007/06/05 18:59:47 menno Exp $
+ * $Id: input.c,v 1.14 2007/06/08 17:29:24 menno Exp $
  */
 
 #ifdef HAVE_CONFIG_H
@@ -111,6 +111,7 @@ pcmfile_t *wav_open_read(const char *name, int rawinput)
   WAVEFORMATEXTENSIBLE wave;
   char *riffl = "RIFF";
   char *wavel = "WAVE";
+  char *bextl = "BEXT";
   char *fmtl = "fmt ";
   char *datal = "data";
   int fmtsize;
