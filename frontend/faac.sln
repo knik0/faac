@@ -1,35 +1,36 @@
-Microsoft Visual Studio Solution File, Format Version 7.00
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "faac", "faac.vcproj", "{5A62E361-2050-4639-A5F4-402D87E1AB88}"
+﻿
+Microsoft Visual Studio Solution File, Format Version 9.00
+# Visual C++ Express 2005
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "faac", "faac.vcproj", "{92992E74-AEDE-46DC-AD8C-ADEA876F1A4C}"
+	ProjectSection(ProjectDependencies) = postProject
+		{C7A305F1-8C73-4E1F-BB1B-623707D44D24} = {C7A305F1-8C73-4E1F-BB1B-623707D44D24}
+		{9CC48C6E-92EB-4814-AD37-97AB3622AB65} = {9CC48C6E-92EB-4814-AD37-97AB3622AB65}
+	EndProjectSection
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "libfaac", "..\LIBFAAC\libfaac.vcproj", "{AB72465E-EE03-4901-AA3D-5B5503DFB381}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "libfaac", "..\LIBFAAC\libfaac.vcproj", "{9CC48C6E-92EB-4814-AD37-97AB3622AB65}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "libsndfile", "..\common\libsndfile\Win32\libsndfile.vcproj", "{6B162CF2-E6E2-4D50-8F27-F0B51C81B78E}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "libmp4v2_st", "..\common\mp4v2\libmp4v2_st60.vcproj", "{C7A305F1-8C73-4E1F-BB1B-623707D44D24}"
 EndProject
 Global
-	GlobalSection(SolutionConfiguration) = preSolution
-		ConfigName.0 = Debug
-		ConfigName.1 = Release
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Win32 = Debug|Win32
+		Release|Win32 = Release|Win32
 	EndGlobalSection
-	GlobalSection(ProjectDependencies) = postSolution
-		{5A62E361-2050-4639-A5F4-402D87E1AB88}.0 = {6B162CF2-E6E2-4D50-8F27-F0B51C81B78E}
-		{5A62E361-2050-4639-A5F4-402D87E1AB88}.1 = {AB72465E-EE03-4901-AA3D-5B5503DFB381}
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{92992E74-AEDE-46DC-AD8C-ADEA876F1A4C}.Debug|Win32.ActiveCfg = Debug|Win32
+		{92992E74-AEDE-46DC-AD8C-ADEA876F1A4C}.Debug|Win32.Build.0 = Debug|Win32
+		{92992E74-AEDE-46DC-AD8C-ADEA876F1A4C}.Release|Win32.ActiveCfg = Release|Win32
+		{92992E74-AEDE-46DC-AD8C-ADEA876F1A4C}.Release|Win32.Build.0 = Release|Win32
+		{9CC48C6E-92EB-4814-AD37-97AB3622AB65}.Debug|Win32.ActiveCfg = Debug|Win32
+		{9CC48C6E-92EB-4814-AD37-97AB3622AB65}.Debug|Win32.Build.0 = Debug|Win32
+		{9CC48C6E-92EB-4814-AD37-97AB3622AB65}.Release|Win32.ActiveCfg = Release|Win32
+		{9CC48C6E-92EB-4814-AD37-97AB3622AB65}.Release|Win32.Build.0 = Release|Win32
+		{C7A305F1-8C73-4E1F-BB1B-623707D44D24}.Debug|Win32.ActiveCfg = Debug|Win32
+		{C7A305F1-8C73-4E1F-BB1B-623707D44D24}.Debug|Win32.Build.0 = Debug|Win32
+		{C7A305F1-8C73-4E1F-BB1B-623707D44D24}.Release|Win32.ActiveCfg = Release|Win32
+		{C7A305F1-8C73-4E1F-BB1B-623707D44D24}.Release|Win32.Build.0 = Release|Win32
 	EndGlobalSection
-	GlobalSection(ProjectConfiguration) = postSolution
-		{5A62E361-2050-4639-A5F4-402D87E1AB88}.Debug.ActiveCfg = Debug|Win32
-		{5A62E361-2050-4639-A5F4-402D87E1AB88}.Debug.Build.0 = Debug|Win32
-		{5A62E361-2050-4639-A5F4-402D87E1AB88}.Release.ActiveCfg = Release|Win32
-		{5A62E361-2050-4639-A5F4-402D87E1AB88}.Release.Build.0 = Release|Win32
-		{AB72465E-EE03-4901-AA3D-5B5503DFB381}.Debug.ActiveCfg = Debug|Win32
-		{AB72465E-EE03-4901-AA3D-5B5503DFB381}.Debug.Build.0 = Debug|Win32
-		{AB72465E-EE03-4901-AA3D-5B5503DFB381}.Release.ActiveCfg = Release|Win32
-		{AB72465E-EE03-4901-AA3D-5B5503DFB381}.Release.Build.0 = Release|Win32
-		{6B162CF2-E6E2-4D50-8F27-F0B51C81B78E}.Debug.ActiveCfg = Debug|Win32
-		{6B162CF2-E6E2-4D50-8F27-F0B51C81B78E}.Debug.Build.0 = Debug|Win32
-		{6B162CF2-E6E2-4D50-8F27-F0B51C81B78E}.Release.ActiveCfg = Release|Win32
-		{6B162CF2-E6E2-4D50-8F27-F0B51C81B78E}.Release.Build.0 = Release|Win32
-	EndGlobalSection
-	GlobalSection(ExtensibilityGlobals) = postSolution
-	EndGlobalSection
-	GlobalSection(ExtensibilityAddIns) = postSolution
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
 	EndGlobalSection
 EndGlobal
