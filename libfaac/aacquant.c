@@ -17,7 +17,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: aacquant.c,v 1.31 2004/07/12 08:46:43 corrados Exp $
+ * $Id: aacquant.c,v 1.32 2008/03/23 23:00:25 menno Exp $
  */
 
 #include <math.h>
@@ -226,6 +226,27 @@ int AACQuantize(CoderInfo *coderInfo,
 	for (i = 0; i < coderInfo->nr_of_sfb; i++)
 	  printf("sf %d: %d\n", i, coderInfo->scale_factor[i]);
 #endif
+    // clamp to valid diff range
+    {
+      int previous_scale_factor = coderInfo->global_gain;
+      int previous_is_factor = 0;
+      for (i = 0; i < coderInfo->nr_of_sfb; i++) {
+        if ((coderInfo->book_vector[i]==INTENSITY_HCB) ||
+            (coderInfo->book_vector[i]==INTENSITY_HCB2)) {
+            const int diff = scale_factor[i] - previous_is_factor;
+            if (diff < -60) scale_factor[i] = previous_is_factor - 60;
+            else if (diff > 59) scale_factor[i] = previous_is_factor + 59;
+            previous_is_factor = scale_factor[i];
+//            printf("sf %d: %d diff=%d **\n", i, coderInfo->scale_factor[i], diff);
+        } else if (coderInfo->book_vector[i]) {
+            const int diff = scale_factor[i] - previous_scale_factor;
+            if (diff < -60) scale_factor[i] = previous_scale_factor - 60;
+            else if (diff > 59) scale_factor[i] = previous_scale_factor + 59;
+            previous_scale_factor = scale_factor[i];
+//            printf("sf %d: %d diff=%d\n", i, coderInfo->scale_factor[i], diff);
+        }
+      }
+    }
 
     /* place the codewords and their respective lengths in arrays data[] and len[] respectively */
     /* there are 'counter' elements in each array, and these are variable length arrays depending on the input */
