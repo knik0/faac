@@ -1,228 +1,334 @@
-<?xml version="1.0" encoding = "Windows-1252"?>
+<?xml version="1.0" encoding="Windows-1252"?>
 <VisualStudioProject
 	ProjectType="Visual C++"
-	Version="7.00"
+	Version="8,00"
 	Name="libfaac_dll"
-	SccProjectName=""
-	SccLocalPath="">
+	ProjectGUID="{856BB8CF-B944-4D7A-9D59-4945316229AA}"
+	>
 	<Platforms>
 		<Platform
-			Name="Win32"/>
+			Name="Win32"
+		/>
 	</Platforms>
+	<ToolFiles>
+	</ToolFiles>
 	<Configurations>
 		<Configuration
 			Name="Release|Win32"
 			OutputDirectory=".\ReleaseDLL"
 			IntermediateDirectory=".\Release"
 			ConfigurationType="2"
+			InheritedPropertySheets="$(VCInstallDir)VCProjectDefaults\UpgradeFromVC70.vsprops"
 			UseOfMFC="0"
-			ATLMinimizesCRunTimeLibraryUsage="FALSE"
-			CharacterSet="2">
+			ATLMinimizesCRunTimeLibraryUsage="false"
+			CharacterSet="2"
+			>
+			<Tool
+				Name="VCPreBuildEventTool"
+			/>
+			<Tool
+				Name="VCCustomBuildTool"
+			/>
+			<Tool
+				Name="VCXMLDataGeneratorTool"
+			/>
+			<Tool
+				Name="VCWebServiceProxyGeneratorTool"
+			/>
+			<Tool
+				Name="VCMIDLTool"
+				PreprocessorDefinitions="NDEBUG"
+				MkTypLibCompatible="true"
+				SuppressStartupBanner="true"
+				TargetEnvironment="1"
+				TypeLibraryName=".\ReleaseDLL/libfaac_dll.tlb"
+			/>
 			<Tool
 				Name="VCCLCompilerTool"
 				InlineFunctionExpansion="1"
-				OptimizeForProcessor="2"
+				AdditionalIncludeDirectories="../include"
 				PreprocessorDefinitions="WIN32;NDEBUG;_WINDOWS;_USRDLL;LIBFAAC_DLL_EXPORTS"
-				StringPooling="TRUE"
+				StringPooling="true"
 				RuntimeLibrary="2"
-				EnableFunctionLevelLinking="TRUE"
-				UsePrecompiledHeader="2"
+				EnableFunctionLevelLinking="true"
+				UsePrecompiledHeader="0"
 				PrecompiledHeaderFile=".\Release/libfaac_dll.pch"
 				AssemblerListingLocation=".\Release/"
 				ObjectFile=".\Release/"
 				ProgramDataBaseFileName=".\Release/"
 				WarningLevel="3"
-				SuppressStartupBanner="TRUE"/>
+				SuppressStartupBanner="true"
+			/>
 			<Tool
-				Name="VCCustomBuildTool"/>
+				Name="VCManagedResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCResourceCompilerTool"
+				PreprocessorDefinitions="NDEBUG"
+				Culture="1031"
+			/>
+			<Tool
+				Name="VCPreLinkEventTool"
+			/>
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalOptions="/MACHINE:I386"
 				AdditionalDependencies="odbc32.lib odbccp32.lib"
 				OutputFile="ReleaseDLL/libfaac.dll"
 				LinkIncremental="1"
-				SuppressStartupBanner="TRUE"
+				SuppressStartupBanner="true"
 				ModuleDefinitionFile=".\libfaac.def"
 				ProgramDatabaseFile=".\ReleaseDLL/libfaac.pdb"
-				ImportLibrary=".\ReleaseDLL/libfaac.lib"/>
+				ImportLibrary=".\ReleaseDLL/libfaac.lib"
+			/>
 			<Tool
-				Name="VCMIDLTool"
-				PreprocessorDefinitions="NDEBUG"
-				MkTypLibCompatible="TRUE"
-				SuppressStartupBanner="TRUE"
-				TargetEnvironment="1"
-				TypeLibraryName=".\ReleaseDLL/libfaac_dll.tlb"/>
+				Name="VCALinkTool"
+			/>
 			<Tool
-				Name="VCPostBuildEventTool"/>
+				Name="VCManifestTool"
+			/>
 			<Tool
-				Name="VCPreBuildEventTool"/>
+				Name="VCXDCMakeTool"
+			/>
 			<Tool
-				Name="VCPreLinkEventTool"/>
+				Name="VCBscMakeTool"
+			/>
 			<Tool
-				Name="VCResourceCompilerTool"
-				PreprocessorDefinitions="NDEBUG"
-				Culture="1031"/>
+				Name="VCFxCopTool"
+			/>
 			<Tool
-				Name="VCWebServiceProxyGeneratorTool"/>
+				Name="VCAppVerifierTool"
+			/>
 			<Tool
-				Name="VCWebDeploymentTool"/>
+				Name="VCWebDeploymentTool"
+			/>
+			<Tool
+				Name="VCPostBuildEventTool"
+			/>
 		</Configuration>
 		<Configuration
 			Name="Debug|Win32"
 			OutputDirectory=".\DebugDLL"
 			IntermediateDirectory=".\Debug"
 			ConfigurationType="2"
+			InheritedPropertySheets="$(VCInstallDir)VCProjectDefaults\UpgradeFromVC70.vsprops"
 			UseOfMFC="0"
-			ATLMinimizesCRunTimeLibraryUsage="FALSE"
-			CharacterSet="2">
+			ATLMinimizesCRunTimeLibraryUsage="false"
+			CharacterSet="2"
+			>
+			<Tool
+				Name="VCPreBuildEventTool"
+			/>
+			<Tool
+				Name="VCCustomBuildTool"
+			/>
+			<Tool
+				Name="VCXMLDataGeneratorTool"
+			/>
+			<Tool
+				Name="VCWebServiceProxyGeneratorTool"
+			/>
+			<Tool
+				Name="VCMIDLTool"
+				PreprocessorDefinitions="_DEBUG"
+				MkTypLibCompatible="true"
+				SuppressStartupBanner="true"
+				TargetEnvironment="1"
+				TypeLibraryName=".\DebugDLL/libfaac_dll.tlb"
+			/>
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
+				AdditionalIncludeDirectories="../include"
 				PreprocessorDefinitions="WIN32;_DEBUG;_WINDOWS;_USRDLL;LIBFAAC_DLL_EXPORTS"
 				BasicRuntimeChecks="3"
 				RuntimeLibrary="3"
-				UsePrecompiledHeader="2"
+				UsePrecompiledHeader="0"
 				PrecompiledHeaderFile=".\Debug/libfaac_dll.pch"
 				AssemblerListingLocation=".\Debug/"
 				ObjectFile=".\Debug/"
 				ProgramDataBaseFileName=".\Debug/"
 				WarningLevel="3"
-				SuppressStartupBanner="TRUE"
-				DebugInformationFormat="4"/>
+				SuppressStartupBanner="true"
+				DebugInformationFormat="4"
+			/>
 			<Tool
-				Name="VCCustomBuildTool"/>
+				Name="VCManagedResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCResourceCompilerTool"
+				PreprocessorDefinitions="_DEBUG"
+				Culture="1031"
+			/>
+			<Tool
+				Name="VCPreLinkEventTool"
+			/>
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalOptions="/MACHINE:I386"
 				AdditionalDependencies="odbc32.lib odbccp32.lib"
 				OutputFile="DebugDLL/libfaac.dll"
 				LinkIncremental="2"
-				SuppressStartupBanner="TRUE"
+				SuppressStartupBanner="true"
 				ModuleDefinitionFile=".\libfaac.def"
-				GenerateDebugInformation="TRUE"
+				GenerateDebugInformation="true"
 				ProgramDatabaseFile=".\DebugDLL/libfaac.pdb"
-				ImportLibrary=".\DebugDLL/libfaac.lib"/>
+				ImportLibrary=".\DebugDLL/libfaac.lib"
+			/>
 			<Tool
-				Name="VCMIDLTool"
-				PreprocessorDefinitions="_DEBUG"
-				MkTypLibCompatible="TRUE"
-				SuppressStartupBanner="TRUE"
-				TargetEnvironment="1"
-				TypeLibraryName=".\DebugDLL/libfaac_dll.tlb"/>
+				Name="VCALinkTool"
+			/>
 			<Tool
-				Name="VCPostBuildEventTool"/>
+				Name="VCManifestTool"
+			/>
 			<Tool
-				Name="VCPreBuildEventTool"/>
+				Name="VCXDCMakeTool"
+			/>
 			<Tool
-				Name="VCPreLinkEventTool"/>
+				Name="VCBscMakeTool"
+			/>
 			<Tool
-				Name="VCResourceCompilerTool"
-				PreprocessorDefinitions="_DEBUG"
-				Culture="1031"/>
+				Name="VCFxCopTool"
+			/>
 			<Tool
-				Name="VCWebServiceProxyGeneratorTool"/>
+				Name="VCAppVerifierTool"
+			/>
 			<Tool
-				Name="VCWebDeploymentTool"/>
+				Name="VCWebDeploymentTool"
+			/>
+			<Tool
+				Name="VCPostBuildEventTool"
+			/>
 		</Configuration>
 	</Configurations>
+	<References>
+	</References>
 	<Files>
 		<Filter
 			Name="Source Files"
-			Filter="cpp;c;cxx;rc;def;r;odl;idl;hpj;bat">
+			Filter="cpp;c;cxx;rc;def;r;odl;idl;hpj;bat"
+			>
 			<File
-				RelativePath=".\aacquant.c">
+				RelativePath=".\aacquant.c"
+				>
 			</File>
 			<File
-				RelativePath=".\backpred.c">
+				RelativePath=".\backpred.c"
+				>
 			</File>
 			<File
-				RelativePath=".\bitstream.c">
+				RelativePath=".\bitstream.c"
+				>
 			</File>
 			<File
-				RelativePath=".\channels.c">
+				RelativePath=".\channels.c"
+				>
 			</File>
 			<File
-				RelativePath=".\fft.c">
+				RelativePath=".\fft.c"
+				>
 			</File>
 			<File
-				RelativePath=".\filtbank.c">
+				RelativePath=".\filtbank.c"
+				>
 			</File>
 			<File
-				RelativePath=".\frame.c">
+				RelativePath=".\frame.c"
+				>
 			</File>
 			<File
-				RelativePath=".\huffman.c">
+				RelativePath=".\huffman.c"
+				>
 			</File>
 			<File
-				RelativePath=".\joint.c">
+				RelativePath=".\ltp.c"
+				>
 			</File>
 			<File
-				RelativePath=".\ltp.c">
+				RelativePath=".\midside.c"
+				>
 			</File>
 			<File
-				RelativePath=".\psychiso.c">
+				RelativePath=".\psychkni.c"
+				>
 			</File>
 			<File
-				RelativePath=".\psychkni.c">
+				RelativePath=".\tns.c"
+				>
 			</File>
 			<File
-				RelativePath=".\tns.c">
-			</File>
-			<File
-				RelativePath=".\util.c">
+				RelativePath=".\util.c"
+				>
 			</File>
 		</Filter>
 		<Filter
 			Name="Header Files"
-			Filter="h;hpp;hxx;hm;inl">
+			Filter="h;hpp;hxx;hm;inl"
+			>
 			<File
-				RelativePath=".\aacquant.h">
+				RelativePath=".\aacquant.h"
+				>
 			</File>
 			<File
-				RelativePath=".\backpred.h">
+				RelativePath=".\backpred.h"
+				>
 			</File>
 			<File
-				RelativePath=".\bitstream.h">
+				RelativePath=".\bitstream.h"
+				>
 			</File>
 			<File
-				RelativePath=".\channels.h">
+				RelativePath=".\channels.h"
+				>
 			</File>
 			<File
-				RelativePath=".\coder.h">
+				RelativePath=".\coder.h"
+				>
 			</File>
 			<File
-				RelativePath=".\fft.h">
+				RelativePath=".\fft.h"
+				>
 			</File>
 			<File
-				RelativePath=".\filtbank.h">
+				RelativePath=".\filtbank.h"
+				>
 			</File>
 			<File
-				RelativePath=".\frame.h">
+				RelativePath=".\frame.h"
+				>
 			</File>
 			<File
-				RelativePath=".\huffman.h">
+				RelativePath=".\huffman.h"
+				>
 			</File>
 			<File
-				RelativePath=".\hufftab.h">
+				RelativePath=".\hufftab.h"
+				>
 			</File>
 			<File
-				RelativePath=".\joint.h">
+				RelativePath=".\joint.h"
+				>
 			</File>
 			<File
-				RelativePath=".\ltp.h">
+				RelativePath=".\ltp.h"
+				>
 			</File>
 			<File
-				RelativePath=".\psych.h">
+				RelativePath=".\psych.h"
+				>
 			</File>
 			<File
-				RelativePath=".\tns.h">
+				RelativePath=".\tns.h"
+				>
 			</File>
 			<File
-				RelativePath=".\util.h">
+				RelativePath=".\util.h"
+				>
 			</File>
 		</Filter>
 		<File
-			RelativePath=".\libfaac.def">
+			RelativePath=".\libfaac.def"
+			>
 		</File>
 	</Files>
 	<Globals>
