@@ -71,7 +71,10 @@ typedef __int16 int16_t;
 typedef __int8  int8_t;
 typedef unsigned short in_port_t;
 typedef int socklen_t;
+#ifndef __MINGW32__
+/* Let's avoid some boring conflicting declarations */
 typedef int ssize_t;
+#endif /* #ifndef __MINGW32__ */
 #define snprintf _snprintf
 #define strncasecmp _strnicmp
 #define strcasecmp _stricmp
@@ -121,13 +124,17 @@ int gettimeofday(struct timeval *t, void *);
 #define LOG_INFO 6
 #define LOG_DEBUG 7
 
-#if     !__STDC__ && _INTEGRAL_MAX_BITS >= 64
+#ifdef __MINGW32__
+#define FPOS_TO_VAR(fpos, typed, var) (var) = (typed)(fpos)
+#define VAR_TO_FPOS(fpos, var) (fpos) = (var)
+#elif     !__STDC__ && _INTEGRAL_MAX_BITS >= 64
 #define VAR_TO_FPOS(fpos, var) (fpos) = (var)
 #define FPOS_TO_VAR(fpos, typed, var) (var) = (typed)(_FPOSOFF(fpos))
 #else
 #define VAR_TO_FPOS(fpos, var) (fpos).lopart = ((var) & UINT_MAX); (fpos).hipart = ((var) >> 32)
 #define FPOS_TO_VAR(fpos, typed, var) (var) = (typed)((uint64_t)((fpos).hipart ) << 32 | (fpos).lopart)
-#endif
+#endif /* #ifdef __MINGW32__ */
+
 
 #define __STRING(expr) #expr
 

@@ -29,6 +29,10 @@
 
 #include "mp4common.h"
 #include "atoms.h"
+#ifdef __MINGW32__
+/* We need isalnum() declaration */
+#include <ctype.h>
+#endif /* #ifdef __MINGW32__ */
 
 MP4AtomInfo::MP4AtomInfo(const char* name, bool mandatory, bool onlyOne) 
 {

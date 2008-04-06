@@ -16,7 +16,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: input.h,v 1.5 2003/08/17 19:38:15 menno Exp $
+ * $Id: input.h,v 1.6 2008/04/06 00:42:31 menno Exp $
  */
 
 #ifndef _INPUT_H
@@ -31,6 +31,8 @@
 #ifdef HAVE_SYS_TYPES_H
 # include <sys/types.h>
 #endif
+#ifndef __MPEG4IP_INCLUDED__
+/* Let's avoid some boring conflicting declarations */
 #ifdef HAVE_INTTYPES_H
 # include <inttypes.h>
 #endif
@@ -50,6 +52,7 @@ typedef unsigned int u_int32_t;
 #ifndef HAVE_U_INT16_T
 typedef unsigned short u_int16_t;
 #endif
+#endif /* #ifndef __MPEG4IP_INCLUDED__ */
 
 #ifdef __cplusplus
 extern "C"

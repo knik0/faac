@@ -20,6 +20,10 @@
  */
 
 #include "mp4common.h"
+#ifdef __MINGW32__
+/* We need tolower() declaration */
+#include <ctype.h>
+#endif /* #ifdef __MINGW32__ */
 
 void MP4Error::Print(FILE* pFile)
 {
