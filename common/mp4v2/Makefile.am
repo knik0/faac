@@ -2,11 +2,11 @@ INCLUDES = -I$(top_srcdir)/include
 
 AM_CXXFLAGS = -Wall
 
-lib_LTLIBRARIES = libmp4v2.la 
+noinst_LIBRARIES = libmp4v2.a 
 
-include_HEADERS = mp4.h mpeg4ip.h mpeg4ip_version.h mpeg4ip_config.h
+noinst_HEADERS = mp4.h mpeg4ip.h mpeg4ip_version.h mpeg4ip_config.h
 
-libmp4v2_la_SOURCES = \
+libmp4v2_a_SOURCES = \
 	3gp.cpp \
 	atom_bitr.cpp \
 	atom_co64.cpp \

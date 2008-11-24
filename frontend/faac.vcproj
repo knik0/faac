@@ -132,7 +132,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				InlineFunctionExpansion="1"
-				AdditionalIncludeDirectories="../include,../common/libsndfile/src,../common/getopt"
+				AdditionalIncludeDirectories="../common/mp4v2;../include,../common/libsndfile/src,../common/getopt"
 				PreprocessorDefinitions="WIN32,NDEBUG,_CONSOLE"
 				StringPooling="true"
 				RuntimeLibrary="0"
