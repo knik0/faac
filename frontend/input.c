@@ -16,7 +16,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: input.c,v 1.14 2007/06/08 17:29:24 menno Exp $
+ * $Id: input.c,v 1.15 2008/11/24 22:00:11 menno Exp $
  */
 
 #ifdef HAVE_CONFIG_H
@@ -27,7 +27,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#ifdef WIN32
+#ifdef _WIN32
 #include <io.h>
 #include <fcntl.h>
 #endif
@@ -120,7 +120,7 @@ pcmfile_t *wav_open_read(const char *name, int rawinput)
 
   if (!strcmp(name, "-"))
   {
-#ifdef WIN32
+#ifdef _WIN32
     setmode(fileno(stdin), O_BINARY);
 #endif
     wave_f = stdin;

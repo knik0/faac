@@ -16,7 +16,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: frame.h,v 1.27 2003/11/24 18:09:38 knik Exp $
+ * $Id: frame.h,v 1.28 2008/11/24 22:00:11 menno Exp $
  */
 
 #ifndef FRAME_H
@@ -37,7 +37,7 @@
 #endif
 
 #ifndef HAVE_INT32_T
-typedef int int32_t;
+typedef signed int int32_t;
 #endif
 
 #ifdef __cplusplus
@@ -50,7 +50,7 @@ extern "C" {
 #include "aacquant.h"
 #include "fft.h"
 
-#ifdef WIN32
+#ifdef _WIN32
   #ifndef FAACAPI
     #define FAACAPI __stdcall
   #endif

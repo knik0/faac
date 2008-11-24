@@ -16,7 +16,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: faac.h,v 1.33 2004/07/04 12:12:05 corrados Exp $
+ * $Id: faac.h,v 1.34 2008/11/24 22:00:11 menno Exp $
  */
 
 #ifndef _FAAC_H_
@@ -26,7 +26,7 @@
 extern "C" {
 #endif /* __cplusplus */
 
-#ifdef WIN32
+#ifdef _WIN32
 # ifndef FAACAPI
 #  define FAACAPI __stdcall
 # endif
@@ -50,7 +50,7 @@ psymodellist_t;
 typedef void *faacEncHandle;
 
 #ifndef HAVE_INT32_T
-typedef int int32_t;
+typedef signed int int32_t;
 #endif
 
 /*
