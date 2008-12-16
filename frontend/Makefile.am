@@ -1,4 +1,5 @@
 bin_PROGRAMS = faac
+man_MANS = ../docs/faac.1
 
 faac_SOURCES = main.c input.c
 
