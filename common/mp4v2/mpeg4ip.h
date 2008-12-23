@@ -25,7 +25,7 @@
 /* project wide applicable stuff here */
 
 
-#ifdef WIN32
+#ifdef _WIN32
 #define HAVE_IN_PORT_T
 #define HAVE_SOCKLEN_T
 #define NEED_SDL_VIDEO_IN_MAIN_THREAD
@@ -45,7 +45,7 @@
 
 
 
-#ifdef WIN32
+#ifdef _WIN32
 
 #define _WIN32_WINNT 0x0400
 #define _WINSOCKAPI_
