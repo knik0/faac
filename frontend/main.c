@@ -18,7 +18,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: main.c,v 1.80 2007/03/19 19:57:40 menno Exp $
+ * $Id: main.c,v 1.81 2009/01/24 00:15:12 menno Exp $
  */
 
 #ifdef _MSC_VER
@@ -108,6 +108,7 @@ const char *short_help =
   "MP4 specific options:\n"
 #ifdef HAVE_LIBMP4V2
   "  -w\t\tWrap AAC data in MP4 container. (default for *.mp4 and *.m4a)\n"
+  "  -s\t\tOptimize MP4 container layout after encoding\n"
   "  --artist X\tSet artist to X\n"
   "  --writer X\tSet writer to X\n"
   "  --title X\tSet title to X\n"
@@ -175,6 +176,7 @@ const char *long_help =
 #ifdef HAVE_LIBMP4V2
   "  -w\t\tWrap AAC data in MP4 container. (default for *.mp4, *.m4a and\n"
   "\t\t*.m4b)\n"
+  "  -s\t\tOptimize MP4 container layout after encoding.\n"
   "  --artist X\tSet artist to X\n"
   "  --writer X\tSet writer/composer to X\n"
   "  --title X\tSet title/track name to X\n"
@@ -404,6 +406,7 @@ int main(int argc, char *argv[])
     unsigned int useMidSide = 1;
     static unsigned int useTns = DEFAULT_TNS;
     enum container_format container = NO_CONTAINER;
+    int optimizeFlag = 0;
     enum stream_format stream = ADTS_STREAM;
     int cutOff = -1;
     int bitRate = 0;
@@ -489,6 +492,7 @@ int main(int argc, char *argv[])
             { "license", 0, 0, 'L'},
 #ifdef HAVE_LIBMP4V2
             { "createmp4", 0, 0, 'w'},
+            { "optimize", 0, 0, 's'},
             { "artist", 1, 0, ARTIST_FLAG},
             { "title", 1, 0, TITLE_FLAG},
             { "album", 1, 0, ALBUM_FLAG},
@@ -509,7 +513,7 @@ int main(int argc, char *argv[])
 
         c = getopt_long(argc, argv, "Hhb:m:o:rnc:q:PR:B:C:I:X"
 #ifdef HAVE_LIBMP4V2
-                        "w"
+                        "ws"
 #endif
             ,long_options, &option_index);
 
@@ -605,6 +609,9 @@ int main(int argc, char *argv[])
 #ifdef HAVE_LIBMP4V2
         case 'w':
         container = MP4_CONTAINER;
+            break;
+        case 's':
+        optimizeFlag = 1;
             break;
     case ARTIST_FLAG:
         artist = optarg;
@@ -1126,15 +1133,23 @@ int main(int argc, char *argv[])
 #endif
             }
         }
-        fprintf(stderr, "\n\n");
 
 #ifdef HAVE_LIBMP4V2
         /* clean up */
         if (container == MP4_CONTAINER)
+        {
             MP4Close(MP4hFile);
-        else
+            if (optimizeFlag == 1)
+            {
+                fprintf(stderr, "\n\nMP4 format optimization... ");
+                MP4Optimize(aacFileName, NULL, 0);
+                fprintf(stderr, "Done!");
+            }
+        } else
 #endif
             fclose(outfile);
+
+        fprintf(stderr, "\n\n");
     }
 
     faacEncClose(hEncoder);
@@ -1152,6 +1167,9 @@ int main(int argc, char *argv[])
 
 /*
 $Log: main.c,v $
+Revision 1.81  2009/01/24 00:15:12  menno
+Added -s option for output of optimized mp4 layout
+
 Revision 1.80  2007/03/19 19:57:40  menno
 Made faacgui buildable again
 Made stdout as output possible (use - as output filename)
