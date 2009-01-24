@@ -18,7 +18,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: main.c,v 1.81 2009/01/24 00:15:12 menno Exp $
+ * $Id: main.c,v 1.82 2009/01/24 01:10:20 menno Exp $
  */
 
 #ifdef _MSC_VER
@@ -332,8 +332,8 @@ void signal_handler(int signal) {
 static int check_image_header(const char *buf) {
   if (!strncmp(buf, "\x89\x50\x4E\x47\x0D\x0A\x1A\x0A", 8))
     return 1; /* PNG */
-  else if (!strncmp(buf, "\xFF\xD8\xFF\xE0", 4) &&
-       !strncmp(buf + 6, "JFIF\0", 5))
+  else if (!strncmp(buf, "\xFF\xD8\xFF\xE0", 4) ||
+       !strncmp(buf, "\xFF\xD8\xFF\xE1", 4))
     return 1; /* JPEG */
   else if (!strncmp(buf, "GIF87a", 6) || !strncmp(buf, "GIF89a", 6))
     return 1; /* GIF */
@@ -1167,6 +1167,9 @@ int main(int argc, char *argv[])
 
 /*
 $Log: main.c,v $
+Revision 1.82  2009/01/24 01:10:20  menno
+Made JPEG detection less restrictive
+
 Revision 1.81  2009/01/24 00:15:12  menno
 Added -s option for output of optimized mp4 layout
 
