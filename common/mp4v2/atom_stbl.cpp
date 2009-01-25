@@ -28,6 +28,7 @@ MP4StblAtom::MP4StblAtom()
 	ExpectChildAtom("stts", Required, OnlyOne);
 	ExpectChildAtom("ctts", Optional, OnlyOne);
 	ExpectChildAtom("stsz", Required, OnlyOne);
+	ExpectChildAtom("stz2", Optional, OnlyOne);
 	ExpectChildAtom("stsc", Required, OnlyOne);
 	ExpectChildAtom("stco", Optional, OnlyOne);
 	ExpectChildAtom("co64", Optional, OnlyOne);

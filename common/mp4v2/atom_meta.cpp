@@ -23,42 +23,15 @@
 
 #include "mp4common.h"
 
-MP4MetaAtom::MP4MetaAtom()
-    : MP4Atom("meta")
+MP4Meta1Atom::MP4Meta1Atom(const char *name)
+    : MP4Atom(name)
 {
-	AddVersionAndFlags(); /* 0, 1 */
+  AddVersionAndFlags(); /* 0, 1 */
 
-    ExpectChildAtom("hdlr", Required, OnlyOne);
-    ExpectChildAtom("ilst", Required, OnlyOne);
+  AddProperty(new MP4BytesProperty("metadata")); /* 2 */
 }
 
-MP4MeanAtom::MP4MeanAtom()
-    : MP4Atom("mean")
-{
-	AddVersionAndFlags(); /* 0, 1 */
-
-    AddProperty(
-        new MP4BytesProperty("metadata")); /* 2 */
-}
-
-void MP4MeanAtom::Read() 
-{
-	// calculate size of the metadata from the atom size
-	((MP4BytesProperty*)m_pProperties[2])->SetValueSize(m_size - 4);
-
-	MP4Atom::Read();
-}
-
-MP4NameAtom::MP4NameAtom()
-    : MP4Atom("name")
-{
-	AddVersionAndFlags(); /* 0, 1 */
-
-    AddProperty(
-        new MP4BytesProperty("metadata")); /* 2 */
-}
-
-void MP4NameAtom::Read() 
+void MP4Meta1Atom::Read() 
 {
 	// calculate size of the metadata from the atom size
 	((MP4BytesProperty*)m_pProperties[2])->SetValueSize(m_size - 4);
@@ -84,114 +57,28 @@ void MP4DataAtom::Read()
 	MP4Atom::Read();
 }
 
-MP4IlstAtom::MP4IlstAtom()
-    : MP4Atom("ilst")
+
+// MP4Meta2Atom is for \251nam and \251cmt flags, which appear differently
+// in .mov and in itunes file.  In .movs, they appear under udata, in 
+// itunes, they appear under ilst.
+MP4Meta2Atom::MP4Meta2Atom (const char *name) : MP4Atom(name)
 {
-    ExpectChildAtom("\251nam", Optional, OnlyOne); /* name */
-    ExpectChildAtom("\251ART", Optional, OnlyOne); /* artist */
-    ExpectChildAtom("\251wrt", Optional, OnlyOne); /* writer */
-    ExpectChildAtom("\251alb", Optional, OnlyOne); /* album */
-    ExpectChildAtom("\251day", Optional, OnlyOne); /* date */
-    ExpectChildAtom("\251too", Optional, OnlyOne); /* tool */
-    ExpectChildAtom("\251cmt", Optional, OnlyOne); /* comment */
-    ExpectChildAtom("\251gen", Optional, OnlyOne); /* custom genre */
-    ExpectChildAtom("trkn", Optional, OnlyOne); /* tracknumber */
-    ExpectChildAtom("disk", Optional, OnlyOne); /* disknumber */
-    ExpectChildAtom("gnre", Optional, OnlyOne); /* genre (ID3v1 index + 1) */
-    ExpectChildAtom("cpil", Optional, OnlyOne); /* compilation */
-    ExpectChildAtom("tmpo", Optional, OnlyOne); /* BPM */
-    ExpectChildAtom("covr", Optional, OnlyOne); /* cover art */
-    ExpectChildAtom("----", Optional, Many); /* ---- free form */
 }
 
-MP4DashAtom::MP4DashAtom()
-    : MP4Atom("----")
+void MP4Meta2Atom::Read ()
 {
-    ExpectChildAtom("mean", Required, OnlyOne);
-    ExpectChildAtom("name", Required, OnlyOne);
+  MP4Atom *parent = GetParentAtom();
+  if (ATOMID(parent->GetType()) == ATOMID("udta")) {
+    // add data property
+    AddReserved("reserved2", 4); /* 0 */
+
+    AddProperty(
+        new MP4BytesProperty("metadata")); /* 1 */
+    ((MP4BytesProperty*)m_pProperties[1])->SetValueSize(m_size - 4);
+  } else {
     ExpectChildAtom("data", Required, OnlyOne);
+  }
+  MP4Atom::Read();
 }
 
-MP4NamAtom::MP4NamAtom()
-    : MP4Atom("\251nam")
-{
-    ExpectChildAtom("data", Required, OnlyOne);
-}
-
-MP4ArtAtom::MP4ArtAtom()
-    : MP4Atom("\251ART")
-{
-    ExpectChildAtom("data", Required, OnlyOne);
-}
-
-MP4WrtAtom::MP4WrtAtom()
-    : MP4Atom("\251wrt")
-{
-    ExpectChildAtom("data", Required, OnlyOne);
-}
-
-MP4AlbAtom::MP4AlbAtom()
-    : MP4Atom("\251alb")
-{
-    ExpectChildAtom("data", Required, OnlyOne);
-}
-
-MP4CmtAtom::MP4CmtAtom()
-    : MP4Atom("\251cmt")
-{
-    ExpectChildAtom("data", Required, OnlyOne);
-}
-
-MP4TrknAtom::MP4TrknAtom()
-    : MP4Atom("trkn")
-{
-    ExpectChildAtom("data", Required, OnlyOne);
-}
-
-MP4DiskAtom::MP4DiskAtom()
-    : MP4Atom("disk")
-{
-    ExpectChildAtom("data", Required, OnlyOne);
-}
-
-MP4DayAtom::MP4DayAtom()
-    : MP4Atom("\251day")
-{
-    ExpectChildAtom("data", Required, OnlyOne);
-}
-
-MP4GenAtom::MP4GenAtom()
-    : MP4Atom("\251gen")
-{
-    ExpectChildAtom("data", Required, OnlyOne);
-}
-
-MP4TooAtom::MP4TooAtom()
-    : MP4Atom("\251too")
-{
-    ExpectChildAtom("data", Required, OnlyOne);
-}
-
-MP4GnreAtom::MP4GnreAtom()
-    : MP4Atom("gnre")
-{
-    ExpectChildAtom("data", Optional, OnlyOne);
-}
-
-MP4CpilAtom::MP4CpilAtom()
-    : MP4Atom("cpil")
-{
-    ExpectChildAtom("data", Required, OnlyOne);
-}
-
-MP4TmpoAtom::MP4TmpoAtom()
-    : MP4Atom("tmpo")
-{
-    ExpectChildAtom("data", Required, OnlyOne);
-}
-
-MP4CovrAtom::MP4CovrAtom()
-    : MP4Atom("covr")
-{
-    ExpectChildAtom("data", Required, OnlyOne);
-}
+  

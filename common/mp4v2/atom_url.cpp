@@ -21,8 +21,8 @@
 
 #include "mp4common.h"
 
-MP4UrlAtom::MP4UrlAtom() 
-	: MP4Atom("url ")
+MP4UrlAtom::MP4UrlAtom(const char *type) 
+	: MP4Atom(type)
 {
 	AddVersionAndFlags();
 	AddProperty(new MP4StringProperty("location"));

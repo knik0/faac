@@ -13,7 +13,7 @@
  * 
  * The Initial Developer of the Original Code is Cisco Systems Inc.
  * Portions created by Cisco Systems Inc. are
- * Copyright (C) Cisco Systems Inc. 2001 - 2004.  All Rights Reserved.
+ * Copyright (C) Cisco Systems Inc. 2001 - 2005.  All Rights Reserved.
  * 
  * 3GPP features implementation is based on 3GPP's TS26.234-v5.60,
  * and was contributed by Ximpo Group Ltd.
@@ -38,6 +38,7 @@ class MP4StringProperty;
 class MP4BytesProperty;
 class MP4Descriptor;
 class MP4DescriptorProperty;
+struct Virtual_IO;
 
 class MP4File {
 public: /* equivalent to MP4 library API */
@@ -46,11 +47,16 @@ public: /* equivalent to MP4 library API */
 
 	/* file operations */
 	void Read(const char* fileName);
-	void Create(const char* fileName, u_int32_t flags);
-	void CreateEx(const char* fileName, u_int32_t flags, char* majorBrand, 
-		      u_int32_t minorVersion, char** supportedBrands, 
-		      u_int32_t supportedBrandsCount);
-	void Modify(const char* fileName);
+	#ifdef _WIN32
+	void Read(const wchar_t* fileName);
+	#endif
+	void ReadEx(const char *fileName, void *user, Virtual_IO *virtual_IO); //benski>
+	void Create(const char* fileName, u_int32_t flags, 
+		    int add_ftyp = 1, int add_iods = 1,
+		    char* majorBrand = NULL, 
+		    u_int32_t minorVersion = 0, char** supportedBrands = NULL, 
+		    u_int32_t supportedBrandsCount = 0);
+	bool Modify(const char* fileName);
 	void Optimize(const char* orgFileName, 
 		const char* newFileName = NULL);
 	void Dump(FILE* pDumpFile = NULL, bool dumpImplicits = false);
@@ -66,7 +72,7 @@ public: /* equivalent to MP4 library API */
 	}
 
 	bool Use64Bits(const char *atomName);
-
+	void Check64BitStatus(const char *atomName);
 	/* file properties */
 
 	u_int64_t GetIntegerProperty(const char* name);
@@ -122,7 +128,7 @@ public: /* equivalent to MP4 library API */
 	u_int16_t FindTrakAtomIndex(MP4TrackId trackId);
 
 	/* track properties */
-
+	MP4Atom *FindTrackAtom(MP4TrackId trackId, const char *name);
 	u_int64_t GetTrackIntegerProperty(
 		MP4TrackId trackId, const char* name);
 	float GetTrackFloatProperty(
@@ -211,7 +217,8 @@ public: /* equivalent to MP4 library API */
                 u_int8_t  key_ind_len,
                 u_int8_t  iv_len, 
                 bool      selective_enc,
-                char      *kms_uri);
+                const char  *kms_uri,
+		bool      use_ismacryp);
 
 	void SetAmrVendor(
 			MP4TrackId trackId,
@@ -224,6 +231,7 @@ public: /* equivalent to MP4 library API */
 	void SetAmrModeSet(
 			MP4TrackId trackId,
 			u_int16_t modeSet);
+	uint16_t GetAmrModeSet(MP4TrackId trackId);
 
 	MP4TrackId AddAmrAudioTrack(
 			u_int32_t timeScale,
@@ -232,7 +240,11 @@ public: /* equivalent to MP4 library API */
 			u_int8_t framesPerSample,
 			bool isAmrWB);
 
-	MP4TrackId AddVideoTrack(
+	MP4TrackId AddHrefTrack(uint32_t timeScale,
+				MP4Duration sampleDuration,
+				const char *base_url);
+
+	MP4TrackId AddMP4VideoTrack(
 		u_int32_t timeScale, 
 		MP4Duration sampleDuration,
 		u_int16_t width, 
@@ -245,12 +257,8 @@ public: /* equivalent to MP4 library API */
 		u_int16_t width, 
 		u_int16_t height, 
 		u_int8_t  videoType,
-                u_int32_t scheme_type,
-                u_int16_t scheme_version,
-                u_int8_t  key_ind_len,
-                u_int8_t  iv_len,
-                bool      selective_enc,
-                char      *kms_uri);
+		mp4v2_ismacrypParams *icPp,
+		const char *oFormat);
 
 	void SetH263Vendor(
 			MP4TrackId trackId,
@@ -275,12 +283,42 @@ public: /* equivalent to MP4 library API */
 			u_int32_t avgBitrate,
 			u_int32_t maxBitrate);
 
+	MP4TrackId AddH264VideoTrack(
+				     u_int32_t timeScale,
+				     MP4Duration sampleDuration,
+				     u_int16_t width,
+				     u_int16_t height,
+				     uint8_t AVCProfileIndication,
+				     uint8_t profile_compat,
+				     uint8_t AVCLevelIndication,
+				     uint8_t sampleLenFieldSizeMinusOne);
+
+	MP4TrackId AddEncH264VideoTrack(
+				     u_int32_t timeScale,
+				     MP4Duration sampleDuration,
+				     u_int16_t width,
+				     u_int16_t height,
+					MP4Atom *srcAtom,
+					mp4v2_ismacrypParams *icPp);
+
+	void AddH264SequenceParameterSet(MP4TrackId trackId,
+					 const uint8_t *pSequence,
+					 uint16_t sequenceLen);
+	void AddH264PictureParameterSet(MP4TrackId trackId,
+					const uint8_t *pPicture,
+					uint16_t pictureLen);
 	MP4TrackId AddHintTrack(MP4TrackId refTrackId);
+
+	MP4TrackId AddTextTrack(MP4TrackId refTrackId);
+	MP4TrackId AddChapterTextTrack(MP4TrackId refTrackId);
 
 	MP4SampleId GetTrackNumberOfSamples(MP4TrackId trackId);
 
 	const char* GetTrackType(MP4TrackId trackId);
 
+	const char *GetTrackMediaDataName(MP4TrackId trackId);
+	bool GetTrackMediaDataOriginalFormat(MP4TrackId trackId,
+		char *originalFormat, u_int32_t buflen);
 	MP4Duration GetTrackDuration(MP4TrackId trackId);
 
 	u_int32_t GetTrackTimeScale(MP4TrackId trackId);
@@ -289,19 +327,25 @@ public: /* equivalent to MP4 library API */
 	// replacement to GetTrackAudioType and GetTrackVideoType	
 	u_int8_t GetTrackEsdsObjectTypeId(MP4TrackId trackId);
 
-	u_int8_t GetTrackAudioType(MP4TrackId trackId);
 	u_int8_t GetTrackAudioMpeg4Type(MP4TrackId trackId);
-	u_int8_t GetTrackVideoType(MP4TrackId trackId);
 
 	MP4Duration GetTrackFixedSampleDuration(MP4TrackId trackId);
 
-	float GetTrackVideoFrameRate(MP4TrackId trackId);
-
+	double GetTrackVideoFrameRate(MP4TrackId trackId);
+	
+	int GetTrackAudioChannels(MP4TrackId trackId);
 	void GetTrackESConfiguration(MP4TrackId trackId, 
 		u_int8_t** ppConfig, u_int32_t* pConfigSize);
 	void SetTrackESConfiguration(MP4TrackId trackId, 
 		const u_int8_t* pConfig, u_int32_t configSize);
 
+	void GetTrackVideoMetadata(MP4TrackId trackId, 
+		u_int8_t** ppConfig, u_int32_t* pConfigSize);
+	void GetTrackH264SeqPictHeaders(MP4TrackId trackId, 
+					uint8_t ***pSeqHeader,
+					uint32_t **pSeqHeaderSize,
+					uint8_t ***pPictHeader,
+					uint32_t **pPictHeaderSize);
 	const char* GetHintTrackSdp(MP4TrackId hintTrackId);
 	void SetHintTrackSdp(MP4TrackId hintTrackId, const char* sdpString);
 	void AppendHintTrackSdp(MP4TrackId hintTrackId, const char* sdpString);
@@ -507,48 +551,50 @@ public: /* equivalent to MP4 library API */
 		MP4Duration* pDuration = NULL);
 
 	/* iTunes metadata handling */
+ protected:
 	bool CreateMetadataAtom(const char* name);
+ public:
+	// these are public to remove a lot of unnecessary routines
+	bool DeleteMetadataAtom(const char* name, bool try_udta = false);
+	bool GetMetadataString(const char *atom, char **value, bool try_udta = false);
+	bool SetMetadataString(const char *atom, const char *value);
 	bool MetadataDelete(void);
+
+	bool SetMetadataUint8(const char *atom, u_int8_t compilation);
+	bool GetMetadataUint8(const char *atom, u_int8_t* compilation);
 	
 	/* set metadata */
-	bool SetMetadataName(const char* value);
-	bool SetMetadataWriter(const char* value);
-	bool SetMetadataAlbum(const char* value);
-	bool SetMetadataArtist(const char* value);
-	bool SetMetadataTool(const char* value);
-	bool SetMetadataComment(const char* value);
-	bool SetMetadataYear(const char* value);
 	bool SetMetadataTrack(u_int16_t track, u_int16_t totalTracks);
 	bool SetMetadataDisk(u_int16_t disk, u_int16_t totalDisks);
 	bool SetMetadataGenre(const char *value);
 	bool SetMetadataTempo(u_int16_t tempo);
-	bool SetMetadataCompilation(u_int8_t compilation);
 	bool SetMetadataCoverArt(u_int8_t *coverArt, u_int32_t size);
-	bool SetMetadataFreeForm(char *name, 
-				 u_int8_t* pValue, 
-				 u_int32_t valueSize);
+	bool SetMetadataFreeForm(const char *name, 
+				 const u_int8_t* pValue, 
+				 u_int32_t valueSize,
+				 const char *owner = NULL);
  
 	/* get metadata */
 	bool GetMetadataByIndex(u_int32_t index,
-				const char** ppName,
-				u_int8_t** ppValue, 
+				char** ppName, // free memory when done
+				u_int8_t** ppValue,  // free memory when done
 				u_int32_t* pValueSize);
-	bool GetMetadataName(char** value);
-	bool GetMetadataWriter(char** value);
-	bool GetMetadataAlbum(char** value);
-	bool GetMetadataArtist(char** value);
-	bool GetMetadataTool(char** value);
-	bool GetMetadataComment(char** value);
-	bool GetMetadataYear(char** value);
 	bool GetMetadataTrack(u_int16_t* track, u_int16_t* totalTracks);
 	bool GetMetadataDisk(u_int16_t* disk, u_int16_t* totalDisks);
 	bool GetMetadataGenre(char **value);
 	bool GetMetadataTempo(u_int16_t* tempo);
-	bool GetMetadataCompilation(u_int8_t* compilation);
-	bool GetMetadataCoverArt(u_int8_t **coverArt, u_int32_t* size);
-	bool GetMetadataFreeForm(char *name, 
+	bool GetMetadataCoverArt(u_int8_t **coverArt, u_int32_t* size,
+				 uint32_t index = 0);
+	u_int32_t GetMetadataCoverArtCount(void);
+	bool GetMetadataFreeForm(const char *name, 
 				 u_int8_t** pValue, 
-				 u_int32_t* valueSize);
+				 u_int32_t* valueSize,
+				 const char *owner = NULL);
+
+	/* delete metadata */
+	bool DeleteMetadataGenre();
+	bool DeleteMetadataFreeForm(const char *name, const char *owner = NULL);
+
 	/* end of MP4 API */
 
 	/* "protected" interface to be used only by friends in library */
@@ -558,7 +604,7 @@ public: /* equivalent to MP4 library API */
 
 	u_int64_t GetSize();
 
-	u_int32_t ReadBytes(
+	void ReadBytes(
 		u_int8_t* pBytes, u_int32_t numBytes, FILE* pFile = NULL);
 	u_int64_t ReadUInt(u_int8_t size);
 	u_int8_t ReadUInt8();
@@ -576,11 +622,10 @@ public: /* equivalent to MP4 library API */
 	void FlushReadBits();
 	u_int32_t ReadMpegLength();
 
-	u_int32_t PeekBytes(
+	void PeekBytes(
 		u_int8_t* pBytes, u_int32_t numBytes, FILE* pFile = NULL);
 
 	void WriteBytes(u_int8_t* pBytes, u_int32_t numBytes, FILE* pFile = NULL);
-	void WriteUInt(u_int64_t value, u_int8_t size);
 	void WriteUInt8(u_int8_t value);
 	void WriteUInt16(u_int16_t value);
 	void WriteUInt24(u_int32_t value);
@@ -608,7 +653,7 @@ public: /* equivalent to MP4 library API */
 
 	MP4Track* GetTrack(MP4TrackId trackId);
 
-	MP4Duration UpdateDuration(MP4Duration duration);
+	void UpdateDuration(MP4Duration duration);
 
 	MP4Atom* FindAtom(const char* name);
 
@@ -640,13 +685,16 @@ public: /* equivalent to MP4 library API */
 
 protected:
 	void Open(const char* fmode);
+	#ifdef _WIN32
+	void Open(const wchar_t* fmode);
+	#endif
 	void ReadFromFile();
 	void GenerateTracks();
 	void BeginWrite();
 	void FinishWrite();
 	void CacheProperties();
-	void RewriteMdat(FILE* pReadFile, FILE* pWriteFile);
-	MP4Atom* GetTrakDamrAtom(MP4TrackId trackId);
+	void RewriteMdat(void* pReadFile, void* pWriteFile,
+			 Virtual_IO *readIO, Virtual_IO *writeIO);
 	bool ShallHaveIods();
 
 	const char* TempFileName();
@@ -666,6 +714,16 @@ protected:
 	bool FindProperty(const char* name,
 		MP4Property** ppProperty, u_int32_t* pIndex = NULL);
 
+	MP4TrackId AddVideoTrackDefault(
+		u_int32_t timeScale, 
+		MP4Duration sampleDuration,
+		u_int16_t width, 
+		u_int16_t height, 
+		const char *videoType);
+	MP4TrackId AddCntlTrackDefault(
+		u_int32_t timeScale, 
+		MP4Duration sampleDuration,
+		const char *videoType);
 	void AddTrackToIod(MP4TrackId trackId);
 
 	void RemoveTrackFromIod(MP4TrackId trackId, bool shallHaveIods = true);
@@ -697,14 +755,14 @@ protected:
 		u_int8_t** ppBytes,
 		u_int64_t* pNumBytes);
 
-	MP4Descriptor* CreateESD(
+	void CreateESD(
 		MP4DescriptorProperty* pEsProperty,
 		u_int32_t esid,
 		u_int8_t objectType,
 		u_int8_t streamType,
 		u_int32_t bufferSize,
 		u_int32_t bitrate,
-		u_int8_t* pConfig,
+		const u_int8_t* pConfig,
 		u_int32_t configLength,
 		char* url);
 
@@ -735,7 +793,11 @@ protected:
 
 protected:
 	char*			m_fileName;
-	FILE*			m_pFile;
+	#ifdef _WIN32
+	wchar_t*    	m_fileName_w;
+	#endif
+	void*			m_pFile;
+	Virtual_IO             *m_virtual_IO;
 	u_int64_t		m_orgFileSize;
 	u_int64_t		m_fileSize;
 	MP4Atom*		m_pRootAtom;
@@ -762,6 +824,14 @@ protected:
 	u_int8_t	m_bufReadBits;
 	u_int8_t	m_numWriteBits;
 	u_int8_t	m_bufWriteBits;
+
+#ifndef _WIN32
+	char m_tempFileName[64];
+#else
+	char m_tempFileName[MAX_PATH + 3];
+#endif
+	char m_trakName[1024];
+	char *m_editName;
 };
 
 #endif /* __MP4_FILE_INCLUDED__ */

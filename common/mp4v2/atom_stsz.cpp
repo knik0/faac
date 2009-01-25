@@ -37,7 +37,7 @@ MP4StszAtom::MP4StszAtom()
 	AddProperty(pTable); /* 4 */
 
 	pTable->AddProperty( /* 4/0 */
-		new MP4Integer32Property("sampleSize"));
+		new MP4Integer32Property("entrySize"));
 }
 
 void MP4StszAtom::Read() 

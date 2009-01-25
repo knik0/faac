@@ -13,27 +13,19 @@
  * 
  * The Initial Developer of the Original Code is Cisco Systems Inc.
  * Portions created by Cisco Systems Inc. are
- * Copyright (C) Cisco Systems Inc. 2001.  All Rights Reserved.
+ * Copyright (C) Cisco Systems Inc. 2001 - 2005.  All Rights Reserved.
  * 
  * Contributor(s): 
- *		Dave Mackie		dmackie@cisco.com
+ *		Ben Allison			benski at nullsoft.com
+ *
+ * Virtual I/O support, for file support other than fopen/fread/fwrite
  */
 
-#include "mp4common.h"
+#ifndef __VIRTUAL_IO_INCLUDED__
+#define __VIRTUAL_IO_INCLUDED__
 
-MP4TrexAtom::MP4TrexAtom() 
-	: MP4Atom("trex")
-{
-	AddVersionAndFlags();	/* 0, 1 */
-	AddProperty( /* 2 */
-		new MP4Integer32Property("trackId"));
-	AddProperty( /* 3 */
-		new MP4Integer32Property("defaultSampleDesriptionIndex"));
-	AddProperty( /* 4 */
-		new MP4Integer32Property("defaultSampleDuration"));
-	AddProperty( /* 5 */
-		new MP4Integer32Property("defaultSampleSize"));
-	AddProperty( /* 6 */
-		new MP4Integer32Property("defaultSampleFlags"));
-}
+#include "mpeg4ip.h"
 
+extern Virtual_IO FILE_virtual_IO;
+
+#endif

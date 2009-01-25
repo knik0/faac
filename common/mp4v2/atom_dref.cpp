@@ -33,6 +33,7 @@ MP4DrefAtom::MP4DrefAtom()
 
 	ExpectChildAtom("url ", Optional, Many);
 	ExpectChildAtom("urn ", Optional, Many);
+	ExpectChildAtom("alis", Optional, Many);
 }
 
 void MP4DrefAtom::Read() 

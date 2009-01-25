@@ -42,7 +42,8 @@ void MP4TrunAtom::AddProperties(u_int32_t flags)
 	}
 
 	MP4TableProperty* pTable = 
-		new MP4TableProperty("samples", m_pProperties[2]);
+	  new MP4TableProperty("samples", 
+			       (MP4Integer32Property *)m_pProperties[2]);
 	AddProperty(pTable);
 
 	if (flags & 0x100) {

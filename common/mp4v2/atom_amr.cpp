@@ -27,8 +27,8 @@
 
 #include "mp4common.h"
 
-MP4SawbAtom::MP4SawbAtom() 
-	: MP4Atom("sawb") 
+MP4AmrAtom::MP4AmrAtom(const char *type) 
+	: MP4Atom(type) 
 {
 	AddReserved("reserved1", 6); /* 0 */
 
@@ -45,7 +45,7 @@ MP4SawbAtom::MP4SawbAtom()
 	ExpectChildAtom("damr", Required, OnlyOne);
 }
 
-void MP4SawbAtom::Generate()
+void MP4AmrAtom::Generate()
 {
 	MP4Atom::Generate();
 

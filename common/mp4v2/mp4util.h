@@ -24,26 +24,17 @@
 #include <assert.h>
 
 #ifndef ASSERT
-#ifdef NDEBUG
-#define ASSERT(expr)
-#else
 #define ASSERT(expr) \
 	if (!(expr)) { \
-		fflush(stdout); \
-		assert((expr)); \
+		throw new MP4Error("assert failure", __STRING((expr))); \
 	}
 #endif
-#endif
-#ifdef NDEBUG
-#define WARNING(expr)
-#else
 #define WARNING(expr) \
 	if (expr) { \
 		fflush(stdout); \
 		fprintf(stderr, "Warning (%s) in %s at line %u\n", \
 			__STRING(expr), __FILE__, __LINE__); \
 	}
-#endif
 
 #define VERBOSE(exprverbosity, verbosity, expr)	\
 	if (((exprverbosity) & (verbosity)) == (exprverbosity)) { expr; }
@@ -172,6 +163,7 @@ void MP4HexDump(
 	FILE* pFile = stdout, u_int8_t indent = 0);
 
 inline void* MP4Malloc(size_t size) {
+  if (size == 0) return NULL;
 	void* p = malloc(size);
 	if (p == NULL && size > 0) {
 		throw new MP4Error(errno);
@@ -180,6 +172,7 @@ inline void* MP4Malloc(size_t size) {
 }
 
 inline void* MP4Calloc(size_t size) {
+  if (size == 0) return NULL;
 	return memset(MP4Malloc(size), 0, size);
 }
 
@@ -188,6 +181,14 @@ inline char* MP4Stralloc(const char* s1) {
 	strcpy(s2, s1);
 	return s2;
 }
+
+#ifdef _WIN32
+inline wchar_t* MP4Stralloc(const wchar_t* s1) {
+	wchar_t* s2 = (wchar_t*)MP4Malloc((wcslen(s1) + 1)*sizeof(wchar_t));
+	wcscpy(s2, s1);
+	return s2;
+}
+#endif
 
 inline void* MP4Realloc(void* p, u_int32_t newSize) {
 	// workaround library bug
@@ -201,17 +202,13 @@ inline void* MP4Realloc(void* p, u_int32_t newSize) {
 	return p;
 }
 
-inline void MP4Free(void* p) {
-	free(p);
-}
-
 inline u_int32_t STRTOINT32(const char* s) {
-	return (s[0] << 24) | (s[1] << 16) | (s[2] << 8) | s[3];
+  return ntohl(*(uint32_t *)s);
 }
 
 inline void INT32TOSTR(u_int32_t i, char* s) {
-	s[0] = ((i >> 24) & 0xFF); s[1] = ((i >> 16) & 0xFF); 
-	s[2] = ((i >> 8) & 0xFF); s[3] = (i & 0xFF); s[4] = 0;
+  *(uint32_t *)s = htonl(i);
+  s[4] = 0;
 }
 
 inline MP4Timestamp MP4GetAbsTimestamp() {
@@ -238,5 +235,8 @@ const char* MP4NameAfterFirst(const char *s);
 char* MP4ToBase16(const u_int8_t* pData, u_int32_t dataSize);
 
 char* MP4ToBase64(const u_int8_t* pData, u_int32_t dataSize);
+
+const char* MP4NormalizeTrackType(const char* type,
+				  uint32_t verbosity);
 
 #endif /* __MP4_UTIL_INCLUDED__ */

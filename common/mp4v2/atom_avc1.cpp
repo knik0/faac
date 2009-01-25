@@ -13,17 +13,16 @@
  * 
  * The Initial Developer of the Original Code is Cisco Systems Inc.
  * Portions created by Cisco Systems Inc. are
- * Copyright (C) Cisco Systems Inc. 2001.  All Rights Reserved.
+ * Copyright (C) Cisco Systems Inc. 2004.  All Rights Reserved.
  * 
  * Contributor(s): 
- *		Dave Mackie			dmackie@cisco.com
- *		Alix Marchandise-Franquet	alix@cisco.com
+ *		Bill May wmay@cisco.com
  */
 
 #include "mp4common.h"
 
-MP4EncvAtom::MP4EncvAtom() 
-	: MP4Atom("encv")
+MP4Avc1Atom::MP4Avc1Atom() 
+	: MP4Atom("avc1")
 {
 	AddReserved("reserved1", 6); /* 0 */
 
@@ -42,16 +41,17 @@ MP4EncvAtom::MP4EncvAtom()
 	MP4StringProperty* pProp = 
 		new MP4StringProperty("compressorName");
 	pProp->SetFixedLength(32);
-	pProp->SetValue("");
+	pProp->SetValue("AVC Coding");
 	AddProperty(pProp); /* 6 */
+
 	AddReserved("reserved4", 4); /* 7 */
 
-	ExpectChildAtom("esds", Required, OnlyOne);
-	ExpectChildAtom("sinf", Required, OnlyOne);
-	ExpectChildAtom("avcC", Optional, OnlyOne);
-}	
+	ExpectChildAtom("avcC", Required, OnlyOne);
+	ExpectChildAtom("btrt", Optional, OnlyOne);
+	// for now ExpectChildAtom("m4ds", Optional, OnlyOne);
+}
 
-void MP4EncvAtom::Generate()
+void MP4Avc1Atom::Generate()
 {
 	MP4Atom::Generate();
 

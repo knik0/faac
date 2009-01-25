@@ -41,19 +41,6 @@ void MP4File::Make3GPCompliant(const char* fileName,  char* majorBrand, u_int32_
 		}
 	}
 
-	m_fileName = MP4Stralloc(fileName);
-	m_mode = 'r';
-	// first load meta-info into memory
-	Open("rb");
-	ReadFromFile();
-
-	CacheProperties();	// of moov atom
-
-	// now switch over to writing the new file
-	MP4Free(m_fileName);
-	// create a temporary file 
-	m_fileName = MP4Stralloc(TempFileName());
-
 	MakeFtypAtom(
 			majorBrand ? majorBrand : (char*)brand,
 			majorBrand ? minorVersion  : _3GP_MINOR_VERSION,
@@ -71,75 +58,49 @@ void MP4File::Make3GPCompliant(const char* fileName,  char* majorBrand, u_int32_
 		}
 	}
 
-
-	FILE* pReadFile = m_pFile;
-	m_pFile = NULL;
-	m_mode = 'w';
-
-	Open("wb");
-
-	SetIntegerProperty("moov.mvhd.modificationTime", 
-		MP4GetAbsTimestamp());
-
-	// writing meta info in the optimal order
-	((MP4RootAtom*)m_pRootAtom)->BeginOptimalWrite();
-
-	// write data in optimal order
-	RewriteMdat(pReadFile, m_pFile);
-
-	// finish writing
-	((MP4RootAtom*)m_pRootAtom)->FinishOptimalWrite();
-
-	// cleanup
-	fclose(m_pFile);
-	m_pFile = NULL;
-	fclose(pReadFile);
-
-	// move temporary file into place
-	Rename(m_fileName, fileName);
 }
 
 void MP4File::MakeFtypAtom(char* majorBrand, u_int32_t minorVersion, char** supportedBrands, u_int32_t supportedBrandsCount)
 {
 	bool rewriteNeeded = false;
 	u_int32_t currentSupportedBrandsCount;
-	u_int64_t currentSize;
 	u_int32_t i;
 
 		
-
-		
 	MP4Atom* ftypAtom = m_pRootAtom->FindAtom("ftyp");
-	ASSERT(ftypAtom);
-
-	currentSize = ftypAtom->GetSize();
-
+	if (ftypAtom == NULL) {
+	  ftypAtom = InsertChildAtom(m_pRootAtom, "ftyp", 0);
+	}
+	if (majorBrand == NULL)
+	  return;
 	MP4StringProperty* pMajorBrandProperty;
-	ftypAtom->FindProperty(
-		"ftyp.majorBrand",
-		(MP4Property**)&pMajorBrandProperty);
+	if (!ftypAtom->FindProperty(
+				   "ftyp.majorBrand",
+				   (MP4Property**)&pMajorBrandProperty))
+	  return;
 
 	pMajorBrandProperty->SetValue(majorBrand);
 
 
 	MP4Integer32Property* pMinorVersionProperty;
-	ftypAtom->FindProperty(
-		"ftype.minorVersion",
-		(MP4Property**)&pMinorVersionProperty);
+	if (!ftypAtom->FindProperty(
+				   "ftype.minorVersion",
+				   (MP4Property**)&pMinorVersionProperty))
+	  return;
 
 	pMinorVersionProperty->SetValue(minorVersion);
 
 	MP4Integer32Property* pCompatibleBrandsCountProperty;
-	ftypAtom->FindProperty(
+	if (!ftypAtom->FindProperty(
 		"ftyp.compatibleBrandsCount",
-		(MP4Property**)&pCompatibleBrandsCountProperty);
+		(MP4Property**)&pCompatibleBrandsCountProperty)) return;
 
 	currentSupportedBrandsCount = pCompatibleBrandsCountProperty->GetValue();
 
 	MP4TableProperty* pCompatibleBrandsProperty;
-	ftypAtom->FindProperty(
+	if (!ftypAtom->FindProperty(
 		"ftyp.compatibleBrands",
-		(MP4Property**)&pCompatibleBrandsProperty);
+		(MP4Property**)&pCompatibleBrandsProperty)) return;
 
 	MP4StringProperty* pBrandProperty = (MP4StringProperty*)
 		pCompatibleBrandsProperty->GetProperty(0);

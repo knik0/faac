@@ -13,19 +13,28 @@
  * 
  * The Initial Developer of the Original Code is Cisco Systems Inc.
  * Portions created by Cisco Systems Inc. are
- * Copyright (C) Cisco Systems Inc. 2001.  All Rights Reserved.
+ * Copyright (C) Cisco Systems Inc. 2005.  All Rights Reserved.
  * 
  * Contributor(s): 
- *		Dave Mackie		dmackie@cisco.com
+ *		Bill May wmay@cisco.com
  */
 
 #include "mp4common.h"
 
-MP4MfhdAtom::MP4MfhdAtom() 
-	: MP4Atom("mfhd")
+MP4HrefAtom::MP4HrefAtom() 
+	: MP4Atom("href") 
 {
-	AddVersionAndFlags();	/* 0, 1 */
-	AddProperty( /* 2 */
-		new MP4Integer32Property("sequenceNumber"));
+	AddReserved("reserved1", 6); /* 0 */
+
+	AddProperty( /* 1 */
+		new MP4Integer16Property("dataReferenceIndex"));
+	ExpectChildAtom("burl", Optional, OnlyOne);
 }
 
+void MP4HrefAtom::Generate()
+{
+	MP4Atom::Generate();
+
+	((MP4Integer16Property*)m_pProperties[1])->SetValue(1);
+
+}

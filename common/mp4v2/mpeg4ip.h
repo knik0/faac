@@ -13,10 +13,11 @@
  * 
  * The Initial Developer of the Original Code is Cisco Systems Inc.
  * Portions created by Cisco Systems Inc. are
- * Copyright (C) Cisco Systems Inc. 2000, 2001.  All Rights Reserved.
+ * Copyright (C) Cisco Systems Inc. 2000-2005.  All Rights Reserved.
  * 
  * Contributor(s): 
  *		Dave Mackie		dmackie@cisco.com
+ *              Bill May                wmay@cisco.com
  */
 
 #ifndef __MPEG4IP_INCLUDED__
@@ -25,123 +26,41 @@
 /* project wide applicable stuff here */
 
 
-#ifdef _WIN32
-#define HAVE_IN_PORT_T
-#define HAVE_SOCKLEN_T
-#define NEED_SDL_VIDEO_IN_MAIN_THREAD
-#else
-#undef PACKAGE
-#undef VERSION
+#ifndef _WIN32
+#ifdef PACKAGE_BUGREPORT
+#define TEMP_PACKAGE_BUGREPORT PACKAGE_BUGREPORT
+#define TEMP_PACKAGE_NAME PACKAGE_NAME
+#define TEMP_PACKAGE_STRING PACKAGE_STRING
+#define TEMP_PACKAGE_TARNAME PACKAGE_TARNAME
+#define TEMP_PACKAGE_VERSION PACKAGE_VERSION
+#undef PACKAGE_BUGREPORT
+#undef PACKAGE_NAME
+#undef PACKAGE_STRING
+#undef PACKAGE_TARNAME
+#undef PACKAGE_VERSION
 #include <mpeg4ip_config.h>
-#undef PACKAGE
-#undef VERSION
-// so these don't propogate
+#undef PACKAGE_BUGREPORT
+#undef PACKAGE_NAME
+#undef PACKAGE_STRING
+#undef PACKAGE_TARNAME
+#undef PACKAGE_VERSION
+#define PACKAGE_BUGREPORT TEMP_PACKAGE_BUGREPORT
+#define PACKAGE_NAME TEMP_PACKAGE_NAME
+#define PACKAGE_STRING TEMP_PACKAGE_STRING
+#define PACKAGE_TARNAME TEMP_PACKAGE_TARNAME
+#define PACKAGE_VERSION TEMP_PACKAGE_VERSION
+#else
+#include <mpeg4ip_config.h>
+#endif
 #endif
 
 // the mpeg4ip_package and mpeg4ip_version are always in this
 // file 
 #include "mpeg4ip_version.h"
 
-
-
-
 #ifdef _WIN32
-
-#define _WIN32_WINNT 0x0400
-#define _WINSOCKAPI_
-#include <windows.h>
-#include <winsock2.h>
-#include <stdio.h>
-#include <errno.h>
-#include <stdlib.h>
-#include <time.h>
-#include <limits.h>
-
-typedef unsigned __int64 uint64_t;
-typedef unsigned __int32 uint32_t;
-typedef unsigned __int16 uint16_t;
-typedef unsigned __int8 uint8_t;
-typedef unsigned __int64 u_int64_t;
-typedef unsigned __int32 u_int32_t;
-typedef unsigned __int16 u_int16_t;
-typedef unsigned __int8 u_int8_t;
-typedef __int64 int64_t;
-typedef __int32 int32_t;
-typedef __int16 int16_t;
-typedef __int8  int8_t;
-typedef unsigned short in_port_t;
-typedef int socklen_t;
-#ifndef __MINGW32__
-/* Let's avoid some boring conflicting declarations */
-typedef int ssize_t;
-#endif /* #ifndef __MINGW32__ */
-#define snprintf _snprintf
-#define strncasecmp _strnicmp
-#define strcasecmp _stricmp
-
-#include <io.h>
-#include <fcntl.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#define write _write
-#define lseek _lseek
-#define close _close
-#define open _open
-#define access _access
-#define vsnprintf _vsnprintf
-#define F_OK 0
-#define OPEN_RDWR (_O_RDWR | _O_BINARY)
-#define OPEN_CREAT (_O_CREAT | _O_BINARY)
-#define OPEN_RDONLY (_O_RDONLY | _O_BINARY)
-#define srandom srand
-#define random rand
-
-#define IOSBINARY ios::binary
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-int gettimeofday(struct timeval *t, void *);
-#ifdef __cplusplus
-}
-#endif
-
-#define PATH_MAX MAX_PATH
-#define MAX_UINT64 -1
-#define D64F "I64d"
-#define U64F  "I64u"
-#define X64F "I64x"
-
-#define TO_D64(a) (a##I64)
-#define TO_U64(a) (a##UI64)
-
-#define LOG_EMERG 0
-#define LOG_ALERT 1
-#define LOG_CRIT 2
-#define LOG_ERR 3
-#define LOG_WARNING 4
-#define LOG_NOTICE 5
-#define LOG_INFO 6
-#define LOG_DEBUG 7
-
-#ifdef __MINGW32__
-#define FPOS_TO_VAR(fpos, typed, var) (var) = (typed)(fpos)
-#define VAR_TO_FPOS(fpos, var) (fpos) = (var)
-#elif     !__STDC__ && _INTEGRAL_MAX_BITS >= 64
-#define VAR_TO_FPOS(fpos, var) (fpos) = (var)
-#define FPOS_TO_VAR(fpos, typed, var) (var) = (typed)(_FPOSOFF(fpos))
-#else
-#define VAR_TO_FPOS(fpos, var) (fpos).lopart = ((var) & UINT_MAX); (fpos).hipart = ((var) >> 32)
-#define FPOS_TO_VAR(fpos, typed, var) (var) = (typed)((uint64_t)((fpos).hipart ) << 32 | (fpos).lopart)
-#endif /* #ifdef __MINGW32__ */
-
-
-#define __STRING(expr) #expr
-
-#define FOPEN_READ_BINARY "rb"
-#define FOPEN_WRITE_BINARY "wb"
-
-#define UINT64_TO_DOUBLE(a) ((double)((int64_t)(a)))
+#include "mpeg4ip_win32.h"
+#include "mpeg4ip_version.h"
 #else /* UNIX */
 /*****************************************************************************
  *   UNIX LIKE DEFINES BELOW THIS POINT
@@ -201,6 +120,14 @@ int gettimeofday(struct timeval *t, void *);
 #endif
 #include <sys/param.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+char *strcasestr(const char *haystack, const char *needle);
+#ifdef __cplusplus
+}
+#endif
+
 #define OPEN_RDWR O_RDWR
 #define OPEN_CREAT O_CREAT 
 #define OPEN_RDONLY O_RDONLY
@@ -214,7 +141,7 @@ int gettimeofday(struct timeval *t, void *);
 #define U64F  "lu"
 #define X64F "lx"
 
-#define TO_D64(a) (a##LD)
+#define TO_D64(a) (a##L)
 #define TO_U64(a) (a##LU)
 #else
 #define MAX_UINT64 -1LLU
@@ -222,7 +149,7 @@ int gettimeofday(struct timeval *t, void *);
 #define U64F  "llu"
 #define X64F "llx"
 
-#define TO_D64(a) (a##LLD)
+#define TO_D64(a) (a##LL)
 #define TO_U64(a) (a##LLU)
 #endif
 
@@ -343,9 +270,29 @@ typedef int8_t gint8;
 #endif
 
 #ifndef __cplusplus
+
 #ifndef bool
-typedef unsigned char bool;
+ #if SIZEOF_BOOL == 8
+  typedef uint64_t bool;
+ #else
+   #if SIZEOF_BOOL == 4
+    typedef uint32_t bool;
+   #else
+     #if SIZEOF_BOOL == 2
+      typedef uint16_t bool;
+     #else
+      typedef unsigned char bool;
+     #endif
+   #endif
+ #endif
+ #ifndef false
+ #define false FALSE
+ #endif
+ #ifndef true
+ #define true TRUE
+ #endif
 #endif
+
 #endif
 
 #ifndef ROUND
@@ -369,6 +316,26 @@ typedef unsigned char bool;
 
 #ifndef UINT64_MAX
 # define UINT64_MAX TO_U64(0xffffffffffffffff)
+#endif
+
+typedef enum audio_format_t {
+  AUDIO_FMT_U8 = 0,
+  AUDIO_FMT_S8,
+  AUDIO_FMT_U16LSB,
+  AUDIO_FMT_S16LSB,
+  AUDIO_FMT_U16MSB,
+  AUDIO_FMT_S16MSB,
+  AUDIO_FMT_U16,
+  AUDIO_FMT_S16,
+  AUDIO_FMT_FLOAT,
+  AUDIO_FMT_HW_AC3,
+} audio_format_t;
+
+#ifndef HAVE_STRUCT_IOVEC
+struct iovec {
+  void *iov_base;
+  unsigned int iov_len;
+};
 #endif
 
 #endif /* __MPEG4IP_INCLUDED__ */

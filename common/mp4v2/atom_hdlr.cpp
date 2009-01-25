@@ -42,13 +42,15 @@ void MP4HdlrAtom::Read()
 {
 	// read all the properties but the "name" field
 	ReadProperties(0, 5);
+	uint64_t pos = m_pFile->GetPosition();
+	uint64_t end = GetEnd();
+	if (pos == end) return;
 
 	// take a peek at the next byte
 	u_int8_t strLength;
 	m_pFile->PeekBytes(&strLength, 1);
-
 	// if the value matches the remaining atom length
-	if (m_pFile->GetPosition() + strLength + 1 == GetEnd()) {
+	if (pos + strLength + 1 == end) {
 		// read a counted string
 		MP4StringProperty* pNameProp = 
 			(MP4StringProperty*)m_pProperties[5];

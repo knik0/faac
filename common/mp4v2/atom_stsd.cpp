@@ -48,6 +48,9 @@ MP4StsdAtom::MP4StsdAtom()
  	ExpectChildAtom("samr", Optional, Many); // For AMR-NB
  	ExpectChildAtom("sawb", Optional, Many); // For AMR-WB
  	ExpectChildAtom("s263", Optional, Many); // For H.263
+	ExpectChildAtom("avc1", Optional, Many);
+	ExpectChildAtom("alac", Optional, Many);
+	ExpectChildAtom("text", Optional, Many);
 }
 
 void MP4StsdAtom::Read() 

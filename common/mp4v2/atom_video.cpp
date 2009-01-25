@@ -13,17 +13,16 @@
  * 
  * The Initial Developer of the Original Code is Cisco Systems Inc.
  * Portions created by Cisco Systems Inc. are
- * Copyright (C) Cisco Systems Inc. 2001.  All Rights Reserved.
+ * Copyright (C) Cisco Systems Inc. 2004.  All Rights Reserved.
  * 
  * Contributor(s): 
- *		Dave Mackie			dmackie@cisco.com
- *		Alix Marchandise-Franquet	alix@cisco.com
+ *		Bill May  wmay@cisco.com
  */
 
 #include "mp4common.h"
 
-MP4EncvAtom::MP4EncvAtom() 
-	: MP4Atom("encv")
+MP4VideoAtom::MP4VideoAtom (const char *type) 
+	: MP4Atom(type)
 {
 	AddReserved("reserved1", 6); /* 0 */
 
@@ -44,14 +43,15 @@ MP4EncvAtom::MP4EncvAtom()
 	pProp->SetFixedLength(32);
 	pProp->SetValue("");
 	AddProperty(pProp); /* 6 */
-	AddReserved("reserved4", 4); /* 7 */
 
-	ExpectChildAtom("esds", Required, OnlyOne);
-	ExpectChildAtom("sinf", Required, OnlyOne);
-	ExpectChildAtom("avcC", Optional, OnlyOne);
-}	
+	AddProperty(/* 7 */
+		    new MP4Integer16Property("depth"));
+	AddProperty(/* 8 */
+		    new MP4Integer16Property("colorTableId"));
+	ExpectChildAtom("smi ", Optional, OnlyOne);
+}
 
-void MP4EncvAtom::Generate()
+void MP4VideoAtom::Generate()
 {
 	MP4Atom::Generate();
 
@@ -69,13 +69,10 @@ void MP4EncvAtom::Generate()
 		SetValue(reserved3, sizeof(reserved3));
 	m_pProperties[5]->SetReadOnly(true);
 
-	// property reserved4 has non-zero fixed values
-	static u_int8_t reserved4[4] = {
-		0x00, 0x18, 0xFF, 0xFF, 
-	};
-	m_pProperties[7]->SetReadOnly(false);
-	((MP4BytesProperty*)m_pProperties[7])->
-		SetValue(reserved4, sizeof(reserved4));
-	m_pProperties[7]->SetReadOnly(true);
+	// depth and color table id values - should be set later
+	// as far as depth - color table is most likely 0xff
+	((MP4IntegerProperty *)m_pProperties[7])->SetValue(0x18);
+	((MP4IntegerProperty *)m_pProperties[8])->SetValue(0xffff);
+
 }
 
