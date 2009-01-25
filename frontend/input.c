@@ -16,7 +16,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: input.c,v 1.15 2008/11/24 22:00:11 menno Exp $
+ * $Id: input.c,v 1.16 2009/01/25 18:50:32 menno Exp $
  */
 
 #ifdef HAVE_CONFIG_H
@@ -61,10 +61,14 @@ typedef struct
 }
 riffsub_t;
 
+#ifdef _MSC_VER
+#pragma pack(push, 1)
+#endif
+
 #define WAVE_FORMAT_PCM		1
 #define WAVE_FORMAT_FLOAT	3
 #define WAVE_FORMAT_EXTENSIBLE	0xfffe
-typedef struct
+struct WAVEFORMATEX
 {
   u_int16_t wFormatTag;
   u_int16_t nChannels;
@@ -74,11 +78,14 @@ typedef struct
   u_int16_t wBitsPerSample;
   u_int16_t cbSize;
 }
-WAVEFORMATEX;
+#ifdef __GNUC
+__attribute__((packed))
+#endif
+;
 
-typedef struct
+struct WAVEFORMATEXTENSIBLE
 {
-  WAVEFORMATEX Format;
+  struct WAVEFORMATEX Format;
   union {
     u_int16_t wValidBitsPerSample;	// bits of precision
     u_int16_t wSamplesPerBlock;		// valid if wBitsPerSample==0
@@ -86,7 +93,15 @@ typedef struct
   } Samples;
   u_int32_t dwChannelMask;		// which channels are present in stream
   unsigned char SubFormat[16];		// guid
-} WAVEFORMATEXTENSIBLE;
+}
+#ifdef __GNUC
+__attribute__((packed))
+#endif
+;
+
+#ifdef _MSC_VER
+#pragma pack(pop)
+#endif
 
 static unsigned char waveformat_pcm_guid[16] =
 {
@@ -108,7 +123,7 @@ pcmfile_t *wav_open_read(const char *name, int rawinput)
   FILE *wave_f;
   riff_t riff;
   riffsub_t riffsub;
-  WAVEFORMATEXTENSIBLE wave;
+  struct WAVEFORMATEXTENSIBLE wave;
   char *riffl = "RIFF";
   char *wavel = "WAVE";
   char *bextl = "BEXT";
@@ -121,7 +136,7 @@ pcmfile_t *wav_open_read(const char *name, int rawinput)
   if (!strcmp(name, "-"))
   {
 #ifdef _WIN32
-    setmode(fileno(stdin), O_BINARY);
+    _setmode(_fileno(stdin), O_BINARY);
 #endif
     wave_f = stdin;
     dostdin = 1;
@@ -158,6 +173,7 @@ pcmfile_t *wav_open_read(const char *name, int rawinput)
     if (memcmp(&(riffsub.label), fmtl, 4))
         return NULL;
     memset(&wave, 0, sizeof(wave));
+
     fmtsize = (riffsub.len < sizeof(wave)) ? riffsub.len : sizeof(wave);
     if (fread(&wave, 1, fmtsize, wave_f) != fmtsize)
         return NULL;
@@ -186,8 +202,12 @@ pcmfile_t *wav_open_read(const char *name, int rawinput)
           return NULL;
         if (memcmp(wave.SubFormat, waveformat_pcm_guid, 16))
         {
-          unsuperr(name);
-          return NULL;
+          waveformat_pcm_guid[0] = WAVE_FORMAT_FLOAT;
+          if (memcmp(wave.SubFormat, waveformat_pcm_guid, 16))
+          {          
+            unsuperr(name);
+            return NULL;
+          }
         }
       }
       else
@@ -201,7 +221,12 @@ pcmfile_t *wav_open_read(const char *name, int rawinput)
   sndf = malloc(sizeof(*sndf));
   memset(sndf, 0, sizeof(*sndf));
   sndf->f = wave_f;
-  sndf->isfloat = (UINT16(wave.Format.wFormatTag) == WAVE_FORMAT_FLOAT);
+
+  if (UINT16(wave.Format.wFormatTag) == WAVE_FORMAT_FLOAT) {
+    sndf->isfloat = 1;
+  } else {
+    sndf->isfloat = (wave.SubFormat[0] == WAVE_FORMAT_FLOAT);
+  }
   if (rawinput)
   {
     sndf->bigendian = 1;

@@ -16,7 +16,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: frame.h,v 1.29 2009/01/25 03:06:08 menno Exp $
+ * $Id: frame.h,v 1.30 2009/01/25 18:50:32 menno Exp $
  */
 
 #ifndef FRAME_H
@@ -50,7 +50,7 @@ extern "C" {
 #include "aacquant.h"
 #include "fft.h"
 
-#ifdef _WIN32 && !defined(__MINGW32__)
+#if defined(_WIN32) && !defined(__MINGW32__)
   #ifndef FAACAPI
     #define FAACAPI __stdcall
   #endif
