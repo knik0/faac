@@ -331,12 +331,5 @@ typedef enum audio_format_t {
   AUDIO_FMT_HW_AC3,
 } audio_format_t;
 
-#ifndef HAVE_STRUCT_IOVEC
-struct iovec {
-  void *iov_base;
-  unsigned int iov_len;
-};
-#endif
-
 #endif /* __MPEG4IP_INCLUDED__ */
 
