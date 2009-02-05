@@ -1,5 +1,5 @@
 AC_PREREQ(2.50)
-AC_INIT(FAAC, 1.25, faac-dev@lists.sourceforge.net)
+AC_INIT(FAAC, 1.28, faac-dev@lists.sourceforge.net)
 AC_CONFIG_AUX_DIR(.)
 AM_INIT_AUTOMAKE
 
