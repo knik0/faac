@@ -23,7 +23,7 @@ must be included in all copies or derivative works. Copyright 1996.
 
 ***********/
 /*
- * $Id: huffman.c,v 1.11 2005/02/02 07:53:20 sur Exp $
+ * $Id: huffman.c,v 1.12 2009/06/05 16:16:06 menno Exp $
  */
 
 #include <math.h>
@@ -1197,8 +1197,19 @@ int WriteScalefactors(CoderInfo *coderInfo,
                 /* only send scalefactors if using non-zero codebooks */
                 diff = scale_factors[index] - previous_is_factor;
                 if ((diff < 60)&&(diff >= -60))
-                    length = huff12[diff+60][FIRSTINTAB];
-                else length = 0;
+				{
+					length = huff12[diff+60][FIRSTINTAB];
+				}
+                else if ( diff >= 60 ) // frank 30.Oct.2007 added this because faad2 decoder and QuickTime choke when nothing is written and the codebook says a number is expected.
+				{
+					diff = 59;
+					length = huff12[119][FIRSTINTAB]; //max
+				}
+                else 
+				{
+					diff = -60;
+					length = huff12[0][FIRSTINTAB]; // min
+				}
                 bit_count+=length;
                 previous_is_factor = scale_factors[index];
                 if (writeFlag == 1 ) {
@@ -1209,8 +1220,19 @@ int WriteScalefactors(CoderInfo *coderInfo,
                 /* only send scalefactors if using non-zero codebooks */
                 diff = scale_factors[index] - previous_scale_factor;
                 if ((diff < 60)&&(diff >= -60))
-                    length = huff12[diff+60][FIRSTINTAB];
-                else length = 0;
+				{
+					length = huff12[diff+60][FIRSTINTAB];
+				}
+                else if ( diff >= 60 ) // frank 30.Oct.2007 added this because faad2 decoder and QuickTime choke when nothing is written and the codebook says a number is expected.
+				{
+					diff = 59;
+					length = huff12[119][FIRSTINTAB]; //max
+				}
+                else 
+				{
+					diff = -60;
+					length = huff12[0][FIRSTINTAB]; //min
+				}
                 bit_count+=length;
                 previous_scale_factor = scale_factors[index];
                 if (writeFlag == 1 ) {
