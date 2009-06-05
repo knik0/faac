@@ -16,7 +16,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: frame.c,v 1.67 2004/11/17 14:26:06 menno Exp $
+ * $Id: frame.c,v 1.68 2009/06/05 16:09:38 menno Exp $
  */
 
 /*
@@ -196,6 +196,7 @@ int FAACAPI faacEncSetConfiguration(faacEncHandle hEncoder,
 			{47000, 10000},
 			{64000, 16000},
 			{76000, 20000},
+			{128000, 20000},
 #endif
 			{0, 0}
 		};
@@ -1116,6 +1117,9 @@ static SR_INFO srInfo[12+1] =
 
 /*
 $Log: frame.c,v $
+Revision 1.68  2009/06/05 16:09:38  menno
+Allow higher bitrates
+
 Revision 1.67  2004/11/17 14:26:06  menno
 Infinite loop fix
 dunno if this is good, encoder might be tuned to use energies from before MS encoding. But since the MS encoded samples are used in quantisation this might actually be better. Please test.
