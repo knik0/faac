@@ -10,7 +10,7 @@ AC_ARG_ENABLE( drm,  [  --enable-drm            Digital Radio Mondiale support],
 
 AC_DEFUN([MY_DEFINE], [ AC_DEFINE($1, 1, [define if needed]) ])
 
-CFLAGS=${CFLAGS:-"-O2 -Wall"}
+CFLAGS=${CFLAGS:-"-O2 -Wall -fexceptions"}
 
 AC_PROG_CC
 AC_PROG_CXX

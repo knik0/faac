@@ -16,7 +16,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: psychkni.c,v 1.17 2005/04/24 19:16:14 rjamorim Exp $
+ * $Id: psychkni.c,v 1.18 2009/06/05 16:32:15 menno Exp $
  */
 #include <stdio.h>
 #include <stdlib.h>
@@ -231,10 +231,6 @@ static void PsyInit(GlobalPsyInfo * gpsyInfo, PsyInfo * psyInfo, unsigned int nu
 
     psyInfo[channel].sizeS = size;
 
-    psyInfo[channel].prevSamplesS =
-      (double *) AllocMemory(size * sizeof(double));
-    memset(psyInfo[channel].prevSamplesS, 0, size * sizeof(double));
-
     for (j = 0; j < 8; j++)
     {
       psydata->fftEnrgPrevS[j] =
@@ -273,8 +269,6 @@ static void PsyEnd(GlobalPsyInfo * gpsyInfo, PsyInfo * psyInfo, unsigned int num
   {
     psydata_t *psydata = psyInfo[channel].data;
 
-    if (psyInfo[channel].prevSamplesS)
-      FreeMemory(psyInfo[channel].prevSamplesS);
     for (j = 0; j < 8; j++)
     {
       if (psydata->fftEnrgPrevS[j])

@@ -16,7 +16,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: psych.h,v 1.14 2005/04/24 19:16:14 rjamorim Exp $
+ * $Id: psych.h,v 1.15 2009/06/05 16:32:15 menno Exp $
  */
 
 #ifndef PSYCH_H
@@ -40,7 +40,6 @@ typedef struct {
 
 	/* Previous input samples */
 	double *prevSamples;
-	double *prevSamplesS;
 
 	int block_type;
 
