@@ -18,7 +18,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: main.c,v 1.82 2009/01/24 01:10:20 menno Exp $
+ * $Id: main.c,v 1.83 2009/07/27 18:12:38 menno Exp $
  */
 
 #ifdef _MSC_VER
@@ -29,7 +29,10 @@
 #include "config.h"
 #endif
 
-#ifdef HAVE_LIBMP4V2
+#ifdef HAVE_EXTERNAL_LIBMP4V2
+# include <mp4v2/mp4v2.h>
+# define HAVE_LIBMP4V2
+#elif defined(HAVE_LIBMP4V2)
 # include <mp4.h>
 #endif
 
@@ -1167,6 +1170,9 @@ int main(int argc, char *argv[])
 
 /*
 $Log: main.c,v $
+Revision 1.83  2009/07/27 18:12:38  menno
+FAAC now able to use external updated libmp4v2
+
 Revision 1.82  2009/01/24 01:10:20  menno
 Made JPEG detection less restrictive
 
