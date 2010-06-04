@@ -4,6 +4,9 @@ AC_CONFIG_AUX_DIR(.)
 AM_INIT_AUTOMAKE
 
 AM_CONFIG_HEADER(config.h)
+AH_TOP([#ifndef CONFIG_H
+#define CONFIG_H])
+AH_BOTTOM([#endif /* CONFIG_H */])
 
 AC_ARG_WITH( mp4v2,  [  --with-mp4v2            compile libmp4v2],WITHMP4V2=$withval, WITHMP4V2=yes)
 AC_ARG_ENABLE( drm,  [  --enable-drm            Digital Radio Mondiale support], enable_drm=$enableval, enable_drm=no)

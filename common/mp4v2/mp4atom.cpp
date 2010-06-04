@@ -806,7 +806,7 @@ void MP4Atom::AddVersionAndFlags()
 	AddProperty(new MP4Integer24Property("flags"));
 }
 
-void MP4Atom::AddReserved(char* name, u_int32_t size) 
+void MP4Atom::AddReserved(const char* name, u_int32_t size) 
 {
 	MP4BytesProperty* pReserved = new MP4BytesProperty(name, size); 
 	pReserved->SetReadOnly();

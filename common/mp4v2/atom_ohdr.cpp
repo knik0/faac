@@ -21,7 +21,7 @@ public:
       \param useCountedFormat    counted format flag.
       \param useUnicode          unicode flag.
   */
-	OhdrMP4StringProperty(char* name, bool useCountedFormat = false,
+	OhdrMP4StringProperty(const char* name, bool useCountedFormat = false,
     bool useUnicode = false): MP4StringProperty(name, useCountedFormat,
     useUnicode) {
   }

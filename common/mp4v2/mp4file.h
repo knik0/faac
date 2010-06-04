@@ -700,7 +700,7 @@ protected:
 	const char* TempFileName();
 	void Rename(const char* existingFileName, const char* newFileName);
 
-	void ProtectWriteOperation(char* where);
+	void ProtectWriteOperation(const char* where);
 
 	void FindIntegerProperty(const char* name, 
 		MP4Property** ppProperty, u_int32_t* pIndex = NULL);

@@ -1360,7 +1360,7 @@ void MP4Track::UpdateSyncSamples(MP4SampleId sampleId, bool isSyncSample)
   }
 }
 
-MP4Atom* MP4Track::AddAtom(char* parentName, char* childName)
+MP4Atom* MP4Track::AddAtom(const char* parentName, const char* childName)
 {
 	MP4Atom* pChildAtom = MP4Atom::CreateAtom(childName);
 

@@ -120,14 +120,6 @@
 #endif
 #include <sys/param.h>
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-char *strcasestr(const char *haystack, const char *needle);
-#ifdef __cplusplus
-}
-#endif
-
 #define OPEN_RDWR O_RDWR
 #define OPEN_CREAT O_CREAT 
 #define OPEN_RDONLY O_RDONLY
@@ -135,7 +127,6 @@ char *strcasestr(const char *haystack, const char *needle);
 #define closesocket close
 #define IOSBINARY ios::bin
 
-#if SIZEOF_LONG == 8
 #define MAX_UINT64 -1LU
 #define D64F "ld"
 #define U64F  "lu"
@@ -143,15 +134,6 @@ char *strcasestr(const char *haystack, const char *needle);
 
 #define TO_D64(a) (a##L)
 #define TO_U64(a) (a##LU)
-#else
-#define MAX_UINT64 -1LLU
-#define D64F "lld"
-#define U64F  "llu"
-#define X64F "llx"
-
-#define TO_D64(a) (a##LL)
-#define TO_U64(a) (a##LLU)
-#endif
 
 #ifdef HAVE_FPOS_T___POS
 #define FPOS_TO_VAR(fpos, typed, var) (var) = (typed)((fpos).__pos)

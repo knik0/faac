@@ -171,7 +171,7 @@ void MP4ExpandedTextDescriptor::Mutate()
 
 class MP4CreatorTableProperty : public MP4TableProperty {
 public:
-	MP4CreatorTableProperty(char* name, MP4Integer8Property* pCountProperty) :
+	MP4CreatorTableProperty(const char* name, MP4Integer8Property* pCountProperty) :
 		MP4TableProperty(name, pCountProperty) {
 	};
 protected:

@@ -168,7 +168,7 @@ protected:
 	void UpdateSyncSamples(MP4SampleId sampleId, 
 		bool isSyncSample);
 
-	MP4Atom* AddAtom(char* parentName, char* childName);
+	MP4Atom* AddAtom(const char* parentName, const char* childName);
 
 	void UpdateDurations(MP4Duration duration);
 	MP4Duration ToMovieDuration(MP4Duration trackDuration);
