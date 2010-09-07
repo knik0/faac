@@ -16,7 +16,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: input.c,v 1.16 2009/01/25 18:50:32 menno Exp $
+ * $Id: input.c,v 1.17 2010/09/07 15:14:02 knik Exp $
  */
 
 #ifdef HAVE_CONFIG_H
@@ -116,17 +116,35 @@ static void unsuperr(const char *name)
   fprintf(stderr, "%s: file format not supported\n", name);
 }
 
+
+static int seekchunk(FILE *f, riffsub_t *riffsub, char *name)
+{
+ while (1)
+ {
+   if (fread(riffsub, 1, sizeof(*riffsub), f) != sizeof(*riffsub))
+     return 0;
+
+   riffsub->len = UINT32(riffsub->len);
+   if (riffsub->len & 1)
+     riffsub->len++;
+
+   if (!memcmp(&(riffsub->label), name, 4))
+     break;
+
+   fseek(f, riffsub->len, SEEK_CUR);
+ }
+
+ return 1;
+}
+
 pcmfile_t *wav_open_read(const char *name, int rawinput)
 {
-  int i;
-  int skip;
   FILE *wave_f;
   riff_t riff;
   riffsub_t riffsub;
   struct WAVEFORMATEXTENSIBLE wave;
   char *riffl = "RIFF";
   char *wavel = "WAVE";
-  char *bextl = "BEXT";
   char *fmtl = "fmt ";
   char *datal = "data";
   int fmtsize;
@@ -156,19 +174,8 @@ pcmfile_t *wav_open_read(const char *name, int rawinput)
     if (memcmp(&(riff.chunk_type), wavel, 4))
       return NULL;
 
-    // handle broadcast extensions. added by pro-tools,otherwise it must be fmt chunk.
-    if (fread(&riffsub, 1, sizeof(riffsub), wave_f) != sizeof(riffsub))
-        return NULL;
-    riffsub.len = UINT32(riffsub.len);
-
-    if (!memcmp(&(riffsub.label), bextl, 4))
-    {
-        fseek(wave_f, riffsub.len, SEEK_CUR);
-
-        if (fread(&riffsub, 1, sizeof(riffsub), wave_f) != sizeof(riffsub))
-            return NULL;
-        riffsub.len = UINT32(riffsub.len);
-    }
+    if (!seekchunk(wave_f, &riffsub, fmtl))
+      return NULL;
 
     if (memcmp(&(riffsub.label), fmtl, 4))
         return NULL;
@@ -178,22 +185,11 @@ pcmfile_t *wav_open_read(const char *name, int rawinput)
     if (fread(&wave, 1, fmtsize, wave_f) != fmtsize)
         return NULL;
 
-    for (skip = riffsub.len - fmtsize; skip > 0; skip--)
-      fgetc(wave_f);
+    fseek(wave_f, riffsub.len - fmtsize, SEEK_CUR);
 
-    for (i = 0;; i++)
-    {
-      if (fread(&riffsub, 1, sizeof(riffsub), wave_f) != sizeof(riffsub))
-	return NULL;
-      riffsub.len = UINT32(riffsub.len);
-      if (!memcmp(&(riffsub.label), datal, 4))
-	break;
-      if (i > 10)
-	return NULL;
+    if (!seekchunk(wave_f, &riffsub, datal))
+      return NULL;
 
-      for (skip = riffsub.len; skip > 0; skip--)
-	fgetc(wave_f);
-    }
     if (UINT16(wave.Format.wFormatTag) != WAVE_FORMAT_PCM && UINT16(wave.Format.wFormatTag) != WAVE_FORMAT_FLOAT)
     {
       if (UINT16(wave.Format.wFormatTag) == WAVE_FORMAT_EXTENSIBLE)
