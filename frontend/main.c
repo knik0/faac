@@ -18,7 +18,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: main.c,v 1.83 2009/07/27 18:12:38 menno Exp $
+ * $Id: main.c,v 1.84 2010/09/27 10:32:17 knik Exp $
  */
 
 #ifdef _MSC_VER
@@ -1028,9 +1028,16 @@ int main(int argc, char *argv[])
         {
             int bytesWritten;
 
-            samplesRead = wav_read_float32(infile, pcmbuf, samplesInput, chanmap);
+            if (total_samples < infile->samples)
+                samplesRead = wav_read_float32(infile, pcmbuf, samplesInput,
+                                               chanmap);
+            else
+                samplesRead = 0;
 
 #ifdef HAVE_LIBMP4V2
+            if (total_samples + (samplesRead / infile->channels) > infile->samples)
+                samplesRead = (infile->samples - total_samples) * infile->channels;
+
             total_samples += samplesRead / infile->channels;
 #endif
 
@@ -1170,6 +1177,9 @@ int main(int argc, char *argv[])
 
 /*
 $Log: main.c,v $
+Revision 1.84  2010/09/27 10:32:17  knik
+Patch by Arthur Yarwood: read correct number of samples from data chunk
+
 Revision 1.83  2009/07/27 18:12:38  menno
 FAAC now able to use external updated libmp4v2
 
