@@ -18,7 +18,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: main.c,v 1.84 2010/09/27 10:32:17 knik Exp $
+ * $Id: main.c,v 1.85 2012/02/23 13:26:45 knik Exp $
  */
 
 #ifdef _MSC_VER
@@ -873,7 +873,11 @@ int main(int argc, char *argv[])
     if (!faacEncSetConfiguration(hEncoder, myFormat)) {
         fprintf(stderr, "Unsupported output format!\n");
 #ifdef HAVE_LIBMP4V2
+#ifdef MP4_CLOSE_DO_NOT_COMPUTE_BITRATE /* r479 fix */
+        if (container == MP4_CONTAINER) MP4Close(MP4hFile, 0);
+#else
         if (container == MP4_CONTAINER) MP4Close(MP4hFile);
+#endif
 #endif
         return 1;
     }
@@ -885,12 +889,10 @@ int main(int argc, char *argv[])
         unsigned long ASCLength = 0;
     char *version_string;
 
-#ifdef MP4_CREATE_EXTENSIBLE_FORMAT
-    /* hack to compile against libmp4v2 >= 1.0RC3
-     * why is there no version identifier in mp4.h? */
+#ifdef MP4_DETAILS_ERROR /* r453 fix */
         MP4hFile = MP4Create(aacFileName, MP4_DETAILS_ERROR, 0);
 #else
-    MP4hFile = MP4Create(aacFileName, MP4_DETAILS_ERROR, 0, 0);
+        MP4hFile = MP4Create(aacFileName, 0);
 #endif
         if (!MP4_IS_VALID_FILE_HANDLE(MP4hFile)) {
             fprintf(stderr, "Couldn't create output file %s\n", aacFileName);
@@ -905,12 +907,22 @@ int main(int argc, char *argv[])
     free(ASC);
 
     /* set metadata */
+#if HAVE_DECL_MP4TAGSALLOC
+    const MP4Tags* tags;
+    tags = MP4TagsAlloc();
+    MP4TagsFetch( tags, MP4hFile );
+#endif
     version_string = malloc(strlen(faac_id_string) + 6);
     strcpy(version_string, "FAAC ");
     strcpy(version_string + 5, faac_id_string);
+#if !HAVE_DECL_MP4TAGSALLOC
     MP4SetMetadataTool(MP4hFile, version_string);
+#else
+    MP4TagsSetEncodingTool(tags, version_string);
+#endif
     free(version_string);
 
+#if !HAVE_DECL_MP4TAGSALLOC
     if (artist) MP4SetMetadataArtist(MP4hFile, artist);
     if (writer) MP4SetMetadataWriter(MP4hFile, writer);
     if (title) MP4SetMetadataName(MP4hFile, title);
@@ -923,8 +935,40 @@ int main(int argc, char *argv[])
     if (comment) MP4SetMetadataComment(MP4hFile, comment);
         if (artSize) {
         MP4SetMetadataCoverArt(MP4hFile, art, artSize);
+#else
+    if (artist) MP4TagsSetArtist(tags, artist);
+    if (writer) MP4TagsSetComposer(tags, writer);
+    if (title) MP4TagsSetName(tags, title);
+    if (album) MP4TagsSetAlbum(tags, album);
+    if (trackno > 0) {
+        MP4TagTrack tt;
+        tt.index = trackno;
+        tt.total = ntracks;
+        MP4TagsSetTrack(tags, &tt);
+    }
+    if (discno > 0) {
+        MP4TagDisk td;
+        td.index = discno;
+        td.total = ndiscs;
+        MP4TagsSetDisk(tags, &td);
+    }
+    if (compilation) MP4TagsSetCompilation(tags, compilation);
+    if (year) MP4TagsSetReleaseDate(tags, year);
+    if (genre) MP4TagsSetGenre(tags, genre);
+    if (comment) MP4TagsSetComments(tags, comment);
+    if (artSize) {
+        MP4TagArtwork mp4art;
+        mp4art.data = art;
+        mp4art.size = artSize;
+        mp4art.type = MP4_ART_UNDEFINED; // delegate typing to libmp4v2
+        MP4TagsAddArtwork( tags, &mp4art );
+#endif
         free(art);
     }
+#if HAVE_DECL_MP4TAGSALLOC
+    MP4TagsStore( tags, MP4hFile );
+    MP4TagsFree( tags );
+#endif
     }
     else
     {
@@ -1148,11 +1192,19 @@ int main(int argc, char *argv[])
         /* clean up */
         if (container == MP4_CONTAINER)
         {
+#ifdef MP4_CLOSE_DO_NOT_COMPUTE_BITRATE /* r479 fix */
+            MP4Close(MP4hFile, 0);
+#else
             MP4Close(MP4hFile);
+#endif
             if (optimizeFlag == 1)
             {
                 fprintf(stderr, "\n\nMP4 format optimization... ");
+#ifdef MP4_DETAILS_ERROR /* r453 fix */
                 MP4Optimize(aacFileName, NULL, 0);
+#else
+                MP4Optimize(aacFileName, NULL);
+#endif
                 fprintf(stderr, "Done!");
             }
         } else
@@ -1177,6 +1229,10 @@ int main(int argc, char *argv[])
 
 /*
 $Log: main.c,v $
+Revision 1.85  2012/02/23 13:26:45  knik
+Support for libmp4v2 r479; Port faac to the iTMF Generic and Tags API.
+Authors: Jaakko Perttilä, Sebastien NOEL, Fabian Greffrath
+
 Revision 1.84  2010/09/27 10:32:17  knik
 Patch by Arthur Yarwood: read correct number of samples from data chunk
 
