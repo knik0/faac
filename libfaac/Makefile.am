@@ -7,6 +7,7 @@ endif
 libfaac_la_SOURCES = $(main_SOURCES) $(drm_SOURCES)
 libfaac_la_INCLUDES = aacquant.h channels.h filtbank.h hufftab.h psych.h backpred.h coder.h frame.h midside.h tns.h bitstream.h fft.h huffman.h ltp.h util.h
 libfaac_la_LIBADD = -lm
+libfaac_la_CFLAGS = -fvisibility=hidden
 
 INCLUDES = -I$(top_srcdir)/include
 

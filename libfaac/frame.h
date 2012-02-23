@@ -16,7 +16,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: frame.h,v 1.30 2009/01/25 18:50:32 menno Exp $
+ * $Id: frame.h,v 1.31 2012/02/23 13:11:28 knik Exp $
  */
 
 #ifndef FRAME_H
@@ -50,14 +50,15 @@ extern "C" {
 #include "aacquant.h"
 #include "fft.h"
 
-#if defined(_WIN32) && !defined(__MINGW32__)
-  #ifndef FAACAPI
-    #define FAACAPI __stdcall
-  #endif
-#else
-  #ifndef FAACAPI
-    #define FAACAPI
-  #endif
+#if !defined(FAACAPI) && defined(__GNUC__) && (__GNUC__ >= 4)
+# if defined(_WIN32)
+#  define FAACAPI __stdcall __declspec(dllexport)
+# else
+#  define FAACAPI __attribute__((visibility("default")))
+# endif
+#endif
+#ifndef FAACAPI
+# define FAACAPI
 #endif
 
 #pragma pack(push, 1)

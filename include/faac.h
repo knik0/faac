@@ -16,7 +16,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: faac.h,v 1.36 2009/01/25 18:50:32 menno Exp $
+ * $Id: faac.h,v 1.37 2012/02/23 13:11:27 knik Exp $
  */
 
 #ifndef _FAAC_H_
@@ -26,14 +26,13 @@
 extern "C" {
 #endif /* __cplusplus */
 
-#if defined(_WIN32) && !defined(__MINGW32__)
-# ifndef FAACAPI
+#ifndef FAACAPI
+# if defined(_WIN32)
 #  define FAACAPI __stdcall
 # endif
-#else
-# ifndef FAACAPI
+#endif
+#ifndef FAACAPI
 #  define FAACAPI
-# endif
 #endif
 
 #pragma pack(push, 1)
