@@ -18,7 +18,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: main.c,v 1.85 2012/02/23 13:26:45 knik Exp $
+ * $Id: main.c,v 1.86 2012/02/25 17:34:01 knik Exp $
  */
 
 #ifdef _MSC_VER
@@ -718,7 +718,7 @@ int main(int argc, char *argv[])
         break;
 #endif
         case 'L':
-        fprintf(stderr, faac_copyright_string);
+        fprintf(stderr, "%s", faac_copyright_string);
         dieMessage = license;
         break;
     case 'X':
@@ -1229,6 +1229,9 @@ int main(int argc, char *argv[])
 
 /*
 $Log: main.c,v $
+Revision 1.86  2012/02/25 17:34:01  knik
+Fix format string security error.
+
 Revision 1.85  2012/02/23 13:26:45  knik
 Support for libmp4v2 r479; Port faac to the iTMF Generic and Tags API.
 Authors: Jaakko Perttilä, Sebastien NOEL, Fabian Greffrath
