@@ -22,7 +22,7 @@ must be included in all copies or derivative works. Copyright 1996.
 
 ***********/
 /*
- * $Id: huffman.h,v 1.6 2004/07/12 08:46:43 corrados Exp $
+ * $Id: huffman.h,v 1.7 2012/03/01 18:34:17 knik Exp $
  */
 
 #ifndef HUFFMAN_H
@@ -47,7 +47,7 @@ extern "C" {
 
 #define ABS(A) ((A) < 0 ? (-A) : (A))
 
-#include "frame.h"
+#include <faac.h>
 
 void HuffmanInit(CoderInfo *coderInfo, unsigned int numChannels);
 void HuffmanEnd(CoderInfo *coderInfo, unsigned int numChannels);

@@ -24,7 +24,7 @@ copyright notice must be included in all copies or derivative works.
 Copyright (c) 1997.
 **********************************************************************/
 /*
- * $Id: backpred.c,v 1.5 2001/09/04 18:39:35 menno Exp $
+ * $Id: backpred.c,v 1.6 2012/03/01 18:34:17 knik Exp $
  */
 
 #include <math.h>
@@ -34,7 +34,7 @@ Copyright (c) 1997.
 #include "backpred.h"
 
 
-void PredInit(faacEncHandle hEncoder)
+void PredInit(faacEncStruct* hEncoder)
 {
     unsigned int channel;
 

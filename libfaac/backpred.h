@@ -16,7 +16,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: backpred.h,v 1.5 2001/06/08 18:01:09 menno Exp $
+ * $Id: backpred.h,v 1.6 2012/03/01 18:34:17 knik Exp $
  */
 
 #ifndef _AAC_BACK_H_INCLUDED
@@ -43,7 +43,7 @@ void PredCalcPrediction(double *act_spec,
                         ChannelInfo *channelInfo,
                         int chanNum);
 
-void PredInit(faacEncHandle hEncoder);
+void PredInit(faacEncStruct* hEncoder);
 
 void CopyPredInfo(CoderInfo *right, CoderInfo *left);
 

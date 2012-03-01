@@ -16,7 +16,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: ltp.h,v 1.3 2001/06/08 18:01:09 menno Exp $
+ * $Id: ltp.h,v 1.4 2012/03/01 18:34:17 knik Exp $
  */
 
 #ifndef LTP_H
@@ -26,8 +26,8 @@
 
 
 
-void LtpInit(faacEncHandle hEncoder);
-void LtpEnd(faacEncHandle hEncoder);
+void LtpInit(faacEncStruct* hEncoder);
+void LtpEnd(faacEncStruct* hEncoder);
 int LtpEncode(faacEncHandle hEncoder,
                 CoderInfo *coderInfo,
                 LtpInfo *ltpInfo,

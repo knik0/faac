@@ -16,7 +16,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: frame.c,v 1.68 2009/06/05 16:09:38 menno Exp $
+ * $Id: frame.c,v 1.69 2012/03/01 18:34:17 knik Exp $
  */
 
 /*
@@ -87,8 +87,9 @@ int FAACAPI faacEncGetVersion( char **faac_id_string,
 }
 
 
-int FAACAPI faacEncGetDecoderSpecificInfo(faacEncHandle hEncoder,unsigned char** ppBuffer,unsigned long* pSizeOfDecoderSpecificInfo)
+int FAACAPI faacEncGetDecoderSpecificInfo(faacEncHandle hpEncoder,unsigned char** ppBuffer,unsigned long* pSizeOfDecoderSpecificInfo)
 {
+    faacEncStruct* hEncoder = (faacEncStruct*)hpEncoder;
     BitStream* pBitStream = NULL;
 
     if((hEncoder == NULL) || (ppBuffer == NULL) || (pSizeOfDecoderSpecificInfo == NULL)) {
@@ -118,16 +119,18 @@ int FAACAPI faacEncGetDecoderSpecificInfo(faacEncHandle hEncoder,unsigned char**
 }
 
 
-faacEncConfigurationPtr FAACAPI faacEncGetCurrentConfiguration(faacEncHandle hEncoder)
+faacEncConfigurationPtr FAACAPI faacEncGetCurrentConfiguration(faacEncHandle hpEncoder)
 {
+    faacEncStruct* hEncoder = (faacEncStruct*)hpEncoder;
     faacEncConfigurationPtr config = &(hEncoder->config);
 
     return config;
 }
 
-int FAACAPI faacEncSetConfiguration(faacEncHandle hEncoder,
+int FAACAPI faacEncSetConfiguration(faacEncHandle hpEncoder,
                                     faacEncConfigurationPtr config)
 {
+    faacEncStruct* hEncoder = (faacEncStruct*)hpEncoder;
 	int i;
 
     hEncoder->config.allowMidside = config->allowMidside;
@@ -278,7 +281,7 @@ int FAACAPI faacEncSetConfiguration(faacEncHandle hEncoder,
 		config->psymodelidx = (sizeof(psymodellist) / sizeof(psymodellist[0])) - 2;
 
     hEncoder->config.psymodelidx = config->psymodelidx;
-    hEncoder->psymodel = psymodellist[hEncoder->config.psymodelidx].model;
+    hEncoder->psymodel = (psymodel_t *)psymodellist[hEncoder->config.psymodelidx].ptr;
     hEncoder->psymodel->PsyInit(&hEncoder->gpsyInfo, hEncoder->psyInfo, hEncoder->numChannels,
 			hEncoder->sampleRate, hEncoder->srInfo->cb_width_long,
 			hEncoder->srInfo->num_cb_long, hEncoder->srInfo->cb_width_short,
@@ -298,7 +301,7 @@ faacEncHandle FAACAPI faacEncOpen(unsigned long sampleRate,
                                   unsigned long *maxOutputBytes)
 {
     unsigned int channel;
-    faacEncHandle hEncoder;
+    faacEncStruct* hEncoder;
 
     *inputSamples = FRAME_LEN*numChannels;
     *maxOutputBytes = (6144/8)*numChannels;
@@ -335,7 +338,7 @@ faacEncHandle FAACAPI faacEncOpen(unsigned long sampleRate,
     hEncoder->config.psymodellist = (psymodellist_t *)psymodellist;
     hEncoder->config.psymodelidx = 0;
     hEncoder->psymodel =
-      hEncoder->config.psymodellist[hEncoder->config.psymodelidx].model;
+      (psymodel_t *)hEncoder->config.psymodellist[hEncoder->config.psymodelidx].ptr;
     hEncoder->config.shortctl = SHORTCTL_NORMAL;
 
 	/* default channel map is straight-through */
@@ -402,8 +405,9 @@ faacEncHandle FAACAPI faacEncOpen(unsigned long sampleRate,
     return hEncoder;
 }
 
-int FAACAPI faacEncClose(faacEncHandle hEncoder)
+int FAACAPI faacEncClose(faacEncHandle hpEncoder)
 {
+    faacEncStruct* hEncoder = (faacEncStruct*)hpEncoder;
     unsigned int channel;
 
     /* Deinitialize coder functions */
@@ -442,13 +446,14 @@ int FAACAPI faacEncClose(faacEncHandle hEncoder)
     return 0;
 }
 
-int FAACAPI faacEncEncode(faacEncHandle hEncoder,
+int FAACAPI faacEncEncode(faacEncHandle hpEncoder,
                           int32_t *inputBuffer,
                           unsigned int samplesInput,
                           unsigned char *outputBuffer,
                           unsigned int bufferSize
                           )
 {
+    faacEncStruct* hEncoder = (faacEncStruct*)hpEncoder;
     unsigned int channel, i;
     int sb, frameBytes;
     unsigned int offset;
@@ -1117,6 +1122,9 @@ static SR_INFO srInfo[12+1] =
 
 /*
 $Log: frame.c,v $
+Revision 1.69  2012/03/01 18:34:17  knik
+Build faac against the public API exposed in <faac.h> instead of the private API defined in "libfaac/frame.h".
+
 Revision 1.68  2009/06/05 16:09:38  menno
 Allow higher bitrates
 

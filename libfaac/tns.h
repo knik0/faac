@@ -24,7 +24,7 @@ copyright notice must be included in all copies or derivative works.
 Copyright (c) 1997.
 **********************************************************************/
 /*
- * $Id: tns.h,v 1.5 2003/11/24 18:08:28 knik Exp $
+ * $Id: tns.h,v 1.6 2012/03/01 18:34:17 knik Exp $
  */
 
 #ifndef TNS_H
@@ -35,7 +35,7 @@ extern "C" {
 #endif /* __cplusplus */
 
 
-void TnsInit(faacEncHandle hEncoder);
+void TnsInit(faacEncStruct* hEncoder);
 void TnsEncode(TnsInfo* tnsInfo, int numberOfBands,int maxSfb,enum WINDOW_TYPE blockType,
                int* sfbOffsetTable,double* spec);
 void TnsEncodeFilterOnly(TnsInfo* tnsInfo, int numberOfBands, int maxSfb,

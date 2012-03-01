@@ -16,7 +16,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: faac.h,v 1.37 2012/02/23 13:11:27 knik Exp $
+ * $Id: faac.h,v 1.38 2012/03/01 18:34:17 knik Exp $
  */
 
 #ifndef _FAAC_H_
@@ -26,9 +26,12 @@
 extern "C" {
 #endif /* __cplusplus */
 
-#ifndef FAACAPI
+
+#if !defined(FAACAPI) && defined(__GNUC__) && (__GNUC__ >= 4)
 # if defined(_WIN32)
-#  define FAACAPI __stdcall
+#  define FAACAPI __stdcall __declspec(dllexport)
+# else
+#  define FAACAPI __attribute__((visibility("default")))
 # endif
 #endif
 #ifndef FAACAPI

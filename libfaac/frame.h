@@ -16,7 +16,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: frame.h,v 1.31 2012/02/23 13:11:28 knik Exp $
+ * $Id: frame.h,v 1.32 2012/03/01 18:34:17 knik Exp $
  */
 
 #ifndef FRAME_H
@@ -36,6 +36,8 @@
 # include <stdint.h>
 #endif
 
+#include <faac.h>
+
 #ifndef HAVE_INT32_T
 typedef signed int int32_t;
 #endif
@@ -50,23 +52,7 @@ extern "C" {
 #include "aacquant.h"
 #include "fft.h"
 
-#if !defined(FAACAPI) && defined(__GNUC__) && (__GNUC__ >= 4)
-# if defined(_WIN32)
-#  define FAACAPI __stdcall __declspec(dllexport)
-# else
-#  define FAACAPI __attribute__((visibility("default")))
-# endif
-#endif
-#ifndef FAACAPI
-# define FAACAPI
-#endif
-
 #pragma pack(push, 1)
-
-typedef struct {
-  psymodel_t *model;
-  char *name;
-} psymodellist_t;
 
 #include <faaccfg.h>
 
@@ -125,32 +111,7 @@ typedef struct {
 
     /* output bits difference in average bitrate mode */
     int bitDiff;
-} faacEncStruct, *faacEncHandle;
-
-int FAACAPI faacEncGetVersion(char **faac_id_string,
-			      char **faac_copyright_string);
-
-int FAACAPI faacEncGetDecoderSpecificInfo(faacEncHandle hEncoder,
-                                          unsigned char** ppBuffer,
-                                          unsigned long* pSizeOfDecoderSpecificInfo);
-
-faacEncConfigurationPtr FAACAPI faacEncGetCurrentConfiguration(faacEncHandle hEncoder);
-int FAACAPI faacEncSetConfiguration (faacEncHandle hEncoder, faacEncConfigurationPtr config);
-
-faacEncHandle FAACAPI faacEncOpen(unsigned long sampleRate,
-                                  unsigned int numChannels,
-                                  unsigned long *inputSamples,
-                                  unsigned long *maxOutputBytes);
-
-int FAACAPI faacEncEncode(faacEncHandle hEncoder,
-                          int32_t *inputBuffer,
-                          unsigned int samplesInput,
-                          unsigned char *outputBuffer,
-                          unsigned int bufferSize
-                          );
-
-int FAACAPI faacEncClose(faacEncHandle hEncoder);
-
+} faacEncStruct;
 
 #pragma pack(pop)
 

@@ -16,7 +16,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: psychkni.c,v 1.18 2009/06/05 16:32:15 menno Exp $
+ * $Id: psychkni.c,v 1.19 2012/03/01 18:34:17 knik Exp $
  */
 #include <stdio.h>
 #include <stdlib.h>
@@ -26,7 +26,7 @@
 #include "coder.h"
 #include "fft.h"
 #include "util.h"
-#include "frame.h"
+#include <faac.h>
 
 typedef float psyfloat;
 

@@ -16,7 +16,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: filtbank.h,v 1.11 2005/02/02 07:51:49 sur Exp $
+ * $Id: filtbank.h,v 1.12 2012/03/01 18:34:17 knik Exp $
  */
 
 #ifndef FILTBANK_H
@@ -41,18 +41,18 @@ extern "C" {
 #define SINE_WINDOW 0
 #define KBD_WINDOW  1
 
-void			FilterBankInit		( faacEncHandle hEncoder );
+void			FilterBankInit		( faacEncStruct* hEncoder );
 
-void			FilterBankEnd		( faacEncHandle hEncoder );
+void			FilterBankEnd		( faacEncStruct* hEncoder );
 
-void			FilterBank( faacEncHandle hEncoder,
+void			FilterBank( faacEncStruct* hEncoder,
 						CoderInfo *coderInfo,
 						double *p_in_data,
 						double *p_out_mdct,
 						double *p_overlap,
 						int overlap_select );
 
-void			IFilterBank( faacEncHandle hEncoder,
+void			IFilterBank( faacEncStruct* hEncoder,
 						CoderInfo *coderInfo,
 						double *p_in_data,
 						double *p_out_mdct,

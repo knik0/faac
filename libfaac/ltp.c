@@ -24,7 +24,7 @@ Copyright (c)1997.
 
 ***************************************************************************/
 /*
- * $Id: ltp.c,v 1.9 2003/06/26 19:20:31 knik Exp $
+ * $Id: ltp.c,v 1.10 2012/03/01 18:34:17 knik Exp $
  */
 
 #include <stdio.h>
@@ -275,7 +275,7 @@ static double ltp_enc_tf(faacEncHandle hEncoder,
     return (bit_gain);
 }
 
-void LtpInit(faacEncHandle hEncoder)
+void LtpInit(faacEncStruct* hEncoder)
 {
     int i;
     unsigned int channel;
@@ -306,7 +306,7 @@ void LtpInit(faacEncHandle hEncoder)
 	}
 }
 
-void LtpEnd(faacEncHandle hEncoder)
+void LtpEnd(faacEncStruct* hEncoder)
 {
     unsigned int channel;
 

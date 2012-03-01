@@ -32,7 +32,7 @@ copyright notice must be included in all copies or derivative works.
 Copyright (c) 1996.
 **********************************************************************/
 /*
- * $Id: bitstream.h,v 1.14 2004/07/04 12:10:52 corrados Exp $
+ * $Id: bitstream.h,v 1.15 2012/03/01 18:34:17 knik Exp $
  */
 
 #ifndef BITSTREAM_H
@@ -149,7 +149,7 @@ typedef struct
 
 
 
-int WriteBitstream(faacEncHandle hEncoder,
+int WriteBitstream(faacEncStruct* hEncoder,
                    CoderInfo *coderInfo,
                    ChannelInfo *channelInfo,
                    BitStream *bitStream,

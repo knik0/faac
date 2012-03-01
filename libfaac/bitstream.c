@@ -24,7 +24,7 @@ copyright notice must be included in all copies or derivative works.
 Copyright (c) 1997.
 **********************************************************************/
 /*
- * $Id: bitstream.c,v 1.34 2007/06/05 18:59:47 menno Exp $
+ * $Id: bitstream.c,v 1.35 2012/03/01 18:34:17 knik Exp $
  */
 
 #include <stdio.h>
@@ -37,12 +37,12 @@ Copyright (c) 1997.
 #include "ltp.h"
 #include "util.h"
 
-static int CountBitstream(faacEncHandle hEncoder,
+static int CountBitstream(faacEncStruct* hEncoder,
                           CoderInfo *coderInfo,
                           ChannelInfo *channelInfo,
                           BitStream *bitStream,
                           int numChannels);
-static int WriteADTSHeader(faacEncHandle hEncoder,
+static int WriteADTSHeader(faacEncStruct* hEncoder,
                            BitStream *bitStream,
                            int writeFlag);
 static int WriteCPE(CoderInfo *coderInfoL,
@@ -152,7 +152,7 @@ static int WriteFAACStr(BitStream *bitStream, char *version, int write)
 }
 
 
-int WriteBitstream(faacEncHandle hEncoder,
+int WriteBitstream(faacEncStruct* hEncoder,
                    CoderInfo *coderInfo,
                    ChannelInfo *channelInfo,
                    BitStream *bitStream,
@@ -243,7 +243,7 @@ int WriteBitstream(faacEncHandle hEncoder,
     return bits;
 }
 
-static int CountBitstream(faacEncHandle hEncoder,
+static int CountBitstream(faacEncStruct* hEncoder,
                           CoderInfo *coderInfo,
                           ChannelInfo *channelInfo,
                           BitStream *bitStream,
@@ -329,7 +329,7 @@ static int CountBitstream(faacEncHandle hEncoder,
     return bits;
 }
 
-static int WriteADTSHeader(faacEncHandle hEncoder,
+static int WriteADTSHeader(faacEncStruct* hEncoder,
                            BitStream *bitStream,
                            int writeFlag)
 {

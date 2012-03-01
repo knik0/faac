@@ -24,7 +24,7 @@ copyright notice must be included in all copies or derivative works.
 Copyright (c) 1997.
 **********************************************************************/
 /*
- * $Id: tns.c,v 1.10 2003/11/24 18:08:28 knik Exp $
+ * $Id: tns.c,v 1.11 2012/03/01 18:34:17 knik Exp $
  */
 
 #include <math.h>
@@ -84,7 +84,7 @@ static void TnsInvFilter(int length,double* spec,TnsFilterData* filter);
 /*****************************************************/
 /* InitTns:                                          */
 /*****************************************************/
-void TnsInit(faacEncHandle hEncoder)
+void TnsInit(faacEncStruct* hEncoder)
 {
     unsigned int channel;
     int fsIndex = hEncoder->sampleRateIdx;
