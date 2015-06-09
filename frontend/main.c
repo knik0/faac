@@ -18,7 +18,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: main.c,v 1.86 2012/02/25 17:34:01 knik Exp $
+ * $Id: main.c,v 1.87 2015/06/09 10:58:00 knik Exp $
  */
 
 #ifdef _MSC_VER
@@ -409,7 +409,6 @@ int main(int argc, char *argv[])
     unsigned int useMidSide = 1;
     static unsigned int useTns = DEFAULT_TNS;
     enum container_format container = NO_CONTAINER;
-    int optimizeFlag = 0;
     enum stream_format stream = ADTS_STREAM;
     int cutOff = -1;
     int bitRate = 0;
@@ -439,6 +438,7 @@ int main(int argc, char *argv[])
     FILE *outfile = NULL;
 
 #ifdef HAVE_LIBMP4V2
+    int optimizeFlag = 0;
     MP4FileHandle MP4hFile = MP4_INVALID_FILE_HANDLE;
     MP4TrackId MP4track = 0;
     unsigned int ntracks = 0, trackno = 0;
@@ -448,11 +448,11 @@ int main(int argc, char *argv[])
       *genre = NULL, *comment = NULL, *writer = NULL;
     u_int8_t *art = NULL;
     u_int64_t artSize = 0;
-    u_int64_t total_samples = 0;
     u_int64_t encoded_samples = 0;
     unsigned int delay_samples;
     unsigned int frameSize;
 #endif
+    u_int64_t total_samples = 0;
     char *faac_id_string;
     char *faac_copyright_string;
 
@@ -1078,12 +1078,10 @@ int main(int argc, char *argv[])
             else
                 samplesRead = 0;
 
-#ifdef HAVE_LIBMP4V2
             if (total_samples + (samplesRead / infile->channels) > infile->samples)
                 samplesRead = (infile->samples - total_samples) * infile->channels;
 
             total_samples += samplesRead / infile->channels;
-#endif
 
             /* call the actual encoding routine */
             bytesWritten = faacEncEncode(hEncoder,
@@ -1229,6 +1227,9 @@ int main(int argc, char *argv[])
 
 /*
 $Log: main.c,v $
+Revision 1.87  2015/06/09 10:58:00  knik
+fixed compilation without limbp4v2
+
 Revision 1.86  2012/02/25 17:34:01  knik
 Fix format string security error.
 
