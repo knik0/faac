@@ -18,7 +18,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: main.c,v 1.87 2015/06/09 10:58:00 knik Exp $
+ * $Id: main.c,v 1.88 2015/11/26 14:27:05 knik Exp $
  */
 
 #ifdef _MSC_VER
@@ -1072,13 +1072,13 @@ int main(int argc, char *argv[])
         {
             int bytesWritten;
 
-            if (total_samples < infile->samples)
+            if (total_samples < infile->samples || infile->samples == 0)
                 samplesRead = wav_read_float32(infile, pcmbuf, samplesInput,
                                                chanmap);
             else
                 samplesRead = 0;
 
-            if (total_samples + (samplesRead / infile->channels) > infile->samples)
+            if (total_samples + (samplesRead / infile->channels) > infile->samples && infile->samples != 0)
                 samplesRead = (infile->samples - total_samples) * infile->channels;
 
             total_samples += samplesRead / infile->channels;
@@ -1227,6 +1227,9 @@ int main(int argc, char *argv[])
 
 /*
 $Log: main.c,v $
+Revision 1.88  2015/11/26 14:27:05  knik
+bugfix by Sebastian Wilhelmi: faac exits immediately when encoding raw wav file
+
 Revision 1.87  2015/06/09 10:58:00  knik
 fixed compilation without limbp4v2
 
