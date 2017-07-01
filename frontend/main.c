@@ -18,7 +18,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: main.c,v 1.88 2015/11/26 14:27:05 knik Exp $
+ * $Id: main.c,v 1.89 2017/07/01 08:52:27 knik Exp $
  */
 
 #ifdef _MSC_VER
@@ -806,6 +806,13 @@ int main(int argc, char *argv[])
     hEncoder = faacEncOpen(infile->samplerate, infile->channels,
         &samplesInput, &maxBytesOutput);
 
+    if (hEncoder == NULL)
+    {
+        fprintf(stderr, "Couldn't open encoder instance for input file %s\n", audioFileName);
+        wav_close(infile);
+        return 1;
+    }
+
 #ifdef HAVE_LIBMP4V2
     if (container != MP4_CONTAINER && (ntracks || trackno || artist ||
                        title ||  album || year || art ||
@@ -1227,6 +1234,9 @@ int main(int argc, char *argv[])
 
 /*
 $Log: main.c,v $
+Revision 1.89  2017/07/01 08:52:27  knik
+fixed CVE-2017-9130 (crash with improper .wav input)
+
 Revision 1.88  2015/11/26 14:27:05  knik
 bugfix by Sebastian Wilhelmi: faac exits immediately when encoding raw wav file
 

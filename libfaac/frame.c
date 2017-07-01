@@ -16,7 +16,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: frame.c,v 1.69 2012/03/01 18:34:17 knik Exp $
+ * $Id: frame.c,v 1.70 2017/07/01 08:52:28 knik Exp $
  */
 
 /*
@@ -288,7 +288,7 @@ int FAACAPI faacEncSetConfiguration(faacEncHandle hpEncoder,
 			hEncoder->srInfo->num_cb_short);
 	
 	/* load channel_map */
-	for( i = 0; i < 64; i++ )
+	for( i = 0; i < MAX_CHANNELS; i++ )
 		hEncoder->config.channel_map[i] = config->channel_map[i];
 
     /* OK */
@@ -302,6 +302,9 @@ faacEncHandle FAACAPI faacEncOpen(unsigned long sampleRate,
 {
     unsigned int channel;
     faacEncStruct* hEncoder;
+
+    if (numChannels > MAX_CHANNELS)
+	return NULL;
 
     *inputSamples = FRAME_LEN*numChannels;
     *maxOutputBytes = (6144/8)*numChannels;
@@ -342,7 +345,7 @@ faacEncHandle FAACAPI faacEncOpen(unsigned long sampleRate,
     hEncoder->config.shortctl = SHORTCTL_NORMAL;
 
 	/* default channel map is straight-through */
-	for( channel = 0; channel < 64; channel++ )
+	for( channel = 0; channel < MAX_CHANNELS; channel++ )
 		hEncoder->config.channel_map[channel] = channel;
 	
     /*
@@ -1122,6 +1125,9 @@ static SR_INFO srInfo[12+1] =
 
 /*
 $Log: frame.c,v $
+Revision 1.70  2017/07/01 08:52:28  knik
+fixed CVE-2017-9130 (crash with improper .wav input)
+
 Revision 1.69  2012/03/01 18:34:17  knik
 Build faac against the public API exposed in <faac.h> instead of the private API defined in "libfaac/frame.h".
 
