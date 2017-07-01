@@ -16,7 +16,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: input.c,v 1.19 2017/07/01 09:32:35 knik Exp $
+ * $Id: input.c,v 1.20 2017/07/01 09:46:12 knik Exp $
  */
 
 #ifdef HAVE_CONFIG_H
@@ -119,7 +119,9 @@ static void unsuperr(const char *name)
 
 static int seekchunk(FILE *f, riffsub_t *riffsub, char *name)
 {
- while (1)
+ int skipped;
+
+ for(skipped = 0; skipped < 10; skipped++)
  {
    if (fread(riffsub, 1, sizeof(*riffsub), f) != sizeof(*riffsub))
      return 0;
@@ -129,12 +131,12 @@ static int seekchunk(FILE *f, riffsub_t *riffsub, char *name)
      riffsub->len++;
 
    if (!memcmp(&(riffsub->label), name, 4))
-     break;
+     return 1;
 
    fseek(f, riffsub->len, SEEK_CUR);
  }
 
- return 1;
+ return 0;
 }
 
 pcmfile_t *wav_open_read(const char *name, int rawinput)
