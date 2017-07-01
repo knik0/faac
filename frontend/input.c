@@ -16,7 +16,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: input.c,v 1.17 2010/09/07 15:14:02 knik Exp $
+ * $Id: input.c,v 1.18 2017/07/01 08:58:58 knik Exp $
  */
 
 #ifdef HAVE_CONFIG_H
@@ -182,6 +182,10 @@ pcmfile_t *wav_open_read(const char *name, int rawinput)
     memset(&wave, 0, sizeof(wave));
 
     fmtsize = (riffsub.len < sizeof(wave)) ? riffsub.len : sizeof(wave);
+    // check if format is at least WAVEFORMATEX long
+    if (fmtsize < sizeof(struct WAVEFORMATEX))
+	return NULL;
+
     if (fread(&wave, 1, fmtsize, wave_f) != fmtsize)
         return NULL;
 
