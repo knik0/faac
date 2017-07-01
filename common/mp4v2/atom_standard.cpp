@@ -22,15 +22,15 @@
 #include "mp4common.h"
 #include "atoms.h"
 
-static const char name[5]={0251,'n', 'a', 'm', '\0'};
-static const char art[5]={0251,'A', 'R', 'T', '\0'};
-static const char wrt[5]={0251,'w', 'r', 't', '\0'};
-static const char alb[5]={0251,'a', 'l', 'b', '\0'};
-static const char day[5]={0251,'d', 'a', 'y', '\0'};
-static const char too[5]={0251,'t', 'o', 'o', '\0'};
-static const char cmt[5]={0251,'c', 'm', 't', '\0'};
-static const char gen[5]={0251,'g', 'e', 'n', '\0'};
-static const char grp[5]={0251,'g', 'r', 'p', '\0'};
+static const char name[5]={(char)0251,'n', 'a', 'm', '\0'};
+static const char art[5]={(char)0251,'A', 'R', 'T', '\0'};
+static const char wrt[5]={(char)0251,'w', 'r', 't', '\0'};
+static const char alb[5]={(char)0251,'a', 'l', 'b', '\0'};
+static const char day[5]={(char)0251,'d', 'a', 'y', '\0'};
+static const char too[5]={(char)0251,'t', 'o', 'o', '\0'};
+static const char cmt[5]={(char)0251,'c', 'm', 't', '\0'};
+static const char gen[5]={(char)0251,'g', 'e', 'n', '\0'};
+static const char grp[5]={(char)0251,'g', 'r', 'p', '\0'};
 
 MP4StandardAtom::MP4StandardAtom (const char *type) : MP4Atom(type)
 {
