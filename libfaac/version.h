@@ -3,6 +3,6 @@
 
 #define FAAC_RELEASE 1
 
-#define FAAC_VERSION "1.29"
+#define FAAC_VERSION PACKAGE_VERSION
 
 #endif
