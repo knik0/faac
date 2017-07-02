@@ -287,7 +287,7 @@ void MP4Track::ReadSample(
 	*pNumBytes = sampleSize;
 
 	VERBOSE_READ_SAMPLE(m_pFile->GetVerbosity(),
-		printf("ReadSample: track %u id %u offset 0x"X64" size %u (0x%x)\n",
+		printf("ReadSample: track %u id %u offset 0x" X64 " size %u (0x%x)\n",
 			m_trackId, sampleId, fileOffset, *pNumBytes, *pNumBytes));
 
 	bool bufferMalloc = false;
@@ -305,7 +305,7 @@ void MP4Track::ReadSample(
 			GetSampleTimes(sampleId, pStartTime, pDuration);
 
 			VERBOSE_READ_SAMPLE(m_pFile->GetVerbosity(),
-				printf("ReadSample:  start "U64" duration "D64"\n",
+				printf("ReadSample:  start " U64 " duration " D64 "\n",
 					(pStartTime ? *pStartTime : 0), 
 					(pDuration ? *pDuration : 0)));
 		}
@@ -313,7 +313,7 @@ void MP4Track::ReadSample(
 			*pRenderingOffset = GetSampleRenderingOffset(sampleId);
 
 			VERBOSE_READ_SAMPLE(m_pFile->GetVerbosity(),
-				printf("ReadSample:  renderingOffset "D64"\n",
+				printf("ReadSample:  renderingOffset " D64 "\n",
 					*pRenderingOffset));
 		}
 		if (pIsSyncSample) {
@@ -412,7 +412,7 @@ void MP4Track::WriteSample(
 	}
 
 	VERBOSE_WRITE_SAMPLE(m_pFile->GetVerbosity(),
-		printf("duration "U64"\n", duration));
+		printf("duration " U64 "\n", duration));
 
 	if ((m_isAmr == AMR_TRUE) &&
 		(m_curMode != curMode)) {
@@ -461,7 +461,7 @@ void MP4Track::WriteChunkBuffer()
 	m_pFile->WriteBytes(m_pChunkBuffer, m_chunkBufferSize);
 
 	VERBOSE_WRITE_SAMPLE(m_pFile->GetVerbosity(),
-		printf("WriteChunk: track %u offset 0x"X64" size %u (0x%x) numSamples %u\n",
+		printf("WriteChunk: track %u offset 0x" X64 " size %u (0x%x) numSamples %u\n",
 			m_trackId, chunkOffset, m_chunkBufferSize, 
 			m_chunkBufferSize, m_chunkSamples));
 
@@ -1495,7 +1495,7 @@ void MP4Track::ReadChunk(MP4ChunkId chunkId,
 	*ppChunk = (u_int8_t*)MP4Malloc(*pChunkSize);
 
 	VERBOSE_READ_SAMPLE(m_pFile->GetVerbosity(),
-		printf("ReadChunk: track %u id %u offset 0x"X64" size %u (0x%x)\n",
+		printf("ReadChunk: track %u id %u offset 0x" X64 " size %u (0x%x)\n",
 			m_trackId, chunkId, chunkOffset, *pChunkSize, *pChunkSize));
 
 	u_int64_t oldPos = m_pFile->GetPosition(); // only used in mode == 'w'
@@ -1529,7 +1529,7 @@ void MP4Track::RewriteChunk(MP4ChunkId chunkId,
 	m_pChunkOffsetProperty->SetValue(chunkOffset, chunkId - 1);
 
 	VERBOSE_WRITE_SAMPLE(m_pFile->GetVerbosity(),
-		printf("RewriteChunk: track %u id %u offset 0x"X64" size %u (0x%x)\n",
+		printf("RewriteChunk: track %u id %u offset 0x" X64 " size %u (0x%x)\n",
 			m_trackId, chunkId, chunkOffset, chunkSize, chunkSize)); 
 }
 
@@ -1766,8 +1766,8 @@ MP4SampleId MP4Track::GetSampleIdFromEditTime(
 			}
 
 			VERBOSE_EDIT(m_pFile->GetVerbosity(),
-				printf("GetSampleIdFromEditTime: when "U64" "
-					"sampleId %u start "U64" duration "D64"\n", 
+				printf("GetSampleIdFromEditTime: when " U64 " "
+					"sampleId %u start " U64 " duration " D64 "\n", 
 					editWhen, sampleId, 
 					editSampleStartTime, editSampleDuration));
 

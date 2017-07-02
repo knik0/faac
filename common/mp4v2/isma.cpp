@@ -535,7 +535,7 @@ void MP4File::CreateIsmaIodFromParams(
     delete pVideoEsdProperty;
 
 	VERBOSE_ISMA(GetVerbosity(),
-		printf("OD data = "U64" bytes\n", numBytes); MP4HexDump(pBytes, numBytes));
+		printf("OD data = " U64 " bytes\n", numBytes); MP4HexDump(pBytes, numBytes));
 
 	char* odCmdBase64 = MP4ToBase64(pBytes, numBytes);
 
@@ -803,7 +803,7 @@ void MP4File::CreateIsmaODUpdateCommandFromFileForStream(
 	CreateIsmaODUpdateCommandForStream(
 		pAudioEsd, pVideoEsd, ppBytes, pNumBytes);
 	VERBOSE_ISMA(GetVerbosity(),
-		printf("After CreateImsaODUpdateCommandForStream len "U64" =\n", *pNumBytes); MP4HexDump(*ppBytes, *pNumBytes));
+		printf("After CreateImsaODUpdateCommandForStream len " U64 " =\n", *pNumBytes); MP4HexDump(*ppBytes, *pNumBytes));
 	// return SL config values to 2 (file)
 	// return ESID values to 0
 	if (pAudioSLConfigPredef) {

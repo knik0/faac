@@ -326,7 +326,7 @@ MP4Atom* MP4Atom::ReadAtom(MP4File* pFile, MP4Atom* pParentAtom)
 	u_int64_t pos = pFile->GetPosition();
 
 	VERBOSE_READ(pFile->GetVerbosity(), 
-		printf("ReadAtom: pos = 0x"X64"\n", pos));
+		printf("ReadAtom: pos = 0x" X64 "\n", pos));
 
 	u_int64_t dataSize = pFile->ReadUInt32();
 
@@ -355,17 +355,17 @@ MP4Atom* MP4Atom::ReadAtom(MP4File* pFile, MP4Atom* pParentAtom)
 	dataSize -= hdrSize;
 
 	VERBOSE_READ(pFile->GetVerbosity(), 
-		printf("ReadAtom: type = \"%s\" data-size = "U64" (0x"X64") hdr %u\n", 
+		printf("ReadAtom: type = \"%s\" data-size = " U64 " (0x" X64 ") hdr %u\n", 
 		       type, dataSize, dataSize, hdrSize));
 
 	if (pos + hdrSize + dataSize > pParentAtom->GetEnd()) {
 		VERBOSE_ERROR(pFile->GetVerbosity(), 
-			printf("ReadAtom: invalid atom size, extends outside parent atom - skipping to end of \"%s\" \"%s\" "U64" vs "U64"\n", 
+			printf("ReadAtom: invalid atom size, extends outside parent atom - skipping to end of \"%s\" \"%s\" " U64 " vs " U64 "\n", 
 			       pParentAtom->GetType(), type,
 			       pos + hdrSize + dataSize, 
 			       pParentAtom->GetEnd()));
 		VERBOSE_READ(pFile->GetVerbosity(),
-			     printf("parent %s ("U64") pos "U64" hdr %d data "U64" sum "U64"\n",
+			     printf("parent %s (" U64 ") pos " U64 " hdr %d data " U64 " sum " U64 "\n",
 				    pParentAtom->GetType(),
 				    pParentAtom->GetEnd(),
 				    pos, 
@@ -432,7 +432,7 @@ void MP4Atom::Read()
 
 	if (ATOMID(m_type) != 0 && m_size > 1000000) {
 		VERBOSE_READ(GetVerbosity(), 
-			printf("Warning: %s atom size "U64" is suspect\n",
+			printf("Warning: %s atom size " U64 " is suspect\n",
 				m_type, m_size));
 	}
 
@@ -450,7 +450,7 @@ void MP4Atom::Skip()
 {
 	if (m_pFile->GetPosition() != m_end) {
 		VERBOSE_READ(m_pFile->GetVerbosity(),
-			printf("Skip: "U64" bytes\n", m_end - m_pFile->GetPosition()));
+			printf("Skip: " U64 " bytes\n", m_end - m_pFile->GetPosition()));
 	}
 	m_pFile->SetPosition(m_end);
 }
@@ -586,7 +586,7 @@ void MP4Atom::ReadProperties(u_int32_t startIndex, u_int32_t count)
 
 		if (m_pFile->GetPosition() > m_end) {
 			VERBOSE_READ(GetVerbosity(), 
-				printf("ReadProperties: insufficient data for property: %s pos 0x"X64" atom end 0x"X64"\n",
+				printf("ReadProperties: insufficient data for property: %s pos 0x" X64 " atom end 0x" X64 "\n",
 					m_pProperties[i]->GetName(), 
 					m_pFile->GetPosition(), m_end)); 
 
@@ -628,7 +628,7 @@ void MP4Atom::ReadChildAtoms()
 	    }
 	    // otherwise, output a warning, but don't care
 	    VERBOSE_WARNING(GetVerbosity(),
-			    printf("Error: In %s atom, extra "D64" bytes at end of atom\n", 
+			    printf("Error: In %s atom, extra " D64 " bytes at end of atom\n", 
 				   m_type, (m_end - position)));
 	    for (uint64_t ix = 0; ix < m_end - position; ix++) {
 	      (void)m_pFile->ReadUInt8();
@@ -741,7 +741,7 @@ void MP4Atom::FinishWrite(bool use64)
 	m_end = m_pFile->GetPosition();
 	m_size = (m_end - m_start);
   VERBOSE_WRITE(GetVerbosity(), 
-		printf("end: type %s "U64" "U64" size "U64"\n", m_type, 
+		printf("end: type %s " U64 " " U64 " size " U64 "\n", m_type, 
 		       m_start, m_end,
 		       m_size));
 	//use64 = m_pFile->Use64Bits();
