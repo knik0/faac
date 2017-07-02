@@ -18,7 +18,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: main.c,v 1.89 2017/07/01 08:52:27 knik Exp $
+ * $Id: main.c,v 1.90 2017/07/02 17:10:00 knik Exp $
  */
 
 #ifdef _MSC_VER
@@ -896,6 +896,12 @@ int main(int argc, char *argv[])
         unsigned long ASCLength = 0;
     char *version_string;
 
+    if (!strcmp(aacFileName, "-"))
+    {
+	fprintf(stderr, "cannot encode MP4 to stdout\n");
+        return 1;
+    }
+
 #ifdef MP4_DETAILS_ERROR /* r453 fix */
         MP4hFile = MP4Create(aacFileName, MP4_DETAILS_ERROR, 0);
 #else
@@ -1234,6 +1240,9 @@ int main(int argc, char *argv[])
 
 /*
 $Log: main.c,v $
+Revision 1.90  2017/07/02 17:10:00  knik
+exit when trying to encode mp4 to stdin
+
 Revision 1.89  2017/07/01 08:52:27  knik
 fixed CVE-2017-9130 (crash with improper .wav input)
 
