@@ -16,7 +16,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: input.c,v 1.20 2017/07/01 09:46:12 knik Exp $
+ * $Id: input.c,v 1.21 2017/07/02 14:35:23 knik Exp $
  */
 
 #ifdef HAVE_CONFIG_H
@@ -78,7 +78,7 @@ struct WAVEFORMATEX
   u_int16_t wBitsPerSample;
   u_int16_t cbSize;
 }
-#ifdef __GNUC
+#ifdef __GNUC__
 __attribute__((packed))
 #endif
 ;
@@ -94,7 +94,7 @@ struct WAVEFORMATEXTENSIBLE
   u_int32_t dwChannelMask;		// which channels are present in stream
   unsigned char SubFormat[16];		// guid
 }
-#ifdef __GNUC
+#ifdef __GNUC__
 __attribute__((packed))
 #endif
 ;
