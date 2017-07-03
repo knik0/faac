@@ -9,6 +9,6 @@ libfaac_drm_la_INCLUDES = ${libfaac_la_INCLUDES}
 libfaac_drm_la_LIBADD = ${libfaac_la_LIBADD}
 libfaac_drm_la_CFLAGS = ${libfaac_la_CFLAGS} -DDRM
 
-INCLUDES = -I$(top_srcdir)/include
+AM_CPPFLAGS = -I$(top_srcdir)/include
 
 
