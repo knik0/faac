@@ -7,3 +7,9 @@
 *.opt
 *.aac
 *.wav
+*.mp4
+*.lo
+Makefile*
+*.deps
+*.libs
+*.la
