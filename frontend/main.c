@@ -107,6 +107,7 @@ const char *short_help =
   "  -C\t\tRaw PCM input channels.\n"
   "  -X\t\tRaw PCM swap input bytes\n"
   "  -I <C,LF>\tInput channel config, default is 3,4 (Center third, LF fourth)\n"
+  "  --ignorelength\tIgnore wav length from header (useful with files over 4 GB)\n"
   "\n"
   "MP4 specific options:\n"
 #ifdef HAVE_LIBMP4V2
@@ -304,24 +305,25 @@ enum container_format {
 
 enum flags {
   SHORTCTL_FLAG = 300,
-  TNS_FLAG = 301,
-  NO_TNS_FLAG = 302,
-  MPEGVERS_FLAG = 303,
-  OBJTYPE_FLAG = 304,
-  NO_MIDSIDE_FLAG = 306,
+  TNS_FLAG,
+  NO_TNS_FLAG,
+  MPEGVERS_FLAG,
+  OBJTYPE_FLAG,
+  NO_MIDSIDE_FLAG,
+  IGNORELEN_FLAG,
 
 #ifdef HAVE_LIBMP4V2
-  ARTIST_FLAG = 320,
-  TITLE_FLAG = 321,
-  GENRE_FLAG = 322,
-  ALBUM_FLAG = 323,
-  COMPILATION_FLAG = 324,
-  TRACK_FLAG = 325,
-  DISC_FLAG = 326,
-  YEAR_FLAG = 327,
-  COVER_ART_FLAG = 328,
-  COMMENT_FLAG = 329,
-  WRITER_FLAG = 330,
+  ARTIST_FLAG,
+  TITLE_FLAG,
+  GENRE_FLAG,
+  ALBUM_FLAG,
+  COMPILATION_FLAG,
+  TRACK_FLAG,
+  DISC_FLAG,
+  YEAR_FLAG,
+  COVER_ART_FLAG,
+  COMMENT_FLAG,
+  WRITER_FLAG,
 #endif
 };
 
@@ -455,6 +457,7 @@ int main(int argc, char *argv[])
     u_int64_t total_samples = 0;
     char *faac_id_string;
     char *faac_copyright_string;
+    int ignorelen = FALSE;
 
 #ifndef _WIN32
     // install signal handler
@@ -509,6 +512,7 @@ int main(int argc, char *argv[])
         { "compilation", 0, 0, COMPILATION_FLAG},
 #endif
         { "pcmswapbytes", 0, 0, 'X'},
+        { "ignorelength", 0, 0, IGNORELEN_FLAG},
             { 0, 0, 0, 0}
         };
         int c = -1;
@@ -689,6 +693,9 @@ int main(int argc, char *argv[])
             break;
         case NO_TNS_FLAG:
             useTns = 0;
+            break;
+        case IGNORELEN_FLAG:
+            ignorelen = TRUE;
             break;
     case MPEGVERS_FLAG:
             mpegVersion = atoi(optarg);
@@ -1085,6 +1092,8 @@ int main(int argc, char *argv[])
         {
             int bytesWritten;
 
+          if (!ignorelen)
+          {
             if (total_samples < infile->samples || infile->samples == 0)
                 samplesRead = wav_read_float32(infile, pcmbuf, samplesInput,
                                                chanmap);
@@ -1093,6 +1102,9 @@ int main(int argc, char *argv[])
 
             if (total_samples + (samplesRead / infile->channels) > infile->samples && infile->samples != 0)
                 samplesRead = (infile->samples - total_samples) * infile->channels;
+          }
+          else
+            samplesRead = wav_read_float32(infile, pcmbuf, samplesInput, chanmap);
 
             total_samples += samplesRead / infile->channels;
 
