@@ -5,6 +5,7 @@ General FAAC compiling instructions
    For MP4 writing and tagging support, you must enable compiling with internal libmp4v2 (included in /common/mp4v2/).
 2. cd to FAAC source dir
 3. Run:
+	./bootstrap
 	./configure
 	make
 	make install
