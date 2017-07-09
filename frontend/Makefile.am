@@ -14,3 +14,7 @@ else
 LDADD = $(top_builddir)/libfaac/libfaac.la -lm
 endif
 endif
+
+if MINGW
+LDADD += -lws2_32
+endif

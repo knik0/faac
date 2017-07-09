@@ -62,6 +62,7 @@ typedef unsigned short in_port_t;
 typedef int socklen_t;
 typedef int ssize_t;
 typedef unsigned int uint;
+#ifndef __MINGW32__
 static inline int snprintf(char *buffer, size_t count,
 			  const char *format, ...) {
   va_list ap;
@@ -75,6 +76,7 @@ static inline int snprintf(char *buffer, size_t count,
   }
   return ret;
 }
+#endif
 #define strncasecmp _strnicmp
 #define strcasecmp _stricmp
 #define localtime_r(a,b) localtime_s(b,a)
@@ -125,7 +127,7 @@ int gettimeofday(struct timeval *t, void *);
 #define X64F "I64x"
 
 #define TO_D64(a) (a##I64)
-#define TO_U64(a) (a##UI64)
+#define TO_U64(a) (a##ULL)
 
 #define LOG_EMERG 0
 #define LOG_ALERT 1
