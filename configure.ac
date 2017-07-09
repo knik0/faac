@@ -63,9 +63,7 @@ else
     AM_CONDITIONAL(USE_DRM, false)
 fi
 
-if test "$host_os" = "mingw32"; then
-    AM_CONDITIONAL(MINGW, true)
-fi
+AM_CONDITIONAL(MINGW, test "$host_os" = "mingw32")
 
 AC_C_BIGENDIAN
 
