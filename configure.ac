@@ -63,6 +63,10 @@ else
     AM_CONDITIONAL(USE_DRM, false)
 fi
 
+if test "$host_os" = "mingw32"; then
+    AM_CONDITIONAL(MINGW, true)
+fi
+
 AC_C_BIGENDIAN
 
 dnl Checks for header files required for mp4.h
