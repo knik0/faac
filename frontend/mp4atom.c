@@ -427,7 +427,7 @@ static int sttsout(void)
     size += u32out(1);
     // only one entry
     // Sample count (number of frames)
-    size += u32out(mp4config.numframes);
+    size += u32out(mp4config.frame.ents);
     // Sample duration (samples per frame)
     size += u32out(1024);
 
@@ -444,14 +444,14 @@ static int stszout(void)
     // Sample size
     size += u32out(0 /*i.e. variable size */ );
     // Number of entries
-    if (!mp4config.numframes)
+    if (!mp4config.frame.ents)
         return size;
-    if (!mp4config.frame)
+    if (!mp4config.frame.data)
         return size;
 
-    size += u32out(mp4config.numframes);
-    for (cnt = 0; cnt < mp4config.numframes; cnt++)
-        size += u32out(mp4config.frame[cnt]);
+    size += u32out(mp4config.frame.ents);
+    for (cnt = 0; cnt < mp4config.frame.ents; cnt++)
+        size += u32out(mp4config.frame.data[cnt]);
 
     return size;
 }
@@ -473,9 +473,9 @@ static int stscout(void)
     size += u32out(1);
     // 2nd entry
     // last chunk
-    size += u32out((mp4config.numframes >> 8) + 1);
+    size += u32out((mp4config.frame.ents >> 8) + 1);
     // frames in last chunk
-    size += u32out(mp4config.numframes & 0xff);
+    size += u32out(mp4config.frame.ents & 0xff);
 
     // sample id
     size += u32out(1);
@@ -486,7 +486,7 @@ static int stscout(void)
 static int stcoout(void)
 {
     int size = 0;
-    int chunks = (mp4config.numframes >> 8) + 1;
+    int chunks = (mp4config.frame.ents >> 8) + 1;
     int cnt;
     uint32_t ofs = mp4config.mdatofs;
 
@@ -495,15 +495,15 @@ static int stcoout(void)
     // Number of entries
     size += u32out(chunks);
     // Chunk offset table
-    if (!mp4config.numframes)
+    if (!mp4config.frame.ents)
         return size;
-    if (!mp4config.frame)
+    if (!mp4config.frame.data)
         return size;
-    for (cnt = 0; cnt < mp4config.numframes; cnt++)
+    for (cnt = 0; cnt < mp4config.frame.ents; cnt++)
     {
         if (!(cnt & 0xff))
             size += u32out(ofs);
-        ofs += mp4config.frame[cnt];
+        ofs += mp4config.frame.data[cnt];
     }
 
     return size;
@@ -715,6 +715,7 @@ static int create(void)
     return size;
 }
 
+enum {BUFSTEP = 0x10000};
 int mp4atom_frame(uint8_t * buf, int size, int samples)
 {
     if (mp4config.framesamples <= samples)
@@ -730,8 +731,15 @@ int mp4atom_frame(uint8_t * buf, int size, int samples)
         mp4config.buffersize = size;
     mp4config.samples += samples;
     mp4config.mdatsize += dataout(buf, size);
-    // fixme: check *frame size and realloc
-    mp4config.frame[mp4config.numframes++] = size;
+
+    if (((mp4config.frame.ents + 1)* sizeof(*(mp4config.frame.data)))
+        < mp4config.frame.bufsize)
+    {
+        mp4config.frame.bufsize += BUFSTEP;
+        mp4config.frame.data = realloc(mp4config.frame.data,
+                                       mp4config.frame.bufsize);
+    }
+    mp4config.frame.data[mp4config.frame.ents++] = size;
 
     return 0;
 }
@@ -745,10 +753,10 @@ int mp4atom_close(void)
         fclose(g_fout);
         g_fout = 0;
     }
-    if (mp4config.frame)
+    if (mp4config.frame.data)
     {
-        free(mp4config.frame);
-        mp4config.frame = 0;
+        free(mp4config.frame.data);
+        mp4config.frame.data = 0;
     }
     return 0;
 }
@@ -762,7 +770,8 @@ int mp4atom_open(char *name)
         return 1;
 
     mp4config.mdatsize = 0;
-    mp4config.frame = malloc(0x10000);  // fixme
+    mp4config.frame.bufsize = BUFSTEP;
+    mp4config.frame.data = malloc(mp4config.frame.bufsize);
 
     return 0;
 }

@@ -1128,7 +1128,7 @@ int main(int argc, char *argv[])
 
         free(version_string);
 
-        fprintf(stderr, "%d frames\n", mp4config.numframes);
+        fprintf(stderr, "%d frames\n", mp4config.frame.ents);
         fprintf(stderr, "%llu input samples\n", input_samples);
         fprintf(stderr, "%u output samples\n", mp4config.samples);
         fprintf(stderr, "max bitrate: %d\n", mp4config.bitratemax);

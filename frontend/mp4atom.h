@@ -32,8 +32,12 @@ typedef struct
     uint32_t bitratemax;
     uint32_t bitrateavg;
     uint32_t framesamples;
-    uint32_t numframes;
-    uint16_t *frame;
+    struct
+    {
+        uint16_t *data;
+        uint32_t ents;
+        uint32_t bufsize;
+    } frame;
     // AudioSpecificConfig data:
     struct
     {
