@@ -394,9 +394,9 @@ static int esdsout(void)
     size += u8out(dsize.dc);
     size += u8out(0x40 /*MPEG-4 audio */ );
     // DC flags: upstream(bit 1); streamType(2-7)
-    // Stream type, is this even used and how?
-    //size += u8out(0x15/*???*/);
-    size += u8out(1 /*AAC main? */  << 2);
+    // this field is typically 0x15 but I think it
+    // could store "Object Type ID", why not
+    size += u8out(2 /*AAC LC*/ << 2);
     // buffer size (24 bits)
     size += u16out(mp4config.buffersize >> 8);
     size += u8out(mp4config.buffersize && 0xff);
