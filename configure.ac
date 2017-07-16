@@ -8,7 +8,6 @@ AH_TOP([#ifndef CONFIG_H
 #define CONFIG_H])
 AH_BOTTOM([#endif /* CONFIG_H */])
 
-AC_ARG_WITH( mp4v2,  [  --with-mp4v2            compile libmp4v2],WITHMP4V2=$withval, WITHMP4V2=yes)
 AC_ARG_ENABLE( drm,  [  --enable-drm            Digital Radio Mondiale support], enable_drm=$enableval, enable_drm=no)
 
 AC_DEFUN([MY_DEFINE], [ AC_DEFINE($1, 1, [define if needed]) ])
@@ -29,30 +28,6 @@ AC_CHECK_TYPES(int16_t)
 AC_CHECK_DECL(strcasecmp, MY_DEFINE(HAVE_STRCASECMP))
 
 AC_CHECK_LIB(gnugetopt, getopt_long)
-
-AM_CONDITIONAL(WITH_MP4V2, false)
-AM_CONDITIONAL(WITH_EXTERNAL_MP4V2, false)
-
-AC_CHECK_DECLS([MP4Create],
-               AC_CHECK_LIB(mp4v2, MP4Create, external_mp4v2=yes,
-                            external_mp4v2=no, -lstdc++),
-               external_mp4v2=no, [#include <mp4v2/mp4v2.h>])
-
-if test x$external_mp4v2 = xyes; then
-  AC_MSG_NOTICE([*** Building with external mp4v2 ***])
-  MY_DEFINE(HAVE_EXTERNAL_LIBMP4V2)
-  AM_CONDITIONAL(WITH_EXTERNAL_MP4V2, true)
-  AC_CHECK_DECLS([MP4TagsAlloc], [], [], [#include <mp4v2/mp4v2.h>])
-else
-  if test x$WITHMP4V2 = xyes; then
-     AC_MSG_NOTICE([*** Building with internal mp4v2 ***])
-     AM_CONDITIONAL(WITH_MP4V2, true)
-     AC_CONFIG_LINKS(common/mp4v2/mpeg4ip_config.h:config.h)
-     MY_DEFINE(HAVE_LIBMP4V2)
-  else
-     AC_MSG_NOTICE([*** Building WITHOUT mp4v2 ***])
-  fi
-fi
 
 dnl Check for DRM mode
 if test "x$enable_drm" = "xyes"; then
@@ -87,7 +62,6 @@ AC_CHECK_MEMBERS(fpos_t.__pos,,, [#include <stdio.h>])
 
 AC_OUTPUT([
 common/Makefile
-common/mp4v2/Makefile
 libfaac/Makefile
 frontend/Makefile
 include/Makefile

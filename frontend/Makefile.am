@@ -1,19 +1,10 @@
 bin_PROGRAMS = faac
 man_MANS = ../docs/faac.1
 
-faac_SOURCES = main.c input.c
+faac_SOURCES = main.c input.c mp4atom.c
 
-if WITH_MP4V2
-AM_CPPFLAGS = -I$(top_srcdir)/include -I$(top_srcdir)/common/mp4v2
-LDADD = $(top_builddir)/libfaac/libfaac.la $(top_srcdir)/common/mp4v2/libmp4v2.a -lm -lstdc++
-else
-AM_CPPFLAGS = -I$(top_srcdir)/include 
-if WITH_EXTERNAL_MP4V2
-LDADD = $(top_builddir)/libfaac/libfaac.la -lm -lmp4v2
-else
+AM_CPPFLAGS = -I$(top_srcdir)/include
 LDADD = $(top_builddir)/libfaac/libfaac.la -lm
-endif
-endif
 
 if MINGW
 LDADD += -lws2_32
