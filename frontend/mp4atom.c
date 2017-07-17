@@ -715,7 +715,7 @@ static int create(void)
     return size;
 }
 
-enum {BUFSTEP = 0x10000};
+enum {BUFSTEP = 0x4000};
 int mp4atom_frame(uint8_t * buf, int size, int samples)
 {
     if (mp4config.framesamples <= samples)
@@ -732,8 +732,8 @@ int mp4atom_frame(uint8_t * buf, int size, int samples)
     mp4config.samples += samples;
     mp4config.mdatsize += dataout(buf, size);
 
-    if (((mp4config.frame.ents + 1)* sizeof(*(mp4config.frame.data)))
-        < mp4config.frame.bufsize)
+    if (((mp4config.frame.ents + 1) * sizeof(*(mp4config.frame.data)))
+        > mp4config.frame.bufsize)
     {
         mp4config.frame.bufsize += BUFSTEP;
         mp4config.frame.data = realloc(mp4config.frame.data,
