@@ -74,8 +74,8 @@
 
 #include <faac.h>
 
-enum
-{ FALSE = 0, TRUE = 1 };
+#define FALSE 0
+#define TRUE 1
 
 const char *usage =
     "Usage: %s [options] [-o outfile] infiles ...\n"
@@ -421,15 +421,15 @@ int main(int argc, char *argv[])
 
     unsigned int ntracks = 0, trackno = 0;
     unsigned int ndiscs = 0, discno = 0;
-    u_int8_t compilation = 0;
+    uint8_t compilation = 0;
     const char *artist = NULL, *title = NULL, *album = NULL, *year = NULL,
         *genre = NULL, *comment = NULL, *composer = NULL;
     uint8_t *art = NULL;
-    u_int64_t artSize = 0;
-    u_int64_t encoded_samples = 0;
+    uint64_t artSize = 0;
+    uint64_t encoded_samples = 0;
     unsigned int delay_samples;
     unsigned int frameSize;
-    u_int64_t input_samples = 0;
+    uint64_t input_samples = 0;
     char *faac_id_string;
     char *faac_copyright_string;
     int ignorelen = FALSE;
@@ -630,7 +630,7 @@ int main(int argc, char *argv[])
 
                 if (artFile)
                 {
-                    u_int64_t r;
+                    uint64_t r;
 
                     fseek(artFile, 0, SEEK_END);
                     artSize = ftell(artFile);
@@ -1082,7 +1082,7 @@ int main(int argc, char *argv[])
 
         if (bytesWritten > 0)
         {
-            u_int64_t frame_samples = input_samples - encoded_samples;
+            uint64_t frame_samples = input_samples - encoded_samples;
             if (frame_samples > delay_samples)
                 frame_samples = delay_samples;
 
@@ -1129,7 +1129,7 @@ int main(int argc, char *argv[])
         free(version_string);
 
         fprintf(stderr, "%d frames\n", mp4config.frame.ents);
-        fprintf(stderr, "%llu input samples\n", input_samples);
+        fprintf(stderr, "%I64u input samples\n", input_samples);
         fprintf(stderr, "%u output samples\n", mp4config.samples);
         fprintf(stderr, "max bitrate: %d\n", mp4config.bitratemax);
         fprintf(stderr, "avg bitrate: %d\n", mp4config.bitrateavg);
