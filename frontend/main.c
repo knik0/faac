@@ -1125,12 +1125,11 @@ int main(int argc, char *argv[])
 
         free(version_string);
 
-        fprintf(stderr, "%d frames\n", mp4config.frame.ents);
-        fprintf(stderr, "%I64u input samples\n", input_samples);
+        fprintf(stderr, "%u frames\n", mp4config.frame.ents);
         fprintf(stderr, "%u output samples\n", mp4config.samples);
-        fprintf(stderr, "max bitrate: %d\n", mp4config.bitratemax);
-        fprintf(stderr, "avg bitrate: %d\n", mp4config.bitrateavg);
-        fprintf(stderr, "max bufsize: %d\n", mp4config.buffersize);
+        fprintf(stderr, "max bitrate: %u\n", mp4config.bitratemax);
+        fprintf(stderr, "avg bitrate: %u\n", mp4config.bitrateavg);
+        fprintf(stderr, "max frame size: %u\n", mp4config.buffersize);
     }
     else
     {
