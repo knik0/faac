@@ -526,9 +526,9 @@ static int tagtxt(char *tagname, const char *tagtxt)
     return size;
 }
 
-static int tagu32(char *tagname, uint32_t n)
+static int tagu32(char *tagname, int n /*number of stored fields*/)
 {
-    int numsize = 4;
+    int numsize = n * 4;
     int size = 0;
     int datasize = numsize + 16;
 
@@ -538,7 +538,6 @@ static int tagu32(char *tagname, uint32_t n)
     size += dataout("data", 4);
     size += u32out(0);
     size += u32out(0);
-    size += u32out(n);
 
     return size;
 }
@@ -579,11 +578,20 @@ static int ilstout(void)
     if (mp4config.tag.album)
         size += tagtxt("\xa9" "alb", mp4config.tag.album);
     if (mp4config.tag.compilation)
-        size += tagu32("cpil", mp4config.tag.compilation);
+    {
+        size += tagu32("cpil", 1);
+        size += u32out(mp4config.tag.compilation);
+    }
     if (mp4config.tag.trackno)
-        size += tagu32("trkn", mp4config.tag.trackno);
+    {
+        size += tagu32("trkn", 1);
+        size += u32out(mp4config.tag.trackno);
+    }
     if (mp4config.tag.discno)
-        size += tagu32("disk", mp4config.tag.discno);
+    {
+        size += tagu32("disk", 1);
+        size += u32out(mp4config.tag.discno);
+    }
     if (mp4config.tag.year)
         size += tagtxt("\xa9" "day", mp4config.tag.year);
 #if 0

@@ -1112,11 +1112,8 @@ int main(int argc, char *argv[])
         SETTAG(composer);
         SETTAG(title);
         SETTAG(album);
-#if 0
-        // fixme: those aren't right yet
         SETTAG(trackno);
         SETTAG(discno);
-#endif
         SETTAG(compilation);
         SETTAG(year);
         SETTAG(genre);
