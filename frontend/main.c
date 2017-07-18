@@ -77,7 +77,7 @@
 #define FALSE 0
 #define TRUE 1
 
-#define fprintf if(!silent)fprintf
+#define fprintf if(verbose)fprintf
 
 const char *usage =
     "Usage: %s [options] [-o outfile] infiles ...\n"
@@ -96,7 +96,7 @@ const char *short_help =
     "  -b <bitrate>\tSet average bitrate to x kbps. (ABR, lower quality mode)\n"
     "  -c <freq>\tSet the bandwidth in Hz. (default=automatic)\n"
     "  -o X\t\tSet output file to X (only for one input file)\n"
-    "  -s\t\tquiet mode\n"
+    "  -v <verbose>\t\tverbosity level (-v0 is  quiet mode)\n"
     "  -r\t\tUse RAW AAC output file.\n"
     "  -P\t\tRaw PCM input mode (default 44100Hz 16bit stereo).\n"
     "  -R\t\tRaw PCM input rate.\n"
@@ -152,7 +152,7 @@ const char *long_help =
     "\t\tonly for one input file; you can use *.aac, *.mp4, *.m4a or\n"
     "\t\t*.m4b as file extension, and the file format will be set\n"
     "\t\tautomatically to ADTS or MP4).\n"
-    "  -s\t\tquiet mode\n\t\tdisable all printed messages\n"
+    "  -v <verbose>\tverbosity level (-v0 is quiet mode)\n"
     "  -P\t\tRaw PCM input mode (default: off, i.e. expecting a WAV header;\n"
     "\t\tnecessary for input files or bitstreams without a header; using\n"
     "\t\tonly -P assumes the default values for -R, -B and -C in the\n"
@@ -437,7 +437,7 @@ int main(int argc, char *argv[])
     char *faac_id_string;
     char *faac_copyright_string;
     int ignorelen = FALSE;
-    int silent = FALSE;
+    int verbose = 1;
 
 #ifndef _WIN32
     // install signal handler
@@ -485,7 +485,7 @@ int main(int argc, char *argv[])
         int c = -1;
         int option_index = 0;
 
-        c = getopt_long(argc, argv, "Hhb:m:o:rnc:q:PR:B:C:I:Xws",
+        c = getopt_long(argc, argv, "Hhb:m:o:rnc:q:PR:B:C:I:Xwv:",
                         long_options, &option_index);
 
         if (c == -1)
@@ -706,8 +706,8 @@ int main(int argc, char *argv[])
         case 'X':
             rawEndian = 0;
             break;
-        case 's':
-            silent = TRUE;
+        case 'v':
+            verbose = atoi(optarg);
             break;
         case 'H':
             dieMessage = long_help;
