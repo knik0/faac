@@ -680,16 +680,6 @@ static int create(void)
 {
     long apos = ftell(g_fout);;
     int size;
-    static int level = 0;
-
-    if (g_atom->opcode != ATOM_NAME)
-    {
-        static int fail = 0;
-        if (++fail > 10)
-            exit(1);
-        printf("internal error: create: not a 'name' opcode\n");
-        return 0;
-    }
 
     size = u32out(8);
     size += dataout(g_atom->data, 4);
@@ -702,7 +692,6 @@ static int create(void)
     }
     if (g_atom->opcode == ATOM_DESCENT)
     {
-        level++;
         g_atom++;
         while (g_atom->opcode != ATOM_STOP)
         {
@@ -713,7 +702,6 @@ static int create(void)
             }
             size += create();
         }
-        level--;
     }
 
     fseek(g_fout, apos, SEEK_SET);
