@@ -77,6 +77,8 @@
 #define FALSE 0
 #define TRUE 1
 
+#define fprintf if(!silent)fprintf
+
 const char *usage =
     "Usage: %s [options] [-o outfile] infiles ...\n"
     "\n"
@@ -94,6 +96,7 @@ const char *short_help =
     "  -b <bitrate>\tSet average bitrate to x kbps. (ABR, lower quality mode)\n"
     "  -c <freq>\tSet the bandwidth in Hz. (default=automatic)\n"
     "  -o X\t\tSet output file to X (only for one input file)\n"
+    "  -s\t\tquiet mode\n"
     "  -r\t\tUse RAW AAC output file.\n"
     "  -P\t\tRaw PCM input mode (default 44100Hz 16bit stereo).\n"
     "  -R\t\tRaw PCM input rate.\n"
@@ -149,6 +152,7 @@ const char *long_help =
     "\t\tonly for one input file; you can use *.aac, *.mp4, *.m4a or\n"
     "\t\t*.m4b as file extension, and the file format will be set\n"
     "\t\tautomatically to ADTS or MP4).\n"
+    "  -s\t\tquiet mode\n\t\tdisable all printed messages\n"
     "  -P\t\tRaw PCM input mode (default: off, i.e. expecting a WAV header;\n"
     "\t\tnecessary for input files or bitstreams without a header; using\n"
     "\t\tonly -P assumes the default values for -R, -B and -C in the\n"
@@ -433,25 +437,13 @@ int main(int argc, char *argv[])
     char *faac_id_string;
     char *faac_copyright_string;
     int ignorelen = FALSE;
+    int silent = FALSE;
 
 #ifndef _WIN32
     // install signal handler
     signal(SIGINT, signal_handler);
     signal(SIGTERM, signal_handler);
 #endif
-
-    // get faac version
-    if (faacEncGetVersion(&faac_id_string, &faac_copyright_string) ==
-        FAAC_CFG_VERSION)
-    {
-        fprintf(stderr, "Freeware Advanced Audio Coder\nFAAC %s\n\n",
-                faac_id_string);
-    }
-    else
-    {
-        fprintf(stderr, __FILE__ "(%d): wrong libfaac version\n", __LINE__);
-        return 1;
-    }
 
     /* begin process command line */
     progName = argv[0];
@@ -493,7 +485,7 @@ int main(int argc, char *argv[])
         int c = -1;
         int option_index = 0;
 
-        c = getopt_long(argc, argv, "Hhb:m:o:rnc:q:PR:B:C:I:Xw",
+        c = getopt_long(argc, argv, "Hhb:m:o:rnc:q:PR:B:C:I:Xws",
                         long_options, &option_index);
 
         if (c == -1)
@@ -714,6 +706,9 @@ int main(int argc, char *argv[])
         case 'X':
             rawEndian = 0;
             break;
+        case 's':
+            silent = TRUE;
+            break;
         case 'H':
             dieMessage = long_help;
             break;
@@ -725,6 +720,19 @@ int main(int argc, char *argv[])
             dieMessage = usage;
             break;
         }
+    }
+
+    // get faac version
+    if (faacEncGetVersion(&faac_id_string, &faac_copyright_string) ==
+        FAAC_CFG_VERSION)
+    {
+        fprintf(stderr, "Freeware Advanced Audio Coder\nFAAC %s\n\n",
+                faac_id_string);
+    }
+    else
+    {
+        fprintf(stderr, __FILE__ "(%d): wrong libfaac version\n", __LINE__);
+        return 1;
     }
 
     /* check that we have at least one non-option arguments */
@@ -967,10 +975,14 @@ int main(int argc, char *argv[])
 
     fprintf(stderr, "Encoding %s to %s\n", audioFileName, aacFileName);
     if (frames != 0)
+    {
         fprintf(stderr, "   frame          | bitrate | elapsed/estim | "
                 "play/CPU | ETA\n");
+    }
     else
+    {
         fprintf(stderr, " frame | elapsed | play/CPU\n");
+    }
 
     /* encoding loop */
 #ifdef _WIN32
@@ -1039,6 +1051,7 @@ int main(int argc, char *argv[])
                 showcnt += 50;
 
                 if (frames != 0)
+                {
                     fprintf(stderr,
                             "\r%5d/%-5d (%3d%%)|  %5.1f  | %6.1f/%-6.1f | %7.2fx | %.1f ",
                             currentFrame, frames, currentFrame * 100 / frames,
@@ -1050,13 +1063,16 @@ int main(int argc, char *argv[])
                             timeused,
                             timeused * (frames -
                                         currentFrame) / currentFrame);
+                }
                 else
+                {
                     fprintf(stderr,
                             "\r %5d |  %6.1f | %7.2fx ",
                             currentFrame,
                             timeused,
                             (1024.0 * currentFrame / infile->samplerate) /
                             timeused);
+                }
 
                 fflush(stderr);
 #ifdef _WIN32
