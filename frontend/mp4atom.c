@@ -250,7 +250,7 @@ static int mdhdout(void)
 };
 
 
-static int hdlrout(void)
+static int hdlr1out(void)
 {
     int size = 0;
 
@@ -548,6 +548,16 @@ static int metaout(void)
 
     // version/flags
     size += u32out(0);
+
+    return size;
+}
+
+static int hdlr2out(void)
+{
+    int size = 0;
+
+    // version/flags
+    size += u32out(0);
     // Predefined
     size += u32out(0);
     // Handler type
@@ -626,7 +636,7 @@ static creator_t g_tail[] = {
     {ATOM_NAME, "mdhd"},
     {ATOM_DATA, mdhdout},
     {ATOM_NAME, "hdlr"},
-    {ATOM_DATA, hdlrout},
+    {ATOM_DATA, hdlr1out},
     {ATOM_NAME, "minf"},
     {ATOM_DESCENT},
     {ATOM_NAME, "smhd"},
@@ -667,9 +677,10 @@ static creator_t g_tail[] = {
     {ATOM_NAME, "udta"},
     {ATOM_DESCENT},
     {ATOM_NAME, "meta"},
+    {ATOM_DATA, metaout},
     {ATOM_DESCENT},
     {ATOM_NAME, "hdlr"},
-    {ATOM_DATA, metaout},
+    {ATOM_DATA, hdlr2out},
     {ATOM_NAME, "ilst"},
     {ATOM_DATA, ilstout},
     {0}
