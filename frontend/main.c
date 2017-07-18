@@ -1110,6 +1110,7 @@ int main(int argc, char *argv[])
             encoded_samples += frame_samples;
         }
     }
+    fprintf(stderr, "\n");
 
     if (container == MP4_CONTAINER)
     {
@@ -1141,16 +1142,18 @@ int main(int argc, char *argv[])
 
         free(version_string);
 
+        if (verbose >= 2)
+        {
         fprintf(stderr, "%u frames\n", mp4config.frame.ents);
         fprintf(stderr, "%u output samples\n", mp4config.samples);
         fprintf(stderr, "max bitrate: %u\n", mp4config.bitratemax);
         fprintf(stderr, "avg bitrate: %u\n", mp4config.bitrateavg);
         fprintf(stderr, "max frame size: %u\n", mp4config.buffersize);
+        }
     }
     else
     {
         fclose(outfile);
-        fprintf(stderr, "\n");
     }
 
     faacEncClose(hEncoder);
