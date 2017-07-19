@@ -430,7 +430,7 @@ static int sttsout(void)
     // Sample count (number of frames)
     size += u32out(mp4config.frame.ents);
     // Sample duration (samples per frame)
-    size += u32out(1024);
+    size += u32out(mp4config.framesamples);
 
     return size;
 }
