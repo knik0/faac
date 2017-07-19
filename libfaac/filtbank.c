@@ -123,6 +123,7 @@ void FilterBank(faacEncStruct* hEncoder,
             else
                 first_window = hEncoder->sin_window_short;
             break;
+        default:
         case KBD_WINDOW:
             if ( (block_type == ONLY_LONG_WINDOW) || (block_type == LONG_SHORT_WINDOW))
                 first_window = hEncoder->kbd_window_long;
@@ -133,6 +134,7 @@ void FilterBank(faacEncStruct* hEncoder,
 
         switch (coderInfo->window_shape){
         case SINE_WINDOW:
+        default:
             if ( (block_type == ONLY_LONG_WINDOW) || (block_type == SHORT_LONG_WINDOW))
                 second_window = hEncoder->sin_window_long;
             else
