@@ -24,7 +24,7 @@
 //#include <byteswap.h>
 #endif
 #include <string.h>
-#include <sys/time.h>
+#include <time.h>
 
 enum ATOM_TYPE
 {
@@ -114,22 +114,22 @@ static int ftypout(void)
 
 enum
 { SECSINDAY = 24 * 60 * 60 };
-uint32_t mp4time(void)
+time_t mp4time(void)
 {
     int y;
-    struct timeval t;
+    time_t t;
 
-    gettimeofday(&t, NULL);
+    time(&t);
 
     // add some time from the start of 1904 to the start of 1970
     for (y = 1904; y < 1970; y++)
     {
-        t.tv_sec += 365 * SECSINDAY;
+        t += 365 * SECSINDAY;
         if (!(y & 3))
-            t.tv_sec += SECSINDAY;
+            t += SECSINDAY;
     }
 
-    return t.tv_sec;
+    return t;
 }
 
 static int mvhdout(void)
