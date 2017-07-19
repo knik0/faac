@@ -1,3 +1,11 @@
+	- new option to set verbosity (-v0 to silence output)
+
+1.29.2:
+	- new mp4 output code
+
+1.29:
+	- various patches applied and bugs fixed
+
 2009-02-02 - Version 1.28
 	* Prevent out of range scalefactors
 	* Updated to latest mpeg4ip mp4 file format library
