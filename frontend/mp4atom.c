@@ -105,8 +105,9 @@ static int ftypout(void)
 
     size += stringout("isom");
     size += u32out(0);
-    //size += stringout("isommp42");
-    size += stringout("mp41mp42");
+    size += stringout("M4A ");
+    size += stringout("mp42");
+    size += stringout("mp41");
 
     return size;
 }
@@ -519,7 +520,7 @@ static int tagtxt(char *tagname, const char *tagtxt)
     size += dataout(tagname, 4);
     size += u32out(datasize);
     size += dataout("data", 4);
-    size += u32out(1);
+    size += u32out(1); // data type text
     size += u32out(0);
     size += dataout(tagtxt, txtsize);
 
@@ -536,7 +537,7 @@ static int tagu32(char *tagname, int n /*number of stored fields*/)
     size += dataout(tagname, 4);
     size += u32out(datasize);
     size += dataout("data", 4);
-    size += u32out(0);
+    size += u32out(0); // data type uint32
     size += u32out(0);
 
     return size;
