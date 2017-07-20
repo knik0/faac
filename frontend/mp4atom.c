@@ -114,7 +114,7 @@ static int ftypout(void)
 
 enum
 { SECSINDAY = 24 * 60 * 60 };
-time_t mp4time(void)
+static time_t mp4time(void)
 {
     int y;
     time_t t;
