@@ -59,7 +59,7 @@
 # include "getopt.c"
 #endif
 
-#include "mp4atom.h"
+#include "mp4write.h"
 
 #if !defined(HAVE_STRCASECMP) && !defined(_WIN32)
 # define strcasecmp strcmp

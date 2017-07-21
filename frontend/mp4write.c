@@ -40,7 +40,7 @@ typedef struct
     void *data;
 } creator_t;
 
-#include "mp4atom.h"
+#include "mp4write.h"
 
 mp4config_t mp4config = { 0 };
 
