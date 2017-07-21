@@ -543,6 +543,22 @@ static int tagu32(char *tagname, int n /*number of stored fields*/)
     return size;
 }
 
+static int tagimage(char *tagname, int n /*image size*/)
+{
+    int numsize = n;
+    int size = 0;
+    int datasize = numsize + 16;
+
+    size += u32out(datasize + 8);
+    size += dataout(tagname, 4);
+    size += u32out(datasize);
+    size += dataout("data", 4);
+    size += u32out(0x0d); // data type: image
+    size += u32out(0);
+
+    return size;
+}
+
 static int metaout(void)
 {
     int size = 0;
@@ -607,10 +623,11 @@ static int ilstout(void)
     }
     if (mp4config.tag.year)
         size += tagtxt("\xa9" "day", mp4config.tag.year);
-#if 0
-    if (mp4config.tag.cover)
-        size += tagtxt("\xa9" "covr", mp4config.tag.cover);
-#endif
+    if (mp4config.tag.cover.data)
+    {
+        size += tagimage("covr", mp4config.tag.cover.size);
+        size += dataout(mp4config.tag.cover.data, mp4config.tag.cover.size);
+    }
     if (mp4config.tag.comment)
         size += tagtxt("\xa9" "cmt", mp4config.tag.comment);
 

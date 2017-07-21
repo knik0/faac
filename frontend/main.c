@@ -428,7 +428,7 @@ int main(int argc, char *argv[])
     uint8_t compilation = 0;
     const char *artist = NULL, *title = NULL, *album = NULL, *year = NULL,
         *genre = NULL, *comment = NULL, *composer = NULL;
-    uint8_t *art = NULL;
+    uint8_t *artData = NULL;
     uint64_t artSize = 0;
     uint64_t encoded_samples = 0;
     unsigned int delay_samples;
@@ -627,26 +627,26 @@ int main(int argc, char *argv[])
                     fseek(artFile, 0, SEEK_END);
                     artSize = ftell(artFile);
 
-                    art = malloc(artSize);
+                    artData = malloc(artSize);
 
                     fseek(artFile, 0, SEEK_SET);
                     clearerr(artFile);
 
-                    r = fread(art, artSize, 1, artFile);
+                    r = fread(artData, artSize, 1, artFile);
 
                     if (r != 1)
                     {
                         dieMessage = "Error reading cover art file!\n";
-                        free(art);
-                        art = NULL;
+                        free(artData);
+                        artData = NULL;
                     }
                     else if (artSize < 12
-                             || !check_image_header((const char *) art))
+                             || !check_image_header((const char *) artData))
                     {
                         /* the above expression checks the image signature */
                         dieMessage = "Unsupported cover image file format!\n";
-                        free(art);
-                        art = NULL;
+                        free(artData);
+                        artData = NULL;
                     }
 
                     fclose(artFile);
@@ -811,7 +811,7 @@ int main(int argc, char *argv[])
     }
 
     if (container != MP4_CONTAINER && (trackno || artist ||
-                                       title || album || year || art ||
+                                       title || album || year || artData ||
                                        genre || comment || discno ||
                                        composer || compilation))
     {
@@ -1135,7 +1135,11 @@ int main(int argc, char *argv[])
         SETTAG(year);
         SETTAG(genre);
         SETTAG(comment);
-        // fixme: add cover-art option
+        if (artData && artSize)
+        {
+            mp4config.tag.cover.data = artData;
+            mp4config.tag.cover.size = artSize;
+        }
 
         mp4atom_tail();
         mp4atom_close();
@@ -1160,6 +1164,8 @@ int main(int argc, char *argv[])
 
     wav_close(infile);
 
+    if (artData)
+        free(artData);
     if (pcmbuf)
         free(pcmbuf);
     if (bitbuf)

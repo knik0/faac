@@ -60,7 +60,10 @@ typedef struct
         uint32_t trackno;
         uint32_t discno;
         const char *year;
-        const char *cover;      // cover filename
+        struct {
+            uint8_t *data;
+            int size;
+        } cover;
         const char *comment;
     } tag;
 } mp4config_t;
