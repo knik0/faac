@@ -1,3 +1,6 @@
+1.29.3:
+	- MP4 tag options improved
+	- fixed MP4 'meta' atom bug
 	- new option to set verbosity (-v0 to silence output)
 
 1.29.2:
