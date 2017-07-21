@@ -114,8 +114,8 @@ const char *short_help =
     "  --genre X\tSet genre to X\n"
     "  --album X\tSet album to X\n"
     "  --compilation\tSet compilation\n"
-    "  --track X\tSet track to X (number/total)\n"
-    "  --disc X\tSet disc to X (number/total)\n"
+    "  --track X\tSet track number to X\n"
+    "  --disc X\tSet disc number to X\n"
     "  --year X\tSet year to X\n"
     "  --cover-art X\tRead cover art from file X\n"
     "  --comment X\tSet comment to X\n"
@@ -177,8 +177,8 @@ const char *long_help =
     "  --genre X\tSet genre to X\n"
     "  --album X\tSet album/performer to X\n"
     "  --compilation\tMark as compilation\n"
-    "  --track X\tSet track to X (number/total)\n"
-    "  --disc X\tSet disc to X (number/total)\n"
+    "  --track X\tSet track number to X\n"
+    "  --disc X\tSet disc number to X\n"
     "  --year X\tSet year to X\n"
     "  --cover-art X\tRead cover art from file X\n"
     "\t\tSupported image formats are GIF, JPEG, and PNG.\n"
@@ -423,8 +423,8 @@ int main(int argc, char *argv[])
 
     FILE *outfile = NULL;
 
-    unsigned int ntracks = 0, trackno = 0;
-    unsigned int ndiscs = 0, discno = 0;
+    unsigned int trackno = 0;
+    unsigned int discno = 0;
     uint8_t compilation = 0;
     const char *artist = NULL, *title = NULL, *album = NULL, *year = NULL,
         *genre = NULL, *comment = NULL, *composer = NULL;
@@ -599,10 +599,10 @@ int main(int argc, char *argv[])
             album = optarg;
             break;
         case TRACK_FLAG:
-            sscanf(optarg, "%d/%d", &trackno, &ntracks);
+            trackno = atoi(optarg);
             break;
         case DISC_FLAG:
-            sscanf(optarg, "%d/%d", &discno, &ndiscs);
+            discno = atoi(optarg);
             break;
         case COMPILATION_FLAG:
             compilation = 0x1;
@@ -810,9 +810,9 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    if (container != MP4_CONTAINER && (ntracks || trackno || artist ||
+    if (container != MP4_CONTAINER && (trackno || artist ||
                                        title || album || year || art ||
-                                       genre || comment || discno || ndiscs ||
+                                       genre || comment || discno ||
                                        composer || compilation))
     {
         fprintf(stderr, "Metadata requires MP4 output!\n");

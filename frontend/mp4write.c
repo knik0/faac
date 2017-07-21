@@ -595,13 +595,15 @@ static int ilstout(void)
     }
     if (mp4config.tag.trackno)
     {
-        size += tagu32("trkn", 1);
+        size += tagu32("trkn", 2);
         size += u32out(mp4config.tag.trackno);
+        size += u32out(0);
     }
     if (mp4config.tag.discno)
     {
-        size += tagu32("disk", 1);
+        size += tagu32("disk", 2);
         size += u32out(mp4config.tag.discno);
+        size += u32out(0);
     }
     if (mp4config.tag.year)
         size += tagtxt("\xa9" "day", mp4config.tag.year);
