@@ -527,9 +527,9 @@ static int tagtxt(char *tagname, const char *tagtxt)
     return size;
 }
 
-static int tagu32(char *tagname, int n /*number of stored fields*/)
+static int tagu16(char *tagname, int n /*number of stored fields*/)
 {
-    int numsize = n * 4;
+    int numsize = n * 2;
     int size = 0;
     int datasize = numsize + 16;
 
@@ -537,7 +537,7 @@ static int tagu32(char *tagname, int n /*number of stored fields*/)
     size += dataout(tagname, 4);
     size += u32out(datasize);
     size += dataout("data", 4);
-    size += u32out(0); // data type uint32
+    size += u32out(0); // data type uint16
     size += u32out(0);
 
     return size;
@@ -601,25 +601,32 @@ static int ilstout(void)
     if (mp4config.tag.title)
         size += tagtxt("\xa9" "nam", mp4config.tag.title);
     if (mp4config.tag.genre)
-        size += tagtxt("gnre", mp4config.tag.genre);
+    {
+        size += tagu16("gnre", 1);
+        size += u16out(mp4config.tag.genre);
+    }
     if (mp4config.tag.album)
         size += tagtxt("\xa9" "alb", mp4config.tag.album);
     if (mp4config.tag.compilation)
     {
-        size += tagu32("cpil", 1);
-        size += u32out(mp4config.tag.compilation);
+        size += tagu16("cpil", 1);
+        size += u16out(mp4config.tag.compilation);
     }
     if (mp4config.tag.trackno)
     {
-        size += tagu32("trkn", 2);
-        size += u32out(mp4config.tag.trackno);
-        size += u32out(0);
+        size += tagu16("trkn", 4);
+        size += u16out(0);
+        size += u16out(mp4config.tag.trackno);
+        size += u16out(mp4config.tag.ntracks);
+        size += u16out(0);
     }
     if (mp4config.tag.discno)
     {
-        size += tagu32("disk", 2);
-        size += u32out(mp4config.tag.discno);
-        size += u32out(0);
+        size += tagu16("disk", 4);
+        size += u16out(0);
+        size += u16out(mp4config.tag.discno);
+        size += u16out(mp4config.tag.ndiscs);
+        size += u16out(0);
     }
     if (mp4config.tag.year)
         size += tagtxt("\xa9" "day", mp4config.tag.year);

@@ -54,11 +54,13 @@ typedef struct
         const char *artist;
         const char *composer;
         const char *title;
-        const char *genre;
         const char *album;
         uint8_t compilation;
         uint32_t trackno;
+        uint32_t ntracks;
         uint32_t discno;
+        uint32_t ndiscs;
+        int genre;
         const char *year;
         struct {
             uint8_t *data;

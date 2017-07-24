@@ -111,11 +111,11 @@ const char *short_help =
     "  --artist X\tSet artist to X\n"
     "  --composer X\tSet composer to X\n"
     "  --title X\tSet title to X\n"
-    "  --genre X\tSet genre to X\n"
+    "  --genre X\tSet genre number to X\n"
     "  --album X\tSet album to X\n"
     "  --compilation\tSet compilation\n"
-    "  --track X\tSet track number to X\n"
-    "  --disc X\tSet disc number to X\n"
+    "  --track X\tSet track to X (number/total)\n"
+    "  --disc X\tSet disc to X (number/total)\n"
     "  --year X\tSet year to X\n"
     "  --cover-art X\tRead cover art from file X\n"
     "  --comment X\tSet comment to X\n"
@@ -174,11 +174,11 @@ const char *long_help =
     "  --artist X\tSet artist to X\n"
     "  --composer X\tSet composer to X\n"
     "  --title X\tSet title/track name to X\n"
-    "  --genre X\tSet genre to X\n"
+    "  --genre X\tSet genre number to X\n"
     "  --album X\tSet album/performer to X\n"
     "  --compilation\tMark as compilation\n"
-    "  --track X\tSet track number to X\n"
-    "  --disc X\tSet disc number to X\n"
+    "  --track X\tSet track to X (number/total)\n"
+    "  --disc X\tSet disc to X (number/total)\n"
     "  --year X\tSet year to X\n"
     "  --cover-art X\tRead cover art from file X\n"
     "\t\tSupported image formats are GIF, JPEG, and PNG.\n"
@@ -423,11 +423,12 @@ int main(int argc, char *argv[])
 
     FILE *outfile = NULL;
 
-    unsigned int trackno = 0;
-    unsigned int discno = 0;
+    unsigned int ntracks = 0, trackno = 0;
+    unsigned int ndiscs = 0, discno = 0;
     uint8_t compilation = 0;
     const char *artist = NULL, *title = NULL, *album = NULL, *year = NULL,
-        *genre = NULL, *comment = NULL, *composer = NULL;
+        *comment = NULL, *composer = NULL;
+    int genre = 0;
     uint8_t *artData = NULL;
     uint64_t artSize = 0;
     uint64_t encoded_samples = 0;
@@ -599,16 +600,16 @@ int main(int argc, char *argv[])
             album = optarg;
             break;
         case TRACK_FLAG:
-            trackno = atoi(optarg);
+            sscanf(optarg, "%d/%d", &trackno, &ntracks);
             break;
         case DISC_FLAG:
-            discno = atoi(optarg);
+            sscanf(optarg, "%d/%d", &discno, &ndiscs);
             break;
         case COMPILATION_FLAG:
             compilation = 0x1;
             break;
         case GENRE_FLAG:
-            genre = optarg;
+            genre = atoi(optarg) + 1;
             break;
         case YEAR_FLAG:
             year = optarg;
@@ -810,9 +811,9 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    if (container != MP4_CONTAINER && (trackno || artist ||
+    if (container != MP4_CONTAINER && (ntracks || trackno || artist ||
                                        title || album || year || artData ||
-                                       genre || comment || discno ||
+                                       genre || comment || discno || ndiscs ||
                                        composer || compilation))
     {
         fprintf(stderr, "Metadata requires MP4 output!\n");
@@ -1130,7 +1131,9 @@ int main(int argc, char *argv[])
         SETTAG(title);
         SETTAG(album);
         SETTAG(trackno);
+        SETTAG(ntracks);
         SETTAG(discno);
+        SETTAG(ndiscs);
         SETTAG(compilation);
         SETTAG(year);
         SETTAG(genre);
