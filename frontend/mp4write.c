@@ -543,6 +543,22 @@ static int tagu16(char *tagname, int n /*number of stored fields*/)
     return size;
 }
 
+static int tagu8(char *tagname, int n /*number of stored fields*/)
+{
+    int numsize = n * 1;
+    int size = 0;
+    int datasize = numsize + 16;
+
+    size += u32out(datasize + 8);
+    size += dataout(tagname, 4);
+    size += u32out(datasize);
+    size += dataout("data", 4);
+    size += u32out(0x15); // data type uint8
+    size += u32out(0);
+
+    return size;
+}
+
 static int tagimage(char *tagname, int n /*image size*/)
 {
     int numsize = n;
@@ -609,8 +625,8 @@ static int ilstout(void)
         size += tagtxt("\xa9" "alb", mp4config.tag.album);
     if (mp4config.tag.compilation)
     {
-        size += tagu16("cpil", 1);
-        size += u16out(mp4config.tag.compilation);
+        size += tagu8("cpil", 1);
+        size += u8out(mp4config.tag.compilation);
     }
     if (mp4config.tag.trackno)
     {
