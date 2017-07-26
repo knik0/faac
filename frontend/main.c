@@ -600,16 +600,21 @@ int main(int argc, char *argv[])
             album = optarg;
             break;
         case TRACK_FLAG:
-            sscanf(optarg, "%d/%d", &trackno, &ntracks);
+            if (sscanf(optarg, "%d/%d", &trackno, &ntracks) < 1)
+                dieMessage = "Wrong track number.\n";
             break;
         case DISC_FLAG:
-            sscanf(optarg, "%d/%d", &discno, &ndiscs);
+            if (sscanf(optarg, "%d/%d", &discno, &ndiscs) < 1)
+                dieMessage = "Wrong disc number.\n";
             break;
         case COMPILATION_FLAG:
             compilation = 0x1;
             break;
         case GENRE_FLAG:
-            genre = atoi(optarg) + 1;
+            genre = atoi(optarg);
+            if ((genre < 0) || (genre > 146))
+                dieMessage = "Genre number out of range.\n";
+            genre++;
             break;
         case YEAR_FLAG:
             year = optarg;
