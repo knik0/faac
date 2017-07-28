@@ -235,13 +235,13 @@ int AACQuantize(CoderInfo *coderInfo,
             (coderInfo->book_vector[i]==INTENSITY_HCB2)) {
             const int diff = scale_factor[i] - previous_is_factor;
             if (diff < -60) scale_factor[i] = previous_is_factor - 60;
-            else if (diff > 59) scale_factor[i] = previous_is_factor + 59;
+            else if (diff > 60) scale_factor[i] = previous_is_factor + 60;
             previous_is_factor = scale_factor[i];
 //            printf("sf %d: %d diff=%d **\n", i, coderInfo->scale_factor[i], diff);
         } else if (coderInfo->book_vector[i]) {
             const int diff = scale_factor[i] - previous_scale_factor;
             if (diff < -60) scale_factor[i] = previous_scale_factor - 60;
-            else if (diff > 59) scale_factor[i] = previous_scale_factor + 59;
+            else if (diff > 60) scale_factor[i] = previous_scale_factor + 60;
             previous_scale_factor = scale_factor[i];
 //            printf("sf %d: %d diff=%d\n", i, coderInfo->scale_factor[i], diff);
         }

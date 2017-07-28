@@ -1196,14 +1196,14 @@ int WriteScalefactors(CoderInfo *coderInfo,
                 (coderInfo->book_vector[index]==INTENSITY_HCB2) ) {
                 /* only send scalefactors if using non-zero codebooks */
                 diff = scale_factors[index] - previous_is_factor;
-                if ((diff < 60)&&(diff >= -60))
+                if ((diff <= 60)&&(diff >= -60))
 				{
 					length = huff12[diff+60][FIRSTINTAB];
 				}
-                else if ( diff >= 60 ) // frank 30.Oct.2007 added this because faad2 decoder and QuickTime choke when nothing is written and the codebook says a number is expected.
+                else if ( diff > 60 ) // frank 30.Oct.2007 added this because faad2 decoder and QuickTime choke when nothing is written and the codebook says a number is expected.
 				{
-					diff = 59;
-					length = huff12[119][FIRSTINTAB]; //max
+					diff = 60;
+					length = huff12[120][FIRSTINTAB]; //max
 				}
                 else 
 				{
@@ -1211,7 +1211,7 @@ int WriteScalefactors(CoderInfo *coderInfo,
 					length = huff12[0][FIRSTINTAB]; // min
 				}
                 bit_count+=length;
-                previous_is_factor = scale_factors[index];
+                previous_is_factor += diff;
                 if (writeFlag == 1 ) {
                     codeword = huff12[diff+60][LASTINTAB];
                     PutBit(bitStream,codeword,length);
@@ -1219,14 +1219,14 @@ int WriteScalefactors(CoderInfo *coderInfo,
             } else if (coderInfo->book_vector[index]) {
                 /* only send scalefactors if using non-zero codebooks */
                 diff = scale_factors[index] - previous_scale_factor;
-                if ((diff < 60)&&(diff >= -60))
+                if ((diff <= 60)&&(diff >= -60))
 				{
 					length = huff12[diff+60][FIRSTINTAB];
 				}
-                else if ( diff >= 60 ) // frank 30.Oct.2007 added this because faad2 decoder and QuickTime choke when nothing is written and the codebook says a number is expected.
+                else if ( diff > 60 ) // frank 30.Oct.2007 added this because faad2 decoder and QuickTime choke when nothing is written and the codebook says a number is expected.
 				{
-					diff = 59;
-					length = huff12[119][FIRSTINTAB]; //max
+					diff = 60;
+					length = huff12[120][FIRSTINTAB]; //max
 				}
                 else 
 				{
@@ -1234,7 +1234,7 @@ int WriteScalefactors(CoderInfo *coderInfo,
 					length = huff12[0][FIRSTINTAB]; //min
 				}
                 bit_count+=length;
-                previous_scale_factor = scale_factors[index];
+                previous_scale_factor += diff;
                 if (writeFlag == 1 ) {
                     codeword = huff12[diff+60][LASTINTAB];
                     PutBit(bitStream,codeword,length);
