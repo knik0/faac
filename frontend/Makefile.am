@@ -1,3 +1,5 @@
+if !USE_DRM # no frontend for DRM version
+
 bin_PROGRAMS = faac
 man_MANS = ../docs/faac.1
 
@@ -9,3 +11,5 @@ LDADD = $(top_builddir)/libfaac/libfaac.la -lm
 if MINGW
 LDADD += -lws2_32
 endif
+
+endif # !USE_DRM
