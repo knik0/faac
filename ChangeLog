@@ -1,3 +1,7 @@
+	- fixed bugs
+	  * rounding in QuantizeReflectionCoeffs (tns.c)
+	  * use +60 value for scalefactor.
+	  * use clipped diff instead of original value (huffman.c)
 1.29.3:
 	- MP4 tag options improved
 	- fixed MP4 'meta' atom bug
