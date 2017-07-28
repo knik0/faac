@@ -488,7 +488,7 @@ static void QuantizeReflectionCoeffs(int fOrder,
 
     /* Quantize and inverse quantize */
     for (i=1;i<=fOrder;i++) {
-        indexArray[i] = (int)(0.5+(asin(kArray[i])*((kArray[i]>=0)?iqfac:iqfac_m)));
+        indexArray[i] = (kArray[i]>=0)?(int)(0.5+(asin(kArray[i])*iqfac)):(int)(-0.5+(asin(kArray[i])*iqfac_m));
         kArray[i] = sin((double)indexArray[i]/((indexArray[i]>=0)?iqfac:iqfac_m));
     }
 }
