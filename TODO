@@ -28,7 +28,6 @@ ChangeLog might give some insight on this though.
 - Rewrite noiseless coding (now taken from old version) (?)
 - Better grouping support (?)
 - Fix short block psychoacoustics (?)
-- Fix TNS (hans-juergen, Oct 17, 2004)
 - Fix LTP (hans-juergen, Oct 17, 2004)
 - Fix Main (hans-juergen, Oct 17, 2004)
 - Add resampler and downmixer (hans-juergen, Oct 17, 2004)
@@ -37,3 +36,4 @@ ChangeLog might give some insight on this though.
   Linux: endianness? TNS? M/S? decoder bug? (hans-juergen, Oct 17, 2004)
 - Fix default ABR cutoff frequencies at different bitrates
   (hans-juergen, Oct 17, 2004)
+- Test TNS(arcen, Apr 8th, 2012)
