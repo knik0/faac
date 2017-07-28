@@ -1,4 +1,4 @@
-Currently maintained by menno (menno@audiocoding.com).
+Currently maintained by knik <knik@users.sourceforge.net>.
 
 The following list contains the user names of all FAAC developers with their first appearance in the ChangeLog:
 
@@ -15,6 +15,7 @@ The following list contains the user names of all FAAC developers with their fir
 2003-09-07  ca5e (Janne Hyvärinen)
 2004-03-17  danchr (Dan Christiansen)
 2004-07-04  corrados (Volker Fischer)
+2012-04-08  arcen (Arcen@github)
 
 Furthermore there are other contributors from the SourceForge mailing list and
 trackers as well as from the web forum or via email whose patches were checked
