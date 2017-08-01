@@ -36,11 +36,11 @@ typedef struct
   int bandS;
   int lastband;
 
-  /* SFB energy */
-  psyfloat *fftEnrgS[8];
-  psyfloat *fftEnrgNextS[8];
-  psyfloat *fftEnrgNext2S[8];
-  psyfloat *fftEnrgPrevS[8];
+  /* band volumes */
+  psyfloat *engPrev[8];
+  psyfloat *eng[8];
+  psyfloat *engNext[8];
+  psyfloat *engNext2[8];
 }
 psydata_t;
 
@@ -64,126 +64,60 @@ static void Hann(GlobalPsyInfo * gpsyInfo, double *inSamples, int size)
 
 static void PsyCheckShort(PsyInfo * psyInfo)
 {
-  double totvol = 0.0;
-  double totchg, totchg2;
+  enum {PREVS = 2, NEXTS = 2};
   psydata_t *psydata = psyInfo->data;
   int lastband = psydata->lastband;
   int firstband = 1;
-  int sfb;
+  int sfb, win;
+  psyfloat *lasteng;
 
-  /* long/short block switch */
-  totchg = totchg2 = 0.0;
-  for (sfb = 0; sfb < lastband; sfb++)
+  psyInfo->block_type = ONLY_LONG_WINDOW;
+
+  lasteng = NULL;
+  for (win = 0; win < PREVS + 8 + NEXTS; win++)
   {
-    int win;
-    double volb[16];
-    double vavg[13];
-    double maxdif = 0.0;
-    double totmaxdif = 0.0;
-    double e, v;
+      psyfloat *eng;
 
-    // previous frame
-    for (win = 0; win < 4; win++)
-    {
-      e = psydata->fftEnrgPrevS[win + 4][sfb];
+      if (win < PREVS)
+          eng = psydata->engPrev[win + 8 - PREVS];
+      else if (win < (PREVS + 8))
+          eng = psydata->eng[win - PREVS];
+      else
+          eng = psydata->engNext[win - PREVS - 8];
 
-      volb[win] = sqrt(e);
-      totvol += e;
-    }
-
-    // current frame
-    for (win = 0; win < 8; win++)
+      if (lasteng)
       {
-      e = psydata->fftEnrgS[win][sfb];
+          double toteng = 0.0;
+          double volchg = 0.0;
 
-      volb[win + 4] = sqrt(e);
-      totvol += e;
-    }
-    // next frame
-    for (win = 0; win < 4; win++)
-    {
-      e = psydata->fftEnrgNextS[win][sfb];
+          for (sfb = firstband; sfb < lastband; sfb++)
+          {
+              toteng += (eng[sfb] < lasteng[sfb]) ? eng[sfb] : lasteng[sfb];
+              volchg += fabs(eng[sfb] - lasteng[sfb]);
+          }
 
-      volb[win + 12] = sqrt(e);
-    totvol += e;
-    }
-
-    // ignore lowest SFBs
-    if (sfb < firstband)
-      continue;
-
-    v = 0.0;
-    for (win = 0; win < 4; win++)
-    {
-      v += volb[win];
-    }
-    vavg[0] = 0.25 * v;
-
-    for (win = 1; win < 13; win++)
-      {
-      v -= volb[win - 1];
-      v += volb[win + 3];
-      vavg[win] = 0.25 * v;
-    }
-
-    for (win = 0; win < 8; win++)
-    {
-      int i;
-      double mina, maxv;
-      double voldif;
-      double totvoldif;
-
-      mina = vavg[win];
-      for (i = 1; i < 5; i++)
-        mina = min(mina, vavg[win + i]);
-
-      maxv = volb[win + 2];
-      for (i = 3; i < 6; i++)
-        maxv = max(maxv, volb[win + i]);
-
-      if (!maxv || !mina)
-        continue;
-
-      voldif = (maxv - mina) / mina;
-      totvoldif = (maxv - mina) * (maxv - mina);
-
-	if (voldif > maxdif)
-	  maxdif = voldif;
-
-	if (totvoldif > totmaxdif)
-	  totmaxdif = totvoldif;
+          if ((volchg / toteng) > 1.5)
+          {
+              psyInfo->block_type = ONLY_SHORT_WINDOW;
+              break;
+          }
       }
-    totchg += maxdif;
-    totchg2 += totmaxdif;
+      lasteng = eng;
   }
-
-  totvol = sqrt(totvol);
-
-  totchg2 = sqrt(totchg2);
-
-  totchg = totchg / lastband;
-  if (totvol)
-    totchg2 /= totvol;
-  else
-    totchg2 = 0.0;
-
-  psyInfo->block_type = ((totchg > 1.0) && (totchg2 > 0.04))
-    ? ONLY_SHORT_WINDOW : ONLY_LONG_WINDOW;
 
 #if 0
   {
-    static int total = 0, shorts = 0;
-    char *flash = "    ";
+      static int cnt = 0;
+      static int total = 0, shorts = 0;
 
-    total++;
-    if (psyInfo->block_type == ONLY_SHORT_WINDOW)
-    {
-      flash = "****";
-      shorts++;
-    }
+      if (!(cnt++ & 0x3f))
+      {
+          total++;
+          if (psyInfo->block_type == ONLY_SHORT_WINDOW)
+              shorts++;
 
-    printf("totchg: %s %g %g\t%g\n", flash, totchg, totchg2,
-	   (double)shorts/total);
+          printf("shorts: %d %%\n", 100*shorts/total);
+      }
   }
 #endif
 }
@@ -233,18 +167,18 @@ static void PsyInit(GlobalPsyInfo * gpsyInfo, PsyInfo * psyInfo, unsigned int nu
 
     for (j = 0; j < 8; j++)
     {
-      psydata->fftEnrgPrevS[j] =
-	(psyfloat *) AllocMemory(NSFB_SHORT * sizeof(psyfloat));
-      memset(psydata->fftEnrgPrevS[j], 0, NSFB_SHORT * sizeof(psyfloat));
-      psydata->fftEnrgS[j] =
-	(psyfloat *) AllocMemory(NSFB_SHORT * sizeof(psyfloat));
-      memset(psydata->fftEnrgS[j], 0, NSFB_SHORT * sizeof(psyfloat));
-      psydata->fftEnrgNextS[j] =
-	(psyfloat *) AllocMemory(NSFB_SHORT * sizeof(psyfloat));
-      memset(psydata->fftEnrgNextS[j], 0, NSFB_SHORT * sizeof(psyfloat));
-      psydata->fftEnrgNext2S[j] =
-	(psyfloat *) AllocMemory(NSFB_SHORT * sizeof(psyfloat));
-      memset(psydata->fftEnrgNext2S[j], 0, NSFB_SHORT * sizeof(psyfloat));
+      psydata->engPrev[j] =
+            (psyfloat *) AllocMemory(NSFB_SHORT * sizeof(psyfloat));
+      memset(psydata->engPrev[j], 0, NSFB_SHORT * sizeof(psyfloat));
+      psydata->eng[j] =
+          (psyfloat *) AllocMemory(NSFB_SHORT * sizeof(psyfloat));
+      memset(psydata->eng[j], 0, NSFB_SHORT * sizeof(psyfloat));
+      psydata->engNext[j] =
+          (psyfloat *) AllocMemory(NSFB_SHORT * sizeof(psyfloat));
+      memset(psydata->engNext[j], 0, NSFB_SHORT * sizeof(psyfloat));
+      psydata->engNext2[j] =
+          (psyfloat *) AllocMemory(NSFB_SHORT * sizeof(psyfloat));
+      memset(psydata->engNext2[j], 0, NSFB_SHORT * sizeof(psyfloat));
     }
   }
 }
@@ -271,14 +205,14 @@ static void PsyEnd(GlobalPsyInfo * gpsyInfo, PsyInfo * psyInfo, unsigned int num
 
     for (j = 0; j < 8; j++)
     {
-      if (psydata->fftEnrgPrevS[j])
-	FreeMemory(psydata->fftEnrgPrevS[j]);
-      if (psydata->fftEnrgS[j])
-	FreeMemory(psydata->fftEnrgS[j]);
-      if (psydata->fftEnrgNextS[j])
-	FreeMemory(psydata->fftEnrgNextS[j]);
-      if (psydata->fftEnrgNext2S[j])
-	FreeMemory(psydata->fftEnrgNext2S[j]);
+        if (psydata->engPrev[j])
+            FreeMemory(psydata->engPrev[j]);
+        if (psydata->eng[j])
+            FreeMemory(psydata->eng[j]);
+        if (psydata->engNext[j])
+            FreeMemory(psydata->engNext[j]);
+        if (psydata->engNext2[j])
+            FreeMemory(psydata->engNext2[j]);
     }
   }
 
@@ -326,6 +260,86 @@ static void PsyCalculate(ChannelInfo * channelInfo, GlobalPsyInfo * gpsyInfo,
   }
 }
 
+// imported from filtbank.c
+static void mdct( FFT_Tables *fft_tables, double *data, int N )
+{
+    double *xi, *xr;
+    double tempr, tempi, c, s, cold, cfreq, sfreq; /* temps for pre and post twiddle */
+    double freq = 2.0 * M_PI / N;
+    double cosfreq8, sinfreq8;
+    int i, n;
+
+    xi = (double*)AllocMemory((N >> 2)*sizeof(double));
+    xr = (double*)AllocMemory((N >> 2)*sizeof(double));
+
+    /* prepare for recurrence relation in pre-twiddle */
+    cfreq = cos (freq);
+    sfreq = sin (freq);
+    cosfreq8 = cos (freq * 0.125);
+    sinfreq8 = sin (freq * 0.125);
+    c = cosfreq8;
+    s = sinfreq8;
+
+    for (i = 0; i < (N >> 2); i++) {
+        /* calculate real and imaginary parts of g(n) or G(p) */
+        n = 2 * i;
+
+        if (n < (N >> 2))
+            tempr = data [(N>>2) + (N>>1) - 1 - n] + data [N - (N>>2) + n];
+        else
+            tempr = data [(N>>2) + (N>>1) - 1 - n] - data [-(N>>2) + n];
+
+        if (n < (N >> 2))
+            tempi = data [(N>>2) + n] - data [(N>>2) - 1 - n];
+        else
+            tempi = data [(N>>2) + n] + data [N + (N>>2) - 1 - n];
+
+        /* calculate pre-twiddled FFT input */
+        xr[i] = tempr * c + tempi * s;
+        xi[i] = tempi * c - tempr * s;
+
+        /* use recurrence to prepare cosine and sine for next value of i */
+        cold = c;
+        c = c * cfreq - s * sfreq;
+        s = s * cfreq + cold * sfreq;
+    }
+
+    /* Perform in-place complex FFT of length N/4 */
+    switch (N) {
+    case BLOCK_LEN_SHORT * 2:
+        fft( fft_tables, xr, xi, 6);
+        break;
+    case BLOCK_LEN_LONG * 2:
+        fft( fft_tables, xr, xi, 9);
+    }
+
+    /* prepare for recurrence relations in post-twiddle */
+    c = cosfreq8;
+    s = sinfreq8;
+
+    /* post-twiddle FFT output and then get output data */
+    for (i = 0; i < (N >> 2); i++) {
+        /* get post-twiddled FFT output  */
+        tempr = 2. * (xr[i] * c + xi[i] * s);
+        tempi = 2. * (xi[i] * c - xr[i] * s);
+
+        /* fill in output values */
+        data [2 * i] = -tempr;   /* first half even */
+        data [(N >> 1) - 1 - 2 * i] = tempi;  /* first half odd */
+        data [(N >> 1) + 2 * i] = -tempi;  /* second half even */
+        data [N - 1 - 2 * i] = tempr;  /* second half odd */
+
+        /* use recurrence to prepare cosine and sine for next value of i */
+        cold = c;
+        c = c * cfreq - s * sfreq;
+        s = s * cfreq + cold * sfreq;
+    }
+
+    if (xr) FreeMemory(xr);
+    if (xi) FreeMemory(xi);
+}
+
+
 static void PsyBufferUpdate( FFT_Tables *fft_tables, GlobalPsyInfo * gpsyInfo, PsyInfo * psyInfo,
 			    double *newSamples, unsigned int bandwidth,
 			    int *cb_width_short, int num_cb_short)
@@ -351,14 +365,14 @@ static void PsyBufferUpdate( FFT_Tables *fft_tables, GlobalPsyInfo * gpsyInfo, P
 	   2 * psyInfo->sizeS * sizeof(double));
 
     Hann(gpsyInfo, transBuffS, 2 * psyInfo->sizeS);
-    rfft( fft_tables, transBuffS, 8);
+    mdct( fft_tables, transBuffS, 2 * psyInfo->sizeS);
 
     // shift bufs
-    tmp = psydata->fftEnrgPrevS[win];
-    psydata->fftEnrgPrevS[win] = psydata->fftEnrgS[win];
-    psydata->fftEnrgS[win] = psydata->fftEnrgNextS[win];
-    psydata->fftEnrgNextS[win] = psydata->fftEnrgNext2S[win];
-    psydata->fftEnrgNext2S[win] = tmp;
+    tmp = psydata->engPrev[win];
+    psydata->engPrev[win] = psydata->eng[win];
+    psydata->eng[win] = psydata->engNext[win];
+    psydata->engNext[win] = psydata->engNext2[win];
+    psydata->engNext2[win] = tmp;
 
     for (sfb = 0; sfb < num_cb_short; sfb++)
     {
@@ -369,27 +383,21 @@ static void PsyBufferUpdate( FFT_Tables *fft_tables, GlobalPsyInfo * gpsyInfo, P
       last = first + cb_width_short[sfb];
 
       if (first < 1)
-	first = 1;
+          first = 1;
 
-      //if (last > psydata->bandS) // band out of range
       if (first >= psydata->bandS) // band out of range
-	break;
+          break;
 
       e = 0.0;
       for (l = first; l < last; l++)
-      {
-	double a = transBuffS[l];
-	double b = transBuffS[l + psyInfo->sizeS];
+          e += transBuffS[l] * transBuffS[l];
 
-	e += a * a + b * b;
-      }
-
-      psydata->fftEnrgNext2S[win][sfb] = e;
+      psydata->engNext2[win][sfb] = e;
     }
     psydata->lastband = sfb;
     for (; sfb < num_cb_short; sfb++)
     {
-      psydata->fftEnrgNext2S[win][sfb] = 0;
+        psydata->engNext2[win][sfb] = 0;
     }
   }
 
