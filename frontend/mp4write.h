@@ -19,6 +19,8 @@
 
 #include <stdint.h>
 
+enum {TAGMAX = 100};
+
 typedef struct
 {
     uint32_t samplerate;
@@ -67,6 +69,11 @@ typedef struct
             int size;
         } cover;
         const char *comment;
+        struct {
+            const char *name;
+            const char *data;
+        } ext[TAGMAX];
+        int extnum;
     } tag;
 } mp4config_t;
 
@@ -77,3 +84,4 @@ int mp4atom_head(void);
 int mp4atom_tail(void);
 int mp4atom_frame(uint8_t * bitbuf, int bytesWritten, int frame_samples);
 int mp4atom_close(void);
+int mp4tag_add(const char *name, const char *data);

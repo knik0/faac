@@ -108,6 +108,7 @@ const char *short_help =
     "\n"
     "MP4 specific options:\n"
     "  -w\t\tWrap AAC data in MP4 container. (default for *.mp4 and *.m4a)\n"
+    "  --tag <tagname,tagvalue> Add named tag (iTunes '----')\n"
     "  --artist X\tSet artist to X\n"
     "  --composer X\tSet composer to X\n"
     "  --title X\tSet title to X\n"
@@ -309,6 +310,7 @@ enum flags
     COVER_ART_FLAG,
     COMMENT_FLAG,
     WRITER_FLAG,
+    TAG_FLAG,
 };
 
 #ifndef _WIN32
@@ -427,7 +429,7 @@ int main(int argc, char *argv[])
     unsigned int ndiscs = 0, discno = 0;
     uint8_t compilation = 0;
     const char *artist = NULL, *title = NULL, *album = NULL, *year = NULL,
-        *comment = NULL, *composer = NULL;
+        *comment = NULL, *composer = NULL, *tagname = 0, *tagval = 0;
     int genre = 0;
     uint8_t *artData = NULL;
     uint64_t artSize = 0;
@@ -481,6 +483,7 @@ int main(int argc, char *argv[])
             {"compilation", 0, 0, COMPILATION_FLAG},
             {"pcmswapbytes", 0, 0, 'X'},
             {"ignorelength", 0, 0, IGNORELEN_FLAG},
+            {"tag", 1, 0, TAG_FLAG},
             {0, 0, 0, 0}
         };
         int c = -1;
@@ -621,6 +624,14 @@ int main(int argc, char *argv[])
             break;
         case COMMENT_FLAG:
             comment = optarg;
+            break;
+        case TAG_FLAG:
+            tagname = optarg;
+            if (!(tagval = strchr(optarg, ',')))
+                dieMessage = "Missing tag value.\n";
+            else
+                *(char *)tagval++ = 0;
+            mp4tag_add(tagname, tagval);
             break;
         case COVER_ART_FLAG:
             {

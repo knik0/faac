@@ -608,6 +608,7 @@ static int hdlr2out(void)
 static int ilstout(void)
 {
     int size = 0;
+    int cnt;
 
     size += tagtxt("\xa9" "too", mp4config.tag.encoder);
     if (mp4config.tag.artist)
@@ -653,6 +654,33 @@ static int ilstout(void)
     }
     if (mp4config.tag.comment)
         size += tagtxt("\xa9" "cmt", mp4config.tag.comment);
+
+    // ----(mean(com.apple.iTunes),name(name),data(data))
+    for (cnt = 0; cnt < mp4config.tag.extnum; cnt++)
+    {
+        static const char *mean = "faac";//"com.apple.iTunes";
+        const char *name = mp4config.tag.ext[cnt].name;
+        const char *data = mp4config.tag.ext[cnt].data;
+        uint32_t len1 = 8 + strlen(mean) + 4;
+        uint32_t len2 = 8 + strlen(name) + 4;
+        uint32_t len3 = 8 + strlen(data) + 4 + 4;
+        u32out(8 + len1 + len2 + len3);
+        size += 8 + len1 + len2 + len3;
+        stringout("----");
+        u32out(len1);
+        stringout("mean");
+        u32out(0);
+        stringout(mean);
+        u32out(len2);
+        stringout("name");
+        u32out(0);
+        stringout(name);
+        u32out(len3);
+        stringout("data");
+        u32out(1);
+        u32out(0);
+        stringout(data);
+    }
 
     return size;
 };
@@ -845,6 +873,23 @@ int mp4atom_tail(void)
     g_atom = g_tail;
     while (g_atom->opcode != ATOM_STOP)
         create();
+
+    return 0;
+}
+
+int mp4tag_add(const char *name, const char *data)
+{
+    int idx = mp4config.tag.extnum;
+
+    if (idx >= TAGMAX)
+    {
+        fprintf(stderr, "To many tags\n");
+        return -1;
+    }
+
+    mp4config.tag.ext[idx].name = name;
+    mp4config.tag.ext[idx].data = data;
+    mp4config.tag.extnum++;
 
     return 0;
 }
