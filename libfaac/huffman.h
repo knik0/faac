@@ -60,8 +60,6 @@ int NoiselessBitCount(CoderInfo *coderInfo,
                       int hop,
                       int min_book_choice[112][3]);
 
-static int CalculateEscSequence(int input, int *len_esc_sequence);
-
 int CalcBits(CoderInfo *coderInfo,
              int book,
              int *quant,
