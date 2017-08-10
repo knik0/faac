@@ -103,11 +103,12 @@ static int ftypout(void)
 {
     int size = 0;
 
-    size += stringout("isom");
+    size += stringout("M4A ");
     size += u32out(0);
     size += stringout("M4A ");
     size += stringout("mp42");
-    size += stringout("mp41");
+    size += stringout("isom");
+    size += u32out(0);
 
     return size;
 }
