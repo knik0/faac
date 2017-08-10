@@ -1,3 +1,4 @@
+	- new option(--tag) to add named tags (iTunes '----')
 	- faster and better short/long window type switch
 	- Don't build DRM(Digital Radio Mondiale) by default.
 	  Use ./configure --enable-drm to build DRM version.
