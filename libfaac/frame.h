@@ -48,7 +48,7 @@ extern "C" {
 
 #include "coder.h"
 #include "channels.h"
-#include "psych.h"
+#include "blockswitch.h"
 #include "aacquant.h"
 #include "fft.h"
 

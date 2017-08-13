@@ -22,7 +22,7 @@
 #include <stdlib.h>
 #include <math.h>
 
-#include "psych.h"
+#include "blockswitch.h"
 #include "coder.h"
 #include "fft.h"
 #include "util.h"

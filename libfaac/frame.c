@@ -41,7 +41,6 @@
 #include "aacquant.h"
 #include "util.h"
 #include "huffman.h"
-#include "psych.h"
 #include "tns.h"
 #include "ltp.h"
 #include "backpred.h"
