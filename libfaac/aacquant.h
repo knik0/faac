@@ -27,7 +27,6 @@ extern "C" {
 #endif /* __cplusplus */
 
 #include "coder.h"
-#include "psych.h"
 
 #define IXMAX_VAL 8191
 #define PRECALC_SIZE (IXMAX_VAL+2)
@@ -41,7 +40,6 @@ extern "C" {
 typedef struct
   {
     double *pow43;
-    double *adj43;
     double quality;
   } AACQuantCfg;
 #pragma pack(pop)
@@ -52,16 +50,12 @@ void AACQuantizeEnd(CoderInfo *coderInfo, unsigned int numChannels,
 		    AACQuantCfg *aacquantCfg);
 
 int AACQuantize(CoderInfo *coderInfo,
-                PsyInfo *psyInfo,
-                ChannelInfo *channelInfo,
                 int *cb_width,
                 int num_cb,
                 double *xr,
 		AACQuantCfg *aacquantcfg);
 
 int SortForGrouping(CoderInfo* coderInfo,
-		    PsyInfo *psyInfo,
-		    ChannelInfo *channelInfo,
 		    int *sfb_width_table,
 		    double *xr);
 void CalcAvgEnrg(CoderInfo *coderInfo,

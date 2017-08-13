@@ -16,7 +16,6 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: frame.c,v 1.70 2017/07/01 08:52:28 knik Exp $
  */
 
 /*
@@ -742,8 +741,6 @@ int FAACAPI faacEncEncode(faacEncHandle hpEncoder,
     for (channel = 0; channel < numChannels; channel++) {
 		if (coderInfo[channel].block_type == ONLY_SHORT_WINDOW) {
 			SortForGrouping(&coderInfo[channel],
-					&hEncoder->psyInfo[channel],
-					&channelInfo[channel],
 					hEncoder->srInfo->cb_width_short,
 					hEncoder->freqBuff[channel]);
 		}
@@ -772,15 +769,15 @@ int FAACAPI faacEncEncode(faacEncHandle hpEncoder,
     /* Quantize and code the signal */
     for (channel = 0; channel < numChannels; channel++) {
         if (coderInfo[channel].block_type == ONLY_SHORT_WINDOW) {
-            AACQuantize(&coderInfo[channel], &hEncoder->psyInfo[channel],
-					&channelInfo[channel], hEncoder->srInfo->cb_width_short,
-					hEncoder->srInfo->num_cb_short, hEncoder->freqBuff[channel],
-					&(hEncoder->aacquantCfg));
+            AACQuantize(&coderInfo[channel],
+                        hEncoder->srInfo->cb_width_short,
+                        hEncoder->srInfo->num_cb_short, hEncoder->freqBuff[channel],
+                        &(hEncoder->aacquantCfg));
         } else {
-            AACQuantize(&coderInfo[channel], &hEncoder->psyInfo[channel],
-					&channelInfo[channel], hEncoder->srInfo->cb_width_long,
-					hEncoder->srInfo->num_cb_long, hEncoder->freqBuff[channel],
-					&(hEncoder->aacquantCfg));
+            AACQuantize(&coderInfo[channel],
+                        hEncoder->srInfo->cb_width_long,
+                        hEncoder->srInfo->num_cb_long, hEncoder->freqBuff[channel],
+                        &(hEncoder->aacquantCfg));
         }
     }
 
@@ -1122,149 +1119,3 @@ static SR_INFO srInfo[12+1] =
     { -1 }
 };
 #endif
-
-/*
-$Log: frame.c,v $
-Revision 1.70  2017/07/01 08:52:28  knik
-fixed CVE-2017-9130 (crash with improper .wav input)
-
-Revision 1.69  2012/03/01 18:34:17  knik
-Build faac against the public API exposed in <faac.h> instead of the private API defined in "libfaac/frame.h".
-
-Revision 1.68  2009/06/05 16:09:38  menno
-Allow higher bitrates
-
-Revision 1.67  2004/11/17 14:26:06  menno
-Infinite loop fix
-dunno if this is good, encoder might be tuned to use energies from before MS encoding. But since the MS encoded samples are used in quantisation this might actually be better. Please test.
-
-Revision 1.66  2004/11/04 12:51:09  aforanna
-version number updated to 1.24.1 due to changes in Winamp and CoolEdit plugins
-
-Revision 1.65  2004/07/18 09:34:24  corrados
-New bandwidth settings for DRM, improved quantization quality adaptation (almost constant bit-rate now)
-
-Revision 1.64  2004/07/13 17:56:37  corrados
-bug fix with new object type definitions
-
-Revision 1.63  2004/07/08 14:01:25  corrados
-New scalefactorband table for 960 transform length, bug fix in HCR
-
-Revision 1.62  2004/07/04 12:10:52  corrados
-made faac compliant with Digital Radio Mondiale (DRM) (DRM macro must be set)
-implemented HCR tool, VCB11, CRC, scalable bitstream order
-note: VCB11 only uses codebook 11! TODO: implement codebooks 16-32
-960 transform length is not yet implemented (TODO)! Use 1024 for encoding and 960 for decoding, resulting in a lot of artefacts
-
-Revision 1.61  2004/05/03 11:37:16  danchr
-bump version to unstable 1.24+
-
-Revision 1.60  2004/04/13 13:47:33  danchr
-clarify release <> unstable status
-
-Revision 1.59  2004/04/02 14:56:17  danchr
-fix name clash w/ libavcodec: fft_init -> fft_initialize
-bump version number to 1.24 beta
-
-Revision 1.58  2004/03/17 13:34:20  danchr
-Automatic, untuned setting of lowpass for VBR.
-
-Revision 1.57  2004/03/15 20:16:42  knik
-fixed copyright notice
-
-Revision 1.56  2004/01/23 10:22:26  stux
-*** empty log message ***
-
-Revision 1.55  2003/12/17 20:59:55  knik
-changed default cutoff to 16k
-
-Revision 1.54  2003/11/24 18:09:12  knik
-A safe version of faacEncGetVersion() without string length problem.
-Removed Stux from copyright notice. I don't think he contributed something very
-substantial to faac and this is not the right place to list all contributors.
-
-Revision 1.53  2003/11/16 05:02:52  stux
-moved global tables from fft.c into hEncoder FFT_Tables. Add fft_init and fft_terminate, flowed through all necessary changes. This should remove at least one instance of a memory leak, and fix some thread-safety problems. Version update to 1.23.3
-
-Revision 1.52  2003/11/15 08:13:42  stux
-added FaacEncGetVersion(), version 1.23.2, added myself to faacCopyright :-P, does vanity know no bound ;)
-
-Revision 1.51  2003/11/10 17:48:00  knik
-Allowed independent bitRate and bandWidth setting.
-Small fixes.
-
-Revision 1.50  2003/10/29 10:31:25  stux
-Added channel_map to FaacEncHandle, facilitates free generalised channel remapping in the faac core. Default is straight-through, should be *zero* performance hit... and even probably an immeasurable performance gain, updated FAAC_CFG_VERSION to 104 and FAAC_VERSION to 1.22.0
-
-Revision 1.49  2003/10/12 16:43:39  knik
-average bitrate control made more stable
-
-Revision 1.48  2003/10/12 14:29:53  knik
-more accurate average bitrate control
-
-Revision 1.47  2003/09/24 16:26:54  knik
-faacEncStruct: quantizer specific data enclosed in AACQuantCfg structure.
-Added config option to enforce block type.
-
-Revision 1.46  2003/09/07 16:48:31  knik
-Updated psymodel call. Updated bitrate/cutoff mapping table.
-
-Revision 1.45  2003/08/23 15:02:13  knik
-last frame moved back to the library
-
-Revision 1.44  2003/08/15 11:42:08  knik
-removed single silent flush frame
-
-Revision 1.43  2003/08/11 09:43:47  menno
-thread safety, some tables added to the encoder context
-
-Revision 1.42  2003/08/09 11:39:30  knik
-LFE support enabled by default
-
-Revision 1.41  2003/08/08 10:02:09  menno
-Small fix
-
-Revision 1.40  2003/08/07 08:17:00  knik
-Better LFE support (reduced bandwidth)
-
-Revision 1.39  2003/08/02 11:32:10  stux
-added config.inputFormat, and associated defines and code, faac now handles native endian 16bit, 24bit and float input. Added faacEncGetDecoderSpecificInfo to the dll exports, needed for MP4. Updated DLL .dsp to compile without error. Updated CFG_VERSION to 102. Version number might need to be updated as the API has technically changed. Did not update libfaac.pdf
-
-Revision 1.38  2003/07/10 19:17:01  knik
-24-bit input
-
-Revision 1.37  2003/06/26 19:20:09  knik
-Mid/Side support.
-Copyright info moved from frontend.
-Fixed memory leak.
-
-Revision 1.36  2003/05/12 17:53:16  knik
-updated ABR table
-
-Revision 1.35  2003/05/10 09:39:55  knik
-added approximate ABR setting
-modified default cutoff
-
-Revision 1.34  2003/05/01 09:31:39  knik
-removed ISO psyodel
-disabled m/s coding
-fixed default bandwidth
-reduced max_sfb check
-
-Revision 1.33  2003/04/13 08:37:23  knik
-version number moved to version.h
-
-Revision 1.32  2003/03/27 17:08:23  knik
-added quantizer quality and bandwidth setting
-
-Revision 1.31  2002/10/11 18:00:15  menno
-small bugfix
-
-Revision 1.30  2002/10/08 18:53:01  menno
-Fixed some memory leakage
-
-Revision 1.29  2002/08/19 16:34:43  knik
-added one additional flush frame
-fixed sample buffer memory allocation
-
-*/
