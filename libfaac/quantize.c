@@ -31,8 +31,7 @@ static void bmask(CoderInfo *coderInfo, double *xr, double *bandqual,
   int *cb_offset = coderInfo->sfb_offset;
   int num_cb = coderInfo->nr_of_sfb;
   double avgenrg = coderInfo->avgenrg;
-  double pows = 0.16;
-  double powl = 0.9 * pows;
+  double powm = 0.25;
   enum {MIDF=34};
 
   for (sfb = 0; sfb < num_cb; sfb++)
@@ -69,50 +68,58 @@ static void bmask(CoderInfo *coderInfo, double *xr, double *bandqual,
 #define NOISETONE 0.2
     if (coderInfo->block_type == ONLY_SHORT_WINDOW)
     {
-        target = NOISETONE * pow(avge/avgenrg, pows);
-        target += (1.0 - NOISETONE) * 0.45 * pow(maxe/avgenrg, powl);
+        target = NOISETONE * pow(avge/avgenrg, powm);
+        target += (1.0 - NOISETONE) * 0.45 * pow(maxe/avgenrg, powm);
 
         target *= 0.9 + (40.0 / (fabs(start + end - MIDF) + 32));
     }
     else
     {
-        target = NOISETONE * pow(avge/avgenrg, pows);
-        target += (1.0 - NOISETONE) * 0.45 * pow(maxe/avgenrg, powl);
+        target = NOISETONE * pow(avge/avgenrg, powm);
+        target += (1.0 - NOISETONE) * 0.45 * pow(maxe/avgenrg, powm);
 
         target *= 0.9 + (40.0 / (0.125 * fabs(start + end - (8*MIDF)) + 32));
 
         target *= 0.45;
     }
-    bandqual[sfb] = 5.0 * target * quality;
+    bandqual[sfb] = 3.0 * target * quality;
   }
 }
 
 // use band quality levels to quantize a block
 static void qlevel(CoderInfo *coderInfo,
-                   const double *xr34,
+                   const double *xr,
                    int *xi,
                    const double *bandqual)
 {
     int sb, cnt;
     int start, end;
-    const double ifqstep = pow(2.0, 0.1875);
-    const double log_ifqstep = 1.0 / log(ifqstep);
+    // 1.5dB step
+    static const double sfstep = 20.0 / 1.5 / log(10);
+    static const double sfstep_1 = 1.0 / sfstep;
 
     for (sb = 0; sb < coderInfo->nr_of_sfb; sb++)
     {
       double sfacfix;
       int sfac;
       double maxx;
+      double rmsx;
 
       start = coderInfo->sfb_offset[sb];
       end = coderInfo->sfb_offset[sb+1];
 
       maxx = 0.0;
+      rmsx = 0.0;
       for (cnt = start; cnt < end; cnt++)
       {
-          if (xr34[cnt] > maxx)
-            maxx = xr34[cnt];
+          double e = xr[cnt] * xr[cnt];
+          if (maxx < e)
+            maxx = e;
+          rmsx += e;
       }
+      rmsx /= (end - start);
+      rmsx = sqrt(rmsx);
+      maxx = sqrt(maxx);
 
       if (maxx < 10.0)
       {
@@ -122,32 +129,32 @@ static void qlevel(CoderInfo *coderInfo,
           continue;
       }
 
-      sfac = (int)(log(bandqual[sb] / maxx) * log_ifqstep - 0.5);
+      sfac = (int)(log(bandqual[sb] / rmsx) * sfstep - 0.5);
+      sfacfix = exp(sfac * sfstep_1);
       coderInfo->scale_factor[sb] = sfac;
-      sfacfix = exp(sfac / log_ifqstep);
       for (cnt = start; cnt < end; cnt++)
-          xi[cnt] = (int)(sfacfix * xr34[cnt] + 0.5);
+      {
+          double tmp = fabs(xr[cnt]) * sfacfix;
+          tmp = sqrt(tmp * sqrt(tmp));
+          xi[cnt] = (int)(tmp + 0.5);
+      }
     }
 }
 
 int BlocQuant(CoderInfo *coderInfo, double *xr, int *xi, double quality)
 {
-    double xr34[FRAME_LEN];
     double bandlvl[MAX_SCFAC_BANDS];
     int cnt;
     int nonzero = 0;
 
-    for (cnt = 0; cnt < FRAME_LEN; cnt++) {
-        double temp = fabs(xr[cnt]);
-        xr34[cnt] = sqrt(temp * sqrt(temp));
-        nonzero += (temp > 1E-20);
-    }
+    for (cnt = 0; cnt < FRAME_LEN; cnt++)
+        nonzero += (fabs(xr[cnt]) > 1E-20);
 
     SetMemory(xi, 0, FRAME_LEN*sizeof(xi[0]));
     if (nonzero)
     {
         bmask(coderInfo, xr, bandlvl, quality);
-        qlevel(coderInfo, xr34, xi, bandlvl);
+        qlevel(coderInfo, xr, xi, bandlvl);
         return 1;
     }
 
