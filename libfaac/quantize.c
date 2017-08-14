@@ -82,7 +82,7 @@ static void bmask(CoderInfo *coderInfo, double *xr, double *bandqual,
 
         target *= 0.45;
     }
-    bandqual[sfb] = 3.0 * target * quality;
+    bandqual[sfb] = 3.5 * target * quality;
   }
 }
 
@@ -134,9 +134,19 @@ static void qlevel(CoderInfo *coderInfo,
       coderInfo->scale_factor[sb] = sfac;
       for (cnt = start; cnt < end; cnt++)
       {
+          int x0, x1;
+          double err0, err1;
           double tmp = fabs(xr[cnt]) * sfacfix;
           tmp = sqrt(tmp * sqrt(tmp));
-          xi[cnt] = (int)(tmp + 0.2);
+          x0 = tmp;
+          x1 = x0 + 1;
+          err0 = fabs(tmp * tmp - x0 * x0);
+          err1 = fabs(tmp * tmp - x1 * x1);
+
+          if (err0 < err1)
+              xi[cnt] = x0;
+          else
+              xi[cnt] = x1;
       }
     }
 }
