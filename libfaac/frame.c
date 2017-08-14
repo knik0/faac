@@ -66,7 +66,7 @@ static SR_INFO srInfo[12+1];
 
 // default bandwidth/samplerate ratio
 static const double bwfac = 0.42;
-
+enum {MAXQUAL = 2000, MINQUAL = 10};
 
 int FAACAPI faacEncGetVersion( char **faac_id_string,
 			      				char **faac_copyright_string)
@@ -254,10 +254,10 @@ int FAACAPI faacEncSetConfiguration(faacEncHandle hpEncoder,
     if (hEncoder->config.bandWidth > (hEncoder->sampleRate / 2))
 		hEncoder->config.bandWidth = hEncoder->sampleRate / 2;
 
-    if (config->quantqual > 500)
-		config->quantqual = 500;
-    if (config->quantqual < 10)
-		config->quantqual = 10;
+    if (config->quantqual > MAXQUAL)
+        config->quantqual = MAXQUAL;
+    if (config->quantqual < MINQUAL)
+        config->quantqual = MINQUAL;
 
     hEncoder->config.quantqual = config->quantqual;
 

@@ -545,7 +545,7 @@ int main(int argc, char *argv[])
                 unsigned int i;
                 if (sscanf(optarg, "%u", &i) > 0)
                 {
-                    if (i > 0 && i < 1000)
+                    if (i > 0)
                         quantqual = i;
                 }
                 break;
