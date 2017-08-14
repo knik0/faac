@@ -1,3 +1,7 @@
+1.29.4:
+	- rewritten quantizer: faster, diffrerent quality, different bitrates
+	- ftyp atom: set brands like itunes does, shoud be more compatible
+	  with picky tools
 	- new option(--tag) to add named tags (iTunes '----')
 	- faster and better short/long window type switch
 	- Don't build DRM(Digital Radio Mondiale) by default.
