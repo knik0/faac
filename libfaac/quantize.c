@@ -136,7 +136,7 @@ static void qlevel(CoderInfo *coderInfo,
       {
           double tmp = fabs(xr[cnt]) * sfacfix;
           tmp = sqrt(tmp * sqrt(tmp));
-          xi[cnt] = (int)(tmp + 0.5);
+          xi[cnt] = (int)(tmp + 0.2);
       }
     }
 }
