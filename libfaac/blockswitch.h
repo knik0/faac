@@ -67,7 +67,7 @@ void (*PsyEnd) (GlobalPsyInfo *gpsyInfo, PsyInfo *psyInfo,
 void (*PsyCalculate) (ChannelInfo *channelInfo, GlobalPsyInfo *gpsyInfo,
 		PsyInfo *psyInfo, int *cb_width_long, int num_cb_long,
 		int *cb_width_short, int num_cb_short,
-		unsigned int numChannels);
+		unsigned int numChannels, double quality);
 void (*PsyBufferUpdate) ( FFT_Tables *fft_tables, GlobalPsyInfo * gpsyInfo, PsyInfo * psyInfo,
 		double *newSamples, unsigned int bandwidth,
 		int *cb_width_short, int num_cb_short);

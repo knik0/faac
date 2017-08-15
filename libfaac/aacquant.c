@@ -101,7 +101,7 @@ int AACQuantize(CoderInfo *coderInfo,
     for (sb = 0; sb < coderInfo->nr_of_sfb; sb++)
         scale_factor[sb] = 0;
 
-    if (BlocQuant(coderInfo, xr, xi, (double)aacquantCfg->quality/100, aacquantCfg->pow43))
+    if (BlocQuant(coderInfo, xr, xi, (double)aacquantCfg->quality/DEFQUAL, aacquantCfg->pow43))
     {
         UpdateRequant(coderInfo, xi, aacquantCfg->pow43);
 

@@ -44,6 +44,8 @@ typedef struct
   } AACQuantCfg;
 #pragma pack(pop)
 
+enum {DEFQUAL = 100, MAXQUAL = 2000, MINQUAL = 10};
+
 void AACQuantizeInit(CoderInfo *coderInfo, unsigned int numChannels,
 		     AACQuantCfg *aacquantCfg);
 void AACQuantizeEnd(CoderInfo *coderInfo, unsigned int numChannels,

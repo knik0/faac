@@ -66,7 +66,6 @@ static SR_INFO srInfo[12+1];
 
 // default bandwidth/samplerate ratio
 static const double bwfac = 0.42;
-enum {MAXQUAL = 2000, MINQUAL = 10};
 
 int FAACAPI faacEncGetVersion( char **faac_id_string,
 			      				char **faac_copyright_string)
@@ -324,7 +323,7 @@ faacEncHandle FAACAPI faacEncOpen(unsigned long sampleRate,
     hEncoder->config.useTns = 0;
     hEncoder->config.bitRate = 0; /* default bitrate / channel */
     hEncoder->config.bandWidth = bwfac * hEncoder->sampleRate;
-    hEncoder->config.quantqual = 100;
+    hEncoder->config.quantqual = DEFQUAL;
     hEncoder->config.psymodellist = (psymodellist_t *)psymodellist;
     hEncoder->config.psymodelidx = 0;
     hEncoder->psymodel =
@@ -590,7 +589,7 @@ int FAACAPI faacEncEncode(faacEncHandle hpEncoder,
     hEncoder->psymodel->PsyCalculate(channelInfo, &hEncoder->gpsyInfo, hEncoder->psyInfo,
         hEncoder->srInfo->cb_width_long, hEncoder->srInfo->num_cb_long,
         hEncoder->srInfo->cb_width_short,
-        hEncoder->srInfo->num_cb_short, numChannels);
+        hEncoder->srInfo->num_cb_short, numChannels, (double)hEncoder->aacquantCfg.quality / DEFQUAL);
 
     hEncoder->psymodel->BlockSwitch(coderInfo, hEncoder->psyInfo, numChannels);
 

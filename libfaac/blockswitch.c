@@ -62,12 +62,12 @@ static void Hann(GlobalPsyInfo * gpsyInfo, double *inSamples, int size)
   }
 }
 
-static void PsyCheckShort(PsyInfo * psyInfo)
+static void PsyCheckShort(PsyInfo * psyInfo, double quality)
 {
   enum {PREVS = 2, NEXTS = 2};
   psydata_t *psydata = psyInfo->data;
   int lastband = psydata->lastband;
-  int firstband = 1;
+  int firstband = 2;
   int sfb, win;
   psyfloat *lasteng;
 
@@ -96,7 +96,7 @@ static void PsyCheckShort(PsyInfo * psyInfo)
               volchg += fabs(eng[sfb] - lasteng[sfb]);
           }
 
-          if ((volchg / toteng) > 1.5)
+          if ((volchg / toteng * quality) > 2.5)
           {
               psyInfo->block_type = ONLY_SHORT_WINDOW;
               break;
@@ -227,7 +227,9 @@ static void PsyEnd(GlobalPsyInfo * gpsyInfo, PsyInfo * psyInfo, unsigned int num
 static void PsyCalculate(ChannelInfo * channelInfo, GlobalPsyInfo * gpsyInfo,
 			 PsyInfo * psyInfo, int *cb_width_long, int
 			 num_cb_long, int *cb_width_short,
-			 int num_cb_short, unsigned int numChannels)
+			 int num_cb_short, unsigned int numChannels,
+			 double quality
+			)
 {
   unsigned int channel;
 
@@ -243,8 +245,8 @@ static void PsyCalculate(ChannelInfo * channelInfo, GlobalPsyInfo * gpsyInfo,
 	int leftChan = channel;
 	int rightChan = channelInfo[channel].paired_ch;
 
-	PsyCheckShort(&psyInfo[leftChan]);
-	PsyCheckShort(&psyInfo[rightChan]);
+	PsyCheckShort(&psyInfo[leftChan], quality);
+	PsyCheckShort(&psyInfo[rightChan], quality);
       }
       else if (!channelInfo[channel].cpe &&
 	       channelInfo[channel].lfe)
@@ -254,7 +256,7 @@ static void PsyCalculate(ChannelInfo * channelInfo, GlobalPsyInfo * gpsyInfo,
       }
       else if (!channelInfo[channel].cpe)
       {				/* SCE */
-	PsyCheckShort(&psyInfo[channel]);
+	PsyCheckShort(&psyInfo[channel], quality);
       }
     }
   }
