@@ -90,13 +90,12 @@ static void bmask(CoderInfo *coderInfo, double *xr, double *bandqual,
 static void qlevel(CoderInfo *coderInfo,
                    const double *xr,
                    int *xi,
-                   const double *bandqual)
+                   const double *bandqual, double *pow43)
 {
     int sb, cnt;
     int start, end;
     // 1.5dB step
     static const double sfstep = 20.0 / 1.5 / log(10);
-    static const double sfstep_1 = 1.0 / sfstep;
 
     for (sb = 0; sb < coderInfo->nr_of_sfb; sb++)
     {
@@ -104,6 +103,7 @@ static void qlevel(CoderInfo *coderInfo,
       int sfac;
       double maxx;
       double rmsx;
+      double ein, eout;
 
       start = coderInfo->sfb_offset[sb];
       end = coderInfo->sfb_offset[sb+1];
@@ -129,29 +129,33 @@ static void qlevel(CoderInfo *coderInfo,
           continue;
       }
 
-      sfac = (int)(log(bandqual[sb] / rmsx) * sfstep - 0.5);
-      sfacfix = exp(sfac * sfstep_1);
-      coderInfo->scale_factor[sb] = sfac;
+      ein = eout = 0;
+      sfacfix = bandqual[sb] / rmsx;
       for (cnt = start; cnt < end; cnt++)
       {
-          int x0, x1;
-          double err0, err1;
-          double tmp = fabs(xr[cnt]) * sfacfix;
-          tmp = sqrt(tmp * sqrt(tmp));
-          x0 = tmp;
-          x1 = x0 + 1;
-          err0 = fabs(tmp * tmp - x0 * x0);
-          err1 = fabs(tmp * tmp - x1 * x1);
+          double tmp = fabs(xr[cnt]);
 
-          if (err0 < err1)
-              xi[cnt] = x0;
-          else
-              xi[cnt] = x1;
+          ein += tmp *tmp;
+
+          tmp *= sfacfix;
+          tmp = sqrt(tmp * sqrt(tmp));
+
+          xi[cnt] = (int)(tmp + 0.5);
+
+          tmp = pow43[xi[cnt]];
+          eout += tmp * tmp;
       }
+
+      if (eout < 1.0)
+          sfac = 10;
+      else
+          sfac = lrint(log(sqrt(eout / ein)) * sfstep);
+
+      coderInfo->scale_factor[sb] = sfac;
     }
 }
 
-int BlocQuant(CoderInfo *coderInfo, double *xr, int *xi, double quality)
+int BlocQuant(CoderInfo *coderInfo, double *xr, int *xi, double quality, double *pow43)
 {
     double bandlvl[MAX_SCFAC_BANDS];
     int cnt;
@@ -164,7 +168,7 @@ int BlocQuant(CoderInfo *coderInfo, double *xr, int *xi, double quality)
     if (nonzero)
     {
         bmask(coderInfo, xr, bandlvl, quality);
-        qlevel(coderInfo, xr, xi, bandlvl);
+        qlevel(coderInfo, xr, xi, bandlvl, pow43);
         return 1;
     }
 
