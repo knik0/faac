@@ -62,6 +62,14 @@ static void Hann(GlobalPsyInfo * gpsyInfo, double *inSamples, int size)
   }
 }
 
+#define PRINTSTAT 0
+#if PRINTSTAT
+static struct {
+    int tot;
+    int s;
+} frames;
+#endif
+
 static void PsyCheckShort(PsyInfo * psyInfo, double quality)
 {
   enum {PREVS = 2, NEXTS = 2};
@@ -96,7 +104,7 @@ static void PsyCheckShort(PsyInfo * psyInfo, double quality)
               volchg += fabs(eng[sfb] - lasteng[sfb]);
           }
 
-          if ((volchg / toteng * quality) > 2.5)
+          if ((volchg / toteng * quality) > 3.0)
           {
               psyInfo->block_type = ONLY_SHORT_WINDOW;
               break;
@@ -105,20 +113,10 @@ static void PsyCheckShort(PsyInfo * psyInfo, double quality)
       lasteng = eng;
   }
 
-#if 0
-  {
-      static int cnt = 0;
-      static int total = 0, shorts = 0;
-
-      if (!(cnt++ & 0x3f))
-      {
-          total++;
-          if (psyInfo->block_type == ONLY_SHORT_WINDOW)
-              shorts++;
-
-          printf("shorts: %d %%\n", 100*shorts/total);
-      }
-  }
+#if PRINTSTAT
+  frames.tot++;
+  if (psyInfo->block_type == ONLY_SHORT_WINDOW)
+      frames.s++;
 #endif
 }
 
@@ -221,6 +219,10 @@ static void PsyEnd(GlobalPsyInfo * gpsyInfo, PsyInfo * psyInfo, unsigned int num
     if (psyInfo[channel].data)
       FreeMemory(psyInfo[channel].data);
   }
+
+#if PRINTSTAT
+  printf("short frames: %.2f %%\n", 100.0*frames.s/frames.tot);
+#endif
 }
 
 /* Do psychoacoustical analysis */
