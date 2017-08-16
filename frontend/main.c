@@ -139,7 +139,7 @@ static help_t help_io[] = {
     "\t\tthus enabling piping from other applications and utilities. The\n"
     "\t\tsame works for stdout as well, so FAAC can pipe its output to\n"
     "\t\tother apps such as a server.\n"},
-    {"v <verbose>\t\tverbosity level (-v0 is  quiet mode)\n"},
+    {"-v <verbose>\t\tverbosity level (-v0 is quiet mode)\n"},
     {"-r\t\tUse RAW AAC output file.\n",
     "\t\tGenerate raw AAC bitstream (i.e. without any headers).\n"
     "\t\tNot advised!!!, RAW AAC files are practically useless!!!\n"},
@@ -174,7 +174,7 @@ static help_t help_mp4[] = {
     "\t\t*.m4b)\n"},
     {"--tag <tagname,tagvalue> Add named tag (iTunes '----')\n"},
     {"--artist <name>\tSet artist name\n"},
-    {"--composer name\tSet composer name\n"},
+    {"--composer <name>\tSet composer name\n"},
     {"--title <name>\tSet title/track name\n"},
     {"--genre <number>\tSet genre number\n"},
     {"--album <name>\tSet album/performer\n"},
