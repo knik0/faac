@@ -1,4 +1,4 @@
-.TH FAAC 1 "2007-10-11" "1.26" "Free Advanced Audio Coder"
+.TH FAAC 1 "2017-08-16" "1.29.5" "Free Advanced Audio Coder"
 
 .SH NAME
 faac \- open source MPEG-4 and MPEG-2 AAC encoder
@@ -26,102 +26,174 @@ is not up to par with the currently best AAC encoders available.
 .TP
 * Portable
 .TP
-* Reasonably fast
+* Fast
 .TP
 * LC, Main, LTP support
 .TP
 * DRM support through DreaM (optional)
 
-.SH OPTIONS
+.SH HELP OPTIONS
 .TP
-.BR \-q\  <\fIquality\fP>
-Set default variable bitrate (VBR) quantizer quality in percent (default: 100).
+.BR --help
+Short help on using FAAC
 .TP
-.BR \-b\  <\fIbitrate\fP>
-Set average bitrate (ABR, lower quality mode) to approximately \fIbitrate\fP kbps.
+.BR --long-help
+Description of all options for FAAC
 .TP
-.BR \-c\  <\fIfreq\fP>
-Set the bandwidth in Hz (default: automatic).
+.BR --license
+License terms for FAAC.
 .TP
-.BR \-o\  \fIX\fP
-Set output file to \fIX\fP (only for one input file).
+.BR --help-qual
+Quality-related options
 .TP
-.BR \-r
+.BR --help-io
+Input/output options
+.TP
+.BR --help-mp4
+MP4 specific options
+Quality-related options
+.TP
+.BR --help-advanced
+Advanced options, only for testing purposes
+
+.SH QUALITY-RELATED OPTIONS
+.TP
+.BR -q\ <\fIquality\fP>
+Set encoding quality. Set default variable bitrate (VBR) quality level in percent.
+(default: 100, averages at approx. 120 kbps VBR for a normal stereo input file with 16 bit and 44.1 kHz sample rate; max value 2000, min 10).
+.TP
+.BR -b\ <\fIbitrate\fP>
+Set average bitrate (ABR) to approximately <bitrate> kbps.
+(max. value 152 kbps/stereo with a 16 kHz cutoff, can be raised with a higher -c setting).
+.TP
+.BR -c\ <\fIfreq\fP>
+Set the bandwidth in Hz. (default 0.42 of sampling freq)
+
+.SH INPUT/OUTPUT OPTIONS
+.TP
+.BR -o\ <\fIfilename\fP>
+Set output file to X (only for one input file)
+only for one input file; you can use *.aac, *.mp4, *.m4a or
+*.m4b as file extension, and the file format will be set
+automatically to ADTS or MP4).
+.TP
+.BR -
+Use stdin/stdout.
+If you simply use a hyphen/minus sign instead
+of a filename, FAAC can encode directly from stdin,
+thus enabling piping from other applications and utilities. The
+same works for stdout as well, so FAAC can pipe its output to
+other apps such as a server.
+.TP
+.BR -v\ <\fIvebose\fP>
+Verbosity level (-v0 is  quiet mode)
+.TP
+.BR -r
 Use RAW AAC output file.
+Generate raw AAC bitstream (i.e. without any headers).
+Not advised!!!, RAW AAC files are practically useless!!!
 .TP
-.BR \-P
-Raw PCM input mode (default: 44100Hz 16bit stereo).
+.BR -P
+Raw PCM input mode (default 44100Hz 16bit stereo).
+Raw PCM input mode (default: off, i.e. expecting a WAV header;
+necessary for input files or bitstreams without a header; using
+only -P assumes the default values for -R, -B and -C in the
+input file).
 .TP
-.BR \-R
+.BR -R
 Raw PCM input rate.
+Raw PCM input sample rate in Hz (default: 44100 Hz, max. 96 kHz)
 .TP
-.BR \-B
-Raw PCM input sample size (8, 16 [default], 24 or 32bits).
+.BR -B
+Raw PCM input sample size (8, 16 (default), 24 or 32bits).
+Raw PCM input sample size (default: 16, also possible 8, 24, 32
+bit fixed or float input).
 .TP
-.BR \-C
+.BR -C
 Raw PCM input channels.
+Raw PCM input channels (default: 2, max. 33 + 1 LFE).
 .TP
-.BR \-X
+.BR -X
 Raw PCM swap input bytes
+Raw PCM swap input bytes (default: bigendian).
 .TP
-.BR \-I\  <\fIC\fP,\fILF\fP>
-Input channel config (default: 3,4 [which means Center is third and LFE is fourth]).
-
-.SH MP4-SPECIFIC OPTIONS (if built with MP4V2)
+.BR -I\ <\fIC[,LFE]\fP>
+Input channel config, default is 3,4 (Center third, LF fourth)
+Input multichannel configuration (default: 3,4 which means
+Center is third and LFE is fourth like in 5.1 WAV, so you only
+have to specify a different position of these two mono channels
+in your multichannel input files if they haven't been reordered
+already).
 .TP
-.BR \-w
-Wrap AAC data in MP4 container (default for *.mp4 and *.m4a).
+.BR --ignorelength
+Ignore wav length from header (useful with files over 4 GB)
 .TP
-.BR \-s
-Optimize MP4 container layout after encoding.
+.BR --overwrite
+Overwrite existing output file
+.SH MP4 SPECIFIC OPTIONS
 .TP
-.BR \-\-artist\  \fIX\fP
-Set artist to \fIX\fP
+.BR -w
+Wrap AAC data in MP4 container. (default for *.mp4, *.m4a and
+*.m4b)
 .TP
-.BR \-\-writer\  \fIX\fP
-Set writer to \fIX\fP
+.BR --tag\ <\fItagname,tagvalue\fP>
+Add named tag (iTunes '----')
 .TP
-.BR \-\-title\  \fIX\fP
-Set title to \fIX\fP
+.BR --artist\ <\fIname\fP>
+Set artist name
 .TP
-.BR \-\-genre\  \fIX\fP
-Set genre to \fIX\fP
+.BR --composer\ <\fIname\fP>
+Set composer name
 .TP
-.BR \-\-album\  \fIX\fP
-Set album to \fIX\fP
+.BR --title\ <\fIname\fP>
+Set title/track name
 .TP
-.BR \-\-compilation
-Set compilation
+.BR --genre\ <\fInumber\fP>
+Set genre number
 .TP
-.BR \-\-track\  \fIX\fP
-Set track to \fIX\fP (number/total)
+.BR --album\ <\fIname\fP>
+Set album/performer
 .TP
-.BR \-\-disc\  \fIX\fP
-Set disc to \fIX\fP (number/total)
+.BR --compilation
+Mark as compilation
 .TP
-.BR \-\-year\  \fIX\fP
-Set year to \fIX\fP
+.BR --track\ <\fInumber/total\fP>
+Set track number
 .TP
-.BR \-\-cover-art\  \fIX\fP
-Read cover art from file \fIX\fP
+.BR --disc\ <\fInumber/total\fP>
+Set disc number
 .TP
-.BR \-\-comment\  \fIX\fP
-Set comment to \fIX\fP
-
-.SH DOCUMENTATION
+.BR --year\ <\fInumber\fP>
+Set year
 .TP
-.BR \-\-help
-for short help on using FAAC.
+.BR --cover-art\ <\fIfilename\fP>
+Read cover art from file X
+Supported image formats are GIF, JPEG, and PNG.
 .TP
-.BR \-\-long-help
-for a description of all options for FAAC.
+.BR --comment\ <\fIstring\fP>
+Set comment
+.SH ADVANCED OPTIONS, ONLY FOR TESTING PURPOSES
 .TP
-.BR \-\-license
-for the license terms for FAAC.
-
+.BR --tns
+Enable coding of TNS, temporal noise shaping.
+.TP
+.BR --no-midside
+Don't use mid/side coding.
+.TP
+.BR --mpeg-vers \fIX\fP
+Force AAC MPEG version, X can be 2 or 4
+.TP
+.BR --obj-type \fIX\fP
+AAC object type. (LC (Low Complexity, default), Main or LTP (Long Term Prediction)
+.TP
+.BR --shortctl \fIX\fP
+Enforce block type (0 = both (default); 1 = no short; 2 = no long).
 .SH AUTHORS
 .B FAAC
 was written by M. Bakker <menno@audiocoding.com>.
 .PP
-This manpage was written by Fabian Greffrath <fabian@debian\-unofficial.org>
-for the Debian Unofficial project (but may be used by others, of course).
+.nh 2
+Developed and maintained by Krzysztof Nikiel <knik@users.sourceforge.net>.
+.PP
+This manpage was written by Fabian Greffrath <fabian@debian\-unofficial.org> for the Debian Unofficial project (but may be used by others, of course).
+.nh 1
