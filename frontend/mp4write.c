@@ -25,6 +25,7 @@
 #endif
 #include <string.h>
 #include <time.h>
+#include <unistd.h>
 
 enum ATOM_TYPE
 {
@@ -840,13 +841,20 @@ int mp4atom_close(void)
     return 0;
 }
 
-int mp4atom_open(char *name)
+int mp4atom_open(char *name, int over)
 {
     mp4atom_close();
 
-    g_fout = fopen(name, "wb");
-    if (!g_fout)
+    if (!access(name, W_OK) && !over)
+    {
+        fprintf(stderr, "output file exists, use --overwrite option\n");
         return 1;
+    }
+    if (!(g_fout = fopen(name, "wb")))
+    {
+        perror(name);
+        return 1;
+    }
 
     mp4config.mdatsize = 0;
     mp4config.frame.bufsize = BUFSTEP;

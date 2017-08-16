@@ -102,7 +102,8 @@ enum flags
     HELP_QUAL,
     HELP_IO,
     HELP_MP4,
-    HELP_ADVANCED
+    HELP_ADVANCED,
+    OVER_FLAG
 };
 
 typedef struct {
@@ -163,6 +164,7 @@ static help_t help_io[] = {
     "\t\tin your multichannel input files if they haven't been reordered\n"
     "\t\talready).\n"},
     {"--ignorelength\tIgnore wav length from header (useful with files over 4 GB)\n"},
+    {"--overwrite\t\tOverwrite existing output file"},
     {0}
 };
 
@@ -483,6 +485,7 @@ int main(int argc, char *argv[])
     char *faac_copyright_string;
     int ignorelen = FALSE;
     int verbose = 1;
+    int overwrite = 0;
 
 #ifndef _WIN32
     // install signal handler
@@ -535,6 +538,7 @@ int main(int argc, char *argv[])
             {"pcmswapbytes", 0, 0, 'X'},
             {"ignorelength", 0, 0, IGNORELEN_FLAG},
             {"tag", 1, 0, TAG_FLAG},
+            {"overwrite", 0, 0, OVER_FLAG},
             {0, 0, 0, 0}
         };
         int c = -1;
@@ -734,6 +738,9 @@ int main(int argc, char *argv[])
             break;
         case IGNORELEN_FLAG:
             ignorelen = TRUE;
+            break;
+        case OVER_FLAG:
+            overwrite = TRUE;
             break;
         case MPEGVERS_FLAG:
             mpegVersion = atoi(optarg);
@@ -955,7 +962,7 @@ int main(int argc, char *argv[])
             return 1;
         }
 
-        if (mp4atom_open(aacFileName))
+        if (mp4atom_open(aacFileName, overwrite))
         {
             fprintf(stderr, "Couldn't create output file %s\n", aacFileName);
             return 1;

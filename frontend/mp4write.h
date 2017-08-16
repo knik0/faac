@@ -79,7 +79,7 @@ typedef struct
 
 extern mp4config_t mp4config;
 
-int mp4atom_open(char *name);
+int mp4atom_open(char *name, int over);
 int mp4atom_head(void);
 int mp4atom_tail(void);
 int mp4atom_frame(uint8_t * bitbuf, int bytesWritten, int frame_samples);
