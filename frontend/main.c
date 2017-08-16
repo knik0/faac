@@ -77,135 +77,144 @@
 #define FALSE 0
 #define TRUE 1
 
-#define fprintf if(verbose)fprintf
+enum flags
+{
+    SHORTCTL_FLAG = 300,
+    TNS_FLAG,
+    NO_TNS_FLAG,
+    MPEGVERS_FLAG,
+    OBJTYPE_FLAG,
+    NO_MIDSIDE_FLAG,
+    IGNORELEN_FLAG,
+
+    ARTIST_FLAG,
+    TITLE_FLAG,
+    GENRE_FLAG,
+    ALBUM_FLAG,
+    COMPILATION_FLAG,
+    TRACK_FLAG,
+    DISC_FLAG,
+    YEAR_FLAG,
+    COVER_ART_FLAG,
+    COMMENT_FLAG,
+    WRITER_FLAG,
+    TAG_FLAG,
+    HELP_QUAL,
+    HELP_IO,
+    HELP_MP4,
+    HELP_ADVANCED
+};
+
+typedef struct {
+    char *shorthelp;
+    char *longhelp;
+} help_t;
 
 const char *usage =
-    "Usage: %s [options] [-o outfile] infiles ...\n"
-    "\n"
-    "\t<infiles> and/or <outfile> can be \"-\", which means stdin/stdout.\n"
-    "\n"
-    "See also:\n"
-    "\t\"%s --help\" for short help on using FAAC\n"
-    "\t\"%s --long-help\" for a description of all options for FAAC.\n"
-    "\t\"%s --license\" for the license terms for FAAC.\n\n";
+    "Usage: %s [options] infile\n\n";
 
-const char *short_help =
-    "Usage: %s [options] infiles ...\n"
-    "Options:\n"
-    "  -q <quality>\tSet quantizer quality.\n"
-    "  -b <bitrate>\tSet average bitrate to x kbps. (ABR, lower quality mode)\n"
-    "  -c <freq>\tSet the bandwidth in Hz. (default=automatic)\n"
-    "  -o X\t\tSet output file to X (only for one input file)\n"
-    "  -v <verbose>\t\tverbosity level (-v0 is  quiet mode)\n"
-    "  -r\t\tUse RAW AAC output file.\n"
-    "  -P\t\tRaw PCM input mode (default 44100Hz 16bit stereo).\n"
-    "  -R\t\tRaw PCM input rate.\n"
-    "  -B\t\tRaw PCM input sample size (8, 16 (default), 24 or 32bits).\n"
-    "  -C\t\tRaw PCM input channels.\n"
-    "  -X\t\tRaw PCM swap input bytes\n"
-    "  -I <C,LF>\tInput channel config, default is 3,4 (Center third, LF fourth)\n"
-    "  --ignorelength\tIgnore wav length from header (useful with files over 4 GB)\n"
-    "\n"
-    "MP4 specific options:\n"
-    "  -w\t\tWrap AAC data in MP4 container. (default for *.mp4 and *.m4a)\n"
-    "  --tag <tagname,tagvalue> Add named tag (iTunes '----')\n"
-    "  --artist X\tSet artist to X\n"
-    "  --composer X\tSet composer to X\n"
-    "  --title X\tSet title to X\n"
-    "  --genre X\tSet genre number to X\n"
-    "  --album X\tSet album to X\n"
-    "  --compilation\tSet compilation\n"
-    "  --track X\tSet track to X (number/total)\n"
-    "  --disc X\tSet disc to X (number/total)\n"
-    "  --year X\tSet year to X\n"
-    "  --cover-art X\tRead cover art from file X\n"
-    "  --comment X\tSet comment to X\n"
-    "\n"
-    "Documentation:\n"
-    "  --license\tShow the FAAC license.\n"
-    "  --help\tShow this abbreviated help.\n"
-    "  --long-help\tShow complete help.\n"
-    "\n"
-    "  More tips can be found in the audiocoding.com Knowledge Base at\n"
-    "  <http://www.audiocoding.com/wiki/>\n" "\n";
-
-const char *long_help =
-    "Usage: %s [options] infiles ...\n"
-    "\n"
-    "Quality-related options:\n"
-    "  -q <quality>\tSet default variable bitrate (VBR) quantizer quality in percent.\n"
+static help_t help_qual[] = {
+    {"-q <quality>\tSet encoding quality.\n",
+    "\t\tSet default variable bitrate (VBR) quantizer quality in percent.\n"
     "\t\t(default: 100, averages at approx. 120 kbps VBR for a normal\n"
     "\t\tstereo input file with 16 bit and 44.1 kHz sample rate; max.\n"
-    "\t\tvalue 500, min. 10).\n"
-    "  -b <bitrate>\tSet average bitrate (ABR) to approximately <bitrate> kbps.\n"
+    "\t\tvalue 2000, min. 10).\n"},
+    {"-b <bitrate>\tSet average bitrate to x kbps. (ABR, lower quality mode)\n",
+    "\t\tSet average bitrate (ABR) to approximately <bitrate> kbps.\n"
     "\t\t(max. value 152 kbps/stereo with a 16 kHz cutoff, can be raised\n"
-    "\t\twith a higher -c setting).\n"
-    "  -c <freq>\tSet the bandwidth in Hz (default: automatic, i.e. adapts\n"
-    "\t\tmaximum value to input sample rate).\n"
-    "\n"
-    "Input/output options:\n"
-    "  -\t\t<stdin/stdout>: If you simply use a hyphen/minus sign instead\n"
-    "\t\tof an input file name, FAAC can encode directly from stdin,\n"
-    "\t\tthus enabling piping from other applications and utilities. The\n"
-    "\t\tsame works for stdout as well, so FAAC can pipe its output to\n"
-    "\t\tother apps such as a server.\n"
-    "  -o X\t\tSet output file to X (only for one input file)\n"
+    "\t\twith a higher -c setting).\n"},
+    {"-c <freq>\tSet the bandwidth in Hz. (default 0.42 of sampling freq)\n"},
+    {0}
+};
+
+static help_t help_io[] = {
+    {"-o <filename>\tSet output file to X (only for one input file)\n",
     "\t\tonly for one input file; you can use *.aac, *.mp4, *.m4a or\n"
     "\t\t*.m4b as file extension, and the file format will be set\n"
-    "\t\tautomatically to ADTS or MP4).\n"
-    "  -v <verbose>\tverbosity level (-v0 is quiet mode)\n"
-    "  -P\t\tRaw PCM input mode (default: off, i.e. expecting a WAV header;\n"
+    "\t\tautomatically to ADTS or MP4).\n"},
+    {"-\t\tUse stdin/stdout\n",
+    "\t\tIf you simply use a hyphen/minus sign instead\n"
+    "\t\tof a filename, FAAC can encode directly from stdin,\n"
+    "\t\tthus enabling piping from other applications and utilities. The\n"
+    "\t\tsame works for stdout as well, so FAAC can pipe its output to\n"
+    "\t\tother apps such as a server.\n"},
+    {"v <verbose>\t\tverbosity level (-v0 is  quiet mode)\n"},
+    {"-r\t\tUse RAW AAC output file.\n",
+    "\t\tGenerate raw AAC bitstream (i.e. without any headers).\n"
+    "\t\tNot advised!!!, RAW AAC files are practically useless!!!\n"},
+    {"-P\t\tRaw PCM input mode (default 44100Hz 16bit stereo).\n",
+    "\t\tRaw PCM input mode (default: off, i.e. expecting a WAV header;\n"
     "\t\tnecessary for input files or bitstreams without a header; using\n"
     "\t\tonly -P assumes the default values for -R, -B and -C in the\n"
-    "\t\tinput file).\n"
-    "  -R\t\tRaw PCM input sample rate in Hz (default: 44100 Hz, max. 96 kHz)\n"
-    "  -B\t\tRaw PCM input sample size (default: 16, also possible 8, 24, 32\n"
-    "\t\tbit fixed or float input).\n"
-    "  -C\t\tRaw PCM input channels (default: 2, max. 33 + 1 LFE).\n"
-    "  -X\t\tRaw PCM swap input bytes (default: bigendian).\n"
-    "  -I <C[,LFE]>\tInput multichannel configuration (default: 3,4 which means\n"
+    "\t\tinput file).\n"},
+    {"-R\t\tRaw PCM input rate.\n",
+    "\t\tRaw PCM input sample rate in Hz (default: 44100 Hz, max. 96 kHz)\n"},
+    {"-B\t\tRaw PCM input sample size (8, 16 (default), 24 or 32bits).\n",
+    "\t\tRaw PCM input sample size (default: 16, also possible 8, 24, 32\n"
+    "\t\tbit fixed or float input).\n"},
+    {"-C\t\tRaw PCM input channels.\n",
+    "\t\tRaw PCM input channels (default: 2, max. 33 + 1 LFE).\n"},
+    {"-X\t\tRaw PCM swap input bytes\n",
+    "\t\tRaw PCM swap input bytes (default: bigendian).\n"},
+    {"-I <C[,LFE]>\tInput channel config, default is 3,4 (Center third, LF fourth)\n",
+    "\t\tInput multichannel configuration (default: 3,4 which means\n"
     "\t\tCenter is third and LFE is fourth like in 5.1 WAV, so you only\n"
     "\t\thave to specify a different position of these two mono channels\n"
     "\t\tin your multichannel input files if they haven't been reordered\n"
-    "\t\talready).\n"
-    "\n"
-    "MP4 specific options:\n"
-    "  -w\t\tWrap AAC data in MP4 container. (default for *.mp4, *.m4a and\n"
-    "\t\t*.m4b)\n"
-    "  --artist X\tSet artist to X\n"
-    "  --composer X\tSet composer to X\n"
-    "  --title X\tSet title/track name to X\n"
-    "  --genre X\tSet genre number to X\n"
-    "  --album X\tSet album/performer to X\n"
-    "  --compilation\tMark as compilation\n"
-    "  --track X\tSet track to X (number/total)\n"
-    "  --disc X\tSet disc to X (number/total)\n"
-    "  --year X\tSet year to X\n"
-    "  --cover-art X\tRead cover art from file X\n"
-    "\t\tSupported image formats are GIF, JPEG, and PNG.\n"
-    "  --comment X\tSet comment to X\n"
-    "\n" "Expert options, only for testing purposes:\n"
+    "\t\talready).\n"},
+    {"--ignorelength\tIgnore wav length from header (useful with files over 4 GB)\n"},
+    {0}
+};
+
+static help_t help_mp4[] = {
+    {"-w\t\tWrap AAC data in MP4 container. (default for *.mp4 and *.m4a)\n",
+    "\t\tWrap AAC data in MP4 container. (default for *.mp4, *.m4a and\n"
+    "\t\t*.m4b)\n"},
+    {"--tag <tagname,tagvalue> Add named tag (iTunes '----')\n"},
+    {"--artist <name>\tSet artist name\n"},
+    {"--composer name\tSet composer name\n"},
+    {"--title <name>\tSet title/track name\n"},
+    {"--genre <number>\tSet genre number\n"},
+    {"--album <name>\tSet album/performer\n"},
+    {"--compilation\tMark as compilation\n"},
+    {"--track <number/total>\tSet track number\n"},
+    {"--disc <number/total>\tSet disc number\n"},
+    {"--year <number>\tSet year\n"},
+    {"--cover-art <filename>\tRead cover art from file X\n",
+    "\t\tSupported image formats are GIF, JPEG, and PNG.\n"},
+    {"--comment <string>\tSet comment\n"},
+    {0}
+};
+
+static help_t help_advanced[] = {
+    {
 #if !DEFAULT_TNS
-    "  --tns  \tEnable coding of TNS, temporal noise shaping.\n"
+    "--tns  \tEnable coding of TNS, temporal noise shaping.\n"
 #else
-    "  --no-tns\tDisable coding of TNS, temporal noise shaping.\n"
+    "--no-tns\tDisable coding of TNS, temporal noise shaping.\n"
 #endif
-    "  --no-midside\tDon\'t use mid/side coding.\n"
-    "  --mpeg-vers X\tForce AAC MPEG version, X can be 2 or 4\n"
-    "  --obj-type X\tAAC object type. (LC (Low Complexity, default), Main or LTP\n"
-    "\t\t(Long Term Prediction)\n"
-    "  --shortctl X\tEnforce block type (0 = both (default); 1 = no short; 2 = no\n"
-    "\t\tlong).\n"
-    "  -r\t\tGenerate raw AAC bitstream (i.e. without any headers).\n"
-    "\t\tNot advised!!!, RAW AAC files are practically useless!!!\n"
-    "\n"
-    "Documentation:\n"
-    "  --license\tShow the FAAC license.\n"
-    "  --help\tShow this abbreviated help.\n"
-    "  --long-help\tShow complete help.\n"
-    "\n"
-    "  More tips can be found in the audiocoding.com Knowledge Base at\n"
-    "  <http://www.audiocoding.com/wiki/>\n" "\n";
+    },
+    {"--no-midside\tDon\'t use mid/side coding.\n"},
+    {"--mpeg-vers X\tForce AAC MPEG version, X can be 2 or 4\n"},
+    {"--obj-type X\tAAC object type. (LC (Low Complexity, default), Main or LTP\n"
+    "\t\t(Long Term Prediction)\n"},
+    {" --shortctl X\tEnforce block type (0 = both (default); 1 = no short; 2 = no\n"
+    "\t\tlong).\n"},
+    {0}
+};
+
+static struct {
+    int id;
+    char *name;
+    char *option;
+    help_t *help;
+} g_help[] = {
+    {HELP_QUAL, "Quality-related options", "--help-qual", help_qual},
+    {HELP_IO, "Input/output options", "--help-io", help_io},
+    {HELP_MP4, "MP4 specific options", "--help-mp4", help_mp4},
+    {HELP_ADVANCED, "Advanced options, only for testing purposes", "--help-advanced", help_advanced},
+    {0}
+};
 
 char *license =
     "\nPlease note that the use of this software may require the payment of patent\n"
@@ -289,36 +298,67 @@ enum container_format
     MP4_CONTAINER,
 };
 
-enum flags
-{
-    SHORTCTL_FLAG = 300,
-    TNS_FLAG,
-    NO_TNS_FLAG,
-    MPEGVERS_FLAG,
-    OBJTYPE_FLAG,
-    NO_MIDSIDE_FLAG,
-    IGNORELEN_FLAG,
-
-    ARTIST_FLAG,
-    TITLE_FLAG,
-    GENRE_FLAG,
-    ALBUM_FLAG,
-    COMPILATION_FLAG,
-    TRACK_FLAG,
-    DISC_FLAG,
-    YEAR_FLAG,
-    COVER_ART_FLAG,
-    COMMENT_FLAG,
-    WRITER_FLAG,
-    TAG_FLAG,
-};
-
 #ifndef _WIN32
 void signal_handler(int signal)
 {
     running = 0;
 }
 #endif
+
+static void help0(help_t *h, int l)
+{
+    int cnt;
+
+    for (cnt = 0; h[cnt].shorthelp; cnt++)
+    {
+        printf("    %s", h[cnt].shorthelp);
+        if (l && h[cnt].longhelp)
+            printf("%s", h[cnt].longhelp);
+    }
+    printf("\n\n");
+}
+
+static void help(int mode)
+{
+    int cnt;
+    static const char *name = "faac";
+
+    printf(usage, name);
+    switch (mode)
+    {
+    case '?':
+        printf("Help options:\n"
+                "\t--help\t\tShort help on using FAAC\n"
+                "\t--long-help\tDescription of all options for FAAC.\n"
+                "\t--license\tLicense terms for FAAC.\n");
+        for (cnt = 0; g_help[cnt].id; cnt++)
+            printf("\t%s\t%s\n", g_help[cnt].option, g_help[cnt].name);
+        break;
+    case 'h':
+        for (cnt = 0; cnt < 2; cnt++)
+        {
+            printf("%s:\n", g_help[cnt].name);
+            help0(g_help[cnt].help, 0);
+        }
+        break;
+    case 'H':
+        for (cnt = 0; cnt < g_help[cnt].id; cnt++)
+        {
+            printf("%s:\n", g_help[cnt].name);
+            help0(g_help[cnt].help, 1);
+        }
+        break;
+    default:
+        for (cnt = 0; g_help[cnt].id; cnt++)
+            if (g_help[cnt].id == mode)
+            {
+                printf("%s:\n", g_help[cnt].name);
+                help0(g_help[cnt].help, 0);
+                break;
+            }
+        break;
+    }
+}
 
 static int check_image_header(const char *buf)
 {
@@ -382,6 +422,8 @@ static int *mkChanMap(int channels, int center, int lf)
 
     return map;
 }
+
+#define fprintf if(verbose)fprintf
 
 int main(int argc, char *argv[])
 {
@@ -450,11 +492,20 @@ int main(int argc, char *argv[])
 
     /* begin process command line */
     progName = argv[0];
+    if (argc < 2)
+    {
+        help('?');
+        return 1;
+    }
     while (1)
     {
         static struct option long_options[] = {
             {"help", 0, 0, 'h'},
-            {"long-help", 0, 0, 'H'},
+            {"help-long", 0, 0, 'H'},
+            {"help-qual", 0, 0, HELP_QUAL},
+            {"help-io", 0, 0, HELP_IO},
+            {"help-mp4", 0, 0, HELP_MP4},
+            {"help-advanced", 0, 0, HELP_ADVANCED},
             {"raw", 0, 0, 'r'},
             {"no-midside", 0, 0, NO_MIDSIDE_FLAG},
             {"cutoff", 1, 0, 'c'},
@@ -496,10 +547,7 @@ int main(int argc, char *argv[])
             break;
 
         if (!c)
-        {
-            dieMessage = usage;
-            break;
-        }
+            continue;
 
         switch (c)
         {
@@ -726,15 +774,19 @@ int main(int argc, char *argv[])
         case 'v':
             verbose = atoi(optarg);
             break;
+        case HELP_QUAL:
+        case HELP_IO:
+        case HELP_MP4:
+        case HELP_ADVANCED:
         case 'H':
-            dieMessage = long_help;
-            break;
         case 'h':
-            dieMessage = short_help;
+            help(c);
+            return 1;
             break;
         case '?':
         default:
-            dieMessage = usage;
+            help('?');
+            return 1;
             break;
         }
     }
@@ -759,8 +811,7 @@ int main(int argc, char *argv[])
 
     if (argc - optind < 1 || dieMessage)
     {
-        fprintf(stderr, dieMessage ? dieMessage : usage,
-                progName, progName, progName, progName);
+        fprintf(stderr, dieMessage, progName, progName, progName, progName);
         return 1;
     }
 
