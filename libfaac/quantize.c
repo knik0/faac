@@ -21,6 +21,8 @@
 #include <math.h>
 #include "util.h"
 
+#define MAGIC_NUMBER  0.4054
+
 // band sound masking
 static void bmask(CoderInfo *coderInfo, double *xr, double *bandqual,
                   double quality)
@@ -143,7 +145,7 @@ static void qlevel(CoderInfo *coderInfo,
           tmp *= sfacfix;
           tmp = sqrt(tmp * sqrt(tmp));
 
-          xi[cnt] = (int)(tmp + 0.5);
+          xi[cnt] = (int)(tmp + MAGIC_NUMBER);
 
           tmp = pow43[xi[cnt]];
           eout += tmp * tmp;
