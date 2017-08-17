@@ -1,3 +1,10 @@
+1.29.5:
+	- updated manpage
+	- check if output file exists; --overwrite option added
+	- help/usage options reorganized
+	- block switching is now tuned to match quality/bitrate
+	- give more quality to lower frequancies (less to highs)
+	- quantizer updated again
 1.29.4:
 	- rewritten quantizer: faster, diffrerent quality, different bitrates
 	- ftyp atom: set brands like itunes does, shoud be more compatible

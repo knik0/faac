@@ -25,8 +25,6 @@
 #include "config.h"
 #endif
 
-#define DEFAULT_TNS     0
-
 #ifdef _WIN32
 #include <windows.h>
 #include <fcntl.h>
@@ -80,18 +78,12 @@
 enum flags
 {
     SHORTCTL_FLAG = 300,
-    TNS_FLAG,
-    NO_TNS_FLAG,
     MPEGVERS_FLAG,
     OBJTYPE_FLAG,
-    NO_MIDSIDE_FLAG,
-    IGNORELEN_FLAG,
-
     ARTIST_FLAG,
     TITLE_FLAG,
     GENRE_FLAG,
     ALBUM_FLAG,
-    COMPILATION_FLAG,
     TRACK_FLAG,
     DISC_FLAG,
     YEAR_FLAG,
@@ -103,7 +95,6 @@ enum flags
     HELP_IO,
     HELP_MP4,
     HELP_ADVANCED,
-    OVER_FLAG
 };
 
 typedef struct {
@@ -148,12 +139,12 @@ static help_t help_io[] = {
     "\t\tnecessary for input files or bitstreams without a header; using\n"
     "\t\tonly -P assumes the default values for -R, -B and -C in the\n"
     "\t\tinput file).\n"},
-    {"-R\t\tRaw PCM input rate.\n",
+    {"-R <samplerate>\tRaw PCM input rate.\n",
     "\t\tRaw PCM input sample rate in Hz (default: 44100 Hz, max. 96 kHz)\n"},
-    {"-B\t\tRaw PCM input sample size (8, 16 (default), 24 or 32bits).\n",
+    {"-B <samplebits>\tRaw PCM input sample size (8, 16 (default), 24 or 32bits).\n",
     "\t\tRaw PCM input sample size (default: 16, also possible 8, 24, 32\n"
     "\t\tbit fixed or float input).\n"},
-    {"-C\t\tRaw PCM input channels.\n",
+    {"-C <channels>\tRaw PCM input channels.\n",
     "\t\tRaw PCM input channels (default: 2, max. 33 + 1 LFE).\n"},
     {"-X\t\tRaw PCM swap input bytes\n",
     "\t\tRaw PCM swap input bytes (default: bigendian).\n"},
@@ -189,13 +180,8 @@ static help_t help_mp4[] = {
 };
 
 static help_t help_advanced[] = {
-    {
-#if !DEFAULT_TNS
-    "--tns  \tEnable coding of TNS, temporal noise shaping.\n"
-#else
-    "--no-tns\tDisable coding of TNS, temporal noise shaping.\n"
-#endif
-    },
+    {"--tns  \tEnable coding of TNS, temporal noise shaping.\n"},
+    {"--no-tns\tDisable coding of TNS, temporal noise shaping.\n"},
     {"--no-midside\tDon\'t use mid/side coding.\n"},
     {"--mpeg-vers X\tForce AAC MPEG version, X can be 2 or 4\n"},
     {"--obj-type X\tAAC object type. (LC (Low Complexity, default), Main or LTP\n"
@@ -438,8 +424,8 @@ int main(int argc, char *argv[])
     faacEncConfigurationPtr myFormat;
     unsigned int mpegVersion = MPEG2;
     unsigned int objectType = LOW;
-    unsigned int useMidSide = 1;
-    static unsigned int useTns = DEFAULT_TNS;
+    static int useMidSide = 1;
+    static int useTns = 0;
     enum container_format container = NO_CONTAINER;
     enum stream_format stream = ADTS_STREAM;
     int cutOff = -1;
@@ -471,7 +457,7 @@ int main(int argc, char *argv[])
 
     unsigned int ntracks = 0, trackno = 0;
     unsigned int ndiscs = 0, discno = 0;
-    uint8_t compilation = 0;
+    static int compilation = 0;
     const char *artist = NULL, *title = NULL, *album = NULL, *year = NULL,
         *comment = NULL, *composer = NULL, *tagname = 0, *tagval = 0;
     int genre = 0;
@@ -483,9 +469,9 @@ int main(int argc, char *argv[])
     uint64_t input_samples = 0;
     char *faac_id_string;
     char *faac_copyright_string;
-    int ignorelen = FALSE;
+    static int ignorelen = 0;
     int verbose = 1;
-    int overwrite = 0;
+    static int overwrite = 0;
 
 #ifndef _WIN32
     // install signal handler
@@ -510,7 +496,7 @@ int main(int argc, char *argv[])
             {"help-mp4", 0, 0, HELP_MP4},
             {"help-advanced", 0, 0, HELP_ADVANCED},
             {"raw", 0, 0, 'r'},
-            {"no-midside", 0, 0, NO_MIDSIDE_FLAG},
+            {"no-midside", 0, &useMidSide, 0},
             {"cutoff", 1, 0, 'c'},
             {"quality", 1, 0, 'q'},
             {"pcmraw", 0, 0, 'P'},
@@ -518,8 +504,8 @@ int main(int argc, char *argv[])
             {"pcmsamplebits", 1, 0, 'B'},
             {"pcmchannels", 1, 0, 'C'},
             {"shortctl", 1, 0, SHORTCTL_FLAG},
-            {"tns", 0, 0, TNS_FLAG},
-            {"no-tns", 0, 0, NO_TNS_FLAG},
+            {"tns", 0, &useTns, 1},
+            {"no-tns", 0, &useTns, 0},
             {"mpeg-version", 1, 0, MPEGVERS_FLAG},
             {"obj-type", 1, 0, OBJTYPE_FLAG},
             {"license", 0, 0, 'L'},
@@ -534,11 +520,11 @@ int main(int argc, char *argv[])
             {"cover-art", 1, 0, COVER_ART_FLAG},
             {"comment", 1, 0, COMMENT_FLAG},
             {"composer", 1, 0, WRITER_FLAG},
-            {"compilation", 0, 0, COMPILATION_FLAG},
+            {"compilation", 0, &compilation, 1},
             {"pcmswapbytes", 0, 0, 'X'},
-            {"ignorelength", 0, 0, IGNORELEN_FLAG},
+            {"ignorelength", 0, &ignorelen, 1},
             {"tag", 1, 0, TAG_FLAG},
-            {"overwrite", 0, 0, OVER_FLAG},
+            {"overwrite", 0, &overwrite, 1},
             {0, 0, 0, 0}
         };
         int c = -1;
@@ -567,11 +553,6 @@ int main(int argc, char *argv[])
         case 'r':
             {
                 stream = RAW_STREAM;
-                break;
-            }
-        case NO_MIDSIDE_FLAG:
-            {
-                useMidSide = 0;
                 break;
             }
         case 'c':
@@ -662,9 +643,6 @@ int main(int argc, char *argv[])
             if (sscanf(optarg, "%d/%d", &discno, &ndiscs) < 1)
                 dieMessage = "Wrong disc number.\n";
             break;
-        case COMPILATION_FLAG:
-            compilation = 0x1;
-            break;
         case GENRE_FLAG:
             genre = atoi(optarg);
             if ((genre < 0) || (genre > 146))
@@ -729,18 +707,6 @@ int main(int argc, char *argv[])
             }
         case SHORTCTL_FLAG:
             shortctl = atoi(optarg);
-            break;
-        case TNS_FLAG:
-            useTns = 1;
-            break;
-        case NO_TNS_FLAG:
-            useTns = 0;
-            break;
-        case IGNORELEN_FLAG:
-            ignorelen = TRUE;
-            break;
-        case OVER_FLAG:
-            overwrite = TRUE;
             break;
         case MPEGVERS_FLAG:
             mpegVersion = atoi(optarg);

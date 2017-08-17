@@ -100,16 +100,16 @@ necessary for input files or bitstreams without a header; using
 only -P assumes the default values for -R, -B and -C in the
 input file).
 .TP
-.BR -R
+.BR -R\ <\fIsamplerate\fP>
 Raw PCM input rate.
 Raw PCM input sample rate in Hz (default: 44100 Hz, max. 96 kHz)
 .TP
-.BR -B
+.BR -B\ <\fIsamplebits\fP>
 Raw PCM input sample size (8, 16 (default), 24 or 32bits).
 Raw PCM input sample size (default: 16, also possible 8, 24, 32
 bit fixed or float input).
 .TP
-.BR -C
+.BR -C\ <\fIchannels\fP>
 Raw PCM input channels.
 Raw PCM input channels (default: 2, max. 33 + 1 LFE).
 .TP
@@ -177,16 +177,19 @@ Set comment
 .BR --tns
 Enable coding of TNS, temporal noise shaping.
 .TP
+.BR --no-tns
+Disable coding of TNS, temporal noise shaping.
+.TP
 .BR --no-midside
 Don't use mid/side coding.
 .TP
-.BR --mpeg-vers \fIX\fP
+.BR --mpeg-vers\ \fIX\fP
 Force AAC MPEG version, X can be 2 or 4
 .TP
-.BR --obj-type \fIX\fP
+.BR --obj-type\ \fIX\fP
 AAC object type. (LC (Low Complexity, default), Main or LTP (Long Term Prediction)
 .TP
-.BR --shortctl \fIX\fP
+.BR --shortctl\ \fIX\fP
 Enforce block type (0 = both (default); 1 = no short; 2 = no long).
 .SH AUTHORS
 .B FAAC
