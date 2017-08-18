@@ -85,9 +85,9 @@ static void bmask(CoderInfo *coderInfo, double *xr, double *bandqual,
         target *= 0.45;
     }
 
-    target *= 1.0 / (0.75 + ((start+end)/last));
+    target *= 1.0 / (0.75 + ((double)(start+end)/last));
 
-    bandqual[sfb] = 3.5 * target * quality;
+    bandqual[sfb] = 5.5 * target * quality;
   }
 }
 
