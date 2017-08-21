@@ -163,7 +163,7 @@ int FAACAPI faacEncSetConfiguration(faacEncHandle hpEncoder,
 
     /* Check for correct bitrate */
     if (config->bitRate > MaxBitrate(hEncoder->sampleRate))
-		return 0;
+        config->bitRate = MaxBitrate(hEncoder->sampleRate);
 #if 0
     if (config->bitRate < MinBitrate())
         return 0;
@@ -234,7 +234,7 @@ int FAACAPI faacEncSetConfiguration(faacEncHandle hpEncoder,
 			config->bandWidth = f1;
 
 #ifndef DRM
-        config->bandWidth = config->bitRate * hEncoder->sampleRate * bwfac / 60000;
+        config->bandWidth = (double)config->bitRate * hEncoder->sampleRate * bwfac / 60000.0;
 #endif
     }
 
@@ -881,8 +881,8 @@ int FAACAPI faacEncEncode(faacEncHandle hpEncoder,
 		if (((diff > 0) && (fix > 0.0)) || ((diff < 0) && (fix < 0.0)))
 		{
 			hEncoder->aacquantCfg.quality *= (1.0 - fix);
-			if (hEncoder->aacquantCfg.quality > 300)
-				hEncoder->aacquantCfg.quality = 300;
+                        if (hEncoder->aacquantCfg.quality > MAXQUAL)
+                            hEncoder->aacquantCfg.quality = MAXQUAL;
             if (hEncoder->aacquantCfg.quality < 50)
                 hEncoder->aacquantCfg.quality = 50;
 		}
