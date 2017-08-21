@@ -315,25 +315,29 @@ static void help(int mode)
     switch (mode)
     {
     case '?':
+    case 'h':
+    case 'H':
         printf("Help options:\n"
                 "\t-h\t\tShort help on using FAAC\n"
                 "\t-H\t\tDescription of all options for FAAC.\n"
                 "\t--license\tLicense terms for FAAC.\n");
         for (cnt = 0; g_help[cnt].id; cnt++)
             printf("\t%s\t%s\n", g_help[cnt].option, g_help[cnt].name);
-        break;
-    case 'h':
+        if (mode == 'h')
+        {
         for (cnt = 0; cnt < 2; cnt++)
         {
             printf("%s:\n", g_help[cnt].name);
             help0(g_help[cnt].help, 0);
         }
-        break;
-    case 'H':
+        }
+        if (mode == 'H')
+        {
         for (cnt = 0; cnt < g_help[cnt].id; cnt++)
         {
             printf("%s:\n", g_help[cnt].name);
             help0(g_help[cnt].help, 1);
+        }
         }
         break;
     default:
