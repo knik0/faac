@@ -316,8 +316,8 @@ static void help(int mode)
     {
     case '?':
         printf("Help options:\n"
-                "\t--help\t\tShort help on using FAAC\n"
-                "\t--help-long\tDescription of all options for FAAC.\n"
+                "\t-h\t\tShort help on using FAAC\n"
+                "\t-H\t\tDescription of all options for FAAC.\n"
                 "\t--license\tLicense terms for FAAC.\n");
         for (cnt = 0; g_help[cnt].id; cnt++)
             printf("\t%s\t%s\n", g_help[cnt].option, g_help[cnt].name);
@@ -490,7 +490,6 @@ int main(int argc, char *argv[])
     {
         static struct option long_options[] = {
             {"help", 0, 0, 'h'},
-            {"help-long", 0, 0, 'H'},
             {"help-qual", 0, 0, HELP_QUAL},
             {"help-io", 0, 0, HELP_IO},
             {"help-mp4", 0, 0, HELP_MP4},
