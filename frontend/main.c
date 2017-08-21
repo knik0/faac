@@ -317,7 +317,7 @@ static void help(int mode)
     case '?':
         printf("Help options:\n"
                 "\t--help\t\tShort help on using FAAC\n"
-                "\t--long-help\tDescription of all options for FAAC.\n"
+                "\t--help-long\tDescription of all options for FAAC.\n"
                 "\t--license\tLicense terms for FAAC.\n");
         for (cnt = 0; g_help[cnt].id; cnt++)
             printf("\t%s\t%s\n", g_help[cnt].option, g_help[cnt].name);
