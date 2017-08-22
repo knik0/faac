@@ -60,15 +60,17 @@ Advanced options, only for testing purposes
 .TP
 .BR -q\ <\fIquality\fP>
 Set encoding quality. Set default variable bitrate (VBR) quality level in percent.
-(default: 100, averages at approx. 120 kbps VBR for a normal stereo input file with 16 bit and 44.1 kHz sample rate; max value 2000, min 10).
+max. 5000 (mp4) or 500 (adts), min. 10.
+default: 100, averages at approx. 120 kbps VBR for a normal
+stereo input file with 16 bit and 44.1 kHz sample rate
 .TP
 .BR -b\ <\fIbitrate\fP>
 Set average bitrate (ABR) to approximately <bitrate> kbps.
-(max. value 152 kbps/stereo with a 16 kHz cutoff, can be raised with a higher -c setting).
+max. ~500 (stereo mp4) or ~250k (adts)
 .TP
 .BR -c\ <\fIfreq\fP>
-Set the bandwidth in Hz. (default 0.42 of sampling freq)
-
+Set the bandwidth in Hz.
+The actual frequency is adjusted to maximize upper spectral band usage.
 .SH INPUT/OUTPUT OPTIONS
 .TP
 .BR -o\ <\fIfilename\fP>

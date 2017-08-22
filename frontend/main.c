@@ -108,14 +108,16 @@ const char *usage =
 static help_t help_qual[] = {
     {"-q <quality>\tSet encoding quality.\n",
     "\t\tSet default variable bitrate (VBR) quantizer quality in percent.\n"
-    "\t\t(default: 100, averages at approx. 120 kbps VBR for a normal\n"
-    "\t\tstereo input file with 16 bit and 44.1 kHz sample rate; max.\n"
-    "\t\tvalue 2000, min. 10).\n"},
-    {"-b <bitrate>\tSet average bitrate to x kbps. (ABR, lower quality mode)\n",
+    "\t\tmax. 5000 (mp4) or 500 (adts), min. 10.\n"
+    "\t\tdefault: 100, averages at approx. 120 kbps VBR for a normal\n"
+    "\t\tstereo input file with 16 bit and 44.1 kHz sample rate\n"
+    },
+    {"-b <bitrate>\tSet average bitrate to x kbps. (ABR)\n",
     "\t\tSet average bitrate (ABR) to approximately <bitrate> kbps.\n"
-    "\t\t(max. value 152 kbps/stereo with a 16 kHz cutoff, can be raised\n"
-    "\t\twith a higher -c setting).\n"},
-    {"-c <freq>\tSet the bandwidth in Hz. (default 0.42 of sampling freq)\n"},
+    "\t\tmax. ~500 (stereo mp4) or ~250k (adts)\n"},
+    {"-c <freq>\tSet the bandwidth in Hz.\n",
+    "\t\tThe actual frequency is adjusted to maximize upper spectral band\n"
+    "\t\tusage.\n"},
     {0}
 };
 
@@ -345,7 +347,7 @@ static void help(int mode)
             if (g_help[cnt].id == mode)
             {
                 printf("%s:\n", g_help[cnt].name);
-                help0(g_help[cnt].help, 0);
+                help0(g_help[cnt].help, 1);
                 break;
             }
         break;
