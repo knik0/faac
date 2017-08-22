@@ -1,3 +1,10 @@
+1.29.7
+	* quantizer tweaked to better support high bitrates
+	* allow higher quality for mp4 files (-q 5000 max)
+	* removed mid frequency boost (it turned out useless)
+	* cutoff frequency adjusted to fully utilize upper band
+	* --help-long option removed, it was just an alias for -H
+	* -b option bug fixed
 1.29.6:
 	- quality related bug fixed
 1.29.5:
