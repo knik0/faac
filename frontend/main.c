@@ -483,6 +483,19 @@ int main(int argc, char *argv[])
     signal(SIGTERM, signal_handler);
 #endif
 
+    // get faac version
+    if (faacEncGetVersion(&faac_id_string, &faac_copyright_string) ==
+        FAAC_CFG_VERSION)
+    {
+        fprintf(stderr, "Freeware Advanced Audio Coder\nFAAC %s\n\n",
+                faac_id_string);
+    }
+    else
+    {
+        fprintf(stderr, __FILE__ "(%d): wrong libfaac version\n", __LINE__);
+        return 1;
+    }
+
     /* begin process command line */
     progName = argv[0];
     if (argc < 2)
@@ -765,19 +778,6 @@ int main(int argc, char *argv[])
             return 1;
             break;
         }
-    }
-
-    // get faac version
-    if (faacEncGetVersion(&faac_id_string, &faac_copyright_string) ==
-        FAAC_CFG_VERSION)
-    {
-        fprintf(stderr, "Freeware Advanced Audio Coder\nFAAC %s\n\n",
-                faac_id_string);
-    }
-    else
-    {
-        fprintf(stderr, __FILE__ "(%d): wrong libfaac version\n", __LINE__);
-        return 1;
     }
 
     /* check that we have at least one non-option arguments */
