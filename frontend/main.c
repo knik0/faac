@@ -867,6 +867,7 @@ int main(int argc, char *argv[])
     {
         mpegVersion = MPEG4;
         stream = RAW_STREAM;
+        maxBytesOutput = 0x1000 * infile->channels;
     }
 
     frameSize = samplesInput / infile->channels;

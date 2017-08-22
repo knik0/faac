@@ -46,7 +46,7 @@ typedef struct
 
 #include "quantize.h"
 
-enum {DEFQUAL = 100, MAXQUAL = 2000, MINQUAL = 10};
+enum {DEFQUAL = 100, MAXQUAL = 5000, MAXQUALADTS = 500, MINQUAL = 10};
 
 void AACQuantizeInit(CoderInfo *coderInfo, unsigned int numChannels,
 		     AACQuantCfg *aacquantCfg);

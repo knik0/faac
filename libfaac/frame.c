@@ -124,7 +124,8 @@ int FAACAPI faacEncSetConfiguration(faacEncHandle hpEncoder,
                                     faacEncConfigurationPtr config)
 {
     faacEncStruct* hEncoder = (faacEncStruct*)hpEncoder;
-	int i;
+    int i;
+    int maxqual = hEncoder->config.outputFormat ? MAXQUALADTS : MAXQUAL;
 
     hEncoder->config.allowMidside = config->allowMidside;
     hEncoder->config.useLfe = config->useLfe;
@@ -253,8 +254,8 @@ int FAACAPI faacEncSetConfiguration(faacEncHandle hpEncoder,
     if (hEncoder->config.bandWidth > (hEncoder->sampleRate / 2))
 		hEncoder->config.bandWidth = hEncoder->sampleRate / 2;
 
-    if (config->quantqual > MAXQUAL)
-        config->quantqual = MAXQUAL;
+    if (config->quantqual > maxqual)
+        config->quantqual = maxqual;
     if (config->quantqual < MINQUAL)
         config->quantqual = MINQUAL;
 
@@ -470,6 +471,7 @@ int FAACAPI faacEncEncode(faacEncHandle hpEncoder,
     unsigned int allowMidside = hEncoder->config.allowMidside;
     unsigned int bandWidth = hEncoder->config.bandWidth;
     unsigned int shortctl = hEncoder->config.shortctl;
+    int maxqual = hEncoder->config.outputFormat ? MAXQUALADTS : MAXQUAL;
 
     /* Increase frame number */
     hEncoder->frameNum++;
@@ -887,8 +889,8 @@ int FAACAPI faacEncEncode(faacEncHandle hpEncoder,
 		if (((diff > 0) && (fix > 0.0)) || ((diff < 0) && (fix < 0.0)))
 		{
 			hEncoder->aacquantCfg.quality *= (1.0 - fix);
-                        if (hEncoder->aacquantCfg.quality > MAXQUAL)
-                            hEncoder->aacquantCfg.quality = MAXQUAL;
+                        if (hEncoder->aacquantCfg.quality > maxqual)
+                            hEncoder->aacquantCfg.quality = maxqual;
             if (hEncoder->aacquantCfg.quality < 50)
                 hEncoder->aacquantCfg.quality = 50;
 		}
