@@ -262,6 +262,10 @@ int FAACAPI faacEncSetConfiguration(faacEncHandle hpEncoder,
 
     /* set quantization quality */
     hEncoder->aacquantCfg.quality = config->quantqual;
+    BandLimit(&hEncoder->config.bandWidth,
+              hEncoder->sampleRate,
+              hEncoder->srInfo,
+              &hEncoder->aacquantCfg);
 
     // reset psymodel
     hEncoder->psymodel->PsyEnd(&hEncoder->gpsyInfo, hEncoder->psyInfo, hEncoder->numChannels);
@@ -620,6 +624,7 @@ int FAACAPI faacEncEncode(faacEncHandle hpEncoder,
             hEncoder->overlapBuff[channel],
             MOVERLAPPED);
 
+#if 0
         if (coderInfo[channel].block_type == ONLY_SHORT_WINDOW) {
             for (k = 0; k < 8; k++) {
                 specFilter(hEncoder->freqBuff[channel]+k*BLOCK_LEN_SHORT,
@@ -629,6 +634,7 @@ int FAACAPI faacEncEncode(faacEncHandle hpEncoder,
             specFilter(hEncoder->freqBuff[channel], sampleRate,
 					bandWidth, BLOCK_LEN_LONG);
         }
+#endif
     }
 
     /* TMP: Build sfb offset table and other stuff */

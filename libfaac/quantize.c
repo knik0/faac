@@ -25,7 +25,7 @@
 
 // band sound masking
 static void bmask(CoderInfo *coderInfo, double *xr, double *bandqual,
-                  double quality)
+                  AACQuantCfg *aacquantCfg)
 {
   int sfb, start, end, cnt;
   int last = coderInfo->lastx;
@@ -33,8 +33,14 @@ static void bmask(CoderInfo *coderInfo, double *xr, double *bandqual,
   int *cb_offset = coderInfo->sfb_offset;
   int num_cb = coderInfo->nr_of_sfb;
   double avgenrg = coderInfo->avgenrg;
-  double powm = 0.25;
-  enum {MIDF=34};
+  double powm = 0.4;
+  int nullcb;
+  double quality = (double)aacquantCfg->quality/DEFQUAL;
+
+  if (coderInfo->block_type == ONLY_SHORT_WINDOW)
+      nullcb = aacquantCfg->max_cbs;
+  else
+      nullcb = aacquantCfg->max_cbl;
 
   for (sfb = 0; sfb < num_cb; sfb++)
   {
@@ -42,7 +48,7 @@ static void bmask(CoderInfo *coderInfo, double *xr, double *bandqual,
       lastsb = sfb;
   }
 
-  for (sfb = 0; sfb < num_cb; sfb++)
+  for (sfb = 0; sfb < nullcb; sfb++)
   {
     double avge, maxe;
     double target;
@@ -72,22 +78,22 @@ static void bmask(CoderInfo *coderInfo, double *xr, double *bandqual,
     {
         target = NOISETONE * pow(avge/avgenrg, powm);
         target += (1.0 - NOISETONE) * 0.45 * pow(maxe/avgenrg, powm);
-
-        target *= 0.9 + (40.0 / (fabs(start + end - MIDF) + 32));
     }
     else
     {
         target = NOISETONE * pow(avge/avgenrg, powm);
         target += (1.0 - NOISETONE) * 0.45 * pow(maxe/avgenrg, powm);
 
-        target *= 0.9 + (40.0 / (0.125 * fabs(start + end - (8*MIDF)) + 32));
-
         target *= 0.45;
     }
 
-    target *= 1.0 / (0.75 + ((double)(start+end)/last));
+    target *= 6.5 / (1.0 + ((double)(start+end)/last));
 
-    bandqual[sfb] = 5.5 * target * quality;
+    bandqual[sfb] = target * quality;
+  }
+  for (; sfb < num_cb; sfb++)
+  {
+    bandqual[sfb] = 0;
   }
 }
 
@@ -160,7 +166,7 @@ static void qlevel(CoderInfo *coderInfo,
     }
 }
 
-int BlocQuant(CoderInfo *coderInfo, double *xr, int *xi, double quality, double *pow43)
+int BlocQuant(CoderInfo *coderInfo, double *xr, int *xi, AACQuantCfg *aacquantCfg)
 {
     double bandlvl[MAX_SCFAC_BANDS];
     int cnt;
@@ -172,10 +178,41 @@ int BlocQuant(CoderInfo *coderInfo, double *xr, int *xi, double quality, double 
     SetMemory(xi, 0, FRAME_LEN*sizeof(xi[0]));
     if (nonzero)
     {
-        bmask(coderInfo, xr, bandlvl, quality);
-        qlevel(coderInfo, xr, xi, bandlvl, pow43);
+        bmask(coderInfo, xr, bandlvl, aacquantCfg);
+        qlevel(coderInfo, xr, xi, bandlvl, aacquantCfg->pow43);
         return 1;
     }
 
     return 0;
+}
+
+void BandLimit(unsigned *bw, int rate, SR_INFO *sr, AACQuantCfg *aacquantCfg)
+{
+    // find max short frame band
+    int max = *bw * (BLOCK_LEN_SHORT << 1) / rate;
+    int cnt;
+    int l;
+
+    l = 0;
+    for (cnt = 0; cnt < sr->num_cb_short; cnt++)
+    {
+        if (l >= max)
+            break;
+        l += sr->cb_width_short[cnt];
+    }
+    aacquantCfg->max_cbs = cnt;
+    *bw = (double)l * rate / (BLOCK_LEN_SHORT << 1);
+
+    // find max long frame band
+    max = *bw * (BLOCK_LEN_LONG << 1) / rate;
+    l = 0;
+    for (cnt = 0; cnt < sr->num_cb_long; cnt++)
+    {
+        if (l >= max)
+            break;
+        l += sr->cb_width_long[cnt];
+    }
+    aacquantCfg->max_cbl = cnt;
+
+    *bw = (double)l * rate / (BLOCK_LEN_LONG << 1);
 }

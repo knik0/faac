@@ -36,13 +36,15 @@ extern "C" {
 #define POW20(x)  pow(2.0,((double)x)*.25)
 #define IPOW20(x)  pow(2.0,-((double)x)*.1875)
 
-#pragma pack(push, 1)
 typedef struct
   {
     double *pow43;
     double quality;
+    int max_cbl;
+    int max_cbs;
   } AACQuantCfg;
-#pragma pack(pop)
+
+#include "quantize.h"
 
 enum {DEFQUAL = 100, MAXQUAL = 2000, MINQUAL = 10};
 
