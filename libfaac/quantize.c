@@ -87,7 +87,7 @@ static void bmask(CoderInfo *coderInfo, double *xr, double *bandqual,
         target *= 0.45;
     }
 
-    target *= 6.5 / (1.0 + ((double)(start+end)/last));
+    target *= 8.0 / (1.0 + ((double)(start+end)/last));
 
     bandqual[sfb] = target * quality;
   }
@@ -114,7 +114,6 @@ static void qlevel(CoderInfo *coderInfo,
       int sfac;
       double maxx;
       double rmsx;
-      double ein, eout;
 
       start = coderInfo->sfb_offset[sb];
       end = coderInfo->sfb_offset[sb+1];
@@ -140,27 +139,17 @@ static void qlevel(CoderInfo *coderInfo,
           continue;
       }
 
-      ein = eout = 0;
-      sfacfix = bandqual[sb] / rmsx;
+      sfac = lrint(log(bandqual[sb] / rmsx) * sfstep);
+      sfacfix = exp(sfac / sfstep);
       for (cnt = start; cnt < end; cnt++)
       {
           double tmp = fabs(xr[cnt]);
-
-          ein += tmp *tmp;
 
           tmp *= sfacfix;
           tmp = sqrt(tmp * sqrt(tmp));
 
           xi[cnt] = (int)(tmp + MAGIC_NUMBER);
-
-          tmp = pow43[xi[cnt]];
-          eout += tmp * tmp;
       }
-
-      if (eout < 1.0)
-          sfac = 10;
-      else
-          sfac = lrint(log(sqrt(eout / ein)) * sfstep);
 
       coderInfo->scale_factor[sb] = sfac;
     }
