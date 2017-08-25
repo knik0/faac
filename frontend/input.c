@@ -116,6 +116,13 @@ static void unsuperr(const char *name)
   fprintf(stderr, "%s: file format not supported\n", name);
 }
 
+static void seekcur(FILE *f, int ofs)
+{
+    int cnt;
+
+    for (cnt = 0; cnt < ofs; cnt++)
+        fgetc(f);
+}
 
 static int seekchunk(FILE *f, riffsub_t *riffsub, char *name)
 {
@@ -133,7 +140,7 @@ static int seekchunk(FILE *f, riffsub_t *riffsub, char *name)
    if (!memcmp(&(riffsub->label), name, 4))
      return 1;
 
-   fseek(f, riffsub->len, SEEK_CUR);
+   seekcur(f, riffsub->len);
  }
 
  return 0;
@@ -191,7 +198,7 @@ pcmfile_t *wav_open_read(const char *name, int rawinput)
    if (fread(&wave, 1, fmtsize, wave_f) != fmtsize)
         return NULL;
 
-    fseek(wave_f, riffsub.len - fmtsize, SEEK_CUR);
+    seekcur(wave_f, riffsub.len - fmtsize);
 
     if (!seekchunk(wave_f, &riffsub, datal))
       return NULL;
