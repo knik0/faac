@@ -1,5 +1,5 @@
 AC_PREREQ(2.50)
-AC_INIT(faac, 1.29.7.2, https://sourceforge.net/p/faac/bugs/)
+AC_INIT(faac, 1.29.7.3, https://sourceforge.net/p/faac/bugs/)
 AC_CONFIG_AUX_DIR(.)
 AM_INIT_AUTOMAKE([subdir-objects])
 

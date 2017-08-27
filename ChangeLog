@@ -1,3 +1,7 @@
+1.29.7.3
+	* some mp4 atoms fixed for better compalibility
+1.29.7.2
+	* stdin seek bug fixed
 1.29.7
 	* quantizer tweaked to better support high bitrates
 	* allow higher quality for mp4 files (-q 5000 max)
