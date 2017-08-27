@@ -376,7 +376,7 @@ static int esdsout(void)
     { TAG_ES = 3, TAG_DC = 4, TAG_DSI = 5, TAG_SLC = 6 };
 
     // calc sizes
-#define DESCSIZE(x) (x + 2/*.tag+.size*/)
+#define DESCSIZE(x) (x + 5/*.tag+.size*/)
     dsize.sl = 1;
     dsize.dsi = mp4config.asc.size;
     dsize.dc = 13 + DESCSIZE(dsize.dsi);
@@ -387,6 +387,9 @@ static int esdsout(void)
     size += u32out(0);
     // mp4es
     size += u8out(TAG_ES);
+    size += u8out(0x80);
+    size += u8out(0x80);
+    size += u8out(0x80);
     size += u8out(dsize.es);
     // ESID
     size += u16out(0);
@@ -394,25 +397,37 @@ static int esdsout(void)
     size += u8out(0);
 
     size += u8out(TAG_DC);
+    size += u8out(0x80);
+    size += u8out(0x80);
+    size += u8out(0x80);
     size += u8out(dsize.dc);
     size += u8out(0x40 /*MPEG-4 audio */ );
-    // DC flags: upstream(bit 1); streamType(2-7)
-    // this field is typically 0x15 but I think it
-    // could store "Object Type ID", why not
-    size += u8out(2 /*AAC LC*/ << 2);
-    // buffer size (24 bits)
+    size += u8out((5 << 2) /* AudioStream */ | 1 /* reserved = 1 */);
+    // decode buffer size bytes
+#if 0
     size += u16out(mp4config.buffersize >> 8);
     size += u8out(mp4config.buffersize && 0xff);
+#else
+    size += u8out(0);
+    size += u8out(0x18);
+    size += u8out(0);
+#endif
     // bitrate
     size += u32out(mp4config.bitratemax);
     size += u32out(mp4config.bitrateavg);
 
     size += u8out(TAG_DSI);
+    size += u8out(0x80);
+    size += u8out(0x80);
+    size += u8out(0x80);
     size += u8out(dsize.dsi);
     // AudioSpecificConfig
     size += dataout(mp4config.asc.data, mp4config.asc.size);
 
     size += u8out(TAG_SLC);
+    size += u8out(0x80);
+    size += u8out(0x80);
+    size += u8out(0x80);
     size += u8out(dsize.sl);
     // "predefined" (no idea)
     size += u8out(2);
@@ -466,20 +481,11 @@ static int stscout(void)
     // version/flags
     size += u32out(0);
     // Number of entries
-    size += u32out(2);
-    // 1st entry
+    size += u32out(1);
     // first chunk
     size += u32out(1);
-    // frames per chunks (256 for simplicity)
-    size += u32out(0x100);
-    // sample id
-    size += u32out(1);
-    // 2nd entry
-    // last chunk
-    size += u32out((mp4config.frame.ents >> 8) + 1);
-    // frames in last chunk
-    size += u32out(mp4config.frame.ents & 0xff);
-
+    // frames in chunk
+    size += u32out(mp4config.frame.ents);
     // sample id
     size += u32out(1);
 
@@ -489,25 +495,13 @@ static int stscout(void)
 static int stcoout(void)
 {
     int size = 0;
-    int chunks = (mp4config.frame.ents >> 8) + 1;
-    int cnt;
-    uint32_t ofs = mp4config.mdatofs;
 
     // version/flags
     size += u32out(0);
     // Number of entries
-    size += u32out(chunks);
+    size += u32out(1);
     // Chunk offset table
-    if (!mp4config.frame.ents)
-        return size;
-    if (!mp4config.frame.data)
-        return size;
-    for (cnt = 0; cnt < mp4config.frame.ents; cnt++)
-    {
-        if (!(cnt & 0xff))
-            size += u32out(ofs);
-        ofs += mp4config.frame.data[cnt];
-    }
+    size += u32out(mp4config.mdatofs);
 
     return size;
 }
