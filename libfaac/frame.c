@@ -18,15 +18,6 @@
  *
  */
 
-/*
- * CHANGES:
- *  2001/01/17: menno: Added frequency cut off filter.
- *  2001/02/28: menno: Added Temporal Noise Shaping.
- *  2001/03/05: menno: Added Long Term Prediction.
- *  2001/05/01: menno: Added backward prediction.
- *
- */
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
@@ -581,26 +572,12 @@ int FAACAPI faacEncEncode(faacEncHandle hpEncoder,
 
     /* AAC Filterbank, MDCT with overlap and add */
     for (channel = 0; channel < numChannels; channel++) {
-        int k;
-
         FilterBank(hEncoder,
             &coderInfo[channel],
             hEncoder->sampleBuff[channel],
             hEncoder->freqBuff[channel],
             hEncoder->overlapBuff[channel],
             MOVERLAPPED);
-
-#if 0
-        if (coderInfo[channel].block_type == ONLY_SHORT_WINDOW) {
-            for (k = 0; k < 8; k++) {
-                specFilter(hEncoder->freqBuff[channel]+k*BLOCK_LEN_SHORT,
-						sampleRate, bandWidth, BLOCK_LEN_SHORT);
-            }
-        } else {
-            specFilter(hEncoder->freqBuff[channel], sampleRate,
-					bandWidth, BLOCK_LEN_LONG);
-        }
-#endif
     }
 
     /* TMP: Build sfb offset table and other stuff */
