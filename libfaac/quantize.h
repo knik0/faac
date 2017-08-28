@@ -22,6 +22,7 @@
 #define QUANTIZE_H
 
 #include "aacquant.h"
+#include "coder.h"
 
 int BlocQuant(CoderInfo *coderInfo, double *xr, int *xi, AACQuantCfg *aacquantCfg);
 void BandLimit(unsigned *bw, int rate, SR_INFO *sr, AACQuantCfg *aacquantCfg);

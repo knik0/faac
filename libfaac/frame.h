@@ -78,7 +78,6 @@ typedef struct {
     double *nextSampleBuff[MAX_CHANNELS];
     double *next2SampleBuff[MAX_CHANNELS];
     double *next3SampleBuff[MAX_CHANNELS];
-    double *ltpTimeBuff[MAX_CHANNELS];
 
     /* Filterbank buffers */
     double *sin_window_long;

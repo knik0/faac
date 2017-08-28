@@ -27,60 +27,28 @@
 #include "coder.h"
 #include "huffman.h"
 #include "util.h"
-
-#include "quantize.c"
+#include "quantize.h"
 
 
 void AACQuantizeInit(CoderInfo *coderInfo, unsigned int numChannels,
                      AACQuantCfg *aacquantCfg)
 {
-    unsigned int channel, i;
-
+    unsigned int i;
 
     aacquantCfg->pow43 = (double*)AllocMemory(PRECALC_SIZE*sizeof(double));
     aacquantCfg->pow43[0] = 0.0;
     for(i=1;i<PRECALC_SIZE;i++)
         aacquantCfg->pow43[i] = pow((double)i, 4.0/3.0);
-
-    for (channel = 0; channel < numChannels; channel++) {
-        coderInfo[channel].requantFreq = (double*)AllocMemory(BLOCK_LEN_LONG*sizeof(double));
-    }
 }
 
 void AACQuantizeEnd(CoderInfo *coderInfo, unsigned int numChannels,
                     AACQuantCfg *aacquantCfg)
 {
-    unsigned int channel;
-
-
     if (aacquantCfg->pow43)
     {
         FreeMemory(aacquantCfg->pow43);
         aacquantCfg->pow43 = NULL;
     }
-
-    for (channel = 0; channel < numChannels; channel++) {
-        if (coderInfo[channel].requantFreq) FreeMemory(coderInfo[channel].requantFreq);
-    }
-}
-
-static void UpdateRequant(CoderInfo *coderInfo, int *xi,
-                          double *pow43)
-{
-  double *requant_xr = coderInfo->requantFreq;
-  int sb;
-  int i;
-
-  for (sb = 0; sb < coderInfo->nr_of_sfb; sb++)
-  {
-    double invQuantFac =
-      pow(2.0, -0.25*(coderInfo->scale_factor[sb] - coderInfo->global_gain));
-    int start = coderInfo->sfb_offset[sb];
-    int end = coderInfo->sfb_offset[sb + 1];
-
-    for (i = start; i < end; i++)
-      requant_xr[i] = pow43[xi[i]] * invQuantFac;
-  }
 }
 
 int AACQuantize(CoderInfo *coderInfo,
@@ -103,12 +71,9 @@ int AACQuantize(CoderInfo *coderInfo,
 
     if (BlocQuant(coderInfo, xr, xi, aacquantCfg))
     {
-        UpdateRequant(coderInfo, xi, aacquantCfg->pow43);
-
         for ( i = 0; i < FRAME_LEN; i++ )  {
             sign = (xr[i] < 0) ? -1 : 1;
             xi[i] *= sign;
-            coderInfo->requantFreq[i] *= sign;
         }
     }
 

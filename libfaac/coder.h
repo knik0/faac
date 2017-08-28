@@ -70,22 +70,6 @@ enum WINDOW_TYPE {
 #define LEN_TNS_NFILTL 2
 #define LEN_TNS_NFILTS 1
 
-#define DELAY 2048
-#define LEN_LTP_DATA_PRESENT 1
-#define LEN_LTP_LAG 11
-#define LEN_LTP_COEF 3
-#define LEN_LTP_SHORT_USED 1
-#define LEN_LTP_SHORT_LAG_PRESENT 1
-#define LEN_LTP_SHORT_LAG 5
-#define LTP_LAG_OFFSET 16
-#define LEN_LTP_LONG_USED 1
-#define MAX_LT_PRED_LONG_SFB 40
-#define MAX_LT_PRED_SHORT_SFB 13
-#define SHORT_SQ_OFFSET (BLOCK_LEN_LONG-(BLOCK_LEN_SHORT*4+BLOCK_LEN_SHORT/2))
-#define CODESIZE 8
-#define NOK_LT_BLEN (3 * BLOCK_LEN_LONG)
-
-#define SBMAX_L 49
 #define LPC 2
 
 typedef struct {
@@ -114,22 +98,6 @@ typedef struct {
     int tnsMaxOrderShort;
     TnsWindowData windowData[MAX_SHORT_WINDOWS]; /* TNS data per window */
 } TnsInfo;
-
-typedef struct
-{
-    int weight_idx;
-    double weight;
-    int sbk_prediction_used[MAX_SHORT_WINDOWS];
-    int sfb_prediction_used[MAX_SCFAC_BANDS];
-    int delay[MAX_SHORT_WINDOWS];
-    int global_pred_flag;
-    int side_info;
-    double *buffer;
-    double *mdct_predicted;
-
-    double *time_buffer;
-    double *ltp_overlap_buffer;
-} LtpInfo;
 
 typedef struct
 {
@@ -181,18 +149,8 @@ typedef struct {
     int iLenReordSpData;
 #endif
 
-    /* Holds the requantized spectrum */
-    double *requantFreq;
-
     TnsInfo tnsInfo;
-    LtpInfo ltpInfo;
     BwpInfo bwpInfo;
-
-    int max_pred_sfb;
-    int pred_global_flag;
-    int pred_sfb_flag[MAX_SCFAC_BANDS];
-    int reset_group_number;
-
 } CoderInfo;
 
 typedef struct {

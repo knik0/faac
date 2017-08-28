@@ -57,17 +57,6 @@ unsigned int MinBitrate()
     return 8000;
 }
 
-
-/* Max prediction band for backward predictionas function of fs index */
-const int MaxPredSfb[] = { 33, 33, 38, 40, 40, 40, 41, 41, 37, 37, 37, 34, 0 };
-
-int GetMaxPredSfb(int samplingRateIdx)
-{
-    return MaxPredSfb[samplingRateIdx];
-}
-
-
-
 /* Calculate bit_allocation based on PE */
 unsigned int BitAllocation(double pe, int short_block)
 {

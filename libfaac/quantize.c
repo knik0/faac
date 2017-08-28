@@ -20,6 +20,7 @@
 
 #include <math.h>
 #include "util.h"
+#include "quantize.h"
 
 #define MAGIC_NUMBER  0.4054
 

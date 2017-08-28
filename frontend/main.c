@@ -79,7 +79,6 @@ enum flags
 {
     SHORTCTL_FLAG = 300,
     MPEGVERS_FLAG,
-    OBJTYPE_FLAG,
     ARTIST_FLAG,
     TITLE_FLAG,
     GENRE_FLAG,
@@ -186,9 +185,7 @@ static help_t help_advanced[] = {
     {"--no-tns\tDisable coding of TNS, temporal noise shaping.\n"},
     {"--no-midside\tDon\'t use mid/side coding.\n"},
     {"--mpeg-vers X\tForce AAC MPEG version, X can be 2 or 4\n"},
-    {"--obj-type X\tAAC object type. (LC (Low Complexity, default), Main or LTP\n"
-    "\t\t(Long Term Prediction)\n"},
-    {" --shortctl X\tEnforce block type (0 = both (default); 1 = no short; 2 = no\n"
+    {"--shortctl X\tEnforce block type (0 = both (default); 1 = no short; 2 = no\n"
     "\t\tlong).\n"},
     {0}
 };
@@ -525,7 +522,6 @@ int main(int argc, char *argv[])
             {"tns", 0, &useTns, 1},
             {"no-tns", 0, &useTns, 0},
             {"mpeg-version", 1, 0, MPEGVERS_FLAG},
-            {"obj-type", 1, 0, OBJTYPE_FLAG},
             {"license", 0, 0, 'L'},
             {"createmp4", 0, 0, 'w'},
             {"artist", 1, 0, ARTIST_FLAG},
@@ -740,21 +736,6 @@ int main(int argc, char *argv[])
                 dieMessage = "Unrecognised MPEG version!\n";
             }
             break;
-#if 0
-        case OBJTYPE_FLAG:
-            if (!strcasecmp(optarg, "LC"))
-                objectType = LOW;
-            else if (!strcasecmp(optarg, "Main"))
-                objectType = MAIN;
-            else if (!strcasecmp(optarg, "LTP"))
-            {
-                mpegVersion = MPEG4;
-                objectType = LTP;
-            }
-            else
-                dieMessage = "Unrecognised object type!\n";
-            break;
-#endif
         case 'L':
             fprintf(stderr, "%s", faac_copyright_string);
             dieMessage = license;

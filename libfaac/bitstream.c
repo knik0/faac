@@ -34,7 +34,6 @@ Copyright (c) 1997.
 #include "channels.h"
 #include "huffman.h"
 #include "bitstream.h"
-#include "ltp.h"
 #include "util.h"
 
 static int CountBitstream(faacEncStruct* hEncoder,
@@ -71,12 +70,6 @@ static int WriteICS(CoderInfo *coderInfo,
                     int commonWindow,
                     int objectType,
                     int writeFlag);
-static int WriteLTPPredictorData(CoderInfo *coderInfo,
-                                 BitStream *bitStream,
-                                 int writeFlag);
-static int WritePredictorData(CoderInfo *coderInfo,
-                              BitStream *bitStream,
-                              int writeFlag);
 static int WritePulseData(CoderInfo *coderInfo,
                           BitStream *bitStream,
                           int writeFlag);
@@ -537,22 +530,9 @@ static int WriteICSInfo(CoderInfo *coderInfo,
     }
     bits += LEN_TNS_PRES;
 #endif
-        if (objectType == LTP)
-        {
-            bits++;
-            if(writeFlag)
-                PutBit(bitStream, coderInfo->ltpInfo.global_pred_flag, 1); /* Prediction Global used */
-
-            bits += WriteLTPPredictorData(coderInfo, bitStream, writeFlag);
-            if (common_window)
-                bits += WriteLTPPredictorData(coderInfo, bitStream, writeFlag);
-        } else {
             bits++;
             if (writeFlag)
-                PutBit(bitStream, coderInfo->pred_global_flag, LEN_PRED_PRES);  /* predictor_data_present */
-
-            bits += WritePredictorData(coderInfo, bitStream, writeFlag);
-        }
+                PutBit(bitStream, 0, LEN_PRED_PRES);  /* predictor_data_present */
 #ifndef DRM
     }
 #endif
@@ -619,86 +599,6 @@ static int WriteICS(CoderInfo *coderInfo,
 #endif
 
     /* Return number of bits */
-    return bits;
-}
-
-static int WriteLTPPredictorData(CoderInfo *coderInfo, BitStream *bitStream, int writeFlag)
-{
-    int i, last_band;
-    int bits;
-    LtpInfo *ltpInfo = &coderInfo->ltpInfo;
-
-    bits = 0;
-
-    if (ltpInfo->global_pred_flag)
-    {
-
-        if(writeFlag)
-            PutBit(bitStream, 1, 1); /* LTP used */
-        bits++;
-
-        switch(coderInfo->block_type)
-        {
-        case ONLY_LONG_WINDOW:
-        case LONG_SHORT_WINDOW:
-        case SHORT_LONG_WINDOW:
-            bits += LEN_LTP_LAG;
-            bits += LEN_LTP_COEF;
-            if(writeFlag)
-            {
-                PutBit(bitStream, ltpInfo->delay[0], LEN_LTP_LAG);
-                PutBit(bitStream, ltpInfo->weight_idx,  LEN_LTP_COEF);
-            }
-
-            last_band = ((coderInfo->nr_of_sfb < MAX_LT_PRED_LONG_SFB) ?
-                coderInfo->nr_of_sfb : MAX_LT_PRED_LONG_SFB);
-//            last_band = coderInfo->nr_of_sfb;
-
-            bits += last_band;
-            if(writeFlag)
-                for (i = 0; i < last_band; i++)
-                    PutBit(bitStream, ltpInfo->sfb_prediction_used[i], LEN_LTP_LONG_USED);
-            break;
-
-        default:
-            break;
-        }
-    }
-
-    return (bits);
-}
-
-static int WritePredictorData(CoderInfo *coderInfo,
-                              BitStream *bitStream,
-                              int writeFlag)
-{
-    int bits = 0;
-
-    /* Write global predictor data present */
-    short predictorDataPresent = coderInfo->pred_global_flag;
-    int numBands = min(coderInfo->max_pred_sfb, coderInfo->nr_of_sfb);
-
-    if (writeFlag) {
-        if (predictorDataPresent) {
-            int b;
-            if (coderInfo->reset_group_number == -1) {
-                PutBit(bitStream, 0, LEN_PRED_RST); /* No prediction reset */
-            } else {
-                PutBit(bitStream, 1, LEN_PRED_RST);
-                PutBit(bitStream, (unsigned long)coderInfo->reset_group_number,
-                    LEN_PRED_RSTGRP);
-            }
-
-            for (b=0;b<numBands;b++) {
-                PutBit(bitStream, coderInfo->pred_sfb_flag[b], LEN_PRED_ENAB);
-            }
-        }
-    }
-    bits += (predictorDataPresent) ?
-        (LEN_PRED_RST +
-        ((coderInfo->reset_group_number)!=-1)*LEN_PRED_RSTGRP +
-        numBands*LEN_PRED_ENAB) : 0;
-
     return bits;
 }
 

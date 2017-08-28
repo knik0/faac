@@ -42,8 +42,6 @@
 #include "util.h"
 #include "huffman.h"
 #include "tns.h"
-#include "ltp.h"
-#include "backpred.h"
 #include "version.h"
 
 #if FAAC_RELEASE
@@ -151,12 +149,7 @@ int FAACAPI faacEncSetConfiguration(faacEncHandle hpEncoder,
             break;
     }
 
-    /* No SSR supported for now */
-    if (hEncoder->config.aacObjectType == SSR)
-        return 0;
-
-    /* LTP only with MPEG4 */
-    if ((hEncoder->config.aacObjectType == LTP) && (hEncoder->config.mpegVersion != MPEG4))
+    if (hEncoder->config.aacObjectType != LOW)
         return 0;
 
     /* Re-init TNS for new profile */
@@ -322,7 +315,7 @@ faacEncHandle FAACAPI faacEncOpen(unsigned long sampleRate,
     hEncoder->config.name = libfaacName;
     hEncoder->config.copyright = libCopyright;
     hEncoder->config.mpegVersion = MPEG4;
-    hEncoder->config.aacObjectType = LTP;
+    hEncoder->config.aacObjectType = LOW;
     hEncoder->config.allowMidside = 1;
     hEncoder->config.useLfe = 1;
     hEncoder->config.useTns = 0;
@@ -362,14 +355,9 @@ faacEncHandle FAACAPI faacEncOpen(unsigned long sampleRate,
         hEncoder->coderInfo[channel].num_window_groups = 1;
         hEncoder->coderInfo[channel].window_group_length[0] = 1;
 
-        /* FIXME: Use sr_idx here */
-        hEncoder->coderInfo[channel].max_pred_sfb = GetMaxPredSfb(hEncoder->sampleRateIdx);
-
         hEncoder->sampleBuff[channel] = NULL;
         hEncoder->nextSampleBuff[channel] = NULL;
         hEncoder->next2SampleBuff[channel] = NULL;
-        hEncoder->ltpTimeBuff[channel] = (double*)AllocMemory(2*BLOCK_LEN_LONG*sizeof(double));
-        SetMemory(hEncoder->ltpTimeBuff[channel], 0, 2*BLOCK_LEN_LONG*sizeof(double));
     }
 
     /* Initialize coder functions */
@@ -383,10 +371,6 @@ faacEncHandle FAACAPI faacEncOpen(unsigned long sampleRate,
     FilterBankInit(hEncoder);
 
     TnsInit(hEncoder);
-
-    LtpInit(hEncoder);
-
-    PredInit(hEncoder);
 
     AACQuantizeInit(hEncoder->coderInfo, hEncoder->numChannels,
 		    &(hEncoder->aacquantCfg));
@@ -409,8 +393,6 @@ int FAACAPI faacEncClose(faacEncHandle hpEncoder)
 
     FilterBankEnd(hEncoder);
 
-    LtpEnd(hEncoder);
-
     AACQuantizeEnd(hEncoder->coderInfo, hEncoder->numChannels,
 			&(hEncoder->aacquantCfg));
 
@@ -421,8 +403,6 @@ int FAACAPI faacEncClose(faacEncHandle hpEncoder)
     /* Free remaining buffer memory */
     for (channel = 0; channel < hEncoder->numChannels; channel++) 
 	{
-		if (hEncoder->ltpTimeBuff[channel])
-			FreeMemory(hEncoder->ltpTimeBuff[channel]);
 		if (hEncoder->sampleBuff[channel])
 			FreeMemory(hEncoder->sampleBuff[channel]);
 		if (hEncoder->nextSampleBuff[channel])
@@ -452,8 +432,6 @@ int FAACAPI faacEncEncode(faacEncHandle hpEncoder,
     int sb, frameBytes;
     unsigned int offset;
     BitStream *bitStream; /* bitstream used for writing the frame to */
-    TnsInfo *tnsInfo_for_LTP;
-    TnsInfo *tnsDecInfo;
 #ifdef DRM
     int desbits, diff;
     double fix;
@@ -463,9 +441,6 @@ int FAACAPI faacEncEncode(faacEncHandle hpEncoder,
     ChannelInfo *channelInfo = hEncoder->channelInfo;
     CoderInfo *coderInfo = hEncoder->coderInfo;
     unsigned int numChannels = hEncoder->numChannels;
-    unsigned int sampleRate = hEncoder->sampleRate;
-    unsigned int aacObjectType = hEncoder->config.aacObjectType;
-    unsigned int mpegVersion = hEncoder->config.mpegVersion;
     unsigned int useLfe = hEncoder->config.useLfe;
     unsigned int useTns = hEncoder->config.useTns;
     unsigned int allowMidside = hEncoder->config.allowMidside;
@@ -492,17 +467,6 @@ int FAACAPI faacEncEncode(faacEncHandle hpEncoder,
 	{
 		double *tmp;
 
-        if (hEncoder->sampleBuff[channel]) {
-            for(i = 0; i < FRAME_LEN; i++) {
-                hEncoder->ltpTimeBuff[channel][i] = hEncoder->sampleBuff[channel][i];
-            }
-        }
-        if (hEncoder->nextSampleBuff[channel]) {
-            for(i = 0; i < FRAME_LEN; i++) {
-                hEncoder->ltpTimeBuff[channel][FRAME_LEN + i] =
-						hEncoder->nextSampleBuff[channel][i];
-            }
-        }
 
 		if (!hEncoder->sampleBuff[channel])
 			hEncoder->sampleBuff[channel] = (double*)AllocMemory(FRAME_LEN*sizeof(double));
@@ -693,46 +657,6 @@ int FAACAPI faacEncEncode(faacEncHandle hpEncoder,
         }
     }
 
-    for(channel = 0; channel < numChannels; channel++)
-    {
-        if((coderInfo[channel].tnsInfo.tnsDataPresent != 0) && (useTns))
-            tnsInfo_for_LTP = &(coderInfo[channel].tnsInfo);
-        else
-            tnsInfo_for_LTP = NULL;
-
-        if(channelInfo[channel].present && (!channelInfo[channel].lfe) &&
-            (coderInfo[channel].block_type != ONLY_SHORT_WINDOW) &&
-            (mpegVersion == MPEG4) && (aacObjectType == LTP))
-        {
-            LtpEncode(hEncoder,
-					&coderInfo[channel],
-					&(coderInfo[channel].ltpInfo),
-					tnsInfo_for_LTP,
-					hEncoder->freqBuff[channel],
-					hEncoder->ltpTimeBuff[channel]);
-        } else {
-            coderInfo[channel].ltpInfo.global_pred_flag = 0;
-        }
-    }
-
-    for(channel = 0; channel < numChannels; channel++)
-    {
-        if ((aacObjectType == MAIN) && (!channelInfo[channel].lfe)) {
-            int numPredBands = min(coderInfo[channel].max_pred_sfb, coderInfo[channel].nr_of_sfb);
-            PredCalcPrediction(hEncoder->freqBuff[channel],
-					coderInfo[channel].requantFreq,
-					coderInfo[channel].block_type,
-					numPredBands,
-					(coderInfo[channel].block_type==ONLY_SHORT_WINDOW)?
-					hEncoder->srInfo->cb_width_short:hEncoder->srInfo->cb_width_long,
-					coderInfo,
-					channelInfo,
-					channel);
-        } else {
-            coderInfo[channel].pred_global_flag = 0;
-        }
-    }
-
     for (channel = 0; channel < numChannels; channel++) {
 		if (coderInfo[channel].block_type == ONLY_SHORT_WINDOW) {
 			SortForGrouping(&coderInfo[channel],
@@ -821,48 +745,6 @@ int FAACAPI faacEncEncode(faacEncHandle hpEncoder,
 			cil->nr_of_sfb = cir->nr_of_sfb = cil->max_sfb;
 		}
     }
-
-    MSReconstruct(coderInfo, channelInfo, numChannels);
-
-    for (channel = 0; channel < numChannels; channel++)
-    {
-        /* If short window, reconstruction not needed for prediction */
-        if ((coderInfo[channel].block_type == ONLY_SHORT_WINDOW)) {
-            int sind;
-            for (sind = 0; sind < BLOCK_LEN_LONG; sind++) {
-				coderInfo[channel].requantFreq[sind] = 0.0;
-            }
-        } else {
-
-            if((coderInfo[channel].tnsInfo.tnsDataPresent != 0) && (useTns))
-                tnsDecInfo = &(coderInfo[channel].tnsInfo);
-            else
-                tnsDecInfo = NULL;
-
-            if ((!channelInfo[channel].lfe) && (aacObjectType == LTP)) {  /* no reconstruction needed for LFE channel*/
-
-                LtpReconstruct(&coderInfo[channel], &(coderInfo[channel].ltpInfo),
-						coderInfo[channel].requantFreq);
-
-                if(tnsDecInfo != NULL)
-                    TnsDecodeFilterOnly(&(coderInfo[channel].tnsInfo), coderInfo[channel].nr_of_sfb,
-							coderInfo[channel].max_sfb, coderInfo[channel].block_type,
-							coderInfo[channel].sfb_offset, coderInfo[channel].requantFreq);
-
-                IFilterBank(hEncoder, &coderInfo[channel],
-						coderInfo[channel].requantFreq,
-						coderInfo[channel].ltpInfo.time_buffer,
-						coderInfo[channel].ltpInfo.ltp_overlap_buffer,
-						MOVERLAPPED);
-
-                LtpUpdate(&(coderInfo[channel].ltpInfo),
-						coderInfo[channel].ltpInfo.time_buffer,
-						coderInfo[channel].ltpInfo.ltp_overlap_buffer,
-						BLOCK_LEN_LONG);
-            }
-        }
-    }
-
 #ifndef DRM
     /* Write the AAC bitstream */
     bitStream = OpenBitStream(bufferSize, outputBuffer);

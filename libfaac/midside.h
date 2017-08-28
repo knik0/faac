@@ -31,7 +31,6 @@ extern "C" {
 
 void MSEncode(CoderInfo *coderInfo, ChannelInfo *channelInfo, double *spectrum[MAX_CHANNELS],
               unsigned int numberOfChannels, unsigned int msenable);
-void MSReconstruct(CoderInfo *coderInfo, ChannelInfo *channelInfo, int numberOfChannels);
 
 #ifdef __cplusplus
 }
