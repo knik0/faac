@@ -343,8 +343,8 @@ faacEncHandle FAACAPI faacEncOpen(unsigned long sampleRate,
         hEncoder->coderInfo[channel].prev_window_shape = SINE_WINDOW;
         hEncoder->coderInfo[channel].window_shape = SINE_WINDOW;
         hEncoder->coderInfo[channel].block_type = ONLY_LONG_WINDOW;
-        hEncoder->coderInfo[channel].num_window_groups = 1;
-        hEncoder->coderInfo[channel].window_group_length[0] = 1;
+        hEncoder->coderInfo[channel].groups.n = 1;
+        hEncoder->coderInfo[channel].groups.len[0] = 1;
 
         hEncoder->sampleBuff[channel] = NULL;
         hEncoder->nextSampleBuff[channel] = NULL;
@@ -585,38 +585,36 @@ int FAACAPI faacEncEncode(faacEncHandle hpEncoder,
         channelInfo[channel].msInfo.is_present = 0;
 
         if (coderInfo[channel].block_type == ONLY_SHORT_WINDOW) {
-			coderInfo[channel].max_sfb = hEncoder->srInfo->num_cb_short;
-            coderInfo[channel].nr_of_sfb = hEncoder->srInfo->num_cb_short;
+            coderInfo[channel].sfbn = hEncoder->aacquantCfg.max_cbs;
 
-            coderInfo[channel].num_window_groups = 1;
-            coderInfo[channel].window_group_length[0] = 8;
-            coderInfo[channel].window_group_length[1] = 0;
-            coderInfo[channel].window_group_length[2] = 0;
-            coderInfo[channel].window_group_length[3] = 0;
-            coderInfo[channel].window_group_length[4] = 0;
-            coderInfo[channel].window_group_length[5] = 0;
-            coderInfo[channel].window_group_length[6] = 0;
-            coderInfo[channel].window_group_length[7] = 0;
+            coderInfo[channel].groups.n = 1;
+            coderInfo[channel].groups.len[0] = 8;
+            coderInfo[channel].groups.len[1] = 0;
+            coderInfo[channel].groups.len[2] = 0;
+            coderInfo[channel].groups.len[3] = 0;
+            coderInfo[channel].groups.len[4] = 0;
+            coderInfo[channel].groups.len[5] = 0;
+            coderInfo[channel].groups.len[6] = 0;
+            coderInfo[channel].groups.len[7] = 0;
 
             offset = 0;
-            for (sb = 0; sb < coderInfo[channel].nr_of_sfb; sb++) {
+            for (sb = 0; sb < coderInfo[channel].sfbn; sb++) {
                 coderInfo[channel].sfb_offset[sb] = offset;
                 offset += hEncoder->srInfo->cb_width_short[sb];
             }
-            coderInfo[channel].sfb_offset[coderInfo[channel].nr_of_sfb] = offset;
+            coderInfo[channel].sfb_offset[sb] = offset;
         } else {
-            coderInfo[channel].max_sfb = hEncoder->srInfo->num_cb_long;
-            coderInfo[channel].nr_of_sfb = hEncoder->srInfo->num_cb_long;
+            coderInfo[channel].sfbn = hEncoder->aacquantCfg.max_cbl;
 
-            coderInfo[channel].num_window_groups = 1;
-            coderInfo[channel].window_group_length[0] = 1;
+            coderInfo[channel].groups.n = 1;
+            coderInfo[channel].groups.len[0] = 1;
 
             offset = 0;
-            for (sb = 0; sb < coderInfo[channel].nr_of_sfb; sb++) {
+            for (sb = 0; sb < coderInfo[channel].sfbn; sb++) {
                 coderInfo[channel].sfb_offset[sb] = offset;
                 offset += hEncoder->srInfo->cb_width_long[sb];
             }
-            coderInfo[channel].sfb_offset[coderInfo[channel].nr_of_sfb] = offset;
+            coderInfo[channel].sfb_offset[sb] = offset;
         }
     }
 
@@ -624,11 +622,11 @@ int FAACAPI faacEncEncode(faacEncHandle hpEncoder,
     for (channel = 0; channel < numChannels; channel++) {
         if ((!channelInfo[channel].lfe) && (useTns)) {
             TnsEncode(&(coderInfo[channel].tnsInfo),
-					coderInfo[channel].max_sfb,
-					coderInfo[channel].max_sfb,
-					coderInfo[channel].block_type,
-					coderInfo[channel].sfb_offset,
-					hEncoder->freqBuff[channel]);
+                      coderInfo[channel].sfbn,
+                      coderInfo[channel].sfbn,
+                      coderInfo[channel].block_type,
+                      coderInfo[channel].sfb_offset,
+                      hEncoder->freqBuff[channel]);
         } else {
             coderInfo[channel].tnsInfo.tnsDataPresent = 0;      /* TNS not used for LFE */
         }
@@ -645,7 +643,7 @@ int FAACAPI faacEncEncode(faacEncHandle hpEncoder,
       // reduce LFE bandwidth
 		if (!channelInfo[channel].cpe && channelInfo[channel].lfe)
 		{
-			coderInfo[channel].nr_of_sfb = coderInfo[channel].max_sfb = 3;
+                    coderInfo[channel].sfbn = 3;
 		}
 	}
 
@@ -718,8 +716,7 @@ int FAACAPI faacEncEncode(faacEncHandle hpEncoder,
 			cil = &coderInfo[channel];
 			cir = &coderInfo[channelInfo[channel].paired_ch];
 
-			cil->max_sfb = cir->max_sfb = max(cil->max_sfb, cir->max_sfb);
-			cil->nr_of_sfb = cir->nr_of_sfb = cil->max_sfb;
+                        cil->sfbn = cir->sfbn = max(cil->sfbn, cir->sfbn);
 		}
     }
 #ifndef DRM

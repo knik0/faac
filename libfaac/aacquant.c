@@ -66,7 +66,7 @@ int AACQuantize(CoderInfo *coderInfo,
 
     /* Set all scalefactors to 0 */
     coderInfo->global_gain = 0;
-    for (sb = 0; sb < coderInfo->nr_of_sfb; sb++)
+    for (sb = 0; sb < coderInfo->sfbn; sb++)
         scale_factor[sb] = 0;
 
     if (BlocQuant(coderInfo, xr, xi, aacquantCfg))
@@ -77,11 +77,10 @@ int AACQuantize(CoderInfo *coderInfo,
         }
     }
 
-
     BitSearch(coderInfo, xi);
 
     /* offset the difference of common_scalefac and scalefactors by SF_OFFSET  */
-    for (i = 0; i < coderInfo->nr_of_sfb; i++) {
+    for (i = 0; i < coderInfo->sfbn; i++) {
         if ((coderInfo->book_vector[i]!=INTENSITY_HCB)&&(coderInfo->book_vector[i]!=INTENSITY_HCB2)) {
             scale_factor[i] = coderInfo->global_gain - scale_factor[i] + SF_OFFSET;
         }
@@ -91,7 +90,7 @@ int AACQuantize(CoderInfo *coderInfo,
     {
       int previous_scale_factor = coderInfo->global_gain;
       int previous_is_factor = 0;
-      for (i = 0; i < coderInfo->nr_of_sfb; i++) {
+      for (i = 0; i < coderInfo->sfbn; i++) {
         if ((coderInfo->book_vector[i]==INTENSITY_HCB) ||
             (coderInfo->book_vector[i]==INTENSITY_HCB2)) {
             const int diff = scale_factor[i] - previous_is_factor;
@@ -118,7 +117,7 @@ int AACQuantize(CoderInfo *coderInfo,
 #endif
     coderInfo->spectral_count = 0;
     sb = 0;
-    for(i = 0; i < coderInfo->nr_of_sfb; i++) {
+    for(i = 0; i < coderInfo->sfbn; i++) {
         OutputBits(
             coderInfo,
 #ifdef DRM
@@ -134,8 +133,7 @@ int AACQuantize(CoderInfo *coderInfo,
               sb = i;
     }
 
-    // FIXME: Check those max_sfb/nr_of_sfb. Isn't it the same?
-    coderInfo->max_sfb = coderInfo->nr_of_sfb = sb + 1;
+    coderInfo->sfbn = sb + 1;
 
     return bits;
 }
@@ -154,16 +152,13 @@ int SortForGrouping(CoderInfo* coderInfo,
 
     /* set up local variables for used quantInfo elements */
     int* sfb_offset = coderInfo->sfb_offset;
-    int* nr_of_sfb = &(coderInfo->nr_of_sfb);
-    int* window_group_length;
-    int num_window_groups;
-    *nr_of_sfb = coderInfo->max_sfb;              /* Init to max_sfb */
-    window_group_length = coderInfo->window_group_length;
-    num_window_groups = coderInfo->num_window_groups;
+    int sfbn = coderInfo->sfbn;
+    int* groups = coderInfo->groups.len;
+    int num_window_groups = coderInfo->groups.n;
 
     /* calc org sfb_offset just for shortblock */
     sfb_offset[k]=0;
-    for (k=1 ; k <*nr_of_sfb+1; k++) {
+    for (k=1 ; k < sfbn; k++) {
         sfb_offset[k] = sfb_offset[k-1] + sfb_width_table[k-1];
     }
 
@@ -171,13 +166,13 @@ int SortForGrouping(CoderInfo* coderInfo,
     index = 0;
     group_offset=0;
     for (i=0; i< num_window_groups; i++) {
-        for (k=0; k<*nr_of_sfb; k++) {
-            for (j=0; j < window_group_length[i]; j++) {
+        for (k=0; k < sfbn; k++) {
+            for (j=0; j < groups[i]; j++) {
                 for (ii=0;ii< sfb_width_table[k];ii++)
                     xr_tmp[index++] = xr[ii+ sfb_offset[k] + BLOCK_LEN_SHORT*j +group_offset];
             }
         }
-        group_offset +=  BLOCK_LEN_SHORT*window_group_length[i];
+        group_offset +=  BLOCK_LEN_SHORT*groups[i];
     }
 
     for (k=0; k<FRAME_LEN; k++){
@@ -190,14 +185,14 @@ int SortForGrouping(CoderInfo* coderInfo,
     sfb_offset[index++] = 0;
     windowOffset = 0;
     for (i=0; i < num_window_groups; i++) {
-        for (k=0 ; k <*nr_of_sfb; k++) {
-            sfb_offset[index] = sfb_offset[index-1] + sfb_width_table[k]*window_group_length[i] ;
+        for (k=0; k < sfbn; k++) {
+            sfb_offset[index] = sfb_offset[index-1] + sfb_width_table[k]*groups[i] ;
             index++;
         }
-        windowOffset += window_group_length[i];
+        windowOffset += groups[i];
     }
 
-    *nr_of_sfb = *nr_of_sfb * num_window_groups;  /* Number interleaved bands. */
+    coderInfo->sfbn = sfbn * num_window_groups;
 
     return 0;
 }
@@ -209,7 +204,7 @@ void CalcAvgEnrg(CoderInfo *coderInfo,
   int last = 0;
   double totenrg = 0.0;
 
-  end = coderInfo->sfb_offset[coderInfo->nr_of_sfb];
+  end = coderInfo->sfb_offset[coderInfo->sfbn];
   for (l = 0; l < end; l++)
   {
     if (xr[l])
@@ -220,6 +215,5 @@ void CalcAvgEnrg(CoderInfo *coderInfo,
     }
   last++;
 
-  coderInfo->lastx = last;
   coderInfo->avgenrg = totenrg / last;
 }

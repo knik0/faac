@@ -29,39 +29,21 @@ static void bmask(CoderInfo *coderInfo, double *xr, double *bandqual,
                   AACQuantCfg *aacquantCfg)
 {
   int sfb, start, end, cnt;
-  int last = coderInfo->lastx;
-  int lastsb = 0;
   int *cb_offset = coderInfo->sfb_offset;
-  int num_cb = coderInfo->nr_of_sfb;
+  int last;
   double avgenrg = coderInfo->avgenrg;
   double powm = 0.4;
-  int nullcb;
   double quality = (double)aacquantCfg->quality/DEFQUAL;
 
-  if (coderInfo->block_type == ONLY_SHORT_WINDOW)
-      nullcb = aacquantCfg->max_cbs;
-  else
-      nullcb = aacquantCfg->max_cbl;
+  last = BLOCK_LEN_LONG;
 
-  for (sfb = 0; sfb < num_cb; sfb++)
-  {
-    if (last > cb_offset[sfb])
-      lastsb = sfb;
-  }
-
-  for (sfb = 0; sfb < nullcb; sfb++)
+  for (sfb = 0; sfb < coderInfo->sfbn; sfb++)
   {
     double avge, maxe;
     double target;
 
     start = cb_offset[sfb];
     end = cb_offset[sfb + 1];
-
-    if (sfb > lastsb)
-    {
-      bandqual[sfb] = 0;
-      continue;
-    }
 
     avge = 0.0;
     maxe = 0.0;
@@ -92,10 +74,6 @@ static void bmask(CoderInfo *coderInfo, double *xr, double *bandqual,
 
     bandqual[sfb] = target * quality;
   }
-  for (; sfb < num_cb; sfb++)
-  {
-    bandqual[sfb] = 0;
-  }
 }
 
 // use band quality levels to quantize a block
@@ -109,7 +87,7 @@ static void qlevel(CoderInfo *coderInfo,
     // 1.5dB step
     static const double sfstep = 20.0 / 1.5 / log(10);
 
-    for (sb = 0; sb < coderInfo->nr_of_sfb; sb++)
+    for (sb = 0; sb < coderInfo->sfbn; sb++)
     {
       double sfacfix;
       int sfac;

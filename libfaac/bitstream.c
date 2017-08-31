@@ -23,9 +23,6 @@ copyright notice must be included in all copies or derivative works.
 
 Copyright (c) 1997.
 **********************************************************************/
-/*
- * $Id: bitstream.c,v 1.35 2012/03/01 18:34:17 knik Exp $
- */
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -406,8 +403,8 @@ static int WriteCPE(CoderInfo *coderInfoL,
         int numWindows, maxSfb;
 
         bits += WriteICSInfo(coderInfoL, bitStream, objectType, channelInfo->common_window, writeFlag);
-        numWindows = coderInfoL->num_window_groups;
-        maxSfb = coderInfoL->max_sfb;
+        numWindows = coderInfoL->groups.n;
+        maxSfb = coderInfoL->sfbn;
 
         if (writeFlag) {
             PutBit(bitStream, channelInfo->msInfo.is_present, LEN_MASK_PRES);
@@ -512,7 +509,7 @@ static int WriteICSInfo(CoderInfo *coderInfo,
     /* For short windows, write out max_sfb and scale_factor_grouping */
     if (coderInfo->block_type == ONLY_SHORT_WINDOW){
         if (writeFlag) {
-            PutBit(bitStream, coderInfo->max_sfb, LEN_MAX_SFBS);
+            PutBit(bitStream, coderInfo->sfbn, LEN_MAX_SFBS);
             grouping_bits = FindGroupingBits(coderInfo);
             PutBit(bitStream, grouping_bits, MAX_SHORT_WINDOWS - 1);  /* the grouping bits */
         }
@@ -520,7 +517,7 @@ static int WriteICSInfo(CoderInfo *coderInfo,
         bits += MAX_SHORT_WINDOWS - 1;
     } else { /* Otherwise, write out max_sfb and predictor data */
         if (writeFlag) {
-            PutBit(bitStream, coderInfo->max_sfb, LEN_MAX_SFBL);
+            PutBit(bitStream, coderInfo->sfbn, LEN_MAX_SFBL);
         }
         bits += LEN_MAX_SFBL;
 #ifdef DRM
@@ -813,8 +810,8 @@ static int FindGroupingBits(CoderInfo *coderInfo)
     int i, j;
     int index = 0;
 
-    for(i = 0; i < coderInfo->num_window_groups; i++){
-        for (j = 0; j < coderInfo->window_group_length[i]; j++){
+    for(i = 0; i < coderInfo->groups.n; i++){
+        for (j = 0; j < coderInfo->groups.len[i]; j++){
             tmp[index++] = i;
         }
     }
@@ -992,7 +989,7 @@ static int WriteReorderedSpectralData(CoderInfo *coderInfo,
     int segmcnt = 0;
     long startbitpos;
     segment_t segment[FRAME_LEN];
-    int* window_group_length = coderInfo->window_group_length;
+    int* groups = coderInfo->groups.len;
     int* sfb_offset = coderInfo->sfb_offset;
 
     cw_info_t cw_info[FRAME_LEN];
@@ -1037,7 +1034,7 @@ static int WriteReorderedSpectralData(CoderInfo *coderInfo,
         /* presort codewords ------------------------------------------------ */
         /* classify codewords first */
         sfb_cnt = win_cnt = win_grp_cnt = coeff_cnt = last_sfb = acc_win_cnt = 0;
-        cur_sfb_len = sfb_offset[1] / window_group_length[0];
+        cur_sfb_len = sfb_offset[1] / groups[0];
         cur_cb = coderInfo->book_vector[0];
         for (i = 0; i < num_cw; i++) {
             /* Set codeword info parameters */
@@ -1053,14 +1050,14 @@ static int WriteReorderedSpectralData(CoderInfo *coderInfo,
                 last_sfb += cur_sfb_len;
 
                 win_cnt++; /* next window */
-                if (win_cnt == window_group_length[win_grp_cnt]) {
+                if (win_cnt == groups[win_grp_cnt]) {
                     win_cnt = 0;
 
                     sfb_cnt++; /* next sfb */
                     if (sfb_cnt == coderInfo->all_sfb) {
                         sfb_cnt = 0;
 
-                        acc_win_cnt += window_group_length[win_grp_cnt];
+                        acc_win_cnt += groups[win_grp_cnt];
                         win_grp_cnt++; /* next window group */
                     }
 
@@ -1068,7 +1065,7 @@ static int WriteReorderedSpectralData(CoderInfo *coderInfo,
                     cur_cb = coderInfo->book_vector[sfb_cnt];
                     if (last_sfb < FRAME_LEN) {
                         cur_sfb_len = (sfb_offset[sfb_cnt + 1] - sfb_offset[sfb_cnt])
-                            / window_group_length[win_grp_cnt];
+                            / groups[win_grp_cnt];
                     }
                 }
             }

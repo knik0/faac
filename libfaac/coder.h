@@ -120,12 +120,12 @@ typedef struct {
     int global_gain;
     int scale_factor[MAX_SCFAC_BANDS];
 
-    int num_window_groups;
-    int window_group_length[8];
-    int max_sfb;
-    int nr_of_sfb;
+    struct {
+        int n;
+        int len[8];
+    } groups;
+    int sfbn;
     int sfb_offset[250];
-    int lastx;
     double avgenrg;
 
     int spectral_count;

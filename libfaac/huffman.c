@@ -108,7 +108,7 @@ int BitSearch(CoderInfo *coderInfo,
     /* Set local pointer to coderInfo book_vector */
     int* book_vector = coderInfo -> book_vector;
 
-    levels = (int) ((log((double)coderInfo->nr_of_sfb)/log((double)2.0))+1);
+    levels = (int) ((log((double)coderInfo->sfbn)/log((double)2.0))+1);
 
 /* #define SLOW */
 
@@ -125,8 +125,8 @@ int BitSearch(CoderInfo *coderInfo,
         k=0;
         total_bit_count = 0;
 
-	pow2levels = 1 << (levels - i);
-	fracpow2lev = pow2levels + (coderInfo->nr_of_sfb >> i);
+        pow2levels = 1 << (levels - i);
+        fracpow2lev = pow2levels + (coderInfo->sfbn >> i);
 
         for (j=pow2levels; j < fracpow2lev; j++)
         {
@@ -203,10 +203,10 @@ int NoiselessBitCount(CoderInfo *coderInfo,
 
     /* set local pointer to sfb_offset */
     int *sfb_offset = coderInfo->sfb_offset;
-    int nr_of_sfb = coderInfo->nr_of_sfb;
+    int sfbn = coderInfo->sfbn;
 
     /* each section is 'hop' scalefactor bands wide */
-    for (i=0; i < nr_of_sfb; i=i+hop){
+    for (i = 0; i < sfbn; i = i + hop){
 #ifdef SLOW
         if ((i+hop) > nr_of_sfb)
             q = nr_of_sfb;
@@ -1077,10 +1077,10 @@ int SortBookNumbers(CoderInfo *coderInfo,
     }
 
     /* Compute number of scalefactor bands */
-    max_sfb = coderInfo->nr_of_sfb / coderInfo->num_window_groups;
+    max_sfb = coderInfo->sfbn / coderInfo->groups.n;
 
 
-    for (g = 0; g < coderInfo->num_window_groups; g++) {
+    for (g = 0; g < coderInfo->groups.n; g++) {
         band=g*max_sfb;
 
         repeat_counter=1;
@@ -1179,17 +1179,17 @@ int WriteScalefactors(CoderInfo *coderInfo,
     int* scale_factors = coderInfo->scale_factor;
 
     if (coderInfo->block_type == ONLY_SHORT_WINDOW) { /* short windows */
-        nr_of_sfb_per_group = coderInfo->nr_of_sfb/coderInfo->num_window_groups;
+        nr_of_sfb_per_group = coderInfo->sfbn/coderInfo->groups.n;
     } else {
-        nr_of_sfb_per_group = coderInfo->nr_of_sfb;
-        coderInfo->num_window_groups = 1;
-        coderInfo->window_group_length[0] = 1;
+        nr_of_sfb_per_group = coderInfo->sfbn;
+        coderInfo->groups.n = 1;
+        coderInfo->groups.len[0] = 1;
     }
 
     previous_scale_factor = coderInfo->global_gain;
     previous_is_factor = 0;
 
-    for(j=0; j<coderInfo->num_window_groups; j++){
+    for(j=0; j<coderInfo->groups.n; j++){
         for(i=0;i<nr_of_sfb_per_group;i++) {
             /* test to see if any codebooks in a group are zero */
             if ( (coderInfo->book_vector[index]==INTENSITY_HCB) ||

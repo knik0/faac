@@ -47,7 +47,7 @@ void MSEncode(CoderInfo *coderInfo,
 	if ((coderInfo[chn].block_type == coderInfo[rch].block_type)
 	    && allowms)
 	{
-	  int nsfb = coderInfo[chn].nr_of_sfb;
+            int nsfb = coderInfo[chn].sfbn;
 	  MSInfo *msInfoL = &(channelInfo[chn].msInfo);
 	  MSInfo *msInfoR = &(channelInfo[rch].msInfo);
 	  int sfb;
