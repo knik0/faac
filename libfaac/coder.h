@@ -119,6 +119,7 @@ typedef struct {
 
     int global_gain;
     int scale_factor[MAX_SCFAC_BANDS];
+    int sfcnt;
 
     struct {
         int n;

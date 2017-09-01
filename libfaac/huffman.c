@@ -1058,8 +1058,8 @@ int SortBookNumbers(CoderInfo *coderInfo,
     int bit_count = 0;
     int previous;
     int max, bit_len/*,sfbs*/;
-    int max_sfb,g,band;
-	int sect_cb_bits = 4;
+    int g,band;
+    int sect_cb_bits = 4;
 
     /* Set local pointers to coderInfo elements */
     int* book_vector = coderInfo->book_vector;
@@ -1076,12 +1076,8 @@ int SortBookNumbers(CoderInfo *coderInfo,
         bit_len = 5;
     }
 
-    /* Compute number of scalefactor bands */
-    max_sfb = coderInfo->sfbn / coderInfo->groups.n;
-
-
     for (g = 0; g < coderInfo->groups.n; g++) {
-        band=g*max_sfb;
+        band = g * coderInfo->sfbn;
 
         repeat_counter=1;
 
@@ -1091,7 +1087,7 @@ int SortBookNumbers(CoderInfo *coderInfo,
         }
         bit_count += sect_cb_bits;
 
-        for (i=band+1;i<band+max_sfb;i++) {
+        for (i = band + 1; i < (band + coderInfo->sfbn); i++) {
 #ifdef DRM
             /* sect_len is not transmitted in case the codebook for a */
             /* section is 11 or in the range of 16 and 31 */
@@ -1179,7 +1175,7 @@ int WriteScalefactors(CoderInfo *coderInfo,
     int* scale_factors = coderInfo->scale_factor;
 
     if (coderInfo->block_type == ONLY_SHORT_WINDOW) { /* short windows */
-        nr_of_sfb_per_group = coderInfo->sfbn/coderInfo->groups.n;
+        nr_of_sfb_per_group = coderInfo->sfbn;
     } else {
         nr_of_sfb_per_group = coderInfo->sfbn;
         coderInfo->groups.n = 1;

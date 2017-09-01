@@ -23,6 +23,7 @@
 #include "quantize.h"
 
 #define MAGIC_NUMBER  0.4054
+enum {NULL_SF = 0};
 
 // band sound masking
 static void bmask(CoderInfo *coderInfo, double *xr, double *bandqual,
@@ -70,7 +71,7 @@ static void bmask(CoderInfo *coderInfo, double *xr, double *bandqual,
         target *= 0.45;
     }
 
-    target *= 8.0 / (1.0 + ((double)(start+end)/last));
+    target *= 10.0 / (1.0 + ((double)(start+end)/last));
 
     bandqual[sfb] = target * quality;
   }
@@ -114,7 +115,7 @@ static void qlevel(CoderInfo *coderInfo,
       {
           for (cnt = start; cnt < end; cnt++)
               xi[cnt] = 0;
-          coderInfo->scale_factor[sb] = 10;
+          coderInfo->scale_factor[coderInfo->sfcnt++] = NULL_SF;
           continue;
       }
 
@@ -130,7 +131,7 @@ static void qlevel(CoderInfo *coderInfo,
           xi[cnt] = (int)(tmp + MAGIC_NUMBER);
       }
 
-      coderInfo->scale_factor[sb] = sfac;
+      coderInfo->scale_factor[coderInfo->sfcnt++] = sfac;
     }
 }
 
@@ -139,6 +140,8 @@ int BlocQuant(CoderInfo *coderInfo, double *xr, int *xi, AACQuantCfg *aacquantCf
     double bandlvl[MAX_SCFAC_BANDS];
     int cnt;
     int nonzero = 0;
+
+    coderInfo->sfcnt = 0;
 
     for (cnt = 0; cnt < FRAME_LEN; cnt++)
         nonzero += (fabs(xr[cnt]) > 1E-20);
