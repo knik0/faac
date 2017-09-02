@@ -16,7 +16,6 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: util.c,v 1.10 2005/02/02 07:56:33 sur Exp $
  */
 
 #include <math.h>
@@ -42,13 +41,11 @@ int GetSRIndex(unsigned int sampleRate)
     return 11;
 }
 
-/* Returns the maximum bitrate per channel for that sampling frequency */
+/* Returns the maximum bitrate for that sampling frequency */
 unsigned int MaxBitrate(unsigned long sampleRate)
 {
-    /*
-     *  Maximum of 6144 bit for a channel
-     */
-    return (unsigned int)(6144.0 * (double)sampleRate/(double)FRAME_LEN + .5);
+    /* max ADTS frame size 8k */
+    return 0x2000 * 8 * (double)sampleRate/(double)FRAME_LEN;
 }
 
 /* Returns the minimum bitrate per channel for that sampling frequency */

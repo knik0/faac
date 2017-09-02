@@ -147,8 +147,8 @@ int FAACAPI faacEncSetConfiguration(faacEncHandle hpEncoder,
     TnsInit(hEncoder);
 
     /* Check for correct bitrate */
-    if (config->bitRate > MaxBitrate(hEncoder->sampleRate))
-        config->bitRate = MaxBitrate(hEncoder->sampleRate);
+    if (config->bitRate > (MaxBitrate(hEncoder->sampleRate) / hEncoder->numChannels))
+        config->bitRate = MaxBitrate(hEncoder->sampleRate) / hEncoder->numChannels;
 #if 0
     if (config->bitRate < MinBitrate())
         return 0;
@@ -275,9 +275,7 @@ int FAACAPI faacEncSetConfiguration(faacEncHandle hpEncoder,
 faacEncHandle FAACAPI faacEncOpen(unsigned long sampleRate,
                                   unsigned int numChannels,
                                   unsigned long *inputSamples,
-                                  unsigned long *maxOutputBytes,
-                                  int mp4file
-                                 )
+                                  unsigned long *maxOutputBytes)
 {
     unsigned int channel;
     faacEncStruct* hEncoder;
@@ -286,10 +284,7 @@ faacEncHandle FAACAPI faacEncOpen(unsigned long sampleRate,
 	return NULL;
 
     *inputSamples = FRAME_LEN*numChannels;
-    if (mp4file)
-        *maxOutputBytes = 0x1000 * numChannels;
-    else
-        *maxOutputBytes = (6144/8)*numChannels;
+    *maxOutputBytes = 0x2000;
 
 #ifdef DRM
     *maxOutputBytes += 1; /* for CRC */
@@ -327,11 +322,8 @@ faacEncHandle FAACAPI faacEncOpen(unsigned long sampleRate,
 	/* default channel map is straight-through */
 	for( channel = 0; channel < MAX_CHANNELS; channel++ )
 		hEncoder->config.channel_map[channel] = channel;
-	
-    if (mp4file)
-        hEncoder->config.outputFormat = RAW_STREAM;
-    else
-        hEncoder->config.outputFormat = ADTS_STREAM;
+
+    hEncoder->config.outputFormat = ADTS_STREAM;
 
     /*
         be compatible with software which assumes 24bit in 32bit PCM
