@@ -60,13 +60,13 @@ Advanced options, only for testing purposes
 .TP
 .BR -q\ <\fIquality\fP>
 Set encoding quality. Set default variable bitrate (VBR) quality level in percent.
-max. 5000 (mp4) or 500 (adts), min. 10.
+max. 5000, min. 10.
 default: 100, averages at approx. 120 kbps VBR for a normal
 stereo input file with 16 bit and 44.1 kHz sample rate
 .TP
 .BR -b\ <\fIbitrate\fP>
 Set average bitrate (ABR) to approximately <bitrate> kbps.
-max. ~500 (stereo mp4) or ~250k (adts)
+max. ~500 (stereo)
 .TP
 .BR -c\ <\fIfreq\fP>
 Set the bandwidth in Hz.
@@ -187,9 +187,6 @@ Don't use mid/side coding.
 .TP
 .BR --mpeg-vers\ \fIX\fP
 Force AAC MPEG version, X can be 2 or 4
-.TP
-.BR --obj-type\ \fIX\fP
-AAC object type. (LC (Low Complexity, default), Main or LTP (Long Term Prediction)
 .TP
 .BR --shortctl\ \fIX\fP
 Enforce block type (0 = both (default); 1 = no short; 2 = no long).

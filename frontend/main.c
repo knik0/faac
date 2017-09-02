@@ -107,13 +107,13 @@ const char *usage =
 static help_t help_qual[] = {
     {"-q <quality>\tSet encoding quality.\n",
     "\t\tSet default variable bitrate (VBR) quantizer quality in percent.\n"
-    "\t\tmax. 5000 (mp4) or 500 (adts), min. 10.\n"
+    "\t\tmax. 5000, min. 10.\n"
     "\t\tdefault: 100, averages at approx. 120 kbps VBR for a normal\n"
     "\t\tstereo input file with 16 bit and 44.1 kHz sample rate\n"
     },
     {"-b <bitrate>\tSet average bitrate to x kbps. (ABR)\n",
     "\t\tSet average bitrate (ABR) to approximately <bitrate> kbps.\n"
-    "\t\tmax. ~500 (stereo mp4) or ~250k (adts)\n"},
+    "\t\tmax. ~500 (stereo)\n"},
     {"-c <freq>\tSet the bandwidth in Hz.\n",
     "\t\tThe actual frequency is adjusted to maximize upper spectral band\n"
     "\t\tusage.\n"},
