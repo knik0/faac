@@ -1,4 +1,5 @@
 	* allowed even higher bitrates, including ADTS
+	* framebuffer size bug fixed
 	* removed broken object types: Main and LTP
 	* some mp4 atoms fixed for better compalibility
 	* stdin seek bug fixed
