@@ -152,7 +152,8 @@ int WriteBitstream(faacEncStruct* hEncoder,
     int bits = 0;
     int bitsLeftAfterFill, numFillBits;
 
-    CountBitstream(hEncoder, coderInfo, channelInfo, bitStream, numChannel);
+    if (CountBitstream(hEncoder, coderInfo, channelInfo, bitStream, numChannel) < 0)
+        return -1;
 
     if(hEncoder->config.outputFormat == 1){
         bits += WriteADTSHeader(hEncoder, bitStream, 1);
@@ -315,6 +316,11 @@ static int CountBitstream(faacEncStruct* hEncoder,
     bits += ByteAlign(bitStream, 0, bits);
 
     hEncoder->usedBytes = bit2byte(bits);
+    if (hEncoder->usedBytes >= ADTS_FRAMESIZE)
+    {
+        fprintf(stderr, "frame buffer overrun\n");
+        return -1;
+    }
 
     return bits;
 }

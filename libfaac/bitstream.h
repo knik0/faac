@@ -137,6 +137,7 @@ extern "C" {
 #define LONG_NUMBIT 32      /* bits in unsigned long */
 #define bit2byte(a) (((a)+BYTE_NUMBIT-1)/BYTE_NUMBIT)
 
+enum {ADTS_FRAMESIZE = 1 << 13};
 
 typedef struct
 {

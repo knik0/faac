@@ -284,7 +284,7 @@ faacEncHandle FAACAPI faacEncOpen(unsigned long sampleRate,
 	return NULL;
 
     *inputSamples = FRAME_LEN*numChannels;
-    *maxOutputBytes = 0x2000;
+    *maxOutputBytes = ADTS_FRAMESIZE;
 
 #ifdef DRM
     *maxOutputBytes += 1; /* for CRC */
@@ -718,7 +718,8 @@ int FAACAPI faacEncEncode(faacEncHandle hpEncoder,
     /* Write the AAC bitstream */
     bitStream = OpenBitStream(bufferSize, outputBuffer);
 
-    WriteBitstream(hEncoder, coderInfo, channelInfo, bitStream, numChannels);
+    if (WriteBitstream(hEncoder, coderInfo, channelInfo, bitStream, numChannels) < 0)
+        return -1;
 
     /* Close the bitstream and return the number of bytes written */
     frameBytes = CloseBitStream(bitStream);

@@ -1,6 +1,6 @@
-1.29.7.3
+	* allowed even higher bitrates, including ADTS
+	* removed broken object types: Main and LTP
 	* some mp4 atoms fixed for better compalibility
-1.29.7.2
 	* stdin seek bug fixed
 1.29.7
 	* quantizer tweaked to better support high bitrates
