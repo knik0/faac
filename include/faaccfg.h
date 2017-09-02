@@ -45,6 +45,12 @@
 #define SHORTCTL_NOSHORT   1
 #define SHORTCTL_NOLONG    2
 
+enum stream_format
+{
+    RAW_STREAM = 0,
+    ADTS_STREAM = 1,
+};
+
 #pragma pack(push, 1)
 typedef struct faacEncConfiguration
 {

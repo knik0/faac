@@ -275,7 +275,9 @@ int FAACAPI faacEncSetConfiguration(faacEncHandle hpEncoder,
 faacEncHandle FAACAPI faacEncOpen(unsigned long sampleRate,
                                   unsigned int numChannels,
                                   unsigned long *inputSamples,
-                                  unsigned long *maxOutputBytes)
+                                  unsigned long *maxOutputBytes,
+                                  int mp4file
+                                 )
 {
     unsigned int channel;
     faacEncStruct* hEncoder;
@@ -284,7 +286,10 @@ faacEncHandle FAACAPI faacEncOpen(unsigned long sampleRate,
 	return NULL;
 
     *inputSamples = FRAME_LEN*numChannels;
-    *maxOutputBytes = (6144/8)*numChannels;
+    if (mp4file)
+        *maxOutputBytes = 0x1000 * numChannels;
+    else
+        *maxOutputBytes = (6144/8)*numChannels;
 
 #ifdef DRM
     *maxOutputBytes += 1; /* for CRC */
@@ -323,12 +328,10 @@ faacEncHandle FAACAPI faacEncOpen(unsigned long sampleRate,
 	for( channel = 0; channel < MAX_CHANNELS; channel++ )
 		hEncoder->config.channel_map[channel] = channel;
 	
-    /*
-        by default we have to be compatible with all previous software
-        which assumes that we will generate ADTS
-        /AV
-    */
-    hEncoder->config.outputFormat = 1;
+    if (mp4file)
+        hEncoder->config.outputFormat = RAW_STREAM;
+    else
+        hEncoder->config.outputFormat = ADTS_STREAM;
 
     /*
         be compatible with software which assumes 24bit in 32bit PCM

@@ -273,12 +273,6 @@ char *progName;
 volatile int running = 1;
 #endif
 
-enum stream_format
-{
-    RAW_STREAM = 0,
-    ADTS_STREAM = 1,
-};
-
 enum container_format
 {
     NO_CONTAINER,
@@ -827,7 +821,7 @@ int main(int argc, char *argv[])
 
     /* open the encoder library */
     hEncoder = faacEncOpen(infile->samplerate, infile->channels,
-                           &samplesInput, &maxBytesOutput);
+                           &samplesInput, &maxBytesOutput, container == MP4_CONTAINER);
 
     if (hEncoder == NULL)
     {
@@ -850,7 +844,6 @@ int main(int argc, char *argv[])
     {
         mpegVersion = MPEG4;
         stream = RAW_STREAM;
-        maxBytesOutput = 0x1000 * infile->channels;
     }
 
     frameSize = samplesInput / infile->channels;
