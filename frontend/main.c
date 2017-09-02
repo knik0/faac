@@ -821,7 +821,7 @@ int main(int argc, char *argv[])
 
     /* open the encoder library */
     hEncoder = faacEncOpen(infile->samplerate, infile->channels,
-                           &samplesInput, &maxBytesOutput, container == MP4_CONTAINER);
+                           &samplesInput, &maxBytesOutput);
 
     if (hEncoder == NULL)
     {
