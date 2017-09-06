@@ -17,6 +17,6 @@ libfaac_la_LIBADD = ${common_LIBADD}
 libfaac_la_CFLAGS = ${common_CFLAGS}
 endif
 
+libfaac_la_LDFLAGS = -no-undefined
+
 AM_CPPFLAGS = -I$(top_srcdir)/include
-
-
