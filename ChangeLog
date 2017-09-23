@@ -1,3 +1,4 @@
+	* improved autotools support
 	* allowed even higher bitrates, including ADTS
 	* framebuffer size bug fixed
 	* removed broken object types: Main and LTP
