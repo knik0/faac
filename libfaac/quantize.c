@@ -86,11 +86,7 @@ static void qlevel(CoderInfo *coderInfo,
     int sb, cnt;
     int start, end;
     // 1.5dB step
-#ifdef __GNUC__
-    static const double sfstep = 20.0 / 1.5 / log(10);
-#else
-    const double sfstep = 20.0 / 1.5 / log(10);
-#endif
+    static const double sfstep = 20.0 / 1.5 / M_LN10;
 
     for (sb = 0; sb < coderInfo->sfbn; sb++)
     {
