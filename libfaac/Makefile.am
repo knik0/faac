@@ -5,7 +5,8 @@ common_CFLAGS = -fvisibility=hidden
 
 if USE_DRM
 lib_LTLIBRARIES = libfaac_drm.la
-libfaac_drm_la_SOURCES = ${common_SOURCES} ${common_INCLUDES} kiss_fft/kiss_fftr.c kiss_fft/kiss_fft.c
+libfaac_drm_la_SOURCES = ${common_SOURCES} ${common_INCLUDES} kiss_fft/kiss_fftr.c kiss_fft/kiss_fft.c kiss_fft/kiss_fft.h
+EXTRA_libfaac_drm_la_SOURCES = kiss_fft/_kiss_fft_guts.h kiss_fft/kiss_fftr.h kiss_fft/README kiss_fft/README.kiss_fft
 libfaac_drm_la_LIBADD = ${common_LIBADD}
 libfaac_drm_la_CFLAGS = ${common_CFLAGS} -DDRM
 else
