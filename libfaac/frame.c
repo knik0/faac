@@ -156,72 +156,17 @@ int FAACAPI faacEncSetConfiguration(faacEncHandle hpEncoder,
 
     if (config->bitRate && !config->bandWidth)
     {
-		static struct {
-			int rate; // per channel at 44100 sampling frequency
-			int cutoff;
-		}	rates[] = {
-#ifdef DRM
-            /* DRM uses low bit-rates. We've chosen higher bandwidth values and
-               decrease the quantizer quality at the same time to preserve the
-               low bit-rate */
-            {4500,  1200},
-            {9180,  2500},
-            {11640, 3000},
-            {14500, 4000},
-            {17460, 5500},
-            {20960, 6250},
-            {40000, 12000},
-#else
-			{29500, 5000},
-			{37500, 7000},
-			{47000, 10000},
-			{64000, 16000},
-			{76000, 20000},
-			{128000, 20000},
-#endif
-			{0, 0}
-		};
-
-		int f0, f1;
-		int r0, r1;
-
-#ifdef DRM
-        double tmpbitRate = (double)config->bitRate;
-#else
-        double tmpbitRate = (double)config->bitRate * 44100 / hEncoder->sampleRate;
-#endif
-
-        config->quantqual = 100;
-
-		f0 = f1 = rates[0].cutoff;
-		r0 = r1 = rates[0].rate;
-		
-		for (i = 0; rates[i].rate; i++)
-		{
-			f0 = f1;
-			f1 = rates[i].cutoff;
-			r0 = r1;
-			r1 = rates[i].rate;
-			if (rates[i].rate >= tmpbitRate)
-				break;
-		}
-
-        if (tmpbitRate > r1)
-            tmpbitRate = r1;
-        if (tmpbitRate < r0)
-            tmpbitRate = r0;
-
-		if (f1 > f0)
-            config->bandWidth =
-                    pow((double)tmpbitRate / r1,
-                    log((double)f1 / f0) / log ((double)r1 / r0)) * (double)f1;
-		else
-			config->bandWidth = f1;
-
-#ifndef DRM
         config->bandWidth = (double)config->bitRate * hEncoder->sampleRate * bwfac / 60000.0;
-#endif
+        if (!config->quantqual)
+        {
+            config->quantqual = (double)config->bitRate * hEncoder->numChannels / 1280;
+            if (config->quantqual > 100)
+                config->quantqual = (config->quantqual - 100) * 3.0 + 100;
+        }
     }
+
+    if (!config->quantqual)
+        config->quantqual = DEFQUAL;
 
     hEncoder->config.bitRate = config->bitRate;
 
@@ -312,7 +257,7 @@ faacEncHandle FAACAPI faacEncOpen(unsigned long sampleRate,
     hEncoder->config.useTns = 0;
     hEncoder->config.bitRate = 0; /* default bitrate / channel */
     hEncoder->config.bandWidth = bwfac * hEncoder->sampleRate;
-    hEncoder->config.quantqual = DEFQUAL;
+    hEncoder->config.quantqual = 0;
     hEncoder->config.psymodellist = (psymodellist_t *)psymodellist;
     hEncoder->config.psymodelidx = 0;
     hEncoder->psymodel =
@@ -726,26 +671,27 @@ int FAACAPI faacEncEncode(faacEncHandle hpEncoder,
 
     /* Adjust quality to get correct average bitrate */
     if (hEncoder->config.bitRate)
-	{
-		double fix;
-		int desbits = numChannels * (hEncoder->config.bitRate * FRAME_LEN)
-				/ hEncoder->sampleRate;
-		int diff = (frameBytes * 8) - desbits;
+    {
+        int desbits = numChannels * (hEncoder->config.bitRate * FRAME_LEN)
+            / hEncoder->sampleRate;
+        double fix = (double)desbits / (double)(frameBytes * 8);
 
-		hEncoder->bitDiff += diff;
-		fix = (double)hEncoder->bitDiff / desbits;
-		fix *= 0.01;
-		fix = max(fix, -0.2);
-		fix = min(fix, 0.2);
+        if (fix < 0.9)
+            fix += 0.1;
+        else if (fix > 1.1)
+            fix -= 0.1;
+        else
+            fix = 1.0;
 
-		if (((diff > 0) && (fix > 0.0)) || ((diff < 0) && (fix < 0.0)))
-		{
-			hEncoder->aacquantCfg.quality *= (1.0 - fix);
-                        if (hEncoder->aacquantCfg.quality > maxqual)
-                            hEncoder->aacquantCfg.quality = maxqual;
-            if (hEncoder->aacquantCfg.quality < 50)
-                hEncoder->aacquantCfg.quality = 50;
-		}
+        fix = (fix - 1.0) * 0.5 + 1.0;
+        // printf("q: %.1f(f:%.4f)\n", hEncoder->aacquantCfg.quality, fix);
+
+        hEncoder->aacquantCfg.quality *= fix;
+
+        if (hEncoder->aacquantCfg.quality > maxqual)
+            hEncoder->aacquantCfg.quality = maxqual;
+        if (hEncoder->aacquantCfg.quality < 10)
+            hEncoder->aacquantCfg.quality = 10;
     }
 #endif
 

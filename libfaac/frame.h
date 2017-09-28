@@ -105,11 +105,8 @@ typedef struct {
     /* quantizer specific config */
     AACQuantCfg aacquantCfg;
 
-	/* FFT Tables */
-	FFT_Tables	fft_tables;
-
-    /* output bits difference in average bitrate mode */
-    int bitDiff;
+    /* FFT Tables */
+    FFT_Tables	fft_tables;
 } faacEncStruct;
 
 #pragma pack(pop)
