@@ -1,4 +1,3 @@
-LIBRARY  libfaac.dll
 EXPORTS
 ;
 ; libfaac exports

@@ -1,0 +1,37 @@
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 15
+VisualStudioVersion = 15.0.26730.12
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "libfaac_dll", "libfaac_dll.vcxproj", "{856BB8CF-B944-4D7A-9D59-4945316229AA}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "libfaac_dll_drm", "libfaac_dll_drm.vcxproj", "{AA2D0EFE-E73D-40AD-ADCE-8A2B54F34C6F}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "libfaac", "libfaac.vcxproj", "{9CC48C6E-92EB-4814-AD37-97AB3622AB65}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Win32 = Debug|Win32
+		Release|Win32 = Release|Win32
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{856BB8CF-B944-4D7A-9D59-4945316229AA}.Debug|Win32.ActiveCfg = Debug|Win32
+		{856BB8CF-B944-4D7A-9D59-4945316229AA}.Debug|Win32.Build.0 = Debug|Win32
+		{856BB8CF-B944-4D7A-9D59-4945316229AA}.Release|Win32.ActiveCfg = Release|Win32
+		{856BB8CF-B944-4D7A-9D59-4945316229AA}.Release|Win32.Build.0 = Release|Win32
+		{AA2D0EFE-E73D-40AD-ADCE-8A2B54F34C6F}.Debug|Win32.ActiveCfg = Debug|Win32
+		{AA2D0EFE-E73D-40AD-ADCE-8A2B54F34C6F}.Debug|Win32.Build.0 = Debug|Win32
+		{AA2D0EFE-E73D-40AD-ADCE-8A2B54F34C6F}.Debug|Win32.Deploy.0 = Debug|Win32
+		{AA2D0EFE-E73D-40AD-ADCE-8A2B54F34C6F}.Release|Win32.ActiveCfg = Release|Win32
+		{AA2D0EFE-E73D-40AD-ADCE-8A2B54F34C6F}.Release|Win32.Build.0 = Release|Win32
+		{9CC48C6E-92EB-4814-AD37-97AB3622AB65}.Debug|Win32.ActiveCfg = Debug|Win32
+		{9CC48C6E-92EB-4814-AD37-97AB3622AB65}.Debug|Win32.Build.0 = Debug|Win32
+		{9CC48C6E-92EB-4814-AD37-97AB3622AB65}.Release|Win32.ActiveCfg = Release|Win32
+		{9CC48C6E-92EB-4814-AD37-97AB3622AB65}.Release|Win32.Build.0 = Release|Win32
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {FEB55784-5428-470E-835B-D21D471570FE}
+	EndGlobalSection
+EndGlobal
