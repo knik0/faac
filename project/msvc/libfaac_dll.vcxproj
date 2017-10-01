@@ -11,8 +11,8 @@
     </ProjectConfiguration>
   </ItemGroup>
   <PropertyGroup Label="Globals">
-    <ProjectName>libfaac_dll_drm</ProjectName>
-    <ProjectGuid>{AA2D0EFE-E73D-40AD-ADCE-8A2B54F34C6F}</ProjectGuid>
+    <ProjectName>libfaac_dll</ProjectName>
+    <ProjectGuid>{856BB8CF-B944-4D7A-9D59-4945316229AA}</ProjectGuid>
     <WindowsTargetPlatformVersion>8.1</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
@@ -38,21 +38,21 @@
     <_ProjectFileVersion>15.0.26730.12</_ProjectFileVersion>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <OutDir>.\bin\$(Configuration)</OutDir>
-    <IntDir>.\intermediate\$(Configuration)\$(ProjectName)</IntDir>
+    <OutDir>.\bin\$(Configuration)\</OutDir>
+    <IntDir>.\intermediate\$(Configuration)\$(ProjectName)\</IntDir>
     <LinkIncremental>false</LinkIncremental>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <OutDir>.\bin\$(Configuration)</OutDir>
-    <IntDir>.\intermediate\$(Configuration)\$(ProjectName)</IntDir>
+    <OutDir>.\bin\$(Configuration)\</OutDir>
+    <IntDir>.\intermediate\$(Configuration)\$(ProjectName)\</IntDir>
     <LinkIncremental>true</LinkIncremental>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
       <InlineFunctionExpansion>OnlyExplicitInline</InlineFunctionExpansion>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <AdditionalIncludeDirectories>../include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;_USRDLL;LIBFAAC_DLL_EXPORTS;DRM;_USE_MATH_DEFINES;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>../../include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;_USRDLL;LIBFAAC_DLL_EXPORTS;_USE_MATH_DEFINES;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <StringPooling>true</StringPooling>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
       <FunctionLevelLinking>true</FunctionLevelLinking>
@@ -65,15 +65,13 @@
       <SuppressStartupBanner>true</SuppressStartupBanner>
       <ModuleDefinitionFile>.\libfaac.def</ModuleDefinitionFile>
       <TargetMachine>MachineX86</TargetMachine>
-      <OutputFile>$(OutDir)libfaacdrm.dll</OutputFile>
-      <ImportLibrary>$(OutDir)libfaacdrm.lib</ImportLibrary>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
       <Optimization>Disabled</Optimization>
-      <AdditionalIncludeDirectories>../include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;_USRDLL;LIBFAAC_DLL_EXPORTS;DRM;_USE_MATH_DEFINES;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>../../include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;_USRDLL;LIBFAAC_DLL_EXPORTS;_USE_MATH_DEFINES;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
       <PrecompiledHeader />
@@ -87,47 +85,40 @@
       <ModuleDefinitionFile>.\libfaac.def</ModuleDefinitionFile>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <TargetMachine>MachineX86</TargetMachine>
-      <OutputFile>$(OutDir)libfaacdrm.dll</OutputFile>
-      <ImportLibrary>$(OutDir)libfaacdrm.lib</ImportLibrary>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="aacquant.c" />
-    <ClCompile Include="bitstream.c" />
-    <ClCompile Include="blockswitch.c" />
-    <ClCompile Include="channels.c" />
-    <ClCompile Include="fft.c" />
-    <ClCompile Include="filtbank.c" />
-    <ClCompile Include="frame.c" />
-    <ClCompile Include="huffman.c" />
-    <ClCompile Include="kiss_fft\kiss_fft.c" />
-    <ClCompile Include="kiss_fft\kiss_fftr.c" />
-    <ClCompile Include="midside.c" />
-    <ClCompile Include="quantize.c" />
-    <ClCompile Include="tns.c" />
-    <ClCompile Include="util.c" />
+    <ClCompile Include="..\..\libfaac\aacquant.c" />
+    <ClCompile Include="..\..\libfaac\bitstream.c" />
+    <ClCompile Include="..\..\libfaac\blockswitch.c" />
+    <ClCompile Include="..\..\libfaac\channels.c" />
+    <ClCompile Include="..\..\libfaac\fft.c" />
+    <ClCompile Include="..\..\libfaac\filtbank.c" />
+    <ClCompile Include="..\..\libfaac\frame.c" />
+    <ClCompile Include="..\..\libfaac\huffman.c" />
+    <ClCompile Include="..\..\libfaac\midside.c" />
+    <ClCompile Include="..\..\libfaac\quantize.c" />
+    <ClCompile Include="..\..\libfaac\tns.c" />
+    <ClCompile Include="..\..\libfaac\util.c" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\include\faac.h" />
-    <ClInclude Include="..\include\faaccfg.h" />
-    <ClInclude Include="aacquant.h" />
-    <ClInclude Include="bitstream.h" />
-    <ClInclude Include="blockswitch.h" />
-    <ClInclude Include="channels.h" />
-    <ClInclude Include="coder.h" />
-    <ClInclude Include="fft.h" />
-    <ClInclude Include="filtbank.h" />
-    <ClInclude Include="frame.h" />
-    <ClInclude Include="huffman.h" />
-    <ClInclude Include="hufftab.h" />
-    <ClInclude Include="kiss_fft\kiss_fft.h" />
-    <ClInclude Include="kiss_fft\kiss_fftr.h" />
-    <ClInclude Include="kiss_fft\_kiss_fft_guts.h" />
-    <ClInclude Include="midside.h" />
-    <ClInclude Include="quantize.h" />
-    <ClInclude Include="tns.h" />
-    <ClInclude Include="util.h" />
-    <ClInclude Include="version.h" />
+    <ClInclude Include="..\..\include\faac.h" />
+    <ClInclude Include="..\..\include\faaccfg.h" />
+    <ClInclude Include="..\..\libfaac\aacquant.h" />
+    <ClInclude Include="..\..\libfaac\bitstream.h" />
+    <ClInclude Include="..\..\libfaac\blockswitch.h" />
+    <ClInclude Include="..\..\libfaac\channels.h" />
+    <ClInclude Include="..\..\libfaac\coder.h" />
+    <ClInclude Include="..\..\libfaac\fft.h" />
+    <ClInclude Include="..\..\libfaac\filtbank.h" />
+    <ClInclude Include="..\..\libfaac\frame.h" />
+    <ClInclude Include="..\..\libfaac\huffman.h" />
+    <ClInclude Include="..\..\libfaac\hufftab.h" />
+    <ClInclude Include="..\..\libfaac\midside.h" />
+    <ClInclude Include="..\..\libfaac\quantize.h" />
+    <ClInclude Include="..\..\libfaac\tns.h" />
+    <ClInclude Include="..\..\libfaac\util.h" />
+    <ClInclude Include="..\..\libfaac\version.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="libfaac.def" />

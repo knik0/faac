@@ -31,6 +31,6 @@ Makefile*
 /ltmain.sh
 /missing
 /stamp-h1
-libfaac/.vs/
-libfaac/bin/
-libfaac/intermediate/
+/project/msvc/.vs/
+/project/msvc/bin/
+/project/msvc/intermediate/

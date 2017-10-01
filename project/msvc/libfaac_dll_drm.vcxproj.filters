@@ -14,108 +14,108 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="aacquant.c">
+    <ClCompile Include="..\..\libfaac\bitstream.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="bitstream.c">
+    <ClCompile Include="..\..\libfaac\channels.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="channels.c">
+    <ClCompile Include="..\..\libfaac\fft.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="fft.c">
+    <ClCompile Include="..\..\libfaac\filtbank.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="filtbank.c">
+    <ClCompile Include="..\..\libfaac\frame.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="frame.c">
+    <ClCompile Include="..\..\libfaac\huffman.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="huffman.c">
+    <ClCompile Include="..\..\libfaac\midside.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="midside.c">
+    <ClCompile Include="..\..\libfaac\tns.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="tns.c">
+    <ClCompile Include="..\..\libfaac\util.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="util.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="kiss_fft\kiss_fft.c">
+    <ClCompile Include="..\..\libfaac\kiss_fft\kiss_fft.c">
       <Filter>kiss_fft</Filter>
     </ClCompile>
-    <ClCompile Include="kiss_fft\kiss_fftr.c">
+    <ClCompile Include="..\..\libfaac\kiss_fft\kiss_fftr.c">
       <Filter>kiss_fft</Filter>
     </ClCompile>
-    <ClCompile Include="blockswitch.c">
+    <ClCompile Include="..\..\libfaac\blockswitch.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="quantize.c">
+    <ClCompile Include="..\..\libfaac\quantize.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\libfaac\aacquant.c">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="aacquant.h">
+    <ClInclude Include="..\..\libfaac\aacquant.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="bitstream.h">
+    <ClInclude Include="..\..\libfaac\bitstream.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="blockswitch.h">
+    <ClInclude Include="..\..\libfaac\blockswitch.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="channels.h">
+    <ClInclude Include="..\..\libfaac\channels.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="coder.h">
+    <ClInclude Include="..\..\libfaac\coder.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="fft.h">
+    <ClInclude Include="..\..\libfaac\fft.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="filtbank.h">
+    <ClInclude Include="..\..\libfaac\filtbank.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="frame.h">
+    <ClInclude Include="..\..\libfaac\frame.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="huffman.h">
+    <ClInclude Include="..\..\libfaac\huffman.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="hufftab.h">
+    <ClInclude Include="..\..\libfaac\hufftab.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="midside.h">
+    <ClInclude Include="..\..\libfaac\midside.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="quantize.h">
+    <ClInclude Include="..\..\libfaac\quantize.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="tns.h">
+    <ClInclude Include="..\..\libfaac\tns.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="util.h">
+    <ClInclude Include="..\..\libfaac\util.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="kiss_fft\_kiss_fft_guts.h">
+    <ClInclude Include="..\..\libfaac\kiss_fft\_kiss_fft_guts.h">
       <Filter>kiss_fft</Filter>
     </ClInclude>
-    <ClInclude Include="kiss_fft\kiss_fft.h">
+    <ClInclude Include="..\..\libfaac\kiss_fft\kiss_fft.h">
       <Filter>kiss_fft</Filter>
     </ClInclude>
-    <ClInclude Include="kiss_fft\kiss_fftr.h">
+    <ClInclude Include="..\..\libfaac\kiss_fft\kiss_fftr.h">
       <Filter>kiss_fft</Filter>
     </ClInclude>
-    <ClInclude Include="version.h">
+    <ClInclude Include="..\..\libfaac\version.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\faac.h">
+    <ClInclude Include="..\..\include\faac.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\faaccfg.h">
+    <ClInclude Include="..\..\include\faaccfg.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
