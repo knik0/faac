@@ -31,6 +31,6 @@ Makefile*
 /ltmain.sh
 /missing
 /stamp-h1
-/project/msvc/.vs/
+.vs/
 /project/msvc/bin/
 /project/msvc/intermediate/
