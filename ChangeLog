@@ -1,3 +1,4 @@
+	* SSE quantizer
 	* modified functioning of ABR mode (-b option)
 	* improved autotools support
 	* allowed even higher bitrates, including ADTS

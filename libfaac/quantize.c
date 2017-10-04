@@ -121,6 +121,41 @@ static void qlevel(CoderInfo *coderInfo,
 
       sfac = lrint(log(bandqual[sb] / rmsx) * sfstep);
       sfacfix = exp(sfac / sfstep);
+      coderInfo->scale_factor[coderInfo->sfcnt++] = sfac;
+
+#ifdef __GNUC__
+typedef float v4sf __attribute__ ((vector_size (16)));
+typedef int v4si __attribute__ ((vector_size (16)));
+      if (__builtin_cpu_supports("sse2"))
+      {
+          static const v4sf zero = {0, 0, 0, 0};
+          static const v4sf magic = {MAGIC_NUMBER, MAGIC_NUMBER, MAGIC_NUMBER, MAGIC_NUMBER};
+
+          for (cnt = start; cnt < end; cnt += 4)
+          {
+              float fin[4];
+              fin[0] = xr[cnt];
+              fin[1] = xr[cnt+1];
+              fin[2] = xr[cnt+2];
+              fin[3] = xr[cnt+3];
+
+              v4sf x = __builtin_ia32_loadups(fin);
+              x = __builtin_ia32_maxps(x, __builtin_ia32_subps(zero, x));
+
+              v4sf fix = {sfacfix, sfacfix, sfacfix, sfacfix};
+              x = __builtin_ia32_mulps(x, fix);
+              x = __builtin_ia32_mulps(x , __builtin_ia32_sqrtps(x));
+              x = __builtin_ia32_sqrtps(x);
+
+              x = __builtin_ia32_addps(x, magic);
+              v4si vi = __builtin_ia32_cvttps2dq(x);
+              memcpy(xi+cnt,&vi,16);
+          }
+
+          continue;
+      }
+#endif
+
       for (cnt = start; cnt < end; cnt++)
       {
           double tmp = fabs(xr[cnt]);
@@ -130,8 +165,6 @@ static void qlevel(CoderInfo *coderInfo,
 
           xi[cnt] = (int)(tmp + MAGIC_NUMBER);
       }
-
-      coderInfo->scale_factor[coderInfo->sfcnt++] = sfac;
     }
 }
 
