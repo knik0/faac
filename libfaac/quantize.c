@@ -123,7 +123,7 @@ static void qlevel(CoderInfo *coderInfo,
       sfacfix = exp(sfac / sfstep);
       coderInfo->scale_factor[coderInfo->sfcnt++] = sfac;
 
-#if defined(__GNUC__) && defined(__i686__)
+#if defined(__GNUC__) && defined(__SSE2__)
 typedef float v4sf __attribute__ ((vector_size (16)));
 typedef int v4si __attribute__ ((vector_size (16)));
       if (__builtin_cpu_supports("sse2"))
