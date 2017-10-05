@@ -1,7 +1,10 @@
 common_SOURCES = aacquant.c bitstream.c fft.c frame.c midside.c blockswitch.c util.c channels.c filtbank.c huffman.c tns.c quantize.c
 common_INCLUDES = aacquant.h channels.h filtbank.h hufftab.h blockswitch.h coder.h frame.h midside.h tns.h bitstream.h fft.h huffman.h util.h quantize.h version.h
 common_LIBADD = -lm
-common_CFLAGS = -fvisibility=hidden -msse2
+common_CFLAGS = -fvisibility=hidden
+if CPU686
+common_CFLAGS += -msse2
+endif
 
 if USE_DRM
 lib_LTLIBRARIES = libfaac_drm.la
