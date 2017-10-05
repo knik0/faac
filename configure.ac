@@ -39,7 +39,7 @@ else
 fi
 
 AM_CONDITIONAL(MINGW, test "$host_os" = "mingw32")
-AM_CONDITIONAL(CPU686, test "$host_cpu" = "i686")
+AM_CONDITIONAL(CPUSSE, test "$host_cpu" = "x86_64" || test "$host_cpu" = "i686")
 
 AC_C_BIGENDIAN
 
