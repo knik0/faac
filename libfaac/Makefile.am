@@ -20,5 +20,8 @@ libfaac_la_CFLAGS = ${common_CFLAGS}
 endif
 
 libfaac_la_LDFLAGS = -no-undefined
+if MINGW
+libfaac_la_LDFLAGS += -Wl,--add-stdcall-alias
+endif
 
 AM_CPPFLAGS = -I$(top_srcdir)/include
