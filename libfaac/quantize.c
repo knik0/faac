@@ -23,6 +23,18 @@
 #include "util.h"
 #include "quantize.h"
 
+#ifdef __SSE2__
+# ifdef __GNUC__
+#  include <cpuid.h>
+# endif
+#endif
+
+#ifdef _MSC_VER
+# include <intrin.h>
+# define __SSE2__
+# define bit_SSE2 (1 << 26)
+#endif
+
 #define MAGIC_NUMBER  0.4054
 enum {NULL_SF = 0};
 
@@ -88,6 +100,20 @@ static void qlevel(CoderInfo *coderInfo,
     int start, end;
     // 1.5dB step
     static const double sfstep = 20.0 / 1.5 / M_LN10;
+#ifdef __SSE2__
+    int cpuid[4];
+    int sse2 = 0;
+
+    cpuid[3] = 0;
+# ifdef __GNUC__
+    __cpuid(1, cpuid[0], cpuid[1], cpuid[2], cpuid[3]);
+# endif
+# ifdef _MSC_VER
+    __cpuid(cpuid, 1);
+# endif
+    if (cpuid[3] & bit_SSE2)
+        sse2 = 1;
+#endif
 
     for (sb = 0; sb < coderInfo->sfbn; sb++)
     {
@@ -124,39 +150,21 @@ static void qlevel(CoderInfo *coderInfo,
       sfacfix = exp(sfac / sfstep);
       coderInfo->scale_factor[coderInfo->sfcnt++] = sfac;
 
-#if defined(__GNUC__) && defined(__SSE2__)
-typedef float v4sf __attribute__ ((vector_size (16)));
-typedef int v4si __attribute__ ((vector_size (16)));
-#ifdef __APPLE__
-      if (1)
-#else
-      if (__builtin_cpu_supports("sse2"))
-#endif
+#ifdef __SSE2__
+      if (sse2)
       {
-          static const v4sf zero = {0, 0, 0, 0};
-          static const v4sf magic = {MAGIC_NUMBER, MAGIC_NUMBER, MAGIC_NUMBER, MAGIC_NUMBER};
-
           for (cnt = start; cnt < end; cnt += 4)
           {
-              float fin[4];
-              fin[0] = xr[cnt];
-              fin[1] = xr[cnt+1];
-              fin[2] = xr[cnt+2];
-              fin[3] = xr[cnt+3];
+              __m128 x = {xr[cnt], xr[cnt + 1], xr[cnt + 2], xr[cnt + 3]};
 
-              v4sf x = _mm_loadu_ps(fin);
-              x = _mm_max_ps(x, _mm_sub_ps(zero, x));
+              x = _mm_max_ps(x, -x);
+              x *= (__m128){sfacfix, sfacfix, sfacfix, sfacfix};
+              x *= _mm_sqrt_ps(x);
+              x = _mm_sqrt_ps(x);
+              x += (__m128){MAGIC_NUMBER, MAGIC_NUMBER, MAGIC_NUMBER, MAGIC_NUMBER};
 
-              v4sf fix = {sfacfix, sfacfix, sfacfix, sfacfix};
-              x = _mm_mul_ps(x, fix);
-              x = _mm_mul_ps(x , __builtin_ia32_sqrtps(x));
-              x = __builtin_ia32_sqrtps(x);
-
-              x = _mm_add_ps(x, magic);
-              v4si vi = __builtin_ia32_cvttps2dq(x);
-              memcpy(xi+cnt,&vi,16);
+              *(__m128i*)(xi + cnt) = _mm_cvttps_epi32(x);
           }
-
           continue;
       }
 #endif
