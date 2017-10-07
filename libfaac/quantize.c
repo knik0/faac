@@ -18,6 +18,7 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ****************************************************************************/
 
+#include <immintrin.h>
 #include <math.h>
 #include "util.h"
 #include "quantize.h"
@@ -126,7 +127,11 @@ static void qlevel(CoderInfo *coderInfo,
 #if defined(__GNUC__) && defined(__SSE2__)
 typedef float v4sf __attribute__ ((vector_size (16)));
 typedef int v4si __attribute__ ((vector_size (16)));
+#ifdef __APPLE__
+      if (1)
+#else
       if (__builtin_cpu_supports("sse2"))
+#endif
       {
           static const v4sf zero = {0, 0, 0, 0};
           static const v4sf magic = {MAGIC_NUMBER, MAGIC_NUMBER, MAGIC_NUMBER, MAGIC_NUMBER};
@@ -139,15 +144,15 @@ typedef int v4si __attribute__ ((vector_size (16)));
               fin[2] = xr[cnt+2];
               fin[3] = xr[cnt+3];
 
-              v4sf x = __builtin_ia32_loadups(fin);
-              x = __builtin_ia32_maxps(x, __builtin_ia32_subps(zero, x));
+              v4sf x = _mm_loadu_ps(fin);
+              x = _mm_max_ps(x, _mm_sub_ps(zero, x));
 
               v4sf fix = {sfacfix, sfacfix, sfacfix, sfacfix};
-              x = __builtin_ia32_mulps(x, fix);
-              x = __builtin_ia32_mulps(x , __builtin_ia32_sqrtps(x));
+              x = _mm_mul_ps(x, fix);
+              x = _mm_mul_ps(x , __builtin_ia32_sqrtps(x));
               x = __builtin_ia32_sqrtps(x);
 
-              x = __builtin_ia32_addps(x, magic);
+              x = _mm_add_ps(x, magic);
               v4si vi = __builtin_ia32_cvttps2dq(x);
               memcpy(xi+cnt,&vi,16);
           }
