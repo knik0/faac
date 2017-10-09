@@ -391,12 +391,12 @@ size_t wav_read_int24(pcmfile_t *sndf, int32_t *buf, size_t num, int *map)
 {
   int size;
   int i;
-  unsigned char *bufi;
+  uint8_t *bufi;
 
   if ((sndf->samplebytes > 4) || (sndf->samplebytes < 1))
     return 0;
 
-  bufi = (char *)buf + sizeof(*buf) * num - sndf->samplebytes * (num - 1) - sizeof(*buf);
+  bufi = (uint8_t *)buf + sizeof(*buf) * num - sndf->samplebytes * (num - 1) - sizeof(*buf);
 
   size = fread(bufi, sndf->samplebytes, num, sndf->f);
 

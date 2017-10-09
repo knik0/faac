@@ -26,6 +26,7 @@ Copyright (c) 1997.
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "coder.h"
 #include "channels.h"
