@@ -118,31 +118,28 @@ typedef struct {
     int desired_block_type;
 
     int global_gain;
-    int scale_factor[MAX_SCFAC_BANDS];
-    int sfcnt;
+    int sf[MAX_SCFAC_BANDS];
+    int book[MAX_SCFAC_BANDS];
+    int bandcnt;
+    int sfbn;
+    int sfb_offset[NSFB_LONG + 1];
 
     struct {
         int n;
-        int len[8];
+        int len[MAX_SHORT_WINDOWS];
     } groups;
-    int sfbn;
-    int sfb_offset[250];
-    double avgenrg;
 
-    int spectral_count;
+    /* worst case: one codeword with two escapes per two spectral lines */
+#define DATASIZE (3*FRAME_LEN/2)
 
-    /* Huffman codebook selected for each sf band */
-    int book_vector[MAX_SCFAC_BANDS];
-
-    /* Data of spectral bitstream elements, for each spectral pair,
-       5 elements are required: 1*(esc)+2*(sign)+2*(esc value)=5 */
-    int *data;
-
-    /* Lengths of spectral bitstream elements */
-    int *len;
+    struct {
+        int data;
+        int len;
+    } s[DATASIZE];
+    int datacnt;
 
 #ifdef DRM
-    int *num_data_cw;
+    int num_data_cw[FRAME_LEN];
     int cur_cw;
     int all_sfb;
 
