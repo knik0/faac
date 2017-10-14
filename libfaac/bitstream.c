@@ -30,7 +30,7 @@ Copyright (c) 1997.
 
 #include "coder.h"
 #include "channels.h"
-#include "huffman.h"
+#include "huff2.h"
 #include "bitstream.h"
 #include "util.h"
 
@@ -579,8 +579,8 @@ static int WriteICS(CoderInfo *coderInfo,
     bits += LEN_GLOB_GAIN;
 #endif
 
-    bits += SortBookNumbers(coderInfo, bitStream, writeFlag);
-    bits += WriteScalefactors(coderInfo, bitStream, writeFlag);
+    bits += writebooks(coderInfo, bitStream, writeFlag);
+    bits += writesf(coderInfo, bitStream, writeFlag);
 #ifdef DRM
     if (writeFlag) {
         /* length_of_reordered_spectral_data */
@@ -735,22 +735,18 @@ static int WriteSpectralData(CoderInfo *coderInfo,
 {
     int i, bits = 0;
 
-    /* set up local pointers to data and len */
-    /* data array contains data to be written */
-    /* len array contains lengths of data words */
-    int* data = coderInfo->data;
-    int* len  = coderInfo->len;
-
     if (writeFlag) {
-        for(i = 0; i < coderInfo->spectral_count; i++) {
-            if (len[i] > 0) {  /* only send out non-zero codebook data */
-                PutBit(bitStream, data[i], len[i]); /* write data */
-                bits += len[i];
+        for(i = 0; i < coderInfo->datacnt; i++) {
+            int data = coderInfo->s[i].data;
+            int len = coderInfo->s[i].len;
+            if (len > 0) {
+                PutBit(bitStream, data, len);
+                bits += len;
             }
         }
     } else {
-        for(i = 0; i < coderInfo->spectral_count; i++) {
-            bits += len[i];
+        for(i = 0; i < coderInfo->datacnt; i++) {
+            bits += coderInfo->s[i].len;
         }
     }
 

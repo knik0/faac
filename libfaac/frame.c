@@ -21,7 +21,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
-#include <math.h>
+#include <string.h>
 
 #include "frame.h"
 #include "coder.h"
@@ -29,9 +29,7 @@
 #include "channels.h"
 #include "bitstream.h"
 #include "filtbank.h"
-#include "aacquant.h"
 #include "util.h"
-#include "huffman.h"
 #include "tns.h"
 #include "version.h"
 
@@ -303,13 +301,6 @@ faacEncHandle FAACAPI faacEncOpen(unsigned long sampleRate,
 
     TnsInit(hEncoder);
 
-    AACQuantizeInit(hEncoder->coderInfo, hEncoder->numChannels,
-		    &(hEncoder->aacquantCfg));
-
-	
-
-    HuffmanInit(hEncoder->coderInfo, hEncoder->numChannels);
-
     /* Return handle */
     return hEncoder;
 }
@@ -324,12 +315,7 @@ int FAACAPI faacEncClose(faacEncHandle hpEncoder)
 
     FilterBankEnd(hEncoder);
 
-    AACQuantizeEnd(hEncoder->coderInfo, hEncoder->numChannels,
-			&(hEncoder->aacquantCfg));
-
-    HuffmanEnd(hEncoder->coderInfo, hEncoder->numChannels);
-
-	fft_terminate( &hEncoder->fft_tables );
+    fft_terminate(&hEncoder->fft_tables);
 
     /* Free remaining buffer memory */
     for (channel = 0; channel < hEncoder->numChannels; channel++) 
@@ -347,6 +333,8 @@ int FAACAPI faacEncClose(faacEncHandle hpEncoder)
     /* Free handle */
     if (hEncoder) 
 		FreeMemory(hEncoder);
+
+    BlocStat();
 
     return 0;
 }
@@ -520,22 +508,13 @@ int FAACAPI faacEncEncode(faacEncHandle hpEncoder,
             MOVERLAPPED);
     }
 
-    /* TMP: Build sfb offset table and other stuff */
     for (channel = 0; channel < numChannels; channel++) {
         channelInfo[channel].msInfo.is_present = 0;
 
         if (coderInfo[channel].block_type == ONLY_SHORT_WINDOW) {
             coderInfo[channel].sfbn = hEncoder->aacquantCfg.max_cbs;
 
-            coderInfo[channel].groups.n = 1;
-            coderInfo[channel].groups.len[0] = 8;
-            coderInfo[channel].groups.len[1] = 0;
-            coderInfo[channel].groups.len[2] = 0;
-            coderInfo[channel].groups.len[3] = 0;
-            coderInfo[channel].groups.len[4] = 0;
-            coderInfo[channel].groups.len[5] = 0;
-            coderInfo[channel].groups.len[6] = 0;
-            coderInfo[channel].groups.len[7] = 0;
+            BlocGroup(hEncoder->freqBuff[channel], coderInfo + channel, hEncoder->aacquantCfg.max_cbs);
 
             offset = 0;
             for (sb = 0; sb < coderInfo[channel].sfbn; sb++) {
@@ -573,13 +552,6 @@ int FAACAPI faacEncEncode(faacEncHandle hpEncoder,
     }
 
     for (channel = 0; channel < numChannels; channel++) {
-		if (coderInfo[channel].block_type == ONLY_SHORT_WINDOW) {
-			SortForGrouping(&coderInfo[channel],
-					hEncoder->srInfo->cb_width_short,
-					hEncoder->freqBuff[channel]);
-		}
-		CalcAvgEnrg(&coderInfo[channel], hEncoder->freqBuff[channel]);
-
       // reduce LFE bandwidth
 		if (!channelInfo[channel].cpe && channelInfo[channel].lfe)
 		{
@@ -589,30 +561,15 @@ int FAACAPI faacEncEncode(faacEncHandle hpEncoder,
 
     MSEncode(coderInfo, channelInfo, hEncoder->freqBuff, numChannels, allowMidside);
 
-    for (channel = 0; channel < numChannels; channel++)
-    {
-        CalcAvgEnrg(&coderInfo[channel], hEncoder->freqBuff[channel]);
-    }
-
 #ifdef DRM
     /* loop the quantization until the desired bit-rate is reached */
     diff = 1; /* to enter while loop */
     hEncoder->aacquantCfg.quality = 120; /* init quality setting */
     while (diff > 0) { /* if too many bits, do it again */
 #endif
-    /* Quantize and code the signal */
     for (channel = 0; channel < numChannels; channel++) {
-        if (coderInfo[channel].block_type == ONLY_SHORT_WINDOW) {
-            AACQuantize(&coderInfo[channel],
-                        hEncoder->srInfo->cb_width_short,
-                        hEncoder->srInfo->num_cb_short, hEncoder->freqBuff[channel],
-                        &(hEncoder->aacquantCfg));
-        } else {
-            AACQuantize(&coderInfo[channel],
-                        hEncoder->srInfo->cb_width_long,
-                        hEncoder->srInfo->num_cb_long, hEncoder->freqBuff[channel],
-                        &(hEncoder->aacquantCfg));
-        }
+        BlocQuant(&coderInfo[channel], hEncoder->freqBuff[channel],
+                  &(hEncoder->aacquantCfg));
     }
 
 #ifdef DRM

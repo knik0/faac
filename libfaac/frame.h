@@ -49,8 +49,8 @@ extern "C" {
 #include "coder.h"
 #include "channels.h"
 #include "blockswitch.h"
-#include "aacquant.h"
 #include "fft.h"
+#include "quantize.h"
 
 #pragma pack(push, 1)
 

@@ -32,6 +32,9 @@ void MSEncode(CoderInfo *coderInfo,
 {
   int chn;
 
+  // doesn't work with the new windows grouping code
+  return;
+
   for (chn = 0; chn < maxchan; chn++)
   {
     if (channelInfo[chn].present)
@@ -55,10 +58,6 @@ void MSEncode(CoderInfo *coderInfo,
 	  channelInfo[chn].common_window = 1;  /* Use common window */
 	  channelInfo[chn].msInfo.is_present = 1;
 	  channelInfo[rch].msInfo.is_present = 1;
-
-          // make the same reference energy in both channels
-	  coderInfo[chn].avgenrg = coderInfo[rch].avgenrg =
-	    0.5 * (coderInfo[chn].avgenrg + coderInfo[rch].avgenrg);
 
 	  for (sfb = 0; sfb < nsfb; sfb++)
 	  {
