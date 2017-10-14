@@ -21,10 +21,29 @@
 #ifndef QUANTIZE_H
 #define QUANTIZE_H
 
-#include "aacquant.h"
 #include "coder.h"
 
-int BlocQuant(CoderInfo *coderInfo, double *xr, int *xi, AACQuantCfg *aacquantCfg);
+typedef struct
+{
+    //double *pow43;
+    double quality;
+    int max_cbl;
+    int max_cbs;
+} AACQuantCfg;
+
+#include "quantize.h"
+
+enum {
+    DEFQUAL = 100,
+    MAXQUAL = 5000,
+    MAXQUALADTS = MAXQUAL,
+    MINQUAL = 10,
+    SF_OFFSET = 100,
+};
+
+int BlocQuant(CoderInfo *coderInfo, double *xr, AACQuantCfg *aacquantCfg);
 void BandLimit(unsigned *bw, int rate, SR_INFO *sr, AACQuantCfg *aacquantCfg);
+void BlocGroup(double *xr, CoderInfo *coderInfo, int maxsfb);
+void BlocStat(void);
 
 #endif

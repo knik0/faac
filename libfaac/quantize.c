@@ -20,8 +20,9 @@
 
 #include <immintrin.h>
 #include <math.h>
-#include "util.h"
+#include <stdio.h>
 #include "quantize.h"
+#include "huff2.h"
 
 #ifdef __SSE2__
 # ifdef __GNUC__
@@ -36,20 +37,36 @@
 #endif
 
 #define MAGIC_NUMBER  0.4054
-enum {NULL_SF = 0};
 
 // band sound masking
-static void bmask(CoderInfo *coderInfo, double *xr, double *bandqual,
-                  AACQuantCfg *aacquantCfg)
+static void bmask(CoderInfo *coderInfo, double *xr0, double *bandqual,
+                  int gnum, double quality)
 {
   int sfb, start, end, cnt;
   int *cb_offset = coderInfo->sfb_offset;
   int last;
-  double avgenrg = coderInfo->avgenrg;
+  double avgenrg;
   double powm = 0.4;
-  double quality = (double)aacquantCfg->quality/DEFQUAL;
+  double totenrg = 0.0;
+  int gsize = coderInfo->groups.len[gnum];
+  double *xr;
+  int win;
 
-  last = BLOCK_LEN_LONG;
+
+  for (sfb = 0; sfb < coderInfo->sfbn; sfb++)
+  {
+      start = coderInfo->sfb_offset[sfb];
+      end = coderInfo->sfb_offset[sfb + 1];
+
+      xr = xr0;
+      for (win = 0; win < gsize; win++)
+      {
+          for (cnt = start; cnt < end; cnt++)
+              totenrg += xr[cnt] * xr[cnt];
+
+          xr += BLOCK_LEN_SHORT;
+      }
+  }
 
   for (sfb = 0; sfb < coderInfo->sfbn; sfb++)
   {
@@ -61,27 +78,40 @@ static void bmask(CoderInfo *coderInfo, double *xr, double *bandqual,
 
     avge = 0.0;
     maxe = 0.0;
-    for (cnt = start; cnt < end; cnt++)
+    xr = xr0;
+    for (win = 0; win < gsize; win++)
     {
-        double e = xr[cnt]*xr[cnt];
-        avge += e;
-        if (maxe < e)
-            maxe = e;
+        for (cnt = start; cnt < end; cnt++)
+        {
+            double e = xr[cnt]*xr[cnt];
+            avge += e;
+            if (maxe < e)
+                maxe = e;
+        }
+        xr += BLOCK_LEN_SHORT;
     }
-    avge /= (end - start);
+    maxe *= gsize;
 
 #define NOISETONE 0.2
     if (coderInfo->block_type == ONLY_SHORT_WINDOW)
     {
-        target = NOISETONE * pow(avge/avgenrg, powm);
-        target += (1.0 - NOISETONE) * 0.45 * pow(maxe/avgenrg, powm);
-    }
-    else
-    {
+        last = BLOCK_LEN_SHORT;
+        avgenrg = totenrg / last;
+        avgenrg *= end - start;
+
         target = NOISETONE * pow(avge/avgenrg, powm);
         target += (1.0 - NOISETONE) * 0.45 * pow(maxe/avgenrg, powm);
 
-        target *= 0.45;
+        target *= 1.5;
+    }
+    else
+    {
+        last = BLOCK_LEN_LONG;
+        avgenrg = totenrg / last;
+        avgenrg *= end - start;
+
+        target = NOISETONE * pow(avge/avgenrg, powm);
+        target += (1.0 - NOISETONE) * 0.45 * pow(maxe/avgenrg, powm);
     }
 
     target *= 10.0 / (1.0 + ((double)(start+end)/last));
@@ -90,19 +120,21 @@ static void bmask(CoderInfo *coderInfo, double *xr, double *bandqual,
   }
 }
 
-// use band quality levels to quantize a block
+enum {MAXSHORTBAND = 36};
+// use band quality levels to quantize a group of windows
 static void qlevel(CoderInfo *coderInfo,
-                   const double *xr,
-                   int *xi,
-                   const double *bandqual, double *pow43)
+                   const double *xr0,
+                   const double *bandqual,
+                   int gnum
+                  )
 {
     int sb, cnt;
-    int start, end;
     // 1.5dB step
     static const double sfstep = 20.0 / 1.5 / M_LN10;
 #ifdef __SSE2__
     int cpuid[4];
     int sse2 = 0;
+    int gsize = coderInfo->groups.len[gnum];
 
     cpuid[3] = 0;
 # ifdef __GNUC__
@@ -121,85 +153,173 @@ static void qlevel(CoderInfo *coderInfo,
       int sfac;
       double maxx;
       double rmsx;
+      int xitab[8 * MAXSHORTBAND];
+      int *xi;
+      int start, end;
+      const double *xr;
+      int win;
 
       start = coderInfo->sfb_offset[sb];
       end = coderInfo->sfb_offset[sb+1];
 
       maxx = 0.0;
       rmsx = 0.0;
-      for (cnt = start; cnt < end; cnt++)
+      xr = xr0;
+      for (win = 0; win < gsize; win++)
       {
-          double e = xr[cnt] * xr[cnt];
-          if (maxx < e)
-            maxx = e;
-          rmsx += e;
+          for (cnt = start; cnt < end; cnt++)
+          {
+              double e = xr[cnt] * xr[cnt];
+              if (maxx < e)
+                  maxx = e;
+              rmsx += e;
+          }
+          xr += BLOCK_LEN_SHORT;
       }
-      rmsx /= (end - start);
+      rmsx /= ((end - start) * gsize);
       rmsx = sqrt(rmsx);
       maxx = sqrt(maxx);
 
       if (maxx < 10.0)
       {
-          for (cnt = start; cnt < end; cnt++)
-              xi[cnt] = 0;
-          coderInfo->scale_factor[coderInfo->sfcnt++] = NULL_SF;
+          coderInfo->book[coderInfo->bandcnt] = ZERO_HCB;
+          coderInfo->sf[coderInfo->bandcnt++] = 0;
           continue;
       }
 
+      //printf("qual:%f/%f\n", bandqual[sb], bandqual[sb]/rmsx);
       sfac = lrint(log(bandqual[sb] / rmsx) * sfstep);
       sfacfix = exp(sfac / sfstep);
-      coderInfo->scale_factor[coderInfo->sfcnt++] = sfac;
 
-#ifdef __SSE2__
-      if (sse2)
+      xr = xr0 + start;
+      end -= start;
+      xi = xitab;
+      for (win = 0; win < gsize; win++)
       {
-          for (cnt = start; cnt < end; cnt += 4)
+#ifdef __SSE2__
+          if (sse2)
           {
-              __m128 x = {xr[cnt], xr[cnt + 1], xr[cnt + 2], xr[cnt + 3]};
+              for (cnt = 0; cnt < end; cnt += 4)
+              {
+                  __m128 x = {xr[cnt], xr[cnt + 1], xr[cnt + 2], xr[cnt + 3]};
+                  //printf("%f/%f\n", xr[cnt], xr[cnt] * sfacfix);
 
-              x = _mm_max_ps(x, -x);
-              x *= (__m128){sfacfix, sfacfix, sfacfix, sfacfix};
-              x *= _mm_sqrt_ps(x);
-              x = _mm_sqrt_ps(x);
-              x += (__m128){MAGIC_NUMBER, MAGIC_NUMBER, MAGIC_NUMBER, MAGIC_NUMBER};
+                  x = _mm_max_ps(x, -x);
+                  x *= (__m128){sfacfix, sfacfix, sfacfix, sfacfix};
+                  x *= _mm_sqrt_ps(x);
+                  x = _mm_sqrt_ps(x);
+                  x += (__m128){MAGIC_NUMBER, MAGIC_NUMBER, MAGIC_NUMBER, MAGIC_NUMBER};
 
-              *(__m128i*)(xi + cnt) = _mm_cvttps_epi32(x);
+                  *(__m128i*)(xi + cnt) = _mm_cvttps_epi32(x);
+                  //printf("%d/%d/%d/%d\n", xi[cnt],xi[cnt+1],xi[cnt+2],xi[cnt+3]);
+              }
+              for (cnt = 0; cnt < end; cnt++)
+              {
+                  if (xr[cnt] < 0)
+                      xi[cnt] = -xi[cnt];
+              }
+              xi += cnt;
+              xr += BLOCK_LEN_SHORT;
+              continue;
           }
-          continue;
-      }
 #endif
 
-      for (cnt = start; cnt < end; cnt++)
-      {
-          double tmp = fabs(xr[cnt]);
+          for (cnt = 0; cnt < end; cnt++)
+          {
+              double tmp = fabs(xr[cnt]);
 
-          tmp *= sfacfix;
-          tmp = sqrt(tmp * sqrt(tmp));
+              tmp *= sfacfix;
+              tmp = sqrt(tmp * sqrt(tmp));
 
-          xi[cnt] = (int)(tmp + MAGIC_NUMBER);
+              xi[cnt] = (int)(tmp + MAGIC_NUMBER);
+              if (xr[cnt] < 0)
+                  xi[cnt] = -xi[cnt];
+          }
+          xi += cnt;
+          xr += BLOCK_LEN_SHORT;
       }
+      huffbook(coderInfo, xitab, gsize * end);
+      coderInfo->sf[coderInfo->bandcnt++] = SF_OFFSET - sfac;
     }
 }
 
-int BlocQuant(CoderInfo *coderInfo, double *xr, int *xi, AACQuantCfg *aacquantCfg)
+int BlocQuant(CoderInfo *coder, double *xr, AACQuantCfg *aacquantCfg)
 {
     double bandlvl[MAX_SCFAC_BANDS];
     int cnt;
     int nonzero = 0;
+    double *gxr;
 
-    coderInfo->sfcnt = 0;
+    coder->global_gain = 0;
+    for (cnt = 0; cnt < coder->sfbn; cnt++)
+        coder->sf[cnt] = 0;
+
+    coder->bandcnt = 0;
+    coder->datacnt = 0;
 
     for (cnt = 0; cnt < FRAME_LEN; cnt++)
         nonzero += (fabs(xr[cnt]) > 1E-20);
 
-    SetMemory(xi, 0, FRAME_LEN*sizeof(xi[0]));
     if (nonzero)
     {
-        bmask(coderInfo, xr, bandlvl, aacquantCfg);
-        qlevel(coderInfo, xr, xi, bandlvl, aacquantCfg->pow43);
+        int lastis;
+        int lastsf;
+
+        gxr = xr;
+        for (cnt = 0; cnt < coder->groups.n; cnt++)
+        {
+            bmask(coder, gxr, bandlvl, cnt,
+                  (double)aacquantCfg->quality/DEFQUAL);
+            qlevel(coder, gxr, bandlvl, cnt);
+            gxr += coder->groups.len[cnt] * BLOCK_LEN_SHORT;
+        }
+
+        coder->global_gain = 0;
+        for (cnt = 0; cnt < coder->bandcnt; cnt++)
+        {
+            int book = coder->book[cnt];
+            if (!book)
+                continue;
+            if ((book != INTENSITY_HCB) && (book != INTENSITY_HCB2))
+            {
+                coder->global_gain = coder->sf[cnt];
+                break;
+            }
+        }
+
+        lastsf = coder->global_gain;
+        lastis = 0;
+        // fixme: move SF range check to quantizer
+        for (cnt = 0; cnt < coder->bandcnt; cnt++)
+        {
+            int book = coder->book[cnt];
+            if ((book == INTENSITY_HCB) || (book == INTENSITY_HCB2))
+            {
+                int diff = coder->sf[cnt] - lastis;
+
+                if (diff < -60)
+                    diff = -60;
+                if (diff > 60)
+                    diff = 60;
+
+                lastis += diff;
+                coder->sf[cnt] = lastis;
+            }
+            else if (book)
+            {
+                int diff = coder->sf[cnt] - lastsf;
+
+                if (diff < -60)
+                    diff = -60;
+                if (diff > 60)
+                    diff = 60;
+
+                lastsf += diff;
+                coder->sf[cnt] = lastsf;
+            }
+        }
         return 1;
     }
-
     return 0;
 }
 
@@ -232,4 +352,99 @@ void BandLimit(unsigned *bw, int rate, SR_INFO *sr, AACQuantCfg *aacquantCfg)
     aacquantCfg->max_cbl = cnt;
 
     *bw = (double)l * rate / (BLOCK_LEN_LONG << 1);
+}
+
+enum {MINSFB = 2};
+
+static void calce(double *xr, int *bands, double e[NSFB_SHORT], int maxsfb)
+{
+    int sfb;
+    for (sfb = MINSFB; sfb < maxsfb; sfb++)
+    {
+        int l;
+
+        e[sfb] = 0;
+        for (l = bands[sfb]; l < bands[sfb + 1]; l++)
+            e[sfb] += xr[l] * xr[l];
+    }
+}
+
+static void resete(double min[NSFB_SHORT], double max[NSFB_SHORT],
+                   double e[NSFB_SHORT], int maxsfb)
+{
+    int sfb;
+    for (sfb = MINSFB; sfb < maxsfb; sfb++)
+        min[sfb] = max[sfb] = e[sfb];
+}
+
+#define PRINTSTAT 1
+#if PRINTSTAT
+static int groups = 0;
+static int frames = 0;
+#endif
+void BlocGroup(double *xr, CoderInfo *coderInfo, int maxsfb)
+{
+    int win, sfb;
+    double e[NSFB_SHORT];
+    double min[NSFB_SHORT];
+    double max[NSFB_SHORT];
+    const double thr = 3.0;
+    int win0;
+    int fastmin;
+
+    if (coderInfo->block_type != ONLY_SHORT_WINDOW)
+    {
+        coderInfo->groups.n = 1;
+        coderInfo->groups.len[0] = 1;
+        return;
+    }
+
+    fastmin = ((maxsfb - MINSFB) * 3) >> 2;
+
+#if 0
+    coderInfo->groups.n = 1;
+    coderInfo->groups.len[0] = 8;
+    return;
+#endif
+
+#if PRINTSTAT
+    frames++;
+#endif
+    calce(xr, coderInfo->sfb_offset, e, maxsfb);
+    resete(min, max, e, maxsfb);
+    win0 = 0;
+    coderInfo->groups.n = 0;
+    for (win = 1; win < MAX_SHORT_WINDOWS; win++)
+    {
+        int fast = 0;
+
+        calce(xr + win * BLOCK_LEN_SHORT, coderInfo->sfb_offset, e, maxsfb);
+        for (sfb = MINSFB; sfb < maxsfb; sfb++)
+        {
+            if (min[sfb] > e[sfb])
+                min[sfb] = e[sfb];
+            if (max[sfb] < e[sfb])
+                max[sfb] = e[sfb];
+
+            if (max[sfb] > thr * min[sfb])
+                fast++;
+        }
+        if (fast > fastmin)
+        {
+            coderInfo->groups.len[coderInfo->groups.n++] = win - win0;
+            win0 = win;
+            resete(min, max, e, maxsfb);
+        }
+    }
+    coderInfo->groups.len[coderInfo->groups.n++] = win - win0;
+#if PRINTSTAT
+    groups += coderInfo->groups.n;
+#endif
+}
+
+void BlocStat(void)
+{
+#if PRINTSTAT
+    printf("frames:%d; groups:%d; g/f:%f\n", frames, groups, (double)groups/frames);
+#endif
 }
