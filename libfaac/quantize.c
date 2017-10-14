@@ -377,7 +377,7 @@ static void resete(double min[NSFB_SHORT], double max[NSFB_SHORT],
         min[sfb] = max[sfb] = e[sfb];
 }
 
-#define PRINTSTAT 1
+#define PRINTSTAT 0
 #if PRINTSTAT
 static int groups = 0;
 static int frames = 0;
