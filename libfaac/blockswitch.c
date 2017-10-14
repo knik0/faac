@@ -235,6 +235,10 @@ static void PsyCalculate(ChannelInfo * channelInfo, GlobalPsyInfo * gpsyInfo,
 {
   unsigned int channel;
 
+  // limit switching threshold
+  if (quality < 40)
+      quality = 40;
+
   for (channel = 0; channel < numChannels; channel++)
   {
     if (channelInfo[channel].present)
