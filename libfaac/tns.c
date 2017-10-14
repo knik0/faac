@@ -37,9 +37,6 @@ Copyright (c) 1997.
 /***********************************************/
 /* TNS Profile/Frequency Dependent Parameters  */
 /***********************************************/
-static unsigned long tnsSupportedSamplingRates[13] =
-{ 96000,88200,64000,48000,44100,32000,24000,22050,16000,12000,11025,8000,0 };
-
 /* Limit bands to > 2.0 kHz */
 static unsigned short tnsMinBandNumberLong[12] =
 { 11, 12, 15, 16, 17, 20, 25, 26, 24, 28, 30, 31 };
