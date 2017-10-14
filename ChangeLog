@@ -1,3 +1,5 @@
+	* implemented short windows grouping
+	* new huffman coder
 	* SSE quantizer
 	* modified functioning of ABR mode (-b option)
 	* improved autotools support
