@@ -8,6 +8,7 @@
 *.aac
 *.wav
 *.mp4
+*.m4a
 *.lo
 Makefile*
 *.deps
