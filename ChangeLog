@@ -1,3 +1,4 @@
+	* changed default mode to ABR 64kbps/channel
 	* implemented short windows grouping
 	* new huffman coder
 	* SSE quantizer

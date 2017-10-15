@@ -886,11 +886,14 @@ int main(int argc, char *argv[])
     if (infile->channels >= 6)
         myFormat->useLfe = 1;
     myFormat->allowMidside = useMidSide;
+    if (quantqual > 0)
+    {
+        myFormat->quantqual = quantqual;
+        myFormat->bitRate = 0;
+    }
     if (bitRate)
         myFormat->bitRate = bitRate / infile->channels;
     myFormat->bandWidth = cutOff;
-    if (quantqual > 0)
-        myFormat->quantqual = quantqual;
     myFormat->outputFormat = stream;
     myFormat->inputFormat = FAAC_INPUT_FLOAT;
     if (!faacEncSetConfiguration(hEncoder, myFormat))
@@ -941,9 +944,13 @@ int main(int argc, char *argv[])
     quantqual = myFormat->quantqual;
     bitRate = myFormat->bitRate;
     if (bitRate)
-        fprintf(stderr, "Average bitrate: %d kbps\n",
-                (bitRate + 500) / 1000 * infile->channels);
-    fprintf(stderr, "Quantization quality: %ld\n", quantqual);
+    {
+        fprintf(stderr, "Initial quantization quality: %ld\n", quantqual);
+        fprintf(stderr, "Average bitrate: %d kbps/channel\n",
+                (bitRate + 500) / 1000);
+    }
+    else
+        fprintf(stderr, "Quantization quality: %ld\n", quantqual);
     fprintf(stderr, "Bandwidth: %d Hz\n", cutOff);
     fprintf(stderr, "Object type: ");
     switch (objectType)
