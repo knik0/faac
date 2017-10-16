@@ -31,9 +31,6 @@ copyright notice must be included in all copies or derivative works.
 
 Copyright (c) 1996.
 **********************************************************************/
-/*
- * $Id: bitstream.h,v 1.15 2012/03/01 18:34:17 knik Exp $
- */
 
 #ifndef BITSTREAM_H
 #define BITSTREAM_H
@@ -109,7 +106,6 @@ extern "C" {
 # define FIRST_PAIR_HCB 5
 # define QUAD_LEN 4
 # define PAIR_LEN 2
-# define ESC_HCB 11
 #endif
 
 #define ID_SCE 0
