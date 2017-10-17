@@ -128,9 +128,7 @@ END
 
 IDD_MAINDIALOG DLGINIT
 BEGIN
-    IDC_MPEGVERSION, 0x403, 1, 0
-"\000" 
-    0
+    IDC_MPEGVERSION, 0x403, 1, 0, "\000", 0
 END
 
 #endif    // English (U.S.) resources
