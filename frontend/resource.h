@@ -2,6 +2,7 @@
 // Microsoft Developer Studio generated include file.
 // Used by faacgui.rc
 //
+#define ID_ICON1 200
 #define IDD_MAINDIALOG                  102
 #define IDC_INPUTFILENAME               1000
 #define IDC_SELECT_INPUTFILE            1001
