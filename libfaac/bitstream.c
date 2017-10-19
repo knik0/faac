@@ -989,7 +989,7 @@ static int rewind_word(int W, int len)
     return tmp_W;
 }
 
-static int WriteReorderedSpectralData(CoderInfo *coderInfo,
+static int WriteReorderedSpectralData(CoderInfo *coder,
                                       BitStream *bitStream,
                                       int writeFlag)
 {
@@ -998,13 +998,13 @@ static int WriteReorderedSpectralData(CoderInfo *coderInfo,
     int segmcnt = 0;
     long startbitpos;
     segment_t segment[FRAME_LEN];
-    int* groups = coderInfo->groups.len;
-    int* sfb_offset = coderInfo->sfb_offset;
+    int* groups = coder->groups.len;
+    int* sfb_offset = coder->sfb_offset;
 
     cw_info_t cw_info[FRAME_LEN];
     cw_info_t cw_info_preso[FRAME_LEN];
 
-    int num_cw = coderInfo->cur_cw;
+    int num_cw = coder->cur_cw;
     int window_cw_cnt[MAX_SHORT_WINDOWS] = {0,0,0,0,0,0,0,0};
 
     int presort, set, num_sets;
@@ -1020,9 +1020,7 @@ static int WriteReorderedSpectralData(CoderInfo *coderInfo,
     /* set up local pointers to data and len */
     /* data array contains data to be written */
     /* len array contains lengths of data words */
-    int* data = coderInfo->data;
-    int* len  = coderInfo->len;
-    int* num_data = coderInfo->num_data_cw;
+    int* num_data = coder->num_data_cw;
 
     if (writeFlag) {
         /* build offset table */
@@ -1031,7 +1029,7 @@ static int WriteReorderedSpectralData(CoderInfo *coderInfo,
         for (i = 0; i < num_cw; i++) {
             cur_cw_len = 0;
             for (j = 0; j < num_data[i]; j++) {
-                cur_cw_len += len[cur_data++];
+                cur_cw_len += coder->s[cur_data++].len;
             }
 
             cw_info[i].num_data = num_data[i];
@@ -1044,7 +1042,7 @@ static int WriteReorderedSpectralData(CoderInfo *coderInfo,
         /* classify codewords first */
         sfb_cnt = win_cnt = win_grp_cnt = coeff_cnt = last_sfb = acc_win_cnt = 0;
         cur_sfb_len = sfb_offset[1] / groups[0];
-        cur_cb = coderInfo->book_vector[0];
+        cur_cb = coder->book[0];
         for (i = 0; i < num_cw; i++) {
             /* Set codeword info parameters */
             cw_info[i].cb = cur_cb;
@@ -1063,7 +1061,7 @@ static int WriteReorderedSpectralData(CoderInfo *coderInfo,
                     win_cnt = 0;
 
                     sfb_cnt++; /* next sfb */
-                    if (sfb_cnt == coderInfo->all_sfb) {
+                    if (sfb_cnt == coder->all_sfb) {
                         sfb_cnt = 0;
 
                         acc_win_cnt += groups[win_grp_cnt];
@@ -1071,7 +1069,7 @@ static int WriteReorderedSpectralData(CoderInfo *coderInfo,
                     }
 
                     /* new codebook and sfb length */
-                    cur_cb = coderInfo->book_vector[sfb_cnt];
+                    cur_cb = coder->book[sfb_cnt];
                     if (last_sfb < FRAME_LEN) {
                         cur_sfb_len = (sfb_offset[sfb_cnt + 1] - sfb_offset[sfb_cnt])
                             / groups[win_grp_cnt];
@@ -1085,7 +1083,7 @@ static int WriteReorderedSpectralData(CoderInfo *coderInfo,
 
 /* Somehow the second presorting step does not give expected results. Disabling the
    following code surprisingly gives good results. TODO: find the bug */
-        if (0) {//coderInfo->block_type == ONLY_SHORT_WINDOW) {
+        if (0) {//coder->block_type == ONLY_SHORT_WINDOW) {
             for (i = 0; i < MAX_SHORT_WINDOWS; i++)
                 window_cw_cnt[i] = 0; /* reset all counters */
 
@@ -1137,12 +1135,12 @@ static int WriteReorderedSpectralData(CoderInfo *coderInfo,
         accsegmsize = 0;
         for (i = 0; i < num_cw; i++) {
             /* 8.5.3.3.3.2 Derivation of segment width */
-            cursegmsize = min(maxCwLen[cw_info[i].cb], coderInfo->iLenLongestCW);
+            cursegmsize = min(maxCwLen[cw_info[i].cb], coder->iLenLongestCW);
 
-            if (accsegmsize + cursegmsize > coderInfo->iLenReordSpData) {
+            if (accsegmsize + cursegmsize > coder->iLenReordSpData) {
                 /* the last segment is extended until iLenReordSpData */
-                segment[segmcnt - 1].right = coderInfo->iLenReordSpData - 1;
-                segment[segmcnt - 1].len = coderInfo->iLenReordSpData - segment[segmcnt - 1].left;
+                segment[segmcnt - 1].right = coder->iLenReordSpData - 1;
+                segment[segmcnt - 1].len = coder->iLenReordSpData - segment[segmcnt - 1].left;
                 break;
             }
 
@@ -1199,34 +1197,34 @@ static int WriteReorderedSpectralData(CoderInfo *coderInfo,
                         for (cw_part_cnt = 0; cw_part_cnt < cw_info[codeword_index].num_data; cw_part_cnt++) {
                             cur_cw_part = cw_info[codeword_index].cw_offset + cw_part_cnt;
 
-                            if (len[cur_cw_part] <= tmplen) {
+                            if (coder->s[cur_cw_part].len <= tmplen) {
                                 /* write complete data, no partitioning */
                                 if (is_backwards) {
                                     /* write data in reversed bit-order */
-                                    PutBitHcr(bitStream, startbitpos + segment[segment_index].right - len[cur_cw_part] + 1,
-                                        rewind_word(data[cur_cw_part], len[cur_cw_part]), len[cur_cw_part]);
+                                    PutBitHcr(bitStream, startbitpos + segment[segment_index].right - coder->s[cur_cw_part].len + 1,
+                                        rewind_word(coder->s[cur_cw_part].data, coder->s[cur_cw_part].len), coder->s[cur_cw_part].len);
 
-                                    segment[segment_index].right -= len[cur_cw_part];
+                                    segment[segment_index].right -= coder->s[cur_cw_part].len;
                                 } else {
                                     PutBitHcr(bitStream, startbitpos + segment[segment_index].left,
-                                        data[cur_cw_part], len[cur_cw_part]);
+                                        coder->s[cur_cw_part].data, coder->s[cur_cw_part].len);
 
-                                    segment[segment_index].left += len[cur_cw_part];
+                                    segment[segment_index].left += coder->s[cur_cw_part].len;
                                 }
 
-                                tmplen -= len[cur_cw_part];
-                                len[cur_cw_part] = 0;
+                                tmplen -= coder->s[cur_cw_part].len;
+                                coder->s[cur_cw_part].len = 0;
                             } else {
                                 /* codeword part must be partitioned */
                                 /* data must be taken from the left side */
-                                tmp_data = data[cur_cw_part];
+                                tmp_data = coder->s[cur_cw_part].data;
 
-                                diff = len[cur_cw_part] - tmplen;
+                                diff = coder->s[cur_cw_part].len - tmplen;
                                 tmp_data >>= diff;
 
                                 /* remove bits which are already used */
-                                data[cur_cw_part] &= (1 << diff) - 1 /* diff number of ones */;
-                                len[cur_cw_part] = diff;
+                                coder->s[cur_cw_part].data &= (1 << diff) - 1 /* diff number of ones */;
+                                coder->s[cur_cw_part].len = diff;
 
                                 if (is_backwards) {
                                     /* write data in reversed bit-order */
@@ -1256,11 +1254,11 @@ static int WriteReorderedSpectralData(CoderInfo *coderInfo,
         }
 
         /* set parameter for bit stream to current correct position */
-        bitStream->currentBit = startbitpos + coderInfo->iLenReordSpData;
+        bitStream->currentBit = startbitpos + coder->iLenReordSpData;
         bitStream->numBit = bitStream->currentBit;
     }
 
-    return coderInfo->iLenReordSpData;
+    return coder->iLenReordSpData;
 }
 
 /*

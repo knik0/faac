@@ -256,6 +256,11 @@ int BlocQuant(CoderInfo *coder, double *xr, AACQuantCfg *aacquantCfg)
 
     coder->bandcnt = 0;
     coder->datacnt = 0;
+#ifdef DRM
+    coder->iLenReordSpData = 0; /* init length of reordered spectral data */
+    coder->iLenLongestCW = 0; /* init length of longest codeword */
+    coder->cur_cw = 0; /* init codeword counter */
+#endif
 
     for (cnt = 0; cnt < FRAME_LEN; cnt++)
         nonzero += (fabs(xr[cnt]) > 1E-20);

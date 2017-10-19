@@ -9,9 +9,6 @@ AH_TOP([#ifndef CONFIG_H
 AH_BOTTOM([#endif /* CONFIG_H */])
 
 AC_ARG_ENABLE( drm,  [  --enable-drm            Digital Radio Mondiale support], enable_drm=$enableval, enable_drm=no)
-if test "x$enable_drm" = "xyes"; then
-    AC_MSG_ERROR("DRM not available in this version")
-fi
 
 AC_DEFUN([MY_DEFINE], [ AC_DEFINE($1, 1, [define if needed]) ])
 
