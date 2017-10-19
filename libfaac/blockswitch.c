@@ -221,7 +221,7 @@ static void PsyEnd(GlobalPsyInfo * gpsyInfo, PsyInfo * psyInfo, unsigned int num
   }
 
 #if PRINTSTAT
-  printf("short frames: %.2f %%\n", 100.0*frames.s/frames.tot);
+  printf("short frames: %d/%d (%.2f %%)\n", frames.s, frames.tot, 100.0*frames.s/frames.tot);
 #endif
 }
 
@@ -236,8 +236,8 @@ static void PsyCalculate(ChannelInfo * channelInfo, GlobalPsyInfo * gpsyInfo,
   unsigned int channel;
 
   // limit switching threshold
-  if (quality < 40)
-      quality = 40;
+  if (quality < 0.4)
+      quality = 0.4;
 
   for (channel = 0; channel < numChannels; channel++)
   {
