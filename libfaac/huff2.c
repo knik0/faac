@@ -427,12 +427,12 @@ int huffbook(CoderInfo *coder,
 
 #ifdef DRM
     vcb11 = 0;
-#endif
-    if (bookmin > ZERO_HCB)
-        huffcode(qs, len, bookmin, coder);
-#ifdef DRM
+    huffcode(qs, len, bookmin, coder);
     if (vcb11)
         bookmin = vcb11;
+#else
+    if (bookmin > ZERO_HCB)
+        huffcode(qs, len, bookmin, coder);
 #endif
     coder->book[coder->bandcnt] = bookmin;
 
