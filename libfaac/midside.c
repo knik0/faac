@@ -123,8 +123,8 @@ void MSEncode(CoderInfo *coder,
     int chn;
     int usems;
     double mutethr;
-    static const double thr075 = 0.09; /* ~0.75dB */
-    static const double thrmax = 0.25; /* ~2dB */
+    static const double thr075 = 0.1885; /* ~0.75dB */
+    static const double thrmax = 1.5; /* ~1.76dB */
 
     if (quality > 0.01)
     {
