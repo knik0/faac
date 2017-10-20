@@ -157,7 +157,7 @@ int FAACAPI faacEncSetConfiguration(faacEncHandle hpEncoder,
 
     if (config->bitRate && !config->bandWidth)
     {
-        config->bandWidth = (double)config->bitRate * hEncoder->sampleRate * g_bw.fac / 60000.0;
+        config->bandWidth = (double)config->bitRate * hEncoder->sampleRate * g_bw.fac / 50000.0;
         if (config->bandWidth > g_bw.freq)
             config->bandWidth = g_bw.freq;
 
@@ -520,14 +520,13 @@ int FAACAPI faacEncEncode(faacEncHandle hpEncoder,
         if (coderInfo[channel].block_type == ONLY_SHORT_WINDOW) {
             coderInfo[channel].sfbn = hEncoder->aacquantCfg.max_cbs;
 
-            BlocGroup(hEncoder->freqBuff[channel], coderInfo + channel, hEncoder->aacquantCfg.max_cbs);
-
             offset = 0;
             for (sb = 0; sb < coderInfo[channel].sfbn; sb++) {
                 coderInfo[channel].sfb_offset[sb] = offset;
                 offset += hEncoder->srInfo->cb_width_short[sb];
             }
             coderInfo[channel].sfb_offset[sb] = offset;
+            BlocGroup(hEncoder->freqBuff[channel], coderInfo + channel, hEncoder->aacquantCfg.max_cbs);
         } else {
             coderInfo[channel].sfbn = hEncoder->aacquantCfg.max_cbl;
 
@@ -565,7 +564,12 @@ int FAACAPI faacEncEncode(faacEncHandle hpEncoder,
 		}
 	}
 
-    MSEncode(coderInfo, channelInfo, hEncoder->freqBuff, numChannels, allowMidside);
+    if (allowMidside)
+        MSEncode(coderInfo, channelInfo, hEncoder->freqBuff, numChannels,
+                 (double)hEncoder->aacquantCfg.quality/DEFQUAL);
+    else
+        MSEncode(coderInfo, channelInfo, hEncoder->freqBuff, numChannels,
+                 0.0);
 
 #ifdef DRM
     /* loop the quantization until the desired bit-rate is reached */

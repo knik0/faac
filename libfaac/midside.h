@@ -30,7 +30,7 @@ extern "C" {
 
 
 void MSEncode(CoderInfo *coderInfo, ChannelInfo *channelInfo, double *spectrum[MAX_CHANNELS],
-              unsigned int numberOfChannels, unsigned int msenable);
+              unsigned int numberOfChannels, double quality);
 
 #ifdef __cplusplus
 }

@@ -16,7 +16,6 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: midside.c,v 1.1 2003/06/26 19:39:54 knik Exp $
  */
 
 #include <math.h>
@@ -24,99 +23,162 @@
 #include "util.h"
 
 
-void MSEncode(CoderInfo *coderInfo,
-	      ChannelInfo *channelInfo,
-	      double *spectrum[MAX_CHANNELS],
-	      int maxchan,
-	      int allowms)
+static void midside(CoderInfo *coder, ChannelInfo *channel,
+                    double *sl0, double *sr0, int *mscnt,
+                    int wstart, int wend,
+                    double mutethr
+                   )
 {
-  int chn;
+    int sfb;
+    int win;
 
-  // doesn't work with the new windows grouping code
-  return;
-
-  for (chn = 0; chn < maxchan; chn++)
-  {
-    if (channelInfo[chn].present)
+    for (sfb = 0; sfb < coder->sfbn; sfb++)
     {
-      if ((channelInfo[chn].cpe) && (channelInfo[chn].ch_is_left))
-      {
-	int rch = channelInfo[chn].paired_ch;
+        int ms = 0;
+        int l, start, end;
+        double sum, diff;
+        double enrgs, enrgd, enrgl, enrgr;
+        double maxs, maxd, maxl, maxr;
 
-	channelInfo[chn].msInfo.is_present = 0;
-	channelInfo[rch].msInfo.is_present = 0;
+        start = coder->sfb_offset[sfb];
+        end = coder->sfb_offset[sfb + 1];
 
-	/* Perform MS if block_types are the same */
-	if ((coderInfo[chn].block_type == coderInfo[rch].block_type)
-	    && allowms)
-	{
-            int nsfb = coderInfo[chn].sfbn;
-	  MSInfo *msInfoL = &(channelInfo[chn].msInfo);
-	  MSInfo *msInfoR = &(channelInfo[rch].msInfo);
-	  int sfb;
+        enrgs = enrgd = enrgl = enrgr = 0.0;
+        maxs = maxd = maxl = maxr = 0.0;
+        for (win = wstart; win < wend; win++)
+        {
+            double *sl = sl0 + win * BLOCK_LEN_SHORT;
+            double *sr = sr0 + win * BLOCK_LEN_SHORT;
 
-	  channelInfo[chn].common_window = 1;  /* Use common window */
-	  channelInfo[chn].msInfo.is_present = 1;
-	  channelInfo[rch].msInfo.is_present = 1;
+            for (l = start; l < end; l++)
+            {
+                double lx = sl[l];
+                double rx = sr[l];
 
-	  for (sfb = 0; sfb < nsfb; sfb++)
-	  {
-            int ms = 0;
-	    int l, start, end;
-	    double sum, diff;
-            double enrgs, enrgd, enrgl, enrgr;
-	    double maxs, maxd, maxl, maxr;
+                sum = 0.5 * (lx + rx);
+                diff = 0.5 * (lx - rx);
 
-	    start = coderInfo[chn].sfb_offset[sfb];
-            end = coderInfo[chn].sfb_offset[sfb + 1];
+                enrgs += sum * sum;
+                maxs = max(maxs, fabs(sum));
 
-            enrgs = enrgd = enrgl = enrgr = 0.0;
-	    maxs = maxd = maxl = maxr = 0.0;
-	    for (l = start; l < end; l++)
-	    {
-              double lx = spectrum[chn][l];
-	      double rx = spectrum[rch][l];
+                enrgd += diff * diff;
+                maxd = max(maxd, fabs(diff));
 
-	      sum = 0.5 * (lx + rx);
-	      diff = 0.5 * (lx - rx);
+                enrgl += lx * lx;
+                enrgr += rx * rx;
 
-	      enrgs += sum * sum;
-	      maxs = max(maxs, fabs(sum));
+                maxl = max(maxl, fabs(lx));
+                maxr = max(maxr, fabs(rx));
+            }
+        }
 
-	      enrgd += diff * diff;
-	      maxd = max(maxd, fabs(diff));
+        if (min(enrgs, enrgd) < mutethr * max(enrgs, enrgd))
+        {
+            ms = 1;
+            for (win = wstart; win < wend; win++)
+            {
+                double *sl = sl0 + win * BLOCK_LEN_SHORT;
+                double *sr = sr0 + win * BLOCK_LEN_SHORT;
+                for (l = start; l < end; l++)
+                {
+                    sum = sl[l] + sr[l];
+                    diff = sl[l] - sr[l];
+                    if (enrgs < enrgd)
+                        sum = 0.0;
+                    else
+                        diff = 0.0;
+                    sl[l] = 0.5 * sum;
+                    sr[l] = 0.5 * diff;
+                }
+            }
+        }
+        if (min(enrgl, enrgr) < mutethr * max(enrgl, enrgr))
+        {
+            for (win = wstart; win < wend; win++)
+            {
+                double *sl = sl0 + win * BLOCK_LEN_SHORT;
+                double *sr = sr0 + win * BLOCK_LEN_SHORT;
+                for (l = start; l < end; l++)
+                {
+                    if (enrgl < enrgr)
+                        sl[l] = 0.0;
+                    else
+                        sr[l] = 0.0;
+                }
+            }
+        }
 
-	      enrgl += lx * lx;
-	      enrgr += rx * rx;
-
-              maxl = max(maxl, fabs(lx));
-              maxr = max(maxr, fabs(rx));
-	    }
-
-#if 1
-	    if ((min(enrgs, enrgd) < min(enrgl, enrgr))
-		&& (min(maxs, maxd) < min(maxl, maxr)))
-	      ms = 1;
-#else
-	    if (min(enrgs, enrgd) < min(enrgl, enrgr))
-	      ms = 1;
-#endif
-
-	    //printf("%d:%d\n", sfb, ms);
-
-	    msInfoR->ms_used[sfb] = msInfoL->ms_used[sfb] = ms;
-
-	    if (ms)
-	      for (l = start; l < end; l++)
-	      {
-		sum = spectrum[chn][l] + spectrum[rch][l];
-		diff = spectrum[chn][l] - spectrum[rch][l];
-		spectrum[chn][l] = 0.5 * sum;
-		spectrum[rch][l] = 0.5 * diff;
-	      }
-	  }
-	}
-      }
+        channel->msInfo.ms_used[*mscnt] = ms;
+        (*mscnt)++;
     }
-  }
+}
+
+
+void MSEncode(CoderInfo *coder,
+              ChannelInfo *channel,
+              double *s[MAX_CHANNELS],
+              int maxchan,
+              double quality)
+{
+    int chn;
+    int usems;
+    double mutethr;
+    static const double thr075 = 0.09; /* ~0.75dB */
+    static const double thrmax = 0.25; /* ~2dB */
+
+    if (quality > 0.01)
+    {
+        usems = 1;
+        mutethr = thr075 / quality;
+        if (mutethr > thrmax)
+            mutethr = thrmax;
+    }
+    else
+    {
+        usems = 0;
+        mutethr = 0.0;
+    }
+
+    for (chn = 0; chn < maxchan; chn++)
+    {
+        int rch;
+        int cnt;
+        int group;
+        int mscnt = 0;
+        int start = 0;
+
+        if (!channel[chn].present)
+            continue;
+        if (!((channel[chn].cpe) && (channel[chn].ch_is_left)))
+            continue;
+
+        rch = channel[chn].paired_ch;
+
+        channel[chn].msInfo.is_present = 0;
+        channel[rch].msInfo.is_present = 0;
+
+        if (!usems)
+            continue;
+
+        if (coder[chn].block_type != coder[rch].block_type)
+            continue;
+        if (coder[chn].groups.n != coder[rch].groups.n)
+            continue;
+        for (cnt = 0; cnt < coder[chn].groups.n; cnt++)
+            if (coder[chn].groups.len[cnt] != coder[rch].groups.len[cnt])
+                goto skip;
+
+        channel[chn].common_window = 1;
+        channel[chn].msInfo.is_present = 1;
+        channel[rch].msInfo.is_present = 1;
+
+        for (group = 0; group < coder->groups.n; group++)
+        {
+            int end = start + coder->groups.len[group];
+            midside(coder + chn, channel + chn, s[chn], s[rch], &mscnt,
+                    start, end, mutethr);
+            start = end;
+        }
+        skip:;
+    }
 }
