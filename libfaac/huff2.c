@@ -94,18 +94,18 @@ static int huffcode(int *qs /* quantized spectrum */,
     book = hmap[bnum];
     switch (bnum)
     {
+#ifdef DRM
     case ZERO_HCB:
     case INTENSITY_HCB:
     case INTENSITY_HCB2:
-#ifdef DRM
         for(ofs = 0; ofs < len; ofs += 4)
         {
             coder->s[datacnt].data = 0;
             coder->s[datacnt++].len = 0;
             coder->num_data_cw[coder->cur_cw++] = 1;
         }
-#endif
         break;
+#endif
     case 1:
     case 2:
         for(ofs = 0; ofs < len; ofs += 4)
