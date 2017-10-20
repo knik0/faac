@@ -40,6 +40,9 @@ static void midside(CoderInfo *coder, ChannelInfo *channel,
         double enrgs, enrgd, enrgl, enrgr;
         double maxs, maxd, maxl, maxr;
 
+	if (sfb < 1)
+            goto setms;
+
         start = coder->sfb_offset[sfb];
         end = coder->sfb_offset[sfb + 1];
 
@@ -108,6 +111,7 @@ static void midside(CoderInfo *coder, ChannelInfo *channel,
             }
         }
 
+    setms:
         channel->msInfo.ms_used[*mscnt] = ms;
         (*mscnt)++;
     }
