@@ -406,7 +406,7 @@ void BlocGroup(double *xr, CoderInfo *coderInfo, int maxsfb)
 
     fastmin = ((maxsfb - MINSFB) * 3) >> 2;
 
-#if 0
+#ifdef DRM
     coderInfo->groups.n = 1;
     coderInfo->groups.len[0] = 8;
     return;
