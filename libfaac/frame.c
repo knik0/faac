@@ -496,7 +496,7 @@ int FAACAPI faacEncEncode(faacEncHandle hpEncoder,
 			coderInfo[channel].block_type = ONLY_LONG_WINDOW;
 		}
     }
-    if (shortctl == SHORTCTL_NOLONG)
+    else if ((hEncoder->frameNum <= 4) || (shortctl == SHORTCTL_NOLONG))
     {
 		for (channel = 0; channel < numChannels; channel++)
 		{
