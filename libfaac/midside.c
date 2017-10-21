@@ -68,18 +68,42 @@ static void midside(CoderInfo *coder, ChannelInfo *channel,
 
         if ((min(enrgl, enrgr) * thrmid) >= max(enrgs, enrgd))
         {
-            ms = 1;
-            for (win = wstart; win < wend; win++)
-            {
-                double *sl = sl0 + win * BLOCK_LEN_SHORT;
-                double *sr = sr0 + win * BLOCK_LEN_SHORT;
-                for (l = start; l < end; l++)
-                {
-                    sum = sl[l] + sr[l];
-                    diff = 0;
+            enum {PH_NONE, PH_IN, PH_OUT};
+            int phase = PH_NONE;
 
-                    sl[l] = 0.5 * sum;
-                    sr[l] = 0.5 * diff;
+            if ((enrgs * thrmid * 2.0) >= (enrgl + enrgr))
+            {
+                ms = 1;
+                phase = PH_IN;
+            }
+            else if ((enrgd * thrmid * 2.0) >= (enrgl + enrgr))
+            {
+                ms = 1;
+                phase = PH_OUT;
+            }
+
+            if (ms)
+            {
+                for (win = wstart; win < wend; win++)
+                {
+                    double *sl = sl0 + win * BLOCK_LEN_SHORT;
+                    double *sr = sr0 + win * BLOCK_LEN_SHORT;
+                    for (l = start; l < end; l++)
+                    {
+                        if (phase == PH_IN)
+                        {
+                            sum = sl[l] + sr[l];
+                            diff = 0;
+                        }
+                        else
+                        {
+                            sum = 0;
+                            diff = sl[l] - sr[l];
+                        }
+
+                        sl[l] = 0.5 * sum;
+                        sr[l] = 0.5 * diff;
+                    }
                 }
             }
         }
@@ -115,8 +139,10 @@ void MSEncode(CoderInfo *coder,
 {
     int chn;
     int usems;
-    static const double thr075 = 0.1885; /* ~0.75dB */
-    static const double thrmax = 0.5; /* ~1.76dB */
+    static const double thr075 = 1.09 /* ~0.75dB */ - 1.0;
+    static const double thrmax = 1.25 /* ~2dB */ - 1.0;
+    static const double sidemin = 0.1; /* -20dB */
+    static const double sidemax = 0.3; /* ~-10.5dB */
     double thrmid, thrside;
 
     if (quality > 0.01)
@@ -125,15 +151,21 @@ void MSEncode(CoderInfo *coder,
         thrmid = thr075 / quality;
         if (thrmid > thrmax)
             thrmid = thrmax;
+
+        thrside = sidemin / quality;
+        if (thrside > sidemax)
+            thrside = sidemax;
     }
     else
     {
         usems = 0;
         thrmid = 0.0;
+        thrside = 0.0;
     }
-
     thrmid += 1.0;
-    thrside = sqrt(thrmid) - 1.0;
+
+    // convert into energy
+    thrmid *= thrmid;
     thrside *= thrside;
 
     for (chn = 0; chn < maxchan; chn++)
