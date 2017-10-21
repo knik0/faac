@@ -18,11 +18,14 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ****************************************************************************/
 
-#include <immintrin.h>
 #include <math.h>
 #include <stdio.h>
 #include "quantize.h"
 #include "huff2.h"
+
+#ifdef HAVE_IMMINTRIN_H
+# include <immintrin.h>
+#endif
 
 #ifdef __SSE2__
 # ifdef __GNUC__
@@ -31,6 +34,7 @@
 #endif
 
 #ifdef _MSC_VER
+# include <immintrin.h>
 # include <intrin.h>
 # define __SSE2__
 # define bit_SSE2 (1 << 26)
@@ -131,10 +135,10 @@ static void qlevel(CoderInfo *coderInfo,
     int sb, cnt;
     // 1.5dB step
     static const double sfstep = 20.0 / 1.5 / M_LN10;
+    int gsize = coderInfo->groups.len[gnum];
 #ifdef __SSE2__
     int cpuid[4];
     int sse2 = 0;
-    int gsize = coderInfo->groups.len[gnum];
 
     cpuid[3] = 0;
 # ifdef __GNUC__
