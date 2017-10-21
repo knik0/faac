@@ -26,7 +26,7 @@
 static void midside(CoderInfo *coder, ChannelInfo *channel,
                     double *sl0, double *sr0, int *mscnt,
                     int wstart, int wend,
-                    double mutethr
+                    double thrmid, double thrside
                    )
 {
     int sfb;
@@ -38,16 +38,14 @@ static void midside(CoderInfo *coder, ChannelInfo *channel,
         int l, start, end;
         double sum, diff;
         double enrgs, enrgd, enrgl, enrgr;
-        double maxs, maxd, maxl, maxr;
 
-	if (sfb < 1)
+        if (sfb < 1)
             goto setms;
 
         start = coder->sfb_offset[sfb];
         end = coder->sfb_offset[sfb + 1];
 
         enrgs = enrgd = enrgl = enrgr = 0.0;
-        maxs = maxd = maxl = maxr = 0.0;
         for (win = wstart; win < wend; win++)
         {
             double *sl = sl0 + win * BLOCK_LEN_SHORT;
@@ -62,20 +60,13 @@ static void midside(CoderInfo *coder, ChannelInfo *channel,
                 diff = 0.5 * (lx - rx);
 
                 enrgs += sum * sum;
-                maxs = max(maxs, fabs(sum));
-
                 enrgd += diff * diff;
-                maxd = max(maxd, fabs(diff));
-
                 enrgl += lx * lx;
                 enrgr += rx * rx;
-
-                maxl = max(maxl, fabs(lx));
-                maxr = max(maxr, fabs(rx));
             }
         }
 
-        if (min(enrgs, enrgd) < mutethr * max(enrgs, enrgd))
+        if ((min(enrgl, enrgr) * thrmid) >= max(enrgs, enrgd))
         {
             ms = 1;
             for (win = wstart; win < wend; win++)
@@ -85,17 +76,15 @@ static void midside(CoderInfo *coder, ChannelInfo *channel,
                 for (l = start; l < end; l++)
                 {
                     sum = sl[l] + sr[l];
-                    diff = sl[l] - sr[l];
-                    if (enrgs < enrgd)
-                        sum = 0.0;
-                    else
-                        diff = 0.0;
+                    diff = 0;
+
                     sl[l] = 0.5 * sum;
                     sr[l] = 0.5 * diff;
                 }
             }
         }
-        if (min(enrgl, enrgr) < mutethr * max(enrgl, enrgr))
+
+        if (min(enrgl, enrgr) <= (thrside * max(enrgl, enrgr)))
         {
             for (win = wstart; win < wend; win++)
             {
@@ -126,22 +115,26 @@ void MSEncode(CoderInfo *coder,
 {
     int chn;
     int usems;
-    double mutethr;
     static const double thr075 = 0.1885; /* ~0.75dB */
-    static const double thrmax = 1.5; /* ~1.76dB */
+    static const double thrmax = 0.5; /* ~1.76dB */
+    double thrmid, thrside;
 
     if (quality > 0.01)
     {
         usems = 1;
-        mutethr = thr075 / quality;
-        if (mutethr > thrmax)
-            mutethr = thrmax;
+        thrmid = thr075 / quality;
+        if (thrmid > thrmax)
+            thrmid = thrmax;
     }
     else
     {
         usems = 0;
-        mutethr = 0.0;
+        thrmid = 0.0;
     }
+
+    thrmid += 1.0;
+    thrside = sqrt(thrmid) - 1.0;
+    thrside *= thrside;
 
     for (chn = 0; chn < maxchan; chn++)
     {
@@ -180,7 +173,7 @@ void MSEncode(CoderInfo *coder,
         {
             int end = start + coder->groups.len[group];
             midside(coder + chn, channel + chn, s[chn], s[rch], &mscnt,
-                    start, end, mutethr);
+                    start, end, thrmid, thrside);
             start = end;
         }
         skip:;
