@@ -1,3 +1,4 @@
+- optimize codebook list (section_data)
 - optimize CPE windows grouping
 - faster mdct in blockswitch
 - Add PNS
