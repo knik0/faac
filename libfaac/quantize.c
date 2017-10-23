@@ -41,6 +41,7 @@
 #endif
 
 #define MAGIC_NUMBER  0.4054
+#define NOISEFLOOR 0.4
 
 // band sound masking
 static void bmask(CoderInfo *coderInfo, double *xr0, double *bandqual,
@@ -55,6 +56,7 @@ static void bmask(CoderInfo *coderInfo, double *xr0, double *bandqual,
   int gsize = coderInfo->groups.len[gnum];
   double *xr;
   int win;
+  int enrgcnt = 0;
 
 
   for (sfb = 0; sfb < coderInfo->sfbn; sfb++)
@@ -66,10 +68,21 @@ static void bmask(CoderInfo *coderInfo, double *xr0, double *bandqual,
       for (win = 0; win < gsize; win++)
       {
           for (cnt = start; cnt < end; cnt++)
+          {
               totenrg += xr[cnt] * xr[cnt];
+              enrgcnt++;
+          }
 
           xr += BLOCK_LEN_SHORT;
       }
+  }
+
+  if (totenrg < ((NOISEFLOOR * NOISEFLOOR) * (double)enrgcnt))
+  {
+      for (sfb = 0; sfb < coderInfo->sfbn; sfb++)
+          bandqual[sfb] = 0.0;
+
+      return;
   }
 
   for (sfb = 0; sfb < coderInfo->sfbn; sfb++)
@@ -155,7 +168,6 @@ static void qlevel(CoderInfo *coderInfo,
     {
       double sfacfix;
       int sfac;
-      double maxx;
       double rmsx;
       int xitab[8 * MAXSHORTBAND];
       int *xi;
@@ -166,7 +178,6 @@ static void qlevel(CoderInfo *coderInfo,
       start = coderInfo->sfb_offset[sb];
       end = coderInfo->sfb_offset[sb+1];
 
-      maxx = 0.0;
       rmsx = 0.0;
       xr = xr0;
       for (win = 0; win < gsize; win++)
@@ -174,17 +185,14 @@ static void qlevel(CoderInfo *coderInfo,
           for (cnt = start; cnt < end; cnt++)
           {
               double e = xr[cnt] * xr[cnt];
-              if (maxx < e)
-                  maxx = e;
               rmsx += e;
           }
           xr += BLOCK_LEN_SHORT;
       }
       rmsx /= ((end - start) * gsize);
       rmsx = sqrt(rmsx);
-      maxx = sqrt(maxx);
 
-      if (maxx < 10.0)
+      if ((rmsx < NOISEFLOOR) || (!bandqual[sb]))
       {
           coderInfo->book[coderInfo->bandcnt] = ZERO_HCB;
           coderInfo->sf[coderInfo->bandcnt++] = 0;
@@ -193,7 +201,10 @@ static void qlevel(CoderInfo *coderInfo,
 
       //printf("qual:%f/%f\n", bandqual[sb], bandqual[sb]/rmsx);
       sfac = lrint(log(bandqual[sb] / rmsx) * sfstep);
-      sfacfix = exp(sfac / sfstep);
+      if ((SF_OFFSET - sfac) < 10)
+          sfacfix = 0.0;
+      else
+          sfacfix = exp(sfac / sfstep);
 
       xr = xr0 + start;
       end -= start;
@@ -251,7 +262,6 @@ int BlocQuant(CoderInfo *coder, double *xr, AACQuantCfg *aacquantCfg)
 {
     double bandlvl[MAX_SCFAC_BANDS];
     int cnt;
-    int nonzero = 0;
     double *gxr;
 
     coder->global_gain = 0;
@@ -266,10 +276,6 @@ int BlocQuant(CoderInfo *coder, double *xr, AACQuantCfg *aacquantCfg)
     coder->cur_cw = 0; /* init codeword counter */
 #endif
 
-    for (cnt = 0; cnt < FRAME_LEN; cnt++)
-        nonzero += (fabs(xr[cnt]) > 1E-20);
-
-    if (nonzero)
     {
         int lastis;
         int lastsf;

@@ -441,10 +441,7 @@ int huffbook(CoderInfo *coder,
 
 int writebooks(CoderInfo *coder, BitStream *stream, int write)
 {
-    int cnt;
-    int bookcnt;
     int bits = 0;
-    int previous;
     int maxcnt, cntbits;
     int group;
     int bookbits = 4;
@@ -464,80 +461,45 @@ int writebooks(CoderInfo *coder, BitStream *stream, int write)
     for (group = 0; group < coder->groups.n; group++)
     {
         int band = group * coder->sfbn;
-        int book = coder->book[band];
+        int maxband = band + coder->sfbn;
 
-        previous = book;
-        bookcnt = 1;
-
-        if (write) {
-            PutBit(stream, book, bookbits);
-        }
-        bits += bookbits;
-
-        for (cnt = band + 1; cnt < (band + coder->sfbn); cnt++)
+        while (band < maxband)
         {
-            book = coder->book[cnt];
+            int book = coder->book[band++];
+            int bookcnt = 1;
+            if (write) {
+                PutBit(stream, book, bookbits);
+            }
+            bits += bookbits;
+
 #ifdef DRM
             /* sect_len is not transmitted in case the codebook for a */
             /* section is 11 or in the range of 16 and 31 */
-            if ((previous == 11) ||
-                ((previous >= 16) && (previous <= 32)))
-            {
-                if (write)
-                    PutBit(stream, book, bookbits);
-                bits += bookbits;
-                previous = book;
-                bookcnt=1;
-            } else
-#endif
-            if (book != previous)
-            {
-                if (write) {
-                    PutBit(stream, bookcnt, cntbits);
-                }
-                bits += cntbits;
-
-                if (bookcnt >= maxcnt)
-                {
-                    if (write)
-                        PutBit(stream, 0, cntbits);
-                    bits += cntbits;
-                }
-
-                if (write)
-                    PutBit(stream, book, bookbits);
-                bits += bookbits;
-                previous = book;
-                bookcnt = 1;
+            if ((previous == 11) || ((previous >= 16) && (previous <= 32)))
                 continue;
-            }
-            if (bookcnt >= maxcnt)
-            {
-                if (write) {
-                    PutBit(stream, bookcnt, cntbits);
-                }
-                bits += cntbits;
-                bookcnt = 1;
-            }
-            else {
-                bookcnt++;
-            }
-        }
-
-#ifdef DRM
-        if (!((previous == 11) || ((previous >= 16) && (previous <= 32))))
 #endif
-        {
+
+            if (band < maxband)
+            {
+                while (book == coder->book[band])
+                {
+                    band++;
+                    bookcnt++;
+                    if (band >= maxband)
+                        break;
+                }
+            }
+
+            while (bookcnt >= maxcnt)
+            {
+                if (write)
+                    PutBit(stream, maxcnt, cntbits);
+                bits += cntbits;
+                bookcnt -= maxcnt;
+            }
             if (write)
                 PutBit(stream, bookcnt, cntbits);
             bits += cntbits;
-
-            if (bookcnt >= maxcnt)
-            {
-                if (write)
-                    PutBit(stream, 0, cntbits);
-                bits += cntbits;
-            }
         }
     }
 
