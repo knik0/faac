@@ -196,7 +196,7 @@ int FAACAPI faacEncSetConfiguration(faacEncHandle hpEncoder,
 
     /* set quantization quality */
     hEncoder->aacquantCfg.quality = config->quantqual;
-    BandLimit(&hEncoder->config.bandWidth,
+    CalcBW(&hEncoder->config.bandWidth,
               hEncoder->sampleRate,
               hEncoder->srInfo,
               &hEncoder->aacquantCfg);
@@ -526,7 +526,7 @@ int FAACAPI faacEncEncode(faacEncHandle hpEncoder,
                 offset += hEncoder->srInfo->cb_width_short[sb];
             }
             coderInfo[channel].sfb_offset[sb] = offset;
-            BlocGroup(hEncoder->freqBuff[channel], coderInfo + channel, hEncoder->aacquantCfg.max_cbs);
+            BlocGroup(hEncoder->freqBuff[channel], coderInfo + channel, &hEncoder->aacquantCfg);
         } else {
             coderInfo[channel].sfbn = hEncoder->aacquantCfg.max_cbl;
 

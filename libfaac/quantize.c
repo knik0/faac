@@ -338,7 +338,7 @@ int BlocQuant(CoderInfo *coder, double *xr, AACQuantCfg *aacquantCfg)
     return 0;
 }
 
-void BandLimit(unsigned *bw, int rate, SR_INFO *sr, AACQuantCfg *aacquantCfg)
+void CalcBW(unsigned *bw, int rate, SR_INFO *sr, AACQuantCfg *aacquantCfg)
 {
     // find max short frame band
     int max = *bw * (BLOCK_LEN_SHORT << 1) / rate;
@@ -353,7 +353,6 @@ void BandLimit(unsigned *bw, int rate, SR_INFO *sr, AACQuantCfg *aacquantCfg)
         l += sr->cb_width_short[cnt];
     }
     aacquantCfg->max_cbs = cnt;
-    *bw = (double)l * rate / (BLOCK_LEN_SHORT << 1);
 
     // find max long frame band
     max = *bw * (BLOCK_LEN_LONG << 1) / rate;
@@ -365,19 +364,25 @@ void BandLimit(unsigned *bw, int rate, SR_INFO *sr, AACQuantCfg *aacquantCfg)
         l += sr->cb_width_long[cnt];
     }
     aacquantCfg->max_cbl = cnt;
+    aacquantCfg->max_l = l;
 
     *bw = (double)l * rate / (BLOCK_LEN_LONG << 1);
 }
 
 enum {MINSFB = 2};
 
-static void calce(double *xr, int *bands, double e[NSFB_SHORT], int maxsfb)
+static void calce(double *xr, int *bands, double e[NSFB_SHORT], int maxsfb,
+                  int maxl)
 {
     int sfb;
+    int l;
+
+    // mute lines above cutoff freq
+    for (l = maxl; l < bands[maxsfb]; l++)
+        xr[l] = 0.0;
+
     for (sfb = MINSFB; sfb < maxsfb; sfb++)
     {
-        int l;
-
         e[sfb] = 0;
         for (l = bands[sfb]; l < bands[sfb + 1]; l++)
             e[sfb] += xr[l] * xr[l];
@@ -397,7 +402,7 @@ static void resete(double min[NSFB_SHORT], double max[NSFB_SHORT],
 static int groups = 0;
 static int frames = 0;
 #endif
-void BlocGroup(double *xr, CoderInfo *coderInfo, int maxsfb)
+void BlocGroup(double *xr, CoderInfo *coderInfo, AACQuantCfg *cfg)
 {
     int win, sfb;
     double e[NSFB_SHORT];
@@ -406,6 +411,7 @@ void BlocGroup(double *xr, CoderInfo *coderInfo, int maxsfb)
     const double thr = 3.0;
     int win0;
     int fastmin;
+    int maxsfb, maxl;
 
     if (coderInfo->block_type != ONLY_SHORT_WINDOW)
     {
@@ -414,6 +420,8 @@ void BlocGroup(double *xr, CoderInfo *coderInfo, int maxsfb)
         return;
     }
 
+    maxl = cfg->max_l / 8;
+    maxsfb = cfg->max_cbs;
     fastmin = ((maxsfb - MINSFB) * 3) >> 2;
 
 #ifdef DRM
@@ -425,7 +433,7 @@ void BlocGroup(double *xr, CoderInfo *coderInfo, int maxsfb)
 #if PRINTSTAT
     frames++;
 #endif
-    calce(xr, coderInfo->sfb_offset, e, maxsfb);
+    calce(xr, coderInfo->sfb_offset, e, maxsfb, maxl);
     resete(min, max, e, maxsfb);
     win0 = 0;
     coderInfo->groups.n = 0;
@@ -433,7 +441,7 @@ void BlocGroup(double *xr, CoderInfo *coderInfo, int maxsfb)
     {
         int fast = 0;
 
-        calce(xr + win * BLOCK_LEN_SHORT, coderInfo->sfb_offset, e, maxsfb);
+        calce(xr + win * BLOCK_LEN_SHORT, coderInfo->sfb_offset, e, maxsfb, maxl);
         for (sfb = MINSFB; sfb < maxsfb; sfb++)
         {
             if (min[sfb] > e[sfb])

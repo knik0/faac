@@ -29,6 +29,7 @@ typedef struct
     double quality;
     int max_cbl;
     int max_cbs;
+    int max_l;
 } AACQuantCfg;
 
 #include "quantize.h"
@@ -42,8 +43,8 @@ enum {
 };
 
 int BlocQuant(CoderInfo *coderInfo, double *xr, AACQuantCfg *aacquantCfg);
-void BandLimit(unsigned *bw, int rate, SR_INFO *sr, AACQuantCfg *aacquantCfg);
-void BlocGroup(double *xr, CoderInfo *coderInfo, int maxsfb);
+void CalcBW(unsigned *bw, int rate, SR_INFO *sr, AACQuantCfg *aacquantCfg);
+void BlocGroup(double *xr, CoderInfo *coderInfo, AACQuantCfg *aacquantCfg);
 void BlocStat(void);
 
 #endif
