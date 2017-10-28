@@ -146,8 +146,12 @@ static void qlevel(CoderInfo *coderInfo,
                   )
 {
     int sb, cnt;
-    // 1.5dB step
-    static const double sfstep = 20.0 / 1.5 / M_LN10;
+#ifndef __clang__
+    /* 2^0.25 (1.50515 dB) step from AAC specs */
+    static const double sfstep = 1.0 / log10(sqrt(sqrt(2.0)));
+#else
+    static const double sfstep = 20 / 1.50515;
+#endif
     int gsize = coderInfo->groups.len[gnum];
 #ifdef __SSE2__
     int cpuid[4];
@@ -200,11 +204,11 @@ static void qlevel(CoderInfo *coderInfo,
       }
 
       //printf("qual:%f/%f\n", bandqual[sb], bandqual[sb]/rmsx);
-      sfac = lrint(log(bandqual[sb] / rmsx) * sfstep);
+      sfac = lrint(log10(bandqual[sb] / rmsx) * sfstep);
       if ((SF_OFFSET - sfac) < 10)
           sfacfix = 0.0;
       else
-          sfacfix = exp(sfac / sfstep);
+          sfacfix = pow(10, sfac / sfstep);
 
       xr = xr0 + start;
       end -= start;
