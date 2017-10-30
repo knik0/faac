@@ -1,3 +1,6 @@
+	* Intensity Stereo coding
+	* more speed improvements
+	* finer bandwidth/cutoff setting
 	* fixed more bugs
 	* rewritten mid/side coding
 	* fixed bug in blockswitch
