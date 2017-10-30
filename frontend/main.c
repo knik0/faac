@@ -185,8 +185,8 @@ static help_t help_advanced[] = {
     {"--tns  \tEnable coding of TNS, temporal noise shaping.\n"},
     {"--no-tns\tDisable coding of TNS, temporal noise shaping.\n"},
     {"--joint 0\tDisable joint stereo coding.\n"},
-    {"--joint 1\tUse mid/side coding.\n"},
-    {"--joint 2\tUse intensity stereo coding.\n"},
+    {"--joint 1\tUse Mid/Side coding.\n"},
+    {"--joint 2\tUse Intensity Stereo coding.\n"},
     {"--mpeg-vers X\tForce AAC MPEG version, X can be 2 or 4\n"},
     {"--shortctl X\tEnforce block type (0 = both (default); 1 = no short; 2 = no\n"
     "\t\tlong).\n"},
