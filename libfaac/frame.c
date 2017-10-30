@@ -25,23 +25,18 @@
 
 #include "frame.h"
 #include "coder.h"
-#include "midside.h"
 #include "channels.h"
 #include "bitstream.h"
 #include "filtbank.h"
 #include "util.h"
 #include "tns.h"
-#include "version.h"
+#include "stereo.h"
 
-#if FAAC_RELEASE
-static char *libfaacName = FAAC_VERSION;
-#else
-static char *libfaacName = FAAC_VERSION ".1 (" __DATE__ ") UNSTABLE";
-#endif
+static char *libfaacName = PACKAGE_VERSION;
 static char *libCopyright =
-  "FAAC - Freeware Advanced Audio Coder (http://www.audiocoding.com/)\n"
+  "FAAC - Freeware Advanced Audio Coder (http://faac.sourceforge.net/)\n"
   " Copyright (C) 1999,2000,2001  Menno Bakker\n"
-  " Copyright (C) 2002,2003  Krzysztof Nikiel\n"
+  " Copyright (C) 2002,2003,2017  Krzysztof Nikiel\n"
   "This software is based on the ISO MPEG-4 reference source code.\n";
 
 static const psymodellist_t psymodellist[] = {
@@ -117,7 +112,7 @@ int FAACAPI faacEncSetConfiguration(faacEncHandle hpEncoder,
     int i;
     int maxqual = hEncoder->config.outputFormat ? MAXQUALADTS : MAXQUAL;
 
-    hEncoder->config.allowMidside = config->allowMidside;
+    hEncoder->config.jointmode = config->jointmode;
     hEncoder->config.useLfe = config->useLfe;
     hEncoder->config.useTns = config->useTns;
     hEncoder->config.aacObjectType = config->aacObjectType;
@@ -256,7 +251,7 @@ faacEncHandle FAACAPI faacEncOpen(unsigned long sampleRate,
     hEncoder->config.copyright = libCopyright;
     hEncoder->config.mpegVersion = MPEG4;
     hEncoder->config.aacObjectType = LOW;
-    hEncoder->config.allowMidside = 1;
+    hEncoder->config.jointmode = JOINT_IS;
     hEncoder->config.useLfe = 1;
     hEncoder->config.useTns = 0;
     hEncoder->config.bitRate = 64000;
@@ -368,7 +363,7 @@ int FAACAPI faacEncEncode(faacEncHandle hpEncoder,
     unsigned int numChannels = hEncoder->numChannels;
     unsigned int useLfe = hEncoder->config.useLfe;
     unsigned int useTns = hEncoder->config.useTns;
-    unsigned int allowMidside = hEncoder->config.allowMidside;
+    unsigned int jointmode = hEncoder->config.jointmode;
     unsigned int bandWidth = hEncoder->config.bandWidth;
     unsigned int shortctl = hEncoder->config.shortctl;
     int maxqual = hEncoder->config.outputFormat ? MAXQUALADTS : MAXQUAL;
@@ -564,12 +559,8 @@ int FAACAPI faacEncEncode(faacEncHandle hpEncoder,
 		}
 	}
 
-    if (allowMidside)
-        MSEncode(coderInfo, channelInfo, hEncoder->freqBuff, numChannels,
-                 (double)hEncoder->aacquantCfg.quality/DEFQUAL);
-    else
-        MSEncode(coderInfo, channelInfo, hEncoder->freqBuff, numChannels,
-                 0.0);
+    AACstereo(coderInfo, channelInfo, hEncoder->freqBuff, numChannels,
+              (double)hEncoder->aacquantCfg.quality/DEFQUAL, jointmode);
 
 #ifdef DRM
     /* loop the quantization until the desired bit-rate is reached */

@@ -1,5 +1,5 @@
 /****************************************************************************
-    Huffman coding
+    Intensity Stereo
 
     Copyright (C) 2017 Krzysztof Nikiel
 
@@ -17,18 +17,13 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ****************************************************************************/
 
-#include "bitstream.h"
+#include "channels.h"
+#include "util.h"
 
-enum {
-    HCB_ZERO = 0,
-    HCB_ESC = 11,
-    HCB_INTENSITY2 = 14,
-    HCB_INTENSITY = 15,
-    HCB_NONE
-};
-
-int huffbook(CoderInfo *coderInfo,
-             int *qs /* quantized spectrum */,
-             int len);
-int writebooks(CoderInfo *coder, BitStream *stream, int writeFlag);
-int writesf(CoderInfo *coder, BitStream *bitStream, int writeFlag);
+void AACstereo(CoderInfo *coder,
+               ChannelInfo *channel,
+               double *s[MAX_CHANNELS],
+               int maxchan,
+               double quality,
+               int mode
+              );

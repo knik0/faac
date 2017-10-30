@@ -94,6 +94,7 @@ enum flags
     HELP_IO,
     HELP_MP4,
     HELP_ADVANCED,
+    OPT_JOINT
 };
 
 typedef struct {
@@ -183,7 +184,9 @@ static help_t help_mp4[] = {
 static help_t help_advanced[] = {
     {"--tns  \tEnable coding of TNS, temporal noise shaping.\n"},
     {"--no-tns\tDisable coding of TNS, temporal noise shaping.\n"},
-    {"--no-midside\tDon\'t use mid/side coding.\n"},
+    {"--joint 0\tDisable joint stereo coding.\n"},
+    {"--joint 1\tUse mid/side coding.\n"},
+    {"--joint 2\tUse intensity stereo coding.\n"},
     {"--mpeg-vers X\tForce AAC MPEG version, X can be 2 or 4\n"},
     {"--shortctl X\tEnforce block type (0 = both (default); 1 = no short; 2 = no\n"
     "\t\tlong).\n"},
@@ -421,7 +424,7 @@ int main(int argc, char *argv[])
     faacEncConfigurationPtr myFormat;
     unsigned int mpegVersion = MPEG2;
     unsigned int objectType = LOW;
-    static int useMidSide = 1;
+    static int jointmode = JOINT_IS;
     static int useTns = 0;
     enum container_format container = NO_CONTAINER;
     enum stream_format stream = ADTS_STREAM;
@@ -505,7 +508,7 @@ int main(int argc, char *argv[])
             {"help-mp4", 0, 0, HELP_MP4},
             {"help-advanced", 0, 0, HELP_ADVANCED},
             {"raw", 0, 0, 'r'},
-            {"no-midside", 0, &useMidSide, 0},
+            {"joint", required_argument, 0, OPT_JOINT},
             {"cutoff", 1, 0, 'c'},
             {"quality", 1, 0, 'q'},
             {"pcmraw", 0, 0, 'P'},
@@ -749,6 +752,9 @@ int main(int argc, char *argv[])
             help(c);
             return 1;
             break;
+        case OPT_JOINT:
+            jointmode = atoi(optarg);
+            break;
         case '?':
         default:
             help('?');
@@ -885,7 +891,7 @@ int main(int argc, char *argv[])
     }
     if (infile->channels >= 6)
         myFormat->useLfe = 1;
-    myFormat->allowMidside = useMidSide;
+    myFormat->jointmode = jointmode;
     if (quantqual > 0)
     {
         myFormat->quantqual = quantqual;
@@ -968,8 +974,15 @@ int main(int argc, char *argv[])
     fprintf(stderr, "(MPEG-%d)", (mpegVersion == MPEG4) ? 4 : 2);
     if (myFormat->useTns)
         fprintf(stderr, " + TNS");
-    if (myFormat->allowMidside)
+
+    switch(myFormat->jointmode) {
+    case JOINT_MS:
         fprintf(stderr, " + M/S");
+        break;
+    case JOINT_IS:
+        fprintf(stderr, " + IS");
+        break;
+    }
     fprintf(stderr, "\n");
 
     fprintf(stderr, "Container format: ");

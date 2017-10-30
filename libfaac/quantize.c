@@ -179,6 +179,17 @@ static void qlevel(CoderInfo *coderInfo,
       const double *xr;
       int win;
 
+      if (coderInfo->book[coderInfo->bandcnt] != HCB_NONE)
+      {
+#if 0
+          int book = coderInfo->book[coderInfo->bandcnt];
+          if ((book != HCB_INTENSITY) && (book != HCB_INTENSITY2))
+              printf("book[%d]:%d\n",coderInfo->bandcnt, book);
+#endif
+          coderInfo->bandcnt++;
+          continue;
+      }
+
       start = coderInfo->sfb_offset[sb];
       end = coderInfo->sfb_offset[sb+1];
 
@@ -198,8 +209,12 @@ static void qlevel(CoderInfo *coderInfo,
 
       if ((rmsx < NOISEFLOOR) || (!bandqual[sb]))
       {
-          coderInfo->book[coderInfo->bandcnt] = ZERO_HCB;
+#if 0
+          coderInfo->book[coderInfo->bandcnt] = HCB_ZERO;
           coderInfo->sf[coderInfo->bandcnt++] = 0;
+#else
+          coderInfo->book[coderInfo->bandcnt++] = HCB_ZERO;
+#endif
           continue;
       }
 
@@ -258,7 +273,7 @@ static void qlevel(CoderInfo *coderInfo,
           xr += BLOCK_LEN_SHORT;
       }
       huffbook(coderInfo, xitab, gsize * end);
-      coderInfo->sf[coderInfo->bandcnt++] = SF_OFFSET - sfac;
+      coderInfo->sf[coderInfo->bandcnt++] += SF_OFFSET - sfac;
     }
 }
 
@@ -269,8 +284,10 @@ int BlocQuant(CoderInfo *coder, double *xr, AACQuantCfg *aacquantCfg)
     double *gxr;
 
     coder->global_gain = 0;
+#if 0
     for (cnt = 0; cnt < coder->sfbn; cnt++)
-        coder->sf[cnt] = 0;
+        coder->sf[cnt] = SF_OFFSET;
+#endif
 
     coder->bandcnt = 0;
     coder->datacnt = 0;
@@ -299,7 +316,7 @@ int BlocQuant(CoderInfo *coder, double *xr, AACQuantCfg *aacquantCfg)
             int book = coder->book[cnt];
             if (!book)
                 continue;
-            if ((book != INTENSITY_HCB) && (book != INTENSITY_HCB2))
+            if ((book != HCB_INTENSITY) && (book != HCB_INTENSITY2))
             {
                 coder->global_gain = coder->sf[cnt];
                 break;
@@ -312,7 +329,7 @@ int BlocQuant(CoderInfo *coder, double *xr, AACQuantCfg *aacquantCfg)
         for (cnt = 0; cnt < coder->bandcnt; cnt++)
         {
             int book = coder->book[cnt];
-            if ((book == INTENSITY_HCB) || (book == INTENSITY_HCB2))
+            if ((book == HCB_INTENSITY) || (book == HCB_INTENSITY2))
             {
                 int diff = coder->sf[cnt] - lastis;
 

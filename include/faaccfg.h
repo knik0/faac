@@ -22,7 +22,7 @@
 #ifndef _FAACCFG_H_
 #define _FAACCFG_H_
 
-#define FAAC_CFG_VERSION 104
+#define FAAC_CFG_VERSION 105
 
 /* MPEG ID's */
 #define MPEG2 1
@@ -51,6 +51,8 @@ enum stream_format
     ADTS_STREAM = 1,
 };
 
+enum {JOINT_NONE = 0, JOINT_MS, JOINT_IS};
+
 #pragma pack(push, 1)
 typedef struct faacEncConfiguration
 {
@@ -69,8 +71,8 @@ typedef struct faacEncConfiguration
     /* AAC object type */
     unsigned int aacObjectType;
 
-    /* Allow mid/side coding */
-    unsigned int allowMidside;
+    /* Joint coding mode */
+    unsigned int jointmode;
 
     /* Use one of the channels as LFE channel */
     unsigned int useLfe;

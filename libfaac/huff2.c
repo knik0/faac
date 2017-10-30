@@ -95,9 +95,9 @@ static int huffcode(int *qs /* quantized spectrum */,
     switch (bnum)
     {
 #ifdef DRM
-    case ZERO_HCB:
-    case INTENSITY_HCB:
-    case INTENSITY_HCB2:
+    case HCB_ZERO:
+    case HCB_INTENSITY:
+    case HCB_INTENSITY2:
         for(ofs = 0; ofs < len; ofs += 4)
         {
             coder->s[datacnt].data = 0;
@@ -241,7 +241,7 @@ static int huffcode(int *qs /* quantized spectrum */,
             bits += blen;
         }
         break;
-    case ESC_HCB:
+    case HCB_ESC:
         for(ofs = 0; ofs < len; ofs += 2)
         {
             int x0, x1;
@@ -397,7 +397,7 @@ int huffbook(CoderInfo *coder,
 
     if (maxq < 1)
     {
-        bookmin = ZERO_HCB;
+        bookmin = HCB_ZERO;
         lenmin = 0;
     }
     else if (maxq < 2)
@@ -422,7 +422,7 @@ int huffbook(CoderInfo *coder,
     }
     else
     {
-        bookmin = ESC_HCB;
+        bookmin = HCB_ESC;
     }
 
 #ifdef DRM
@@ -431,7 +431,7 @@ int huffbook(CoderInfo *coder,
     if (vcb11)
         bookmin = vcb11;
 #else
-    if (bookmin > ZERO_HCB)
+    if (bookmin > HCB_ZERO)
         huffcode(qs, len, bookmin, coder);
 #endif
     coder->book[coder->bandcnt] = bookmin;
@@ -522,7 +522,7 @@ int writesf(CoderInfo *coder, BitStream *stream, int write)
     {
         int book = coder->book[cnt];
 
-        if ((book == INTENSITY_HCB) || (book== INTENSITY_HCB2))
+        if ((book == HCB_INTENSITY) || (book== HCB_INTENSITY2))
         {
             diff = coder->sf[cnt] - lastis;
             if (diff > 60)
