@@ -189,6 +189,11 @@ int FAACAPI faacEncSetConfiguration(faacEncHandle hpEncoder,
 
     hEncoder->config.quantqual = config->quantqual;
 
+    if (config->pnslevel < 0)
+        config->pnslevel = 0;
+    if (config->pnslevel > 10)
+        config->pnslevel = 10;
+    hEncoder->aacquantCfg.pnslevel = config->pnslevel;
     /* set quantization quality */
     hEncoder->aacquantCfg.quality = config->quantqual;
     CalcBW(&hEncoder->config.bandWidth,
@@ -252,6 +257,7 @@ faacEncHandle FAACAPI faacEncOpen(unsigned long sampleRate,
     hEncoder->config.mpegVersion = MPEG4;
     hEncoder->config.aacObjectType = LOW;
     hEncoder->config.jointmode = JOINT_IS;
+    hEncoder->config.pnslevel = 4;
     hEncoder->config.useLfe = 1;
     hEncoder->config.useTns = 0;
     hEncoder->config.bitRate = 64000;

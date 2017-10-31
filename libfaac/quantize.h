@@ -25,11 +25,11 @@
 
 typedef struct
 {
-    //double *pow43;
     double quality;
     int max_cbl;
     int max_cbs;
     int max_l;
+    int pnslevel;
 } AACQuantCfg;
 
 #include "quantize.h"

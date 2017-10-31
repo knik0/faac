@@ -121,8 +121,8 @@ typedef struct faacEncConfiguration
 		WAVE 5.1		2, 0, 1, 4, 5, 3
 		AIFF 5.1		2, 0, 3, 1, 4, 5 
 	*/
-	int channel_map[64];	
-
+    int channel_map[64];
+    int pnslevel;
 } faacEncConfiguration, *faacEncConfigurationPtr;
 
 #pragma pack(pop)

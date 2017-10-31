@@ -142,7 +142,8 @@ enum {MAXSHORTBAND = 36};
 static void qlevel(CoderInfo *coderInfo,
                    const double *xr0,
                    const double *bandqual,
-                   int gnum
+                   int gnum,
+                   int pnslevel
                   )
 {
     int sb, cnt;
@@ -153,6 +154,7 @@ static void qlevel(CoderInfo *coderInfo,
     static const double sfstep = 20 / 1.50515;
 #endif
     int gsize = coderInfo->groups.len[gnum];
+    double pnsthr = 0.1 * pnslevel;
 #ifdef __SSE2__
     int cpuid[4];
     int sse2 = 0;
@@ -173,6 +175,7 @@ static void qlevel(CoderInfo *coderInfo,
       double sfacfix;
       int sfac;
       double rmsx;
+      double etot;
       int xitab[8 * MAXSHORTBAND];
       int *xi;
       int start, end;
@@ -181,11 +184,6 @@ static void qlevel(CoderInfo *coderInfo,
 
       if (coderInfo->book[coderInfo->bandcnt] != HCB_NONE)
       {
-#if 0
-          int book = coderInfo->book[coderInfo->bandcnt];
-          if ((book != HCB_INTENSITY) && (book != HCB_INTENSITY2))
-              printf("book[%d]:%d\n",coderInfo->bandcnt, book);
-#endif
           coderInfo->bandcnt++;
           continue;
       }
@@ -193,32 +191,37 @@ static void qlevel(CoderInfo *coderInfo,
       start = coderInfo->sfb_offset[sb];
       end = coderInfo->sfb_offset[sb+1];
 
-      rmsx = 0.0;
+      etot = 0.0;
       xr = xr0;
       for (win = 0; win < gsize; win++)
       {
           for (cnt = start; cnt < end; cnt++)
           {
               double e = xr[cnt] * xr[cnt];
-              rmsx += e;
+              etot += e;
           }
           xr += BLOCK_LEN_SHORT;
       }
-      rmsx /= ((end - start) * gsize);
-      rmsx = sqrt(rmsx);
+      etot /= (double)gsize;
+      rmsx = sqrt(etot / (end - start));
 
       if ((rmsx < NOISEFLOOR) || (!bandqual[sb]))
       {
-#if 0
-          coderInfo->book[coderInfo->bandcnt] = HCB_ZERO;
-          coderInfo->sf[coderInfo->bandcnt++] = 0;
-#else
           coderInfo->book[coderInfo->bandcnt++] = HCB_ZERO;
-#endif
           continue;
       }
 
-      //printf("qual:%f/%f\n", bandqual[sb], bandqual[sb]/rmsx);
+#ifndef DRM
+      if (bandqual[sb] < pnsthr)
+      {
+          coderInfo->book[coderInfo->bandcnt] = HCB_PNS;
+          coderInfo->sf[coderInfo->bandcnt] +=
+              lrint(log10(etot) * (0.5 * sfstep));
+          coderInfo->bandcnt++;
+          continue;
+      }
+#endif
+
       sfac = lrint(log10(bandqual[sb] / rmsx) * sfstep);
       if ((SF_OFFSET - sfac) < 10)
           sfacfix = 0.0;
@@ -236,7 +239,6 @@ static void qlevel(CoderInfo *coderInfo,
               for (cnt = 0; cnt < end; cnt += 4)
               {
                   __m128 x = {xr[cnt], xr[cnt + 1], xr[cnt + 2], xr[cnt + 3]};
-                  //printf("%f/%f\n", xr[cnt], xr[cnt] * sfacfix);
 
                   x = _mm_max_ps(x, -x);
                   x *= (__m128){sfacfix, sfacfix, sfacfix, sfacfix};
@@ -245,7 +247,6 @@ static void qlevel(CoderInfo *coderInfo,
                   x += (__m128){MAGIC_NUMBER, MAGIC_NUMBER, MAGIC_NUMBER, MAGIC_NUMBER};
 
                   *(__m128i*)(xi + cnt) = _mm_cvttps_epi32(x);
-                  //printf("%d/%d/%d/%d\n", xi[cnt],xi[cnt+1],xi[cnt+2],xi[cnt+3]);
               }
               for (cnt = 0; cnt < end; cnt++)
               {
@@ -284,10 +285,6 @@ int BlocQuant(CoderInfo *coder, double *xr, AACQuantCfg *aacquantCfg)
     double *gxr;
 
     coder->global_gain = 0;
-#if 0
-    for (cnt = 0; cnt < coder->sfbn; cnt++)
-        coder->sf[cnt] = SF_OFFSET;
-#endif
 
     coder->bandcnt = 0;
     coder->datacnt = 0;
@@ -306,7 +303,7 @@ int BlocQuant(CoderInfo *coder, double *xr, AACQuantCfg *aacquantCfg)
         {
             bmask(coder, gxr, bandlvl, cnt,
                   (double)aacquantCfg->quality/DEFQUAL);
-            qlevel(coder, gxr, bandlvl, cnt);
+            qlevel(coder, gxr, bandlvl, cnt, aacquantCfg->pnslevel);
             gxr += coder->groups.len[cnt] * BLOCK_LEN_SHORT;
         }
 
@@ -341,7 +338,7 @@ int BlocQuant(CoderInfo *coder, double *xr, AACQuantCfg *aacquantCfg)
                 lastis += diff;
                 coder->sf[cnt] = lastis;
             }
-            else if (book)
+            else if (book != HCB_PNS)
             {
                 int diff = coder->sf[cnt] - lastsf;
 

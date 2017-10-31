@@ -94,7 +94,8 @@ enum flags
     HELP_IO,
     HELP_MP4,
     HELP_ADVANCED,
-    OPT_JOINT
+    OPT_JOINT,
+    OPT_PNS
 };
 
 typedef struct {
@@ -187,6 +188,7 @@ static help_t help_advanced[] = {
     {"--joint 0\tDisable joint stereo coding.\n"},
     {"--joint 1\tUse Mid/Side coding.\n"},
     {"--joint 2\tUse Intensity Stereo coding.\n"},
+    {"--pns <0 .. 10>\tPNS level; 0=disabled.\n"},
     {"--mpeg-vers X\tForce AAC MPEG version, X can be 2 or 4\n"},
     {"--shortctl X\tEnforce block type (0 = both (default); 1 = no short; 2 = no\n"
     "\t\tlong).\n"},
@@ -424,7 +426,8 @@ int main(int argc, char *argv[])
     faacEncConfigurationPtr myFormat;
     unsigned int mpegVersion = MPEG2;
     unsigned int objectType = LOW;
-    static int jointmode = JOINT_IS;
+    int jointmode = -1;
+    int pnslevel = -1;
     static int useTns = 0;
     enum container_format container = NO_CONTAINER;
     enum stream_format stream = ADTS_STREAM;
@@ -509,6 +512,7 @@ int main(int argc, char *argv[])
             {"help-advanced", 0, 0, HELP_ADVANCED},
             {"raw", 0, 0, 'r'},
             {"joint", required_argument, 0, OPT_JOINT},
+            {"pns", required_argument, 0, OPT_PNS},
             {"cutoff", 1, 0, 'c'},
             {"quality", 1, 0, 'q'},
             {"pcmraw", 0, 0, 'P'},
@@ -755,6 +759,9 @@ int main(int argc, char *argv[])
         case OPT_JOINT:
             jointmode = atoi(optarg);
             break;
+        case OPT_PNS:
+            pnslevel = atoi(optarg);
+            break;
         case '?':
         default:
             help('?');
@@ -891,7 +898,10 @@ int main(int argc, char *argv[])
     }
     if (infile->channels >= 6)
         myFormat->useLfe = 1;
-    myFormat->jointmode = jointmode;
+    if (jointmode >= 0)
+        myFormat->jointmode = jointmode;
+    if (pnslevel >= 0)
+        myFormat->pnslevel = pnslevel;
     if (quantqual > 0)
     {
         myFormat->quantqual = quantqual;
@@ -958,6 +968,8 @@ int main(int argc, char *argv[])
     else
         fprintf(stderr, "Quantization quality: %ld\n", quantqual);
     fprintf(stderr, "Bandwidth: %d Hz\n", cutOff);
+    if (myFormat->pnslevel > 0)
+        fprintf(stderr, "PNS level: %d\n", myFormat->pnslevel);
     fprintf(stderr, "Object type: ");
     switch (objectType)
     {
@@ -983,6 +995,8 @@ int main(int argc, char *argv[])
         fprintf(stderr, " + IS");
         break;
     }
+    if (myFormat->pnslevel > 0)
+        fprintf(stderr, " + PNS");
     fprintf(stderr, "\n");
 
     fprintf(stderr, "Container format: ");

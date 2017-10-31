@@ -29,13 +29,21 @@ static void stereo(CoderInfo *cl, CoderInfo *cr,
 {
     int sfb;
     int win;
+    int sfmin;
 
     if (!phthr)
         return;
 
     phthr = 1.0 / phthr;
 
-    for (sfb = 0; sfb < cl->sfbn; sfb++)
+    if (cl->block_type == ONLY_SHORT_WINDOW)
+        sfmin = 1;
+    else
+        sfmin = 8;
+
+    (*sfcnt) += sfmin;
+
+    for (sfb = sfmin; sfb < cl->sfbn; sfb++)
     {
         int l, start, end;
         double sum, diff;
@@ -44,14 +52,6 @@ static void stereo(CoderInfo *cl, CoderInfo *cr,
         const double step = 10/1.50515;
         double ethr;
         double vfix, efix;
-
-#if 1
-        if (sfb < 1)
-        {
-            (*sfcnt)++;
-            continue;
-        }
-#endif
 
         start = cl->sfb_offset[sfb];
         end = cl->sfb_offset[sfb + 1];
