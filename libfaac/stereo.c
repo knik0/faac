@@ -140,16 +140,24 @@ static void midside(CoderInfo *coder, ChannelInfo *channel,
 {
     int sfb;
     int win;
+    int sfmin;
 
-    for (sfb = 0; sfb < coder->sfbn; sfb++)
+    if (coder->block_type == ONLY_SHORT_WINDOW)
+        sfmin = 1;
+    else
+        sfmin = 8;
+
+    for (sfb = 0; sfb < sfmin; sfb++)
+    {
+        channel->msInfo.ms_used[*sfcnt] = 0;
+        (*sfcnt)++;
+    }
+    for (sfb = sfmin; sfb < coder->sfbn; sfb++)
     {
         int ms = 0;
         int l, start, end;
         double sum, diff;
         double enrgs, enrgd, enrgl, enrgr;
-
-        if (sfb < 1)
-            goto setms;
 
         start = coder->sfb_offset[sfb];
         end = coder->sfb_offset[sfb + 1];
@@ -233,7 +241,6 @@ static void midside(CoderInfo *coder, ChannelInfo *channel,
             }
         }
 
-    setms:
         channel->msInfo.ms_used[*sfcnt] = ms;
         (*sfcnt)++;
     }
