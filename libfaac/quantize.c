@@ -371,6 +371,8 @@ void CalcBW(unsigned *bw, int rate, SR_INFO *sr, AACQuantCfg *aacquantCfg)
         l += sr->cb_width_short[cnt];
     }
     aacquantCfg->max_cbs = cnt;
+    if (aacquantCfg->pnslevel)
+        *bw = (double)l * rate / (BLOCK_LEN_SHORT << 1);
 
     // find max long frame band
     max = *bw * (BLOCK_LEN_LONG << 1) / rate;

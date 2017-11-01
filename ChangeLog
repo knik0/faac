@@ -1,7 +1,7 @@
 	* initial version of PNS coding
 	* Intensity Stereo coding
 	* more speed improvements
-	* finer bandwidth/cutoff setting
+	* finer bandwidth/cutoff setting (doesn't work with PNS)
 	* fixed more bugs
 	* rewritten mid/side coding
 	* fixed bug in blockswitch
