@@ -139,6 +139,10 @@ int FAACAPI faacEncSetConfiguration(faacEncHandle hpEncoder,
     if (hEncoder->config.aacObjectType != LOW)
         return 0;
 
+#ifdef DRM
+    config->pnslevel = 0;
+#endif
+
     /* Re-init TNS for new profile */
     TnsInit(hEncoder);
 
