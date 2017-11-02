@@ -413,8 +413,8 @@ static int esdsout(void)
     size += u8out(0);
 #endif
     // bitrate
-    size += u32out(mp4config.bitratemax);
-    size += u32out(mp4config.bitrateavg);
+    size += u32out(mp4config.bitrate.max);
+    size += u32out(mp4config.bitrate.avg);
 
     size += u8out(TAG_DSI);
     size += u8out(0x80);
@@ -794,11 +794,21 @@ int mp4atom_frame(uint8_t * buf, int size, int samples)
 {
     if (mp4config.framesamples <= samples)
     {
-        int bitrate = 8.0 * size * mp4config.samplerate / samples;
+        int bitrate;
 
-        if (mp4config.bitratemax < bitrate)
-            mp4config.bitratemax = bitrate;
+        mp4config.bitrate.samples += samples;
+        mp4config.bitrate.size += size;
 
+        if (mp4config.bitrate.samples >= mp4config.samplerate)
+        {
+            bitrate = 8.0 * mp4config.bitrate.size * mp4config.samplerate
+                / mp4config.bitrate.samples;
+            mp4config.bitrate.size = 0;
+            mp4config.bitrate.samples = 0;
+
+            if (mp4config.bitrate.max < bitrate)
+                mp4config.bitrate.max = bitrate;
+        }
         mp4config.framesamples = samples;
     }
     if (mp4config.buffersize < size)
@@ -870,8 +880,10 @@ int mp4atom_head(void)
 
 int mp4atom_tail(void)
 {
-    mp4config.bitrateavg = 8.0 * mp4config.mdatsize
+    mp4config.bitrate.avg = 8.0 * mp4config.mdatsize
         * mp4config.samplerate / mp4config.samples;
+    if (!mp4config.bitrate.max)
+        mp4config.bitrate.max = mp4config.bitrate.avg;
 
     g_atom = g_tail;
     while (g_atom->opcode != ATOM_STOP)

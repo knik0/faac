@@ -1205,11 +1205,11 @@ int main(int argc, char *argv[])
 
         if (verbose >= 2)
         {
-        fprintf(stderr, "%u frames\n", mp4config.frame.ents);
-        fprintf(stderr, "%u output samples\n", mp4config.samples);
-        fprintf(stderr, "max bitrate: %u\n", mp4config.bitratemax);
-        fprintf(stderr, "avg bitrate: %u\n", mp4config.bitrateavg);
-        fprintf(stderr, "max frame size: %u\n", mp4config.buffersize);
+            fprintf(stderr, "%u frames\n", mp4config.frame.ents);
+            fprintf(stderr, "%u output samples\n", mp4config.samples);
+            fprintf(stderr, "max bitrate: %u\n", mp4config.bitrate.max);
+            fprintf(stderr, "avg bitrate: %u\n", mp4config.bitrate.avg);
+            fprintf(stderr, "max frame size: %u\n", mp4config.buffersize);
         }
     }
     else

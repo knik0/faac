@@ -31,8 +31,12 @@ typedef struct
     uint32_t bits;
     // buffer config
     uint16_t buffersize;
-    uint32_t bitratemax;
-    uint32_t bitrateavg;
+    struct {
+        uint32_t max;
+        uint32_t avg;
+        int size;
+        int samples;
+    } bitrate;
     uint32_t framesamples;
     struct
     {
