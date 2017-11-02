@@ -2,8 +2,6 @@
 - optimize codebook list (section_data)
 - optimize CPE windows grouping
 - faster mdct in blockswitch
-- Add PNS
-- Add IS
 - Add bit reservoir control
 - Add resampler and downmixer (hans-juergen, Oct 17, 2004)
 - Add HE AAC (hans-juergen, Oct 17, 2004)
