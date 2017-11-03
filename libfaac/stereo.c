@@ -260,7 +260,7 @@ void AACstereo(CoderInfo *coder,
     static const double thrmax = 1.25 /* ~2dB */ - 1.0;
     static const double sidemin = 0.1; /* -20dB */
     static const double sidemax = 0.3; /* ~-10.5dB */
-    static const double isthrmax = sqrt(2) - 1.0;
+    static const double isthrmax = M_SQRT2 - 1.0;
     double thrmid, thrside;
     double isthr;
 
