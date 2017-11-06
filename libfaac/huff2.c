@@ -475,7 +475,7 @@ int writebooks(CoderInfo *coder, BitStream *stream, int write)
 #ifdef DRM
             /* sect_len is not transmitted in case the codebook for a */
             /* section is 11 or in the range of 16 and 31 */
-            if ((previous == 11) || ((previous >= 16) && (previous <= 32)))
+            if ((book == 11) || ((book >= 16) && (book <= 32)))
                 continue;
 #endif
 

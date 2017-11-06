@@ -1124,7 +1124,7 @@ static int WriteReorderedSpectralData(CoderInfo *coder,
             for (i = 0; i < num_cw; i++) {
                 /* process only codewords that are due now */
                 if ((cw_info_preso[i].cb == nextCB) ||
-                    ((nextCB < ESC_HCB) && (cw_info_preso[i].cb == nextCB + 1)))
+                    ((nextCB < HCB_ESC) && (cw_info_preso[i].cb == nextCB + 1)))
                 {
                     cw_info[cw_cnt++] = cw_info_preso[i];
                 }
