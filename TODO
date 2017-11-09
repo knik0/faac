@@ -1,7 +1,7 @@
+- test DRM
 - optimize quantization bias
 - optimize codebook list (section_data)
 - optimize CPE windows grouping
-- faster mdct in blockswitch
 - Add bit reservoir control
 - Add resampler and downmixer (hans-juergen, Oct 17, 2004)
 - Add HE AAC (hans-juergen, Oct 17, 2004)
