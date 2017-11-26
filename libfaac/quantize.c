@@ -338,7 +338,7 @@ int BlocQuant(CoderInfo *coder, double *xr, AACQuantCfg *aacquantCfg)
                 lastis += diff;
                 coder->sf[cnt] = lastis;
             }
-            else if (book != HCB_PNS)
+            else if (book == HCB_ESC)
             {
                 int diff = coder->sf[cnt] - lastsf;
 
