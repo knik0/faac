@@ -51,10 +51,6 @@ psymodellist_t;
 
 typedef void *faacEncHandle;
 
-#ifndef HAVE_INT32_T
-typedef signed int int32_t;
-#endif
-
 /*
 	Allows an application to get FAAC version info. This is intended
 	purely for informative purposes.

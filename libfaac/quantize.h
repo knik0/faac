@@ -32,8 +32,6 @@ typedef struct
     int pnslevel;
 } AACQuantCfg;
 
-#include "quantize.h"
-
 enum {
     DEFQUAL = 100,
     MAXQUAL = 5000,

@@ -16,7 +16,6 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * $Id: frame.h,v 1.32 2012/03/01 18:34:17 knik Exp $
  */
 
 #ifndef FRAME_H
@@ -26,21 +25,9 @@
 #include "config.h"
 #endif
 
-#ifdef HAVE_SYS_TYPES_H
-# include <sys/types.h>
-#endif
-#ifdef HAVE_INTTYPES_H
-# include <inttypes.h>
-#endif
-#ifdef HAVE_STDINT_H
-# include <stdint.h>
-#endif
+#include <stdint.h>
 
 #include <faac.h>
-
-#ifndef HAVE_INT32_T
-typedef signed int int32_t;
-#endif
 
 #ifdef __cplusplus
 extern "C" {
