@@ -47,19 +47,23 @@ mp4config_t mp4config = { 0 };
 
 static FILE *g_fout = NULL;
 
-static inline uint32_t bswap32(uint32_t u32)
+static inline uint32_t be32(uint32_t u32)
 {
 #ifndef WORDS_BIGENDIAN
     //return __bswap_32(u32);
     return __builtin_bswap32(u32);
+#else
+    return u32;
 #endif
 }
 
-static inline uint16_t bswap16(uint16_t u16)
+static inline uint16_t be16(uint16_t u16)
 {
 #ifndef WORDS_BIGENDIAN
     //return __bswap_16(u16);
     return __builtin_bswap16(u16);
+#else
+    return u16;
 #endif
 }
 
@@ -80,13 +84,13 @@ static int stringout(const char *txt)
 
 static int u32out(uint32_t u32)
 {
-    u32 = bswap32(u32);
+    u32 = be32(u32);
     return dataout(&u32, 4);
 }
 
 static int u16out(uint16_t u16)
 {
-    u16 = bswap16(u16);
+    u16 = be16(u16);
     return dataout(&u16, 2);
 }
 
