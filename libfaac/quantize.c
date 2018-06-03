@@ -40,6 +40,12 @@
 # define bit_SSE2 (1 << 26)
 #endif
 
+#ifdef __GNUC__
+#define GCC_VERSION (__GNUC__ * 10000 \
+                     + __GNUC_MINOR__ * 100 \
+                     + __GNUC_PATCHLEVEL__)
+#endif
+
 #define MAGIC_NUMBER  0.4054
 #define NOISEFLOOR 0.4
 
@@ -147,7 +153,7 @@ static void qlevel(CoderInfo *coderInfo,
                   )
 {
     int sb, cnt;
-#ifndef __clang__
+#if !defined(__clang__) && (!defined(__GNUC__) || GCC_VERSION >= 40600)
     /* 2^0.25 (1.50515 dB) step from AAC specs */
     static const double sfstep = 1.0 / log10(sqrt(sqrt(2.0)));
 #else
