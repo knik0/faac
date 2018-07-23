@@ -147,6 +147,8 @@ int FAACAPI faacEncSetConfiguration(faacEncHandle hpEncoder,
     TnsInit(hEncoder);
 
     /* Check for correct bitrate */
+    if (!hEncoder->sampleRate || !hEncoder->numChannels)
+        return 0;
     if (config->bitRate > (MaxBitrate(hEncoder->sampleRate) / hEncoder->numChannels))
         config->bitRate = MaxBitrate(hEncoder->sampleRate) / hEncoder->numChannels;
 #if 0

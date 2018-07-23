@@ -254,6 +254,8 @@ pcmfile_t *wav_open_read(const char *name, int rawinput)
     sndf->channels = UINT16(wave.Format.nChannels);
     sndf->samplebytes = UINT16(wave.Format.wBitsPerSample) / 8;
     sndf->samplerate = UINT32(wave.Format.nSamplesPerSec);
+    if (!sndf->samplebytes || !sndf->channels)
+      return NULL;
     sndf->samples = riffsub.len / (sndf->samplebytes * sndf->channels);
   }
   return sndf;
