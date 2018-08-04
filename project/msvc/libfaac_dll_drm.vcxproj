@@ -90,18 +90,18 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\libfaac\aacquant.c" />
     <ClCompile Include="..\..\libfaac\bitstream.c" />
     <ClCompile Include="..\..\libfaac\blockswitch.c" />
     <ClCompile Include="..\..\libfaac\channels.c" />
     <ClCompile Include="..\..\libfaac\fft.c" />
     <ClCompile Include="..\..\libfaac\filtbank.c" />
     <ClCompile Include="..\..\libfaac\frame.c" />
-    <ClCompile Include="..\..\libfaac\huffman.c" />
+    <ClCompile Include="..\..\libfaac\huff2.c" />
+    <ClCompile Include="..\..\libfaac\huffdata.c" />
     <ClCompile Include="..\..\libfaac\kiss_fft\kiss_fft.c" />
     <ClCompile Include="..\..\libfaac\kiss_fft\kiss_fftr.c" />
-    <ClCompile Include="..\..\libfaac\midside.c" />
     <ClCompile Include="..\..\libfaac\quantize.c" />
+    <ClCompile Include="..\..\libfaac\stereo.c" />
     <ClCompile Include="..\..\libfaac\tns.c" />
     <ClCompile Include="..\..\libfaac\util.c" />
   </ItemGroup>
@@ -116,13 +116,13 @@
     <ClInclude Include="..\..\libfaac\fft.h" />
     <ClInclude Include="..\..\libfaac\filtbank.h" />
     <ClInclude Include="..\..\libfaac\frame.h" />
-    <ClInclude Include="..\..\libfaac\huffman.h" />
-    <ClInclude Include="..\..\libfaac\hufftab.h" />
+    <ClInclude Include="..\..\libfaac\huff2.h" />
+    <ClInclude Include="..\..\libfaac\huffdata.h" />
     <ClInclude Include="..\..\libfaac\kiss_fft\kiss_fft.h" />
     <ClInclude Include="..\..\libfaac\kiss_fft\kiss_fftr.h" />
     <ClInclude Include="..\..\libfaac\kiss_fft\_kiss_fft_guts.h" />
-    <ClInclude Include="..\..\libfaac\midside.h" />
     <ClInclude Include="..\..\libfaac\quantize.h" />
+    <ClInclude Include="..\..\libfaac\stereo.h" />
     <ClInclude Include="..\..\libfaac\tns.h" />
     <ClInclude Include="..\..\libfaac\util.h" />
     <ClInclude Include="..\..\libfaac\version.h" />
