@@ -47,6 +47,7 @@ typedef struct {
 psymodellist_t;
 
 #include "faaccfg.h"
+#include <stdint.h>
 
 
 typedef void *faacEncHandle;
