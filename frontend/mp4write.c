@@ -30,6 +30,16 @@
 #include <string.h>
 #include <time.h>
 #include <unistd.h>
+#if defined(__GNUC__)
+ #define GCC_VERSION (__GNUC__ * 100 + __GNUC_MINOR__ * 10)
+ #if GCC_VERSION < 480
+  static inline unsigned short __builtin_bswap16(unsigned short x)
+  {
+    return (x<<8)|(x>>8);
+  }
+ #endif
+ #undef GCC_VERSION
+#endif
 
 enum ATOM_TYPE
 {
