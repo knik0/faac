@@ -276,8 +276,8 @@ static void mdct( FFT_Tables *fft_tables, double *data, int N )
     double cosfreq8, sinfreq8;
     int i, n;
 
-    double xi[BLOCK_LEN_LONG];
-    double xr[BLOCK_LEN_LONG];
+    double xi[BLOCK_LEN_LONG / 2];
+    double xr[BLOCK_LEN_LONG / 2];
 
     /* prepare for recurrence relation in pre-twiddle */
     cfreq = cos (freq);
