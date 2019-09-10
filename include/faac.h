@@ -46,6 +46,7 @@ typedef struct {
 }
 psymodellist_t;
 
+#include <stdint.h>
 #include "faaccfg.h"
 
 
