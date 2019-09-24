@@ -35,3 +35,4 @@ Makefile*
 .vs/
 /project/msvc/bin/
 /project/msvc/intermediate/
+*.user
