@@ -60,6 +60,10 @@
     <Lib>
       <SuppressStartupBanner>true</SuppressStartupBanner>
     </Lib>
+    <PreBuildEvent>
+      <Command>"$(SolutionDir)..\..\utils\win32\ac2ver.exe" "faac" "$(SolutionDir)..\..\configure.ac" &gt; "$(SolutionDir)..\..\libfaac\win32_ver.h"</Command>
+      <Message>Retrieving package version...</Message>
+    </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -76,6 +80,10 @@
     <Lib>
       <SuppressStartupBanner>true</SuppressStartupBanner>
     </Lib>
+    <PreBuildEvent>
+      <Command>"$(SolutionDir)..\..\utils\win32\ac2ver.exe" "faac" "$(SolutionDir)..\..\configure.ac" &gt; "$(SolutionDir)..\..\libfaac\win32_ver.h"</Command>
+      <Message>Retrieving package version...</Message>
+    </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="..\..\libfaac\bitstream.c" />
@@ -107,7 +115,7 @@
     <ClInclude Include="..\..\libfaac\stereo.h" />
     <ClInclude Include="..\..\libfaac\tns.h" />
     <ClInclude Include="..\..\libfaac\util.h" />
-    <ClInclude Include="..\..\libfaac\version.h" />
+    <ClInclude Include="..\..\libfaac\win32_ver.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

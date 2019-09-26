@@ -66,6 +66,10 @@
       <ModuleDefinitionFile>.\libfaac.def</ModuleDefinitionFile>
       <TargetMachine>MachineX86</TargetMachine>
     </Link>
+    <PreBuildEvent>
+      <Message>Retrieving package version...</Message>
+      <Command>"$(SolutionDir)..\..\utils\win32\ac2ver.exe" "faac" "$(SolutionDir)..\..\configure.ac" &gt; "$(SolutionDir)..\..\libfaac\win32_ver.h"</Command>
+    </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -86,6 +90,10 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <TargetMachine>MachineX86</TargetMachine>
     </Link>
+    <PreBuildEvent>
+      <Message>Retrieving package version...</Message>
+      <Command>"$(SolutionDir)..\..\utils\win32\ac2ver.exe" "faac" "$(SolutionDir)..\..\configure.ac" &gt; "$(SolutionDir)..\..\libfaac\win32_ver.h"</Command>
+    </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="..\..\libfaac\bitstream.c" />
@@ -117,6 +125,7 @@
     <ClInclude Include="..\..\libfaac\stereo.h" />
     <ClInclude Include="..\..\libfaac\tns.h" />
     <ClInclude Include="..\..\libfaac\util.h" />
+    <ClInclude Include="..\..\libfaac\win32_ver.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="libfaac.def" />

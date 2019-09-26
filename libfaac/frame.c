@@ -32,6 +32,10 @@
 #include "tns.h"
 #include "stereo.h"
 
+#if (defined WIN32 || defined _WIN32 || defined WIN64 || defined _WIN64) && !defined(PACKAGE_VERSION)
+#include "win32_ver.h"
+#endif
+
 static char *libfaacName = PACKAGE_VERSION;
 static char *libCopyright =
   "FAAC - Freeware Advanced Audio Coder (http://faac.sourceforge.net/)\n"
@@ -220,7 +224,7 @@ int FAACAPI faacEncSetConfiguration(faacEncHandle hpEncoder,
 			hEncoder->sampleRate, hEncoder->srInfo->cb_width_long,
 			hEncoder->srInfo->num_cb_long, hEncoder->srInfo->cb_width_short,
 			hEncoder->srInfo->num_cb_short);
-	
+
 	/* load channel_map */
 	for( i = 0; i < MAX_CHANNELS; i++ )
 		hEncoder->config.channel_map[i] = config->channel_map[i];
@@ -291,7 +295,7 @@ faacEncHandle FAACAPI faacEncOpen(unsigned long sampleRate,
     /* find correct sampling rate depending parameters */
     hEncoder->srInfo = &srInfo[hEncoder->sampleRateIdx];
 
-    for (channel = 0; channel < numChannels; channel++) 
+    for (channel = 0; channel < numChannels; channel++)
 	{
         hEncoder->coderInfo[channel].prev_window_shape = SINE_WINDOW;
         hEncoder->coderInfo[channel].window_shape = SINE_WINDOW;
@@ -306,7 +310,7 @@ faacEncHandle FAACAPI faacEncOpen(unsigned long sampleRate,
 
     /* Initialize coder functions */
 	fft_initialize( &hEncoder->fft_tables );
-    
+
 	hEncoder->psymodel->PsyInit(&hEncoder->gpsyInfo, hEncoder->psyInfo, hEncoder->numChannels,
         hEncoder->sampleRate, hEncoder->srInfo->cb_width_long,
         hEncoder->srInfo->num_cb_long, hEncoder->srInfo->cb_width_short,
@@ -333,7 +337,7 @@ int FAACAPI faacEncClose(faacEncHandle hpEncoder)
     fft_terminate(&hEncoder->fft_tables);
 
     /* Free remaining buffer memory */
-    for (channel = 0; channel < hEncoder->numChannels; channel++) 
+    for (channel = 0; channel < hEncoder->numChannels; channel++)
 	{
 		if (hEncoder->sampleBuff[channel])
 			FreeMemory(hEncoder->sampleBuff[channel]);
@@ -346,7 +350,7 @@ int FAACAPI faacEncClose(faacEncHandle hpEncoder)
     }
 
     /* Free handle */
-    if (hEncoder) 
+    if (hEncoder)
 		FreeMemory(hEncoder);
 
     BlocStat();
@@ -397,14 +401,14 @@ int FAACAPI faacEncEncode(faacEncHandle hpEncoder,
     GetChannelInfo(channelInfo, numChannels, useLfe);
 
     /* Update current sample buffers */
-    for (channel = 0; channel < numChannels; channel++) 
+    for (channel = 0; channel < numChannels; channel++)
 	{
 		double *tmp;
 
 
 		if (!hEncoder->sampleBuff[channel])
 			hEncoder->sampleBuff[channel] = (double*)AllocMemory(FRAME_LEN*sizeof(double));
-		
+
 		tmp = hEncoder->sampleBuff[channel];
 
         hEncoder->sampleBuff[channel]		= hEncoder->nextSampleBuff[channel];
@@ -440,7 +444,7 @@ int FAACAPI faacEncEncode(faacEncHandle hpEncoder,
                 case FAAC_INPUT_32BIT:
 					{
 						int32_t *input_channel = (int32_t*)inputBuffer + hEncoder->config.channel_map[channel];
-						
+
 						for (i = 0; i < samples_per_channel; i++)
 						{
 							hEncoder->next3SampleBuff[channel][i] = (1.0/256) * (double)*input_channel;
@@ -475,11 +479,11 @@ int FAACAPI faacEncEncode(faacEncHandle hpEncoder,
 		/* LFE psychoacoustic can run without it */
 		if (!channelInfo[channel].lfe || channelInfo[channel].cpe)
 		{
-			hEncoder->psymodel->PsyBufferUpdate( 
-					&hEncoder->fft_tables, 
-					&hEncoder->gpsyInfo, 
+			hEncoder->psymodel->PsyBufferUpdate(
+					&hEncoder->fft_tables,
+					&hEncoder->gpsyInfo,
 					&hEncoder->psyInfo[channel],
-					hEncoder->next3SampleBuff[channel], 
+					hEncoder->next3SampleBuff[channel],
 					bandWidth,
 					hEncoder->srInfo->cb_width_short,
 					hEncoder->srInfo->num_cb_short);
