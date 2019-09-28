@@ -79,9 +79,6 @@
     <ClInclude Include="..\..\libfaac\util.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\libfaac\version.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\include\faac.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -95,6 +92,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\..\libfaac\stereo.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\libfaac\win32_ver.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
