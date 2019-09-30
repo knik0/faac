@@ -246,11 +246,11 @@ static void qlevel(CoderInfo *coderInfo,
               {
                   __m128 x = {xr[cnt], xr[cnt + 1], xr[cnt + 2], xr[cnt + 3]};
 
-                  x = _mm_max_ps(x, -x);
-                  x *= (__m128){sfacfix, sfacfix, sfacfix, sfacfix};
-                  x *= _mm_sqrt_ps(x);
+                  x = _mm_max_ps(x, _mm_sub_ps((__m128){0, 0, 0, 0}, x));
+                  x = _mm_mul_ps(x, (__m128){sfacfix, sfacfix, sfacfix, sfacfix});
+                  x = _mm_mul_ps(x, _mm_sqrt_ps(x));
                   x = _mm_sqrt_ps(x);
-                  x += (__m128){MAGIC_NUMBER, MAGIC_NUMBER, MAGIC_NUMBER, MAGIC_NUMBER};
+                  x = _mm_add_ps(x, (__m128){MAGIC_NUMBER, MAGIC_NUMBER, MAGIC_NUMBER, MAGIC_NUMBER});
 
                   *(__m128i*)(xi + cnt) = _mm_cvttps_epi32(x);
               }
