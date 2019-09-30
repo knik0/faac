@@ -271,14 +271,13 @@ static void PsyCalculate(ChannelInfo * channelInfo, GlobalPsyInfo * gpsyInfo,
 // imported from filtbank.c
 static void mdct( FFT_Tables *fft_tables, double *data, int N )
 {
-    double *xi, *xr;
     double tempr, tempi, c, s, cold, cfreq, sfreq; /* temps for pre and post twiddle */
     double freq = 2.0 * M_PI / N;
     double cosfreq8, sinfreq8;
     int i, n;
 
-    xi = (double*)AllocMemory((N >> 2)*sizeof(double));
-    xr = (double*)AllocMemory((N >> 2)*sizeof(double));
+    double xi[BLOCK_LEN_LONG / 2];
+    double xr[BLOCK_LEN_LONG / 2];
 
     /* prepare for recurrence relation in pre-twiddle */
     cfreq = cos (freq);
@@ -342,9 +341,6 @@ static void mdct( FFT_Tables *fft_tables, double *data, int N )
         c = c * cfreq - s * sfreq;
         s = s * cfreq + cold * sfreq;
     }
-
-    if (xr) FreeMemory(xr);
-    if (xi) FreeMemory(xi);
 }
 
 
