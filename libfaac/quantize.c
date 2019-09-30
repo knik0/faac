@@ -153,7 +153,7 @@ static void qlevel(CoderInfo *coderInfo,
                   )
 {
     int sb, cnt;
-#if !defined(__clang__) && (!defined(__GNUC__) || GCC_VERSION >= 40600)
+#if !defined(__clang__) && defined(__GNUC__) && (GCC_VERSION >= 40600)
     /* 2^0.25 (1.50515 dB) step from AAC specs */
     static const double sfstep = 1.0 / log10(sqrt(sqrt(2.0)));
 #else
