@@ -228,7 +228,7 @@ pcmfile_t *wav_open_read(const char *name, int rawinput)
     }
   }
 
-  sndf = malloc(sizeof(*sndf));
+  sndf = (pcmfile_t*)malloc(sizeof(*sndf));
   memset(sndf, 0, sizeof(*sndf));
   sndf->f = wave_f;
 
@@ -266,7 +266,7 @@ pcmfile_t *wav_open_read(const char *name, int rawinput)
 static void chan_remap(int32_t *buf, int channels, int blocks, int *map)
 {
   int i;
-  int32_t *tmp = malloc(channels * sizeof(int32_t));
+  int32_t *tmp = (int32_t*)malloc(channels * sizeof(int32_t));
 
   for (i = 0; i < blocks; i++)
   {
@@ -283,13 +283,13 @@ size_t wav_read_float32(pcmfile_t *sndf, float *buf, size_t num, int *map)
 {
   size_t cnt;
   size_t isize;
-  void *bufi;
+  char *bufi;
 
   if ((sndf->samplebytes > 4) || (sndf->samplebytes < 1))
     return 0;
 
   isize = num * sndf->samplebytes;
-  bufi = (buf + num);
+  bufi = (char*)(buf + num);
   bufi -= isize;
   isize = fread(bufi, 1, isize, sndf->f);
   isize /= sndf->samplebytes;
@@ -316,7 +316,7 @@ size_t wav_read_float32(pcmfile_t *sndf, float *buf, size_t num, int *map)
       {
       case 1:
           {
-              uint8_t *in = bufi;
+              uint8_t *in = (uint8_t*)bufi;
               uint8_t s = in[cnt];
 
               buf[cnt] = ((float)s - 128.0) * (float)256;
@@ -324,7 +324,7 @@ size_t wav_read_float32(pcmfile_t *sndf, float *buf, size_t num, int *map)
           break;
       case 2:
           {
-              int16_t *in = bufi;
+              int16_t *in = (int16_t*)bufi;
               int16_t s = in[cnt];
 #ifdef WORDS_BIGENDIAN
               if (!sndf->bigendian)
@@ -339,7 +339,7 @@ size_t wav_read_float32(pcmfile_t *sndf, float *buf, size_t num, int *map)
       case 3:
           {
               int s;
-              uint8_t *in = bufi;
+              uint8_t *in = (uint8_t*)bufi;
               in += 3 * cnt;
 
               if (!sndf->bigendian)
@@ -356,7 +356,7 @@ size_t wav_read_float32(pcmfile_t *sndf, float *buf, size_t num, int *map)
         break;
       case 4:
           {
-              int32_t *in = bufi;
+              int32_t *in = (int32_t*)bufi;
               int s = in[cnt];
 #ifdef WORDS_BIGENDIAN
               if (!sndf->bigendian)
