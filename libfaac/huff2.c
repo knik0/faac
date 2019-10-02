@@ -66,6 +66,8 @@ static int escape(int x, int *code)
 # define DRMDATA
 #endif
 
+#define arrlen(array) (sizeof(array) / sizeof(*array))
+
 static int huffcode(int *qs /* quantized spectrum */,
                     int len,
                     int bnum,
@@ -111,6 +113,10 @@ static int huffcode(int *qs /* quantized spectrum */,
         {
             qp = qs+ofs;
             idx = 27 * qp[0] + 9 * qp[1] + 3 * qp[2] + qp[3] + 40;
+            if (idx < 0 || idx >= arrlen(book01))
+            {
+                return -1;
+            }
             blen = book[idx].len;
             if (coder)
             {
@@ -128,6 +134,10 @@ static int huffcode(int *qs /* quantized spectrum */,
         {
             qp = qs+ofs;
             idx = 27 * abs(qp[0]) + 9 * abs(qp[1]) + 3 * abs(qp[2]) + abs(qp[3]);
+            if (idx < 0 || idx >= arrlen(book03))
+            {
+                return -1;
+            }
             blen = book[idx].len;
             if (!coder)
             {
@@ -163,6 +173,10 @@ static int huffcode(int *qs /* quantized spectrum */,
         {
             qp = qs+ofs;
             idx = 9 * qp[0] + qp[1] + 40;
+            if (idx < 0 || idx >= arrlen(book05))
+            {
+                return -1;
+            }
             blen = book[idx].len;
             if (coder)
             {
@@ -180,6 +194,10 @@ static int huffcode(int *qs /* quantized spectrum */,
         {
             qp = qs+ofs;
             idx = 8 * abs(qp[0]) + abs(qp[1]);
+            if (idx < 0 || idx >= arrlen(book07))
+            {
+                return -1;
+            }
             blen = book[idx].len;
             if (!coder)
             {
@@ -213,6 +231,10 @@ static int huffcode(int *qs /* quantized spectrum */,
         {
             qp = qs+ofs;
             idx = 13 * abs(qp[0]) + abs(qp[1]);
+            if (idx < 0 || idx >= arrlen(book09))
+            {
+                return -1;
+            }
             blen = book[idx].len;
             if (!coder)
             {
@@ -254,6 +276,10 @@ static int huffcode(int *qs /* quantized spectrum */,
             if (x1 > 16)
                 x1 = 16;
             idx = 17 * x0 + x1;
+            if (idx < 0 || idx >= arrlen(book11))
+            {
+                return -1;
+            }
 
             blen = book[idx].len;
             if (!coder)
