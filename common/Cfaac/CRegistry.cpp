@@ -206,7 +206,7 @@ DWORD slen=strlen(valStr)+1;
 		if(RegQueryValueEx(regKey, keyStr, NULL, NULL, (BYTE *)tempVal, &len )!=ERROR_SUCCESS ||
 			strcmpi(tempVal,valStr))
 			RegSetValueEx(regKey, keyStr, 0, REG_SZ, (BYTE *)valStr, slen);
-		delete tempVal;
+		delete [] tempVal;
 	}
 }
 //************************************************************************************************
@@ -226,7 +226,7 @@ DWORD len;
 		if(RegQueryValueEx(regKey, keyStr, NULL, NULL, (BYTE *)tempVal, &len )!=ERROR_SUCCESS ||
 			memcmp(tempVal,addr,len))
 			RegSetValueEx(regKey, keyStr, 0, REG_BINARY, addr, size);
-		delete tempVal;
+		delete [] tempVal;
 	}
 }
 
@@ -340,14 +340,14 @@ int CRegistry::GetSetValN(char *keyStr, BYTE *defData, DWORD defSize, BYTE **des
 long	retVal;
 DWORD	size;
 
-	dest=NULL;
+	*dest=NULL;
 	if((retVal=RegQueryValueEx(regKey , keyStr , NULL , NULL, NULL, &size))==ERROR_SUCCESS)
 		if(*dest=(BYTE *)malloc(size+1))
 			retVal=RegQueryValueEx(regKey , keyStr , NULL , NULL, (BYTE *)*dest , &size);
 	if(retVal!=ERROR_SUCCESS)
 	{
-		if(dest)
-			free(dest);
+		if(*dest)
+			free(*dest);
 		if(!defData)
 			return 0;
 
