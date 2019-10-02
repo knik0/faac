@@ -277,6 +277,7 @@ static void chan_remap(int32_t *buf, int channels, int blocks, int *map)
     for (chn = 0; chn < channels; chn++)
       buf[i * channels + chn] = tmp[map[chn]];
   }
+  free(tmp);
 }
 
 size_t wav_read_float32(pcmfile_t *sndf, float *buf, size_t num, int *map)
