@@ -23,13 +23,14 @@
 
 #include <stdlib.h>
 #include <stdio.h>
-#include <stdint.h>
 #ifndef WORDS_BIGENDIAN
 //#include <byteswap.h>
 #endif
 #include <string.h>
 #include <time.h>
 #include <unistd.h>
+
+#include "mp4write.h"
 
 enum ATOM_TYPE
 {
@@ -44,8 +45,6 @@ typedef struct
     uint16_t opcode;
     void *data;
 } creator_t;
-
-#include "mp4write.h"
 
 mp4config_t mp4config = { 0 };
 

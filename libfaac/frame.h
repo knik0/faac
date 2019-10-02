@@ -25,8 +25,6 @@
 #include "config.h"
 #endif
 
-#include <stdint.h>
-
 #include <faac.h>
 
 #ifdef __cplusplus

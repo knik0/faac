@@ -48,7 +48,6 @@ psymodellist_t;
 
 #include <stdint.h>
 #include "faaccfg.h"
-#include <stdint.h>
 
 
 typedef void *faacEncHandle;
