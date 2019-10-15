@@ -195,7 +195,7 @@ MP4FileHandle MP4File;
 	FREE_ARRAY(comment);
 	MP4GetMetadataComment(MP4File, &comment);
 	FREE_ARRAY(art.data);
-	MP4GetMetadataCoverArt(MP4File, (unsigned __int8 **)&art.data, (u_int32_t *)&art.size);
+	MP4GetMetadataCoverArt(MP4File, (unsigned __int8 **)&art.data, (uint32_t *)&art.size);
 
 	MP4Close(MP4File);
 /*

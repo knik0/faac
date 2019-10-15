@@ -48,16 +48,16 @@
 
 typedef struct
 {
-  u_int32_t label;           /* 'RIFF' */
-  u_int32_t length;        /* Length of rest of file */
-  u_int32_t chunk_type;      /* 'WAVE' */
+  uint32_t label;           /* 'RIFF' */
+  uint32_t length;        /* Length of rest of file */
+  uint32_t chunk_type;      /* 'WAVE' */
 }
 riff_t;
 
 typedef struct
 {
-  u_int32_t label;
-  u_int32_t len;
+  uint32_t label;
+  uint32_t len;
 }
 riffsub_t;
 
@@ -70,13 +70,13 @@ riffsub_t;
 #define WAVE_FORMAT_EXTENSIBLE	0xfffe
 struct WAVEFORMATEX
 {
-  u_int16_t wFormatTag;
-  u_int16_t nChannels;
-  u_int32_t nSamplesPerSec;
-  u_int32_t nAvgBytesPerSec;
-  u_int16_t nBlockAlign;
-  u_int16_t wBitsPerSample;
-  u_int16_t cbSize;
+  uint16_t wFormatTag;
+  uint16_t nChannels;
+  uint32_t nSamplesPerSec;
+  uint32_t nAvgBytesPerSec;
+  uint16_t nBlockAlign;
+  uint16_t wBitsPerSample;
+  uint16_t cbSize;
 }
 #ifdef __GNUC__
 __attribute__((packed))
@@ -87,11 +87,11 @@ struct WAVEFORMATEXTENSIBLE
 {
   struct WAVEFORMATEX Format;
   union {
-    u_int16_t wValidBitsPerSample;	// bits of precision
-    u_int16_t wSamplesPerBlock;		// valid if wBitsPerSample==0
-    u_int16_t wReserved;		// If neither applies, set to zero.
+    uint16_t wValidBitsPerSample;	// bits of precision
+    uint16_t wSamplesPerBlock;		// valid if wBitsPerSample==0
+    uint16_t wReserved;		// If neither applies, set to zero.
   } Samples;
-  u_int32_t dwChannelMask;		// which channels are present in stream
+  uint32_t dwChannelMask;		// which channels are present in stream
   unsigned char SubFormat[16];		// guid
 }
 #ifdef __GNUC__
@@ -415,7 +415,7 @@ size_t wav_read_int24(pcmfile_t *sndf, int32_t *buf, size_t num, int *map)
 
 	s = SWAP16(s);
 
-	buf[i] = ((u_int32_t)s) << 8;
+	buf[i] = ((uint32_t)s) << 8;
       }
     }
     else

@@ -309,7 +309,7 @@ int i;
 					
 					s = SWAP16(s);
 					
-					buf[i] = ((u_int32_t)s) << 8;
+					buf[i] = ((uint32_t)s) << 8;
 				}
 			}
 			else
@@ -369,7 +369,7 @@ int i;
 				}
 			}
 			else
-				memcpy(buf,bufi,size*sizeof(u_int32_t));
+				memcpy(buf,bufi,size*sizeof(uint32_t));
 		/*
 		int exponent, mantissa;
 		float *bufo=(float *)buf;
