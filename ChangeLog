@@ -1,3 +1,38 @@
+1.30
+	[ Robert Kausch ]
+	* Fix Joint Stereo coding
+
+	[ Krzysztof Nikiel ]
+	* Code cleanup and compilation fixes
+	* Fix endianness conversion functions
+
+	[ Takashi Yoshi ]
+	* Fix compilation with GCC < 4.6
+	* Fix compilation on big endian systems
+
+	[ Fabian Greffrath ]
+	* Fix division by zero errors
+	* Fix compilation with GCC <= 4.7.3
+	* Include stdint.h for int32_t
+	* Change bufi to a char pointer
+	* Fix logic error in compiler detection
+	* Revert back to some more generic SSE2 code
+	* Fix a memory leak in chan_remap()
+	* Remove some extra stdint-includes
+	* Fix some cppcheck warnings in the Cfaac code
+	* Check index ranges before dereferencing book arrays (CVE-2018-19886)
+	* Inconditionally include stdint.h in frontend/input.h
+	* Consistently use stdint.h types
+
+	[ Michael Fink ]
+	* Update Visual Studio 2017 projects
+	* Ddded missing include stdint.h needed for using int32_t, uint8_t, etc.
+	* Port over ac2ver tool to generate PACKAGE_VERSION when compiling with Visual Studio
+
+	[ Eugène Filin ]
+	* Memory allocations redefined
+
+1.29.9.2
 	* fixed max MP4 bitrate calculation
 1.29.9:
 	* initial version of PNS coding
