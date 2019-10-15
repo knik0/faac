@@ -31,28 +31,7 @@
 #ifdef HAVE_SYS_TYPES_H
 # include <sys/types.h>
 #endif
-#ifndef __MPEG4IP_INCLUDED__
-/* Let's avoid some boring conflicting declarations */
-#ifdef HAVE_INTTYPES_H
-# include <inttypes.h>
-#endif
-#ifdef HAVE_STDINT_H
-# include <stdint.h>
-#endif
-
-#ifndef HAVE_INT32_T
-typedef signed int int32_t;
-#endif
-#ifndef HAVE_INT16_T
-typedef signed short int16_t;
-#endif
-#ifndef HAVE_U_INT32_T
-typedef unsigned int u_int32_t;
-#endif
-#ifndef HAVE_U_INT16_T
-typedef unsigned short u_int16_t;
-#endif
-#endif /* #ifndef __MPEG4IP_INCLUDED__ */
+#include <stdint.h>
 
 #ifdef __cplusplus
 extern "C"
