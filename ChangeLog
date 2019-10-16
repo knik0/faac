@@ -13,21 +13,20 @@
 	[ Fabian Greffrath ]
 	* Fix division by zero errors
 	* Fix compilation with GCC <= 4.7.3
-	* Include stdint.h for int32_t
-	* Change bufi to a char pointer
+	* Change pointer type for proper arithmetics
 	* Fix logic error in compiler detection
 	* Revert back to some more generic SSE2 code
-	* Fix a memory leak in chan_remap()
-	* Remove some extra stdint-includes
+	* Fix a memory leak
 	* Fix some cppcheck warnings in the Cfaac code
 	* Check index ranges before dereferencing book arrays (CVE-2018-19886)
-	* Inconditionally include stdint.h in frontend/input.h
+	* Clean up stdint.h header inclusions
 	* Consistently use stdint.h types
 
 	[ Michael Fink ]
 	* Update Visual Studio 2017 projects
-	* Ddded missing include stdint.h needed for using int32_t, uint8_t, etc.
-	* Port over ac2ver tool to generate PACKAGE_VERSION when compiling with Visual Studio
+	* Add stdint.h header inclusions
+	* Port over ac2ver tool from faad2 to generate PACKAGE_VERSION
+	  when compiling with Visual Studio
 
 	[ Eugène Filin ]
 	* Memory allocations redefined
