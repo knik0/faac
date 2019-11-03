@@ -1031,12 +1031,12 @@ int main(int argc, char *argv[])
     fprintf(stderr, "Encoding %s to %s\n", audioFileName, aacFileName);
     if (frames != 0)
     {
-        fprintf(stderr, "   frame          | bitrate | elapsed/estim | "
+        fprintf(stderr, "         frame         | bitrate | elapsed/estim | "
                 "play/CPU | ETA\n");
     }
     else
     {
-        fprintf(stderr, " frame | elapsed | play/CPU\n");
+        fprintf(stderr, "  frame  | elapsed | play/CPU\n");
     }
 
     /* encoding loop */
@@ -1108,7 +1108,7 @@ int main(int argc, char *argv[])
                 if (frames != 0)
                 {
                     fprintf(stderr,
-                            "\r%5d/%-5d (%3d%%)|  %5.1f  | %6.1f/%-6.1f | %7.2fx | %.1f ",
+                            "\r%7d/%-7d (%3d%%) |  %5.1f  | %6.1f/%-6.1f | %7.2fx | %.1f ",
                             currentFrame, frames, currentFrame * 100 / frames,
                             ((double) totalBytesWritten * 8.0 / 1000.0) /
                             ((double) infile->samples / infile->samplerate *
@@ -1122,7 +1122,7 @@ int main(int argc, char *argv[])
                 else
                 {
                     fprintf(stderr,
-                            "\r %5d |  %6.1f | %7.2fx ",
+                            "\r %7d | %7.1f | %7.2fx ",
                             currentFrame,
                             timeused,
                             (1024.0 * currentFrame / infile->samplerate) /
