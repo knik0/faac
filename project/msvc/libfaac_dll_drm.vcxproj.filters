@@ -58,9 +58,6 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\libfaac\aacquant.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\libfaac\bitstream.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -99,9 +96,6 @@
     </ClInclude>
     <ClInclude Include="..\..\libfaac\kiss_fft\kiss_fftr.h">
       <Filter>kiss_fft</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\libfaac\version.h">
-      <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\..\include\faac.h">
       <Filter>Header Files</Filter>
