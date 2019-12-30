@@ -14,10 +14,10 @@ bin_PROGRAMS += faacgui
 faacgui_SOURCES = maingui.c input.c input.h resource.h
 faac_LDADD += -lws2_32 icon.o
 faacgui_LDADD = $(faac_LDADD) faacguires.o -lcomdlg32
-faacguires.o:
-	$(WINDRES) faacgui.rc faacguires.o
-icon.o:
-	$(WINDRES) icon.rc icon.o
+faacguires.o: faacgui.rc
+	$(WINDRES) $(top_srcdir)/frontend/faacgui.rc faacguires.o
+icon.o: icon.rc
+	$(WINDRES) $(top_srcdir)/frontend/icon.rc icon.o
 endif
 
 endif # !USE_DRM
