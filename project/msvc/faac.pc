@@ -1,0 +1,9 @@
+prefix=c:/Users/aaron
+libdir=${prefix}/lib
+includedir=${prefix}/include
+
+Name: faac
+Description: FAAC AAC encoder library
+Version: 1.30.0
+Libs: -L${libdir} -llibfaac
+Cflags: -I${includedir}
