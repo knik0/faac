@@ -37,3 +37,4 @@ Makefile*
 /project/msvc/intermediate/
 *.user
 /libfaac/win32_ver.h
+/libfaac/faac.pc

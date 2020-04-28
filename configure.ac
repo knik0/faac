@@ -61,6 +61,7 @@ AC_CHECK_MEMBERS(fpos_t.__pos,,, [#include <stdio.h>])
 AC_OUTPUT([
 common/Makefile
 libfaac/Makefile
+libfaac/faac.pc
 frontend/Makefile
 include/Makefile
 Makefile])

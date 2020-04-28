@@ -25,3 +25,8 @@ libfaac_la_LDFLAGS += -Wl,--add-stdcall-alias
 endif
 
 AM_CPPFLAGS = -I$(top_srcdir)/include
+
+pkgconfigdir = $(libdir)/pkgconfig
+pkgconfig_DATA = faac.pc
+
+EXTRA_DIST = faac.pc.in
