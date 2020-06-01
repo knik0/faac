@@ -58,9 +58,14 @@ typedef struct
         // meta fields
         const char *encoder;
         const char *artist;
+        const char *artistsort;
         const char *composer;
+        const char *composersort;
         const char *title;
         const char *album;
+        const char *albumartist;
+        const char *albumartistsort;
+        const char *albumsort;
         uint8_t compilation;
         uint32_t trackno;
         uint32_t ntracks;

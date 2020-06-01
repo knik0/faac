@@ -626,8 +626,12 @@ static int ilstout(void)
     size += tagtxt("\xa9" "too", mp4config.tag.encoder);
     if (mp4config.tag.artist)
         size += tagtxt("\xa9" "ART", mp4config.tag.artist);
+    if (mp4config.tag.artistsort)
+        size += tagtxt("soar", mp4config.tag.artistsort);
     if (mp4config.tag.composer)
         size += tagtxt("\xa9" "wrt", mp4config.tag.composer);
+    if (mp4config.tag.composersort)
+        size += tagtxt("soco", mp4config.tag.composersort);
     if (mp4config.tag.title)
         size += tagtxt("\xa9" "nam", mp4config.tag.title);
     if (mp4config.tag.genre)
@@ -637,6 +641,12 @@ static int ilstout(void)
     }
     if (mp4config.tag.album)
         size += tagtxt("\xa9" "alb", mp4config.tag.album);
+    if (mp4config.tag.albumartist)
+        size += tagtxt("aART", mp4config.tag.albumartist);
+    if (mp4config.tag.albumartistsort)
+        size += tagtxt("soaa", mp4config.tag.albumartistsort);
+    if (mp4config.tag.albumsort)
+        size += tagtxt("soal", mp4config.tag.albumsort);
     if (mp4config.tag.compilation)
     {
         size += tagu8("cpil", 1);
