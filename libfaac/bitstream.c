@@ -1007,7 +1007,7 @@ static int WriteReorderedSpectralData(CoderInfo *coder,
     int num_cw = coder->cur_cw;
     int window_cw_cnt[MAX_SHORT_WINDOWS] = {0,0,0,0,0,0,0,0};
 
-    int presort, set, num_sets;
+    int presort, set, num_sets = 0;
 
     unsigned short cur_cb, cw_cnt;
     short is_backwards;
@@ -1154,7 +1154,8 @@ static int WriteReorderedSpectralData(CoderInfo *coder,
         startbitpos = bitStream->currentBit;
 
         /* write write priority codewords (PCWs) and nonPCWs ---------------- */
-        num_sets = num_cw / segmcnt; /* number of sets */
+        if (segmcnt > 0)
+            num_sets = num_cw / segmcnt; /* number of sets */
 
         for (set = 0; set <= num_sets; set++) {
             int trial;
