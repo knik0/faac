@@ -693,7 +693,7 @@ int main(int argc, char *argv[])
             break;
         case GENRE_FLAG:
             genre = atoi(optarg);
-            if ((genre < 0) || (genre > 146))
+            if ((genre < 0) || (genre > 255))
                 dieMessage = "Genre number out of range.\n";
             genre++;
             break;
