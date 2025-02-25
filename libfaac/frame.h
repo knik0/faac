@@ -58,8 +58,6 @@ typedef struct {
 
     /* sample buffers of current next and next next frame*/
     double *sampleBuff[MAX_CHANNELS];
-    double *nextSampleBuff[MAX_CHANNELS];
-    double *next2SampleBuff[MAX_CHANNELS];
     double *next3SampleBuff[MAX_CHANNELS];
 
     /* Filterbank buffers */
