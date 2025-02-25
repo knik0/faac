@@ -304,8 +304,6 @@ faacEncHandle FAACAPI faacEncOpen(unsigned long sampleRate,
         hEncoder->coderInfo[channel].groups.len[0] = 1;
 
         hEncoder->sampleBuff[channel] = NULL;
-        hEncoder->nextSampleBuff[channel] = NULL;
-        hEncoder->next2SampleBuff[channel] = NULL;
     }
 
     /* Initialize coder functions */
@@ -341,10 +339,6 @@ int FAACAPI faacEncClose(faacEncHandle hpEncoder)
 	{
 		if (hEncoder->sampleBuff[channel])
 			FreeMemory(hEncoder->sampleBuff[channel]);
-		if (hEncoder->nextSampleBuff[channel])
-			FreeMemory(hEncoder->nextSampleBuff[channel]);
-		if (hEncoder->next2SampleBuff[channel])
-			FreeMemory (hEncoder->next2SampleBuff[channel]);
 		if (hEncoder->next3SampleBuff[channel])
 			FreeMemory (hEncoder->next3SampleBuff[channel]);
     }
@@ -411,9 +405,7 @@ int FAACAPI faacEncEncode(faacEncHandle hpEncoder,
 
 		tmp = hEncoder->sampleBuff[channel];
 
-        hEncoder->sampleBuff[channel]		= hEncoder->nextSampleBuff[channel];
-        hEncoder->nextSampleBuff[channel]	= hEncoder->next2SampleBuff[channel];
-        hEncoder->next2SampleBuff[channel]	= hEncoder->next3SampleBuff[channel];
+		hEncoder->sampleBuff[channel]	= hEncoder->next3SampleBuff[channel];
 		hEncoder->next3SampleBuff[channel]	= tmp;
 
         if (samplesInput == 0)
