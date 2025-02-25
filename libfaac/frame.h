@@ -37,8 +37,6 @@ extern "C" {
 #include "fft.h"
 #include "quantize.h"
 
-#pragma pack(push, 1)
-
 #include <faaccfg.h>
 
 typedef struct {
@@ -93,8 +91,6 @@ typedef struct {
     /* FFT Tables */
     FFT_Tables	fft_tables;
 } faacEncStruct;
-
-#pragma pack(pop)
 
 #ifdef __cplusplus
 }
