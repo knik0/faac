@@ -529,7 +529,7 @@ static double LevinsonDurbin(int fOrder,          /* Filter order */
     double error, kTemp;                /* Prediction error */
     double aArray1[TNS_MAX_ORDER+1];    /* Predictor coeff array */
     double aArray2[TNS_MAX_ORDER+1];    /* Predictor coeff array 2 */
-    double rArray[TNS_MAX_ORDER+1];     /* Autocorrelation coeffs */
+    double rArray[TNS_MAX_ORDER+1] = {0}; /* Autocorrelation coeffs */
     double* aPtr = aArray1;             /* Ptr to aArray1 */
     double* aLastPtr = aArray2;         /* Ptr to aArray2 */
     double* aTemp;
