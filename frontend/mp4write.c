@@ -27,7 +27,7 @@
 //#include <byteswap.h>
 #endif
 #include <string.h>
-#include <time.h>
+#include <sys/time.h>
 #include <unistd.h>
 
 #include "mp4write.h"
