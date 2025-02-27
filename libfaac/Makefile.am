@@ -21,7 +21,9 @@ endif
 
 libfaac_la_LDFLAGS = -no-undefined
 if MINGW
+if !CLANG
 libfaac_la_LDFLAGS += -Wl,--add-stdcall-alias
+endif
 endif
 
 AM_CPPFLAGS = -I$(top_srcdir)/include

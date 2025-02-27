@@ -35,6 +35,7 @@ fi
 
 AM_CONDITIONAL(MINGW, test "$host_os" = "mingw32")
 AM_CONDITIONAL(CPUSSE, test "$host_cpu" = "x86_64" || test "$host_cpu" = "i686")
+AM_CONDITIONAL(CLANG, echo "$CC" | grep -iq "clang")
 
 AC_CHECK_TOOL(WINDRES, windres)
 
@@ -47,7 +48,6 @@ AC_CHECK_HEADERS(float.h)
 AC_CHECK_DECL(strchr, MY_DEFINE(HAVE_STRCHR))
 AC_CHECK_DECL(memcpy, MY_DEFINE(HAVE_MEMCPY))
 AC_CHECK_DECL(strsep, MY_DEFINE(HAVE_STRSEP))
-AC_CHECK_HEADERS(sys/time.h)
 AC_CHECK_HEADERS_ONCE([sys/time.h])
 
 AC_TYPE_OFF_T
