@@ -61,9 +61,7 @@ jobs:
           msystem: ${{ matrix.config.msystem }}
           update: false
           install: >-
-            ${{ matrix.config.msys-env }}-automake
-            ${{ matrix.config.msys-env }}-autoconf
-            ${{ matrix.config.msys-env }}-libtool
+            ${{ matrix.config.msys-env }}-autotools
 
       - uses: actions/checkout@v3
 
