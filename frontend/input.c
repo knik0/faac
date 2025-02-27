@@ -150,7 +150,7 @@ pcmfile_t *wav_open_read(const char *name, int rawinput)
 {
   FILE *wave_f;
   riff_t riff;
-  riffsub_t riffsub;
+  riffsub_t riffsub = {0};
   struct WAVEFORMATEXTENSIBLE wave;
   char *riffl = "RIFF";
   char *wavel = "WAVE";
@@ -255,7 +255,10 @@ pcmfile_t *wav_open_read(const char *name, int rawinput)
     sndf->samplebytes = UINT16(wave.Format.wBitsPerSample) / 8;
     sndf->samplerate = UINT32(wave.Format.nSamplesPerSec);
     if (!sndf->samplebytes || !sndf->channels)
+    {
+      free(sndf);
       return NULL;
+    }
     sndf->samples = riffsub.len / (sndf->samplebytes * sndf->channels);
   }
   return sndf;
