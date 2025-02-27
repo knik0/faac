@@ -1,5 +1,3 @@
-if !USE_DRM # no frontend for DRM version
-
 bin_PROGRAMS = faac
 dist_man_MANS = ../docs/faac.1
 
@@ -20,4 +18,3 @@ icon.o: icon.rc
 	$(WINDRES) $(top_srcdir)/frontend/icon.rc icon.o
 endif
 
-endif # !USE_DRM

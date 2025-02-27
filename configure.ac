@@ -8,8 +8,6 @@ AH_TOP([#ifndef CONFIG_H
 #define CONFIG_H])
 AH_BOTTOM([#endif /* CONFIG_H */])
 
-AC_ARG_ENABLE( drm,  [  --enable-drm            Digital Radio Mondiale support], enable_drm=$enableval, enable_drm=no)
-
 AC_DEFUN([MY_DEFINE], [ AC_DEFINE($1, 1, [define if needed]) ])
 
 CFLAGS=${CFLAGS:-"-O2 -Wall -fexceptions"}
@@ -23,15 +21,6 @@ AC_CHECK_HEADERS(getopt.h immintrin.h)
 AC_CHECK_DECL(strcasecmp, MY_DEFINE(HAVE_STRCASECMP))
 
 AC_CHECK_LIB(gnugetopt, getopt_long)
-
-dnl Check for DRM mode
-if test "x$enable_drm" = "xyes"; then
-    AC_DEFINE(DRM, 1, [Define if you want to encode for DRM])
-    AM_CONDITIONAL(USE_DRM, true)
-      CFLAGS="$CFLAGS -DDRM"
-else
-    AM_CONDITIONAL(USE_DRM, false)
-fi
 
 AM_CONDITIONAL(MINGW, test "$host_os" = "mingw32")
 AM_CONDITIONAL(CPUSSE, test "$host_cpu" = "x86_64" || test "$host_cpu" = "i686")
