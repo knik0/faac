@@ -1,4 +1,4 @@
-AC_PREREQ([2.72])
+AC_PREREQ([2.71])
 AC_INIT([faac],[1.30],[https://github.com/knik0/faac])
 AC_CONFIG_AUX_DIR(.)
 AM_INIT_AUTOMAKE([subdir-objects])
