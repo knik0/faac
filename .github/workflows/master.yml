@@ -62,6 +62,7 @@ jobs:
           update: false
           install: >-
             ${{ matrix.config.msys-env }}-autotools
+            ${{ matrix.config.msys-env }}-gcc
 
       - uses: actions/checkout@v3
 
