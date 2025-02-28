@@ -24,7 +24,15 @@ AC_CHECK_LIB(gnugetopt, getopt_long)
 
 AM_CONDITIONAL(MINGW, test "$host_os" = "mingw32")
 AM_CONDITIONAL(CPUSSE, test "$host_cpu" = "x86_64" || test "$host_cpu" = "i686")
-AM_CONDITIONAL(CLANG, echo "$CC" | grep -iq "clang")
+
+AC_COMPILE_IFELSE(
+	[AC_LANG_SOURCE([[
+#if !defined(__clang__)
+#error not clang
+#endif
+	]])],
+	[AM_CONDITIONAL(CLANG, true)],
+	[AM_CONDITIONAL(CLANG, false)])
 
 AC_CHECK_TOOL(WINDRES, windres)
 
