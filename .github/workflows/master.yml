@@ -74,6 +74,7 @@ jobs:
           autoreconf -fiv
           ./configure
           make
+          mkdir -p temp
           make install DESTDIR=$(realpath temp)
 
       - name: Upload artifacts (Windows)
@@ -82,8 +83,8 @@ jobs:
         with:
           name: faac-${{ github.sha }}-win64
           path: |
-            $(realpath temp)/*/bin/*.exe
-            $(realpath temp)/*/bin/*.dll
+            temp/*/bin/*.exe
+            temp/*/bin/*.dll
 
   cppcheck:
     name: Cppcheck
