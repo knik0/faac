@@ -1,4 +1,43 @@
-1.30
+1.31 (Feb 28, 2025)
+
+	[ Tatsuya Suzuki ]
+	* updated Visual Studio projects to VS 2019
+	* main.c : progress report keeps alignment when encoding a large file
+	* project/msvc : cleanup, fixes and changes
+
+	[ Christopher Degawa ]
+	* frontend: fix out-of-root build
+
+	[ Fabian Greffrath ]
+	* add a pkg-config file
+	* avoid division by zero
+	* Remove #pragma pack from faacEncStruct (thanks Locutus of Borg)
+	* Reduce memory (thanks xnvi)
+	  + Remove `BwpInfo bwpInfo` from `struct CoderInfo`
+	  + Remove `nextSampleBuff[]` and `next2SampleBuff[]` from `struct faacEncStruct`
+	* tns: Initialize `rArray[]` variable
+	* update autoconf.ac and friends
+	* do not pass add-stdcall-alias option to clang
+	* always build both the regular and the DRM library
+	* fix cppcheck warnings
+	* add some basic CI
+	* fix compilation with clang on Windows
+	* Append INSTALL to README
+
+	[ Steve Fosdick ]
+	* Add album artist and various sort order MP4 tags
+
+	[ Aaron Boxer ]
+	* set libfaac library name to "faac" rather than "libfaac"
+
+	[ Frank ]
+	* Error C2065 (add #define _USE_MATH_DEFINES)
+
+	[ pine3ree ]
+	* Allow genre-id up to 255
+
+1.30 (Oct 16, 2019)
+
 	[ Robert Kausch ]
 	* Fix Joint Stereo coding
 
@@ -31,9 +70,12 @@
 	[ Eugène Filin ]
 	* Memory allocations redefined
 
-1.29.9.2
+1.29.9.2 (Nov 14, 2017)
+
 	* fixed max MP4 bitrate calculation
-1.29.9:
+
+1.29.9 (Nov 2, 2017)
+
 	* initial version of PNS coding
 	* Intensity Stereo coding
 	* more speed improvements
@@ -41,7 +83,9 @@
 	* fixed more bugs
 	* rewritten mid/side coding
 	* fixed bug in blockswitch
-1.29.8
+
+1.29.8 (Oct 15, 2017)
+
 	* changed default mode to ABR 64kbps/channel
 	* implemented short windows grouping
 	* new huffman coder
@@ -53,23 +97,31 @@
 	* removed broken object types: Main and LTP
 	* some mp4 atoms fixed for better compalibility
 	* stdin seek bug fixed
-1.29.7
+
+1.29.7 (Aug 22, 2017)
+
 	* quantizer tweaked to better support high bitrates
 	* allow higher quality for mp4 files (-q 5000 max)
 	* removed mid frequency boost (it turned out useless)
 	* cutoff frequency adjusted to fully utilize upper band
 	* --help-long option removed, it was just an alias for -H
 	* -b option bug fixed
-1.29.6:
+
+1.29.6 (Aug 18, 2017)
+
 	- quality related bug fixed
-1.29.5:
+
+1.29.5 (Aug 17, 2017)
+
 	- updated manpage
 	- check if output file exists; --overwrite option added
 	- help/usage options reorganized
 	- block switching is now tuned to match quality/bitrate
 	- give more quality to lower frequancies (less to highs)
 	- quantizer updated again
-1.29.4:
+
+1.29.4 (Aug 14, 2017)
+
 	- rewritten quantizer: faster, diffrerent quality, different bitrates
 	- ftyp atom: set brands like itunes does, shoud be more compatible
 	  with picky tools
@@ -81,18 +133,23 @@
 	  * rounding in QuantizeReflectionCoeffs (tns.c)
 	  * use +60 value for scalefactor.
 	  * use clipped diff instead of original value (huffman.c)
-1.29.3:
+
+1.29.3 (Jul 21, 2017)
+
 	- MP4 tag options improved
 	- fixed MP4 'meta' atom bug
 	- new option to set verbosity (-v0 to silence output)
 
-1.29.2:
+1.29.2 (Jul 17, 2017)
+
 	- new mp4 output code
 
-1.29:
+1.29 (Jul 4, 2017)
+
 	- various patches applied and bugs fixed
 
-2009-02-02 - Version 1.28
+1.28 (Feb 5, 2009)
+
 	* Prevent out of range scalefactors
 	* Updated to latest mpeg4ip mp4 file format library
 	* Added -s option to make the encoder output optimized mp4 layout
