@@ -40,6 +40,19 @@
 # define bit_SSE2 (1 << 26)
 #endif
 
+#ifdef __SSE2__
+#ifdef _MSC_VER /* visual c++ */
+#define ALIGN16_BEG __declspec(align(16))
+#define ALIGN16_END
+#else /* gcc or icc */
+#define ALIGN16_BEG
+#define ALIGN16_END __attribute__((aligned(16)))
+#endif
+#else
+#define ALIGN16_BEG
+#define ALIGN16_END
+#endif
+
 #ifdef __GNUC__
 #define GCC_VERSION (__GNUC__ * 10000 \
                      + __GNUC_MINOR__ * 100 \
@@ -182,7 +195,7 @@ static void qlevel(CoderInfo *coderInfo,
       int sfac;
       double rmsx;
       double etot;
-      int xitab[8 * MAXSHORTBAND];
+      int ALIGN16_BEG xitab[8 * MAXSHORTBAND] ALIGN16_END;
       int *xi;
       int start, end;
       const double *xr;
@@ -242,17 +255,22 @@ static void qlevel(CoderInfo *coderInfo,
 #ifdef __SSE2__
           if (sse2)
           {
+             const __m128 zero = _mm_setzero_ps();
+             const __m128 sfac = _mm_set1_ps(sfacfix);
+             const __m128 magic = _mm_set1_ps(MAGIC_NUMBER);
+
               for (cnt = 0; cnt < end; cnt += 4)
               {
-                  __m128 x = {xr[cnt], xr[cnt + 1], xr[cnt + 2], xr[cnt + 3]};
-
-                  x = _mm_max_ps(x, _mm_sub_ps((__m128){0, 0, 0, 0}, x));
-                  x = _mm_mul_ps(x, (__m128){sfacfix, sfacfix, sfacfix, sfacfix});
+                  const __m256d x_d = _mm256_load_pd(&xr[cnt]);
+                  __m128 x = _mm256_cvtpd_ps(x_d);
+                  x = _mm_max_ps(x, _mm_sub_ps(zero, x));
+                  x = _mm_mul_ps(x, sfac);
                   x = _mm_mul_ps(x, _mm_sqrt_ps(x));
                   x = _mm_sqrt_ps(x);
-                  x = _mm_add_ps(x, (__m128){MAGIC_NUMBER, MAGIC_NUMBER, MAGIC_NUMBER, MAGIC_NUMBER});
+                  x = _mm_add_ps(x, magic);
 
-                  *(__m128i*)(xi + cnt) = _mm_cvttps_epi32(x);
+                  const __m128i xi_result = _mm_cvttps_epi32(x);
+                  _mm_store_si128((__m128i*)&xi[cnt], xi_result);
               }
               for (cnt = 0; cnt < end; cnt++)
               {
@@ -300,6 +318,7 @@ int BlocQuant(CoderInfo *coder, double *xr, AACQuantCfg *aacquantCfg)
     coder->cur_cw = 0; /* init codeword counter */
 #endif
 
+    if (coder != NULL && aacquantCfg != NULL)
     {
         int lastis;
         int lastsf;
