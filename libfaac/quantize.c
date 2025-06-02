@@ -261,7 +261,7 @@ static void qlevel(CoderInfo *coderInfo,
 
               for (cnt = 0; cnt < end; cnt += 4)
               {
-                  const __m256d x_d = _mm256_load_pd(&xr[cnt]);
+                  const __m256d x_d = _mm256_loadu_pd(&xr[cnt]);
                   __m128 x = _mm256_cvtpd_ps(x_d);
                   x = _mm_max_ps(x, _mm_sub_ps(zero, x));
                   x = _mm_mul_ps(x, sfac);
