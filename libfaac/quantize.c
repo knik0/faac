@@ -255,22 +255,20 @@ static void qlevel(CoderInfo *coderInfo,
 #ifdef __SSE2__
           if (sse2)
           {
-             const __m128 zero = _mm_setzero_ps();
-             const __m128 sfac = _mm_set1_ps(sfacfix);
-             const __m128 magic = _mm_set1_ps(MAGIC_NUMBER);
-
+              const __m128 zero = _mm_setzero_ps();
+              const __m128 sfac = _mm_set1_ps(sfacfix);
+              const __m128 magic = _mm_set1_ps(MAGIC_NUMBER);
               for (cnt = 0; cnt < end; cnt += 4)
               {
-                  const __m256d x_d = _mm256_loadu_pd(&xr[cnt]);
-                  __m128 x = _mm256_cvtpd_ps(x_d);
+                  __m128 x = {xr[cnt], xr[cnt + 1], xr[cnt + 2], xr[cnt + 3]};
+
                   x = _mm_max_ps(x, _mm_sub_ps(zero, x));
                   x = _mm_mul_ps(x, sfac);
                   x = _mm_mul_ps(x, _mm_sqrt_ps(x));
                   x = _mm_sqrt_ps(x);
                   x = _mm_add_ps(x, magic);
 
-                  const __m128i xi_result = _mm_cvttps_epi32(x);
-                  _mm_store_si128((__m128i*)&xi[cnt], xi_result);
+                  *(__m128i*)(xi + cnt) = _mm_cvttps_epi32(x);
               }
               for (cnt = 0; cnt < end; cnt++)
               {
@@ -318,7 +316,6 @@ int BlocQuant(CoderInfo *coder, double *xr, AACQuantCfg *aacquantCfg)
     coder->cur_cw = 0; /* init codeword counter */
 #endif
 
-    if (coder != NULL && aacquantCfg != NULL)
     {
         int lastis;
         int lastsf;
