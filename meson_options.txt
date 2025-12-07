@@ -1,0 +1,4 @@
+option('frontend',
+    description: 'Build the frontend',
+    type: 'boolean',
+    value: true)

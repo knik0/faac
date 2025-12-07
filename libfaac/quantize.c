@@ -23,7 +23,7 @@
 #include "quantize.h"
 #include "huff2.h"
 
-#ifdef HAVE_IMMINTRIN_H
+#if defined(HAVE_IMMINTRIN_H) && defined(CPUSSE)
 # include <immintrin.h>
 #endif
 
