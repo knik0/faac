@@ -68,18 +68,22 @@ static int WriteICS(CoderInfo *coderInfo,
                     int commonWindow,
                     int objectType,
                     int writeFlag);
+#ifndef DRM
 static int WritePulseData(CoderInfo *coderInfo,
                           BitStream *bitStream,
                           int writeFlag);
+#endif
 static int WriteTNSData(CoderInfo *coderInfo,
                         BitStream *bitStream,
                         int writeFlag);
+#ifndef DRM
 static int WriteGainControlData(CoderInfo *coderInfo,
                                 BitStream *bitStream,
                                 int writeFlag);
 static int WriteSpectralData(CoderInfo *coderInfo,
                              BitStream *bitStream,
                              int writeFlag);
+#endif
 static int WriteAACFillBits(BitStream* bitStream,
                             int numBits,
                             int writeFlag);
@@ -102,7 +106,7 @@ static int WriteReorderedSpectralData(CoderInfo *coderInfo,
 static void calc_CRC(BitStream *bitStream, int len);
 #endif
 
-
+#ifndef DRM
 static int WriteFAACStr(BitStream *bitStream, char *version, int write)
 {
   int i;
@@ -141,7 +145,7 @@ static int WriteFAACStr(BitStream *bitStream, char *version, int write)
 
   return bitcnt;
 }
-
+#endif
 
 int WriteBitstream(faacEncStruct* hEncoder,
                    CoderInfo *coderInfo,
@@ -612,6 +616,7 @@ static int WriteICS(CoderInfo *coderInfo,
     return bits;
 }
 
+#ifndef DRM
 static int WritePulseData(CoderInfo *coderInfo,
                           BitStream *bitStream,
                           int writeFlag)
@@ -626,6 +631,7 @@ static int WritePulseData(CoderInfo *coderInfo,
 
     return bits;
 }
+#endif
 
 static int WriteTNSData(CoderInfo *coderInfo,
                         BitStream *bitStream,
@@ -714,6 +720,7 @@ static int WriteTNSData(CoderInfo *coderInfo,
     return bits;
 }
 
+#ifndef DRM
 static int WriteGainControlData(CoderInfo *coderInfo,
                                 BitStream *bitStream,
                                 int writeFlag)
@@ -752,6 +759,7 @@ static int WriteSpectralData(CoderInfo *coderInfo,
 
     return bits;
 }
+#endif
 
 static int WriteAACFillBits(BitStream* bitStream,
                             int numBits,
@@ -1242,7 +1250,7 @@ static int WriteReorderedSpectralData(CoderInfo *coder,
 
                                 tmplen = 0;
                             }
-                            
+
                             if (tmplen == 0)
                                 break; /* all data written for this segment trial */
                         }
@@ -1306,7 +1314,7 @@ static void calc_CRC(BitStream *bitStream, int len)
     //int i;
     //unsigned char r = ~0;  /* Initialize to all ones */
     unsigned char crc = ~0;  /* Initialize to all ones */
-    
+
     /* CRC polynome used x^8 + x^4 + x^3 + x^2 +1 */
 
     unsigned int cb         = len / 8;
@@ -1314,7 +1322,7 @@ static void calc_CRC(BitStream *bitStream, int len)
     unsigned char* pb       = &bitStream->data[1];
     //compatible, but slower unsigned char b         = ( bitStream->data[cb + 1] ) >> ( 8 - taillen );
     unsigned char b         = bitStream->data[cb + 1];
-    
+
 //#define GPOLY 0435
 //
 //    for (i = 8; i < len + 8; i++) {
@@ -1332,7 +1340,7 @@ static void calc_CRC(BitStream *bitStream, int len)
 //fprintf( stderr, " %02X", *pb );
         crc = _crctable[ crc ^ *pb++ ];
     }
-    
+
     //compatible, but slower switch ( taillen )
     //{
     //case 7:
@@ -1394,7 +1402,7 @@ static void calc_CRC(BitStream *bitStream, int len)
     //    fprintf( stderr, "%08X != %08X\n", crc, r );
     //}
 //fprintf( stderr, " (%5d bits), CRC is %02X\n", len, ~crc & 0xFF );
-    
+
     /* CRC is stored inverted, per definition at first byte in stream */
     bitStream->data[0] = ~crc;
 }

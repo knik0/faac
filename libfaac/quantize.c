@@ -23,7 +23,7 @@
 #include "quantize.h"
 #include "huff2.h"
 
-#ifdef HAVE_IMMINTRIN_H
+#if defined(HAVE_IMMINTRIN_H) && defined(CPUSSE)
 # include <immintrin.h>
 #endif
 
@@ -173,7 +173,9 @@ static void qlevel(CoderInfo *coderInfo,
     static const double sfstep = 20 / 1.50515;
 #endif
     int gsize = coderInfo->groups.len[gnum];
+#ifndef DRM
     double pnsthr = 0.1 * pnslevel;
+#endif
 #ifdef __SSE2__
     int cpuid[4];
     int sse2 = 0;
