@@ -378,7 +378,9 @@ int FAACAPI faacEncEncode(faacEncHandle hpEncoder,
     unsigned int jointmode = hEncoder->config.jointmode;
     unsigned int bandWidth = hEncoder->config.bandWidth;
     unsigned int shortctl = hEncoder->config.shortctl;
+#ifndef DRM
     int maxqual = hEncoder->config.outputFormat ? MAXQUALADTS : MAXQUAL;
+#endif
 
     /* Increase frame number */
     hEncoder->frameNum++;
