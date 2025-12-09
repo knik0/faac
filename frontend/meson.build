@@ -1,7 +1,8 @@
 faac = executable('faac',
     ['main.c', 'input.c', 'mp4write.c', 'input.h', 'mp4write.h'],
     include_directories: ['..', '../include'],
-    link_with: libfaac
+    link_with: libfaac,
+    install: true
 )
 
 if target_machine.system() == 'windows'
