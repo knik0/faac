@@ -38,7 +38,7 @@ libfaac = library('faac', common_src,
     c_args: c_args,
     link_args: link_args,
     dependencies: [ libm ],
-    vs_module_defs: join_paths('..', 'project', 'msvc', 'libfaac.def'),
+    vs_module_defs: 'libfaac.def',
     install: true
 )
 
@@ -52,7 +52,7 @@ libfaac_drm = library('faac_drm', common_src + drm_src,
     c_args: c_args + ['-DDRM'],
     link_args: link_args,
     dependencies: [ libm ],
-    vs_module_defs: join_paths('..', 'project', 'msvc', 'libfaac.def'),
+    vs_module_defs: 'libfaac.def',
     install: true
 )
 
