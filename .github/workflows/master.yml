@@ -82,7 +82,7 @@ jobs:
         if: runner.os == 'Windows'
         with:
           name: faac-${{ github.sha }}-win64
-          path: temp/ucrt64
+          path: temp/*
 
   cppcheck:
     name: Cppcheck
