@@ -7,7 +7,7 @@ config_h.set_quoted('PACKAGE', meson.project_name())
 config_h.set_quoted('PACKAGE_VERSION', meson.project_version())
 
 cc = meson.get_compiler('c')
-foreach h: ['getopt.h', 'immintrin.h', 'stdint.h', 'inttypes.h', 'mathf.h', 'float.h', 'sys/time.h']
+foreach h: ['getopt.h', 'immintrin.h', 'stdint.h', 'sys/time.h', 'sys/types.h']
     config_h.set('HAVE_' + h.underscorify().to_upper(), cc.has_header(h))
 endforeach
 
