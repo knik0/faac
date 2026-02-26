@@ -280,8 +280,8 @@ static
 void kf_factor(int n,int * facbuf)
 {
     int p=4;
-    double floor_sqrt;
-    floor_sqrt = floor( sqrt((double)n) );
+    faac_real floor_sqrt;
+    floor_sqrt = FAAC_FLOOR( FAAC_SQRT((faac_real)n) );
 
     /*factor out powers of 4, powers of 2, then any remaining primes */
     do {
@@ -322,14 +322,14 @@ kiss_fft_cfg kiss_fft_alloc(int nfft,int inverse_fft,void * mem,size_t * lenmem 
     }
     if (st) {
         int i;
-        const double pi=3.14159265358979323846264338327;
-        const double phase0 = -2.0 * pi / (double)( nfft );
+        const faac_real pi=3.14159265358979323846264338327;
+        const faac_real phase0 = -2.0 * pi / (faac_real)( nfft );
 
         st->nfft=nfft;
         st->inverse = inverse_fft;
 
         for (i=0;i<nfft;++i) {
-            double phase = phase0 * i;
+            faac_real phase = phase0 * i;
             if (st->inverse)
                 phase *= -1;
             kf_cexp(st->twiddles+i, phase );

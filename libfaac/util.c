@@ -45,7 +45,7 @@ int GetSRIndex(unsigned int sampleRate)
 unsigned int MaxBitrate(unsigned long sampleRate)
 {
     /* max ADTS frame size 8k */
-    return 0x2000 * 8 * (double)sampleRate/(double)FRAME_LEN;
+    return 0x2000 * 8 * (faac_real)sampleRate/(faac_real)FRAME_LEN;
 }
 
 /* Returns the minimum bitrate per channel for that sampling frequency */
@@ -55,11 +55,11 @@ unsigned int MinBitrate()
 }
 
 /* Calculate bit_allocation based on PE */
-unsigned int BitAllocation(double pe, int short_block)
+unsigned int BitAllocation(faac_real pe, int short_block)
 {
-    double pew1;
-    double pew2;
-    double bit_allocation;
+    faac_real pew1;
+    faac_real pew2;
+    faac_real bit_allocation;
 
     if (short_block) {
         pew1 = 0.6;
@@ -68,7 +68,7 @@ unsigned int BitAllocation(double pe, int short_block)
         pew1 = 0.3;
         pew2 = 6.0;
     }
-    bit_allocation = pew1 * pe + pew2 * sqrt(pe);
+    bit_allocation = pew1 * pe + pew2 * FAAC_SQRT(pe);
     bit_allocation = min(max(0.0, bit_allocation), 6144.0);
 
     return (unsigned int)(bit_allocation+0.5);
@@ -77,5 +77,5 @@ unsigned int BitAllocation(double pe, int short_block)
 /* Returns the maximum bit reservoir size */
 unsigned int MaxBitresSize(unsigned long bitRate, unsigned long sampleRate)
 {
-    return 6144 - (unsigned int)((double)bitRate/(double)sampleRate*(double)FRAME_LEN);
+    return 6144 - (unsigned int)((faac_real)bitRate/(faac_real)sampleRate*(faac_real)FRAME_LEN);
 }

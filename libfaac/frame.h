@@ -57,18 +57,18 @@ typedef struct {
     SR_INFO *srInfo;
 
     /* sample buffers of current next and next next frame*/
-    double *sampleBuff[MAX_CHANNELS];
-    double *next3SampleBuff[MAX_CHANNELS];
+    faac_real *sampleBuff[MAX_CHANNELS];
+    faac_real *next3SampleBuff[MAX_CHANNELS];
 
     /* Filterbank buffers */
-    double *sin_window_long;
-    double *sin_window_short;
-    double *kbd_window_long;
-    double *kbd_window_short;
-    double *freqBuff[MAX_CHANNELS];
-    double *overlapBuff[MAX_CHANNELS];
+    faac_real *sin_window_long;
+    faac_real *sin_window_short;
+    faac_real *kbd_window_long;
+    faac_real *kbd_window_short;
+    faac_real *freqBuff[MAX_CHANNELS];
+    faac_real *overlapBuff[MAX_CHANNELS];
 
-    double *msSpectrum[MAX_CHANNELS];
+    faac_real *msSpectrum[MAX_CHANNELS];
 
     /* Channel and Coder data for all channels */
     CoderInfo coderInfo[MAX_CHANNELS];

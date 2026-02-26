@@ -6,6 +6,8 @@
 #include <math.h>
 #include <memory.h>
 
+#include "faac_real.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -26,8 +28,8 @@ extern "C" {
 # define kiss_fft_scalar short
 #else
 # ifndef kiss_fft_scalar
-/*  default is float */
-#   define kiss_fft_scalar float
+/*  default is faac_real */
+#   define kiss_fft_scalar faac_real
 # endif
 #endif
 

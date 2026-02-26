@@ -52,8 +52,8 @@ static SR_INFO srInfo[12+1];
 
 // default bandwidth/samplerate ratio
 static const struct {
-    double fac;
-    double freq;
+    faac_real fac;
+    faac_real freq;
 } g_bw = {0.42, 18000};
 
 int FAACAPI faacEncGetVersion( char **faac_id_string,
@@ -162,13 +162,13 @@ int FAACAPI faacEncSetConfiguration(faacEncHandle hpEncoder,
 
     if (config->bitRate && !config->bandWidth)
     {
-        config->bandWidth = (double)config->bitRate * hEncoder->sampleRate * g_bw.fac / 50000.0;
+        config->bandWidth = (faac_real)config->bitRate * hEncoder->sampleRate * g_bw.fac / 50000.0;
         if (config->bandWidth > g_bw.freq)
             config->bandWidth = g_bw.freq;
 
         if (!config->quantqual)
         {
-            config->quantqual = (double)config->bitRate * hEncoder->numChannels / 1280;
+            config->quantqual = (faac_real)config->bitRate * hEncoder->numChannels / 1280;
             if (config->quantqual > 100)
                 config->quantqual = (config->quantqual - 100) * 3.0 + 100;
         }
@@ -366,7 +366,7 @@ int FAACAPI faacEncEncode(faacEncHandle hpEncoder,
     BitStream *bitStream; /* bitstream used for writing the frame to */
 #ifdef DRM
     int desbits, diff;
-    double fix;
+    faac_real fix;
 #endif
 
     /* local copy's of parameters */
@@ -399,11 +399,11 @@ int FAACAPI faacEncEncode(faacEncHandle hpEncoder,
     /* Update current sample buffers */
     for (channel = 0; channel < numChannels; channel++)
 	{
-		double *tmp;
+		faac_real *tmp;
 
 
 		if (!hEncoder->sampleBuff[channel])
-			hEncoder->sampleBuff[channel] = (double*)AllocMemory(FRAME_LEN*sizeof(double));
+			hEncoder->sampleBuff[channel] = (faac_real*)AllocMemory(FRAME_LEN*sizeof(faac_real));
 
 		tmp = hEncoder->sampleBuff[channel];
 
@@ -429,7 +429,7 @@ int FAACAPI faacEncEncode(faacEncHandle hpEncoder,
 
 						for (i = 0; i < samples_per_channel; i++)
 						{
-							hEncoder->next3SampleBuff[channel][i] = (double)*input_channel;
+							hEncoder->next3SampleBuff[channel][i] = (faac_real)*input_channel;
 							input_channel += numChannels;
 						}
 					}
@@ -441,7 +441,7 @@ int FAACAPI faacEncEncode(faacEncHandle hpEncoder,
 
 						for (i = 0; i < samples_per_channel; i++)
 						{
-							hEncoder->next3SampleBuff[channel][i] = (1.0/256) * (double)*input_channel;
+							hEncoder->next3SampleBuff[channel][i] = (1.0/256) * (faac_real)*input_channel;
 							input_channel += numChannels;
 						}
 					}
@@ -453,7 +453,7 @@ int FAACAPI faacEncEncode(faacEncHandle hpEncoder,
 
 						for (i = 0; i < samples_per_channel; i++)
 						{
-							hEncoder->next3SampleBuff[channel][i] = (double)*input_channel;
+							hEncoder->next3SampleBuff[channel][i] = (faac_real)*input_channel;
 							input_channel += numChannels;
 						}
 					}
@@ -491,7 +491,7 @@ int FAACAPI faacEncEncode(faacEncHandle hpEncoder,
     hEncoder->psymodel->PsyCalculate(channelInfo, &hEncoder->gpsyInfo, hEncoder->psyInfo,
         hEncoder->srInfo->cb_width_long, hEncoder->srInfo->num_cb_long,
         hEncoder->srInfo->cb_width_short,
-        hEncoder->srInfo->num_cb_short, numChannels, (double)hEncoder->aacquantCfg.quality / DEFQUAL);
+        hEncoder->srInfo->num_cb_short, numChannels, (faac_real)hEncoder->aacquantCfg.quality / DEFQUAL);
 
     hEncoder->psymodel->BlockSwitch(coderInfo, hEncoder->psyInfo, numChannels);
 
@@ -572,7 +572,7 @@ int FAACAPI faacEncEncode(faacEncHandle hpEncoder,
 	}
 
     AACstereo(coderInfo, channelInfo, hEncoder->freqBuff, numChannels,
-              (double)hEncoder->aacquantCfg.quality/DEFQUAL, jointmode);
+              (faac_real)hEncoder->aacquantCfg.quality/DEFQUAL, jointmode);
 
 #ifdef DRM
     /* loop the quantization until the desired bit-rate is reached */
@@ -594,13 +594,13 @@ int FAACAPI faacEncEncode(faacEncHandle hpEncoder,
     frameBytes = CloseBitStream(bitStream);
 
     /* now calculate desired bits and compare with actual encoded bits */
-    desbits = (int) ((double) numChannels * (hEncoder->config.bitRate * FRAME_LEN)
+    desbits = (int) ((faac_real) numChannels * (hEncoder->config.bitRate * FRAME_LEN)
             / hEncoder->sampleRate);
 
     diff = ((frameBytes - 1 /* CRC */) * 8) - desbits;
 
     /* do linear correction according to relative difference */
-    fix = (double) desbits / ((frameBytes - 1 /* CRC */) * 8);
+    fix = (faac_real) desbits / ((frameBytes - 1 /* CRC */) * 8);
 
     /* speed up convergence. A value of 0.92 gives approx up to 10 iterations */
     if (fix > 0.92)
@@ -644,7 +644,7 @@ int FAACAPI faacEncEncode(faacEncHandle hpEncoder,
     {
         int desbits = numChannels * (hEncoder->config.bitRate * FRAME_LEN)
             / hEncoder->sampleRate;
-        double fix = (double)desbits / (double)(frameBytes * 8);
+        faac_real fix = (faac_real)desbits / (faac_real)(frameBytes * 8);
 
         if (fix < 0.9)
             fix += 0.1;
