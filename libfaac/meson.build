@@ -42,19 +42,21 @@ libfaac = library('faac', common_src,
     install: true
 )
 
-drm_src = [
-    'kiss_fft/kiss_fftr.c',
-    'kiss_fft/kiss_fft.c',
-    'kiss_fft/kiss_fft.h'
-]
-libfaac_drm = library('faac_drm', common_src + drm_src,
-    include_directories: ['..', '../include'],
-    c_args: c_args + ['-DDRM'],
-    link_args: link_args,
-    dependencies: [ libm ],
-    vs_module_defs: 'libfaac.def',
-    install: true
-)
+if get_option('drm')
+    drm_src = [
+        'kiss_fft/kiss_fftr.c',
+        'kiss_fft/kiss_fft.c',
+        'kiss_fft/kiss_fft.h'
+    ]
+    libfaac_drm = library('faac_drm', common_src + drm_src,
+        include_directories: ['..', '../include'],
+        c_args: c_args + ['-DDRM'],
+        link_args: link_args,
+        dependencies: [ libm ],
+        vs_module_defs: 'libfaac.def',
+        install: true
+    )
+endif
 
 pkgconfig = import('pkgconfig')
 pkgconfig.generate(

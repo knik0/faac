@@ -2,3 +2,8 @@ option('frontend',
     description: 'Build the frontend',
     type: 'boolean',
     value: true)
+
+option('drm',
+    description: 'Build the DRM variant library',
+    type: 'boolean',
+    value: true)
