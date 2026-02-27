@@ -13,7 +13,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
 */
 
 /* kiss_fft.h
-   defines kiss_fft_scalar as either short or a float type
+   defines kiss_fft_scalar as either short or a faac_real type
    and defines
    typedef struct { kiss_fft_scalar r; kiss_fft_scalar i; }kiss_fft_cpx; */
 #include "kiss_fft.h"
@@ -81,17 +81,17 @@ struct kiss_fft_state{
     do {    (res).r -= (a).r;  (res).i -= (a).i;  }while(0)
 
 static 
-void kf_cexp(kiss_fft_cpx * x,double phase) /* returns e ** (j*phase)   */
+void kf_cexp(kiss_fft_cpx * x,faac_real phase) /* returns e ** (j*phase)   */
 {
 #ifdef FIXED_POINT
-    x->r = (kiss_fft_scalar) (32767 * cos (phase));
-    x->i = (kiss_fft_scalar) (32767 * sin (phase));
+    x->r = (kiss_fft_scalar) (32767 * FAAC_COS(phase));
+    x->i = (kiss_fft_scalar) (32767 * FAAC_SIN(phase));
 #else
-    x->r = cos (phase);
-    x->i = sin (phase);
+    x->r = FAAC_COS(phase);
+    x->i = FAAC_SIN(phase);
 #endif
 }
 
 /* a debugging function */
 #define pcpx(c)\
-    fprintf(stderr,"%g + %gi\n",(double)((c)->r),(double)((c)->i) )
+    fprintf(stderr,"%g + %gi\n",(faac_real)((c)->r),(faac_real)((c)->i) )

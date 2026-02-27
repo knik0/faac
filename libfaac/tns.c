@@ -62,20 +62,20 @@ static unsigned short tnsMaxOrderShortMainLow = 7;
 /*************************/
 static void Autocorrelation(int maxOrder,        /* Maximum autocorr order */
                      int dataSize,        /* Size of the data array */
-                     double* data,        /* Data array */
-                     double* rArray);     /* Autocorrelation array */
+                     faac_real* data,        /* Data array */
+                     faac_real* rArray);     /* Autocorrelation array */
 
-static double LevinsonDurbin(int maxOrder,        /* Maximum filter order */
+static faac_real LevinsonDurbin(int maxOrder,        /* Maximum filter order */
                       int dataSize,        /* Size of the data array */
-                      double* data,        /* Data array */
-                      double* kArray);     /* Reflection coeff array */
+                      faac_real* data,        /* Data array */
+                      faac_real* kArray);     /* Reflection coeff array */
 
-static void StepUp(int fOrder, double* kArray, double* aArray);
+static void StepUp(int fOrder, faac_real* kArray, faac_real* aArray);
 
-static void QuantizeReflectionCoeffs(int fOrder,int coeffRes,double* rArray,int* indexArray);
-static int TruncateCoeffs(int fOrder,double threshold,double* kArray);
-static void TnsFilter(int length,double* spec,TnsFilterData* filter);
-static void TnsInvFilter(int length,double* spec,TnsFilterData* filter);
+static void QuantizeReflectionCoeffs(int fOrder,int coeffRes,faac_real* rArray,int* indexArray);
+static int TruncateCoeffs(int fOrder,faac_real threshold,faac_real* kArray);
+static void TnsFilter(int length,faac_real* spec,TnsFilterData* filter);
+static void TnsInvFilter(int length,faac_real* spec,TnsFilterData* filter);
 
 
 /*****************************************************/
@@ -133,14 +133,14 @@ void TnsEncode(TnsInfo* tnsInfo,       /* TNS info */
                int maxSfb,              /* max_sfb */
                enum WINDOW_TYPE blockType,   /* block type */
                int* sfbOffsetTable,     /* Scalefactor band offset table */
-               double* spec)            /* Spectral data array */
+               faac_real* spec)            /* Spectral data array */
 {
     int numberOfWindows,windowSize;
     int startBand,stopBand,order;    /* Bands over which to apply TNS */
     int lengthInBands;               /* Length to filter, in bands */
     int w;
     int startIndex,length;
-    double gain;
+    faac_real gain;
 
     switch( blockType ) {
     case ONLY_SHORT_WINDOW :
@@ -185,8 +185,8 @@ void TnsEncode(TnsInfo* tnsInfo,       /* TNS info */
 
         TnsWindowData* windowData = &tnsInfo->windowData[w];
         TnsFilterData* tnsFilter = windowData->tnsFilter;
-        double* k = tnsFilter->kCoeffs;    /* reflection coeffs */
-        double* a = tnsFilter->aCoeffs;    /* prediction coeffs */
+        faac_real* k = tnsFilter->kCoeffs;    /* reflection coeffs */
+        faac_real* a = tnsFilter->aCoeffs;    /* prediction coeffs */
 
         windowData->numFilters=0;
         windowData->coefResolution = DEF_TNS_COEFF_RES;
@@ -221,7 +221,7 @@ void TnsEncodeFilterOnly(TnsInfo* tnsInfo,           /* TNS info */
                          int maxSfb,                 /* max_sfb */
                          enum WINDOW_TYPE blockType, /* block type */
                          int* sfbOffsetTable,        /* Scalefactor band offset table */
-                         double* spec)               /* Spectral data array */
+                         faac_real* spec)               /* Spectral data array */
 {
     int numberOfWindows,windowSize;
     int startBand,stopBand;    /* Bands over which to apply TNS */
@@ -282,7 +282,7 @@ void TnsDecodeFilterOnly(TnsInfo* tnsInfo,           /* TNS info */
                          int maxSfb,                 /* max_sfb */
                          enum WINDOW_TYPE blockType, /* block type */
                          int* sfbOffsetTable,        /* Scalefactor band offset table */
-                         double* spec)               /* Spectral data array */
+                         faac_real* spec)               /* Spectral data array */
 {
     int numberOfWindows,windowSize;
     int startBand,stopBand;    /* Bands over which to apply TNS */
@@ -340,11 +340,11 @@ void TnsDecodeFilterOnly(TnsInfo* tnsInfo,           /* TNS info */
 /*   Not that the order and direction are specified  */
 /*   withing the TNS_FILTER_DATA structure.          */
 /*****************************************************/
-static void TnsFilter(int length,double* spec,TnsFilterData* filter)
+static void TnsFilter(int length,faac_real* spec,TnsFilterData* filter)
 {
     int i,j,k=0;
     int order=filter->order;
-    double* a=filter->aCoeffs;
+    faac_real* a=filter->aCoeffs;
 
     /* Determine loop parameters for given direction */
     if (filter->direction) {
@@ -391,14 +391,14 @@ static void TnsFilter(int length,double* spec,TnsFilterData* filter)
 /*   Not that the order and direction are specified     */
 /*   withing the TNS_FILTER_DATA structure.             */
 /********************************************************/
-static void TnsInvFilter(int length,double* spec,TnsFilterData* filter)
+static void TnsInvFilter(int length,faac_real* spec,TnsFilterData* filter)
 {
     int i,j,k=0;
     int order=filter->order;
-    double* a=filter->aCoeffs;
-    double* temp;
+    faac_real* a=filter->aCoeffs;
+    faac_real* temp;
 
-    temp = (double *)AllocMemory(length * sizeof (double));
+    temp = (faac_real *)AllocMemory(length * sizeof (faac_real));
 
     /* Determine loop parameters for given direction */
     if (filter->direction) {
@@ -455,12 +455,12 @@ static void TnsInvFilter(int length,double* spec,TnsFilterData* filter)
 /*   less than the specified threshold.  Return the  */
 /*   truncated filter order.                         */
 /*****************************************************/
-static int TruncateCoeffs(int fOrder,double threshold,double* kArray)
+static int TruncateCoeffs(int fOrder,faac_real threshold,faac_real* kArray)
 {
     int i;
 
     for (i = fOrder; i >= 0; i--) {
-        kArray[i] = (fabs(kArray[i])>threshold) ? kArray[i] : 0.0;
+        kArray[i] = (FAAC_FABS(kArray[i])>threshold) ? kArray[i] : 0.0;
         if (kArray[i]!=0.0) return i;
     }
 
@@ -474,10 +474,10 @@ static int TruncateCoeffs(int fOrder,double threshold,double* kArray)
 /*****************************************************/
 static void QuantizeReflectionCoeffs(int fOrder,
                               int coeffRes,
-                              double* kArray,
+                              faac_real* kArray,
                               int* indexArray)
 {
-    double iqfac,iqfac_m;
+    faac_real iqfac,iqfac_m;
     int i;
 
     iqfac = ((1<<(coeffRes-1))-0.5)/(M_PI/2);
@@ -485,8 +485,8 @@ static void QuantizeReflectionCoeffs(int fOrder,
 
     /* Quantize and inverse quantize */
     for (i=1;i<=fOrder;i++) {
-        indexArray[i] = (kArray[i]>=0)?(int)(0.5+(asin(kArray[i])*iqfac)):(int)(-0.5+(asin(kArray[i])*iqfac_m));
-        kArray[i] = sin((double)indexArray[i]/((indexArray[i]>=0)?iqfac:iqfac_m));
+        indexArray[i] = (kArray[i]>=0)?(int)(0.5+(FAAC_ASIN(kArray[i])*iqfac)):(int)(-0.5+(FAAC_ASIN(kArray[i])*iqfac_m));
+        kArray[i] = FAAC_SIN((faac_real)indexArray[i]/((indexArray[i]>=0)?iqfac:iqfac_m));
     }
 }
 
@@ -497,8 +497,8 @@ static void QuantizeReflectionCoeffs(int fOrder,
 /*****************************************************/
 static void Autocorrelation(int maxOrder,        /* Maximum autocorr order */
                      int dataSize,        /* Size of the data array */
-                     double* data,        /* Data array */
-                     double* rArray)      /* Autocorrelation array */
+                     faac_real* data,        /* Data array */
+                     faac_real* rArray)      /* Autocorrelation array */
 {
     int order,index;
 
@@ -519,20 +519,20 @@ static void Autocorrelation(int maxOrder,        /* Maximum autocorr order */
 /*   given data using LevinsonDurbin recursion.      */
 /*   Return the prediction gain.                     */
 /*****************************************************/
-static double LevinsonDurbin(int fOrder,          /* Filter order */
+static faac_real LevinsonDurbin(int fOrder,          /* Filter order */
                       int dataSize,        /* Size of the data array */
-                      double* data,        /* Data array */
-                      double* kArray)      /* Reflection coeff array */
+                      faac_real* data,        /* Data array */
+                      faac_real* kArray)      /* Reflection coeff array */
 {
     int order,i;
-    double signal;
-    double error, kTemp;                /* Prediction error */
-    double aArray1[TNS_MAX_ORDER+1];    /* Predictor coeff array */
-    double aArray2[TNS_MAX_ORDER+1];    /* Predictor coeff array 2 */
-    double rArray[TNS_MAX_ORDER+1] = {0}; /* Autocorrelation coeffs */
-    double* aPtr = aArray1;             /* Ptr to aArray1 */
-    double* aLastPtr = aArray2;         /* Ptr to aArray2 */
-    double* aTemp;
+    faac_real signal;
+    faac_real error, kTemp;                /* Prediction error */
+    faac_real aArray1[TNS_MAX_ORDER+1];    /* Predictor coeff array */
+    faac_real aArray2[TNS_MAX_ORDER+1];    /* Predictor coeff array 2 */
+    faac_real rArray[TNS_MAX_ORDER+1] = {0}; /* Autocorrelation coeffs */
+    faac_real* aPtr = aArray1;             /* Ptr to aArray1 */
+    faac_real* aLastPtr = aArray2;         /* Ptr to aArray2 */
+    faac_real* aTemp;
 
     /* Compute autocorrelation coefficients */
     Autocorrelation(fOrder,dataSize,data,rArray);
@@ -587,9 +587,9 @@ static double LevinsonDurbin(int fOrder,          /* Filter order */
 /*   Convert reflection coefficients into            */
 /*   predictor coefficients.                         */
 /*****************************************************/
-static void StepUp(int fOrder,double* kArray,double* aArray)
+static void StepUp(int fOrder,faac_real* kArray,faac_real* aArray)
 {
-    double aTemp[TNS_MAX_ORDER+2];
+    faac_real aTemp[TNS_MAX_ORDER+2];
     int i,order;
 
     aArray[0]=1.0;

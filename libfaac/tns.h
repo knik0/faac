@@ -30,6 +30,8 @@ Copyright (c) 1997.
 #ifndef TNS_H
 #define TNS_H
 
+#include "faac_real.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
@@ -37,11 +39,11 @@ extern "C" {
 
 void TnsInit(faacEncStruct* hEncoder);
 void TnsEncode(TnsInfo* tnsInfo, int numberOfBands,int maxSfb,enum WINDOW_TYPE blockType,
-               int* sfbOffsetTable,double* spec);
+               int* sfbOffsetTable,faac_real* spec);
 void TnsEncodeFilterOnly(TnsInfo* tnsInfo, int numberOfBands, int maxSfb,
-                         enum WINDOW_TYPE blockType, int *sfbOffsetTable, double *spec);
+                         enum WINDOW_TYPE blockType, int *sfbOffsetTable, faac_real *spec);
 void TnsDecodeFilterOnly(TnsInfo* tnsInfo, int numberOfBands, int maxSfb,
-                         enum WINDOW_TYPE blockType, int *sfbOffsetTable, double *spec);
+                         enum WINDOW_TYPE blockType, int *sfbOffsetTable, faac_real *spec);
 
 #ifdef __cplusplus
 }
