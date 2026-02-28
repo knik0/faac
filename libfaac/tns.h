@@ -42,8 +42,6 @@ void TnsEncode(TnsInfo* tnsInfo, int numberOfBands,int maxSfb,enum WINDOW_TYPE b
                int* sfbOffsetTable,faac_real* spec);
 void TnsEncodeFilterOnly(TnsInfo* tnsInfo, int numberOfBands, int maxSfb,
                          enum WINDOW_TYPE blockType, int *sfbOffsetTable, faac_real *spec);
-void TnsDecodeFilterOnly(TnsInfo* tnsInfo, int numberOfBands, int maxSfb,
-                         enum WINDOW_TYPE blockType, int *sfbOffsetTable, faac_real *spec);
 
 #ifdef __cplusplus
 }

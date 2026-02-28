@@ -52,6 +52,5 @@ void fft_terminate	( FFT_Tables *fft_tables );
 
 void rfft			( FFT_Tables *fft_tables, faac_real *x, int logm );
 void fft			( FFT_Tables *fft_tables, faac_real *xr, faac_real *xi, int logm );
-void ffti			( FFT_Tables *fft_tables, faac_real *xr, faac_real *xi, int logm );
 
 #endif

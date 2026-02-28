@@ -173,59 +173,6 @@ void fft( FFT_Tables *fft_tables, faac_real *xr, faac_real *xi, int logm )
     }
 }
 
-void ffti( FFT_Tables *fft_tables, faac_real *xr, faac_real *xi, int logm )
-{
-    int nfft = 0;
-
-    kiss_fft_cpx    fin[1 << MAXLOGM];
-    kiss_fft_cpx    fout[1 << MAXLOGM];
-
-    if ( logm > MAXLOGM )
-	{
-		fprintf(stderr, "fft size too big\n");
-		exit(1);
-	}
-
-    nfft = logm_to_nfft[logm];
-
-    if ( fft_tables->cfg[logm][1] == NULL )
-    {
-        if ( nfft )
-        {
-            fft_tables->cfg[logm][1] = kiss_fft_alloc( nfft, 1, NULL, NULL );
-        }
-        else
-        {
-	    	fprintf(stderr, "bad logm = %d\n", logm);
-            exit( 1 );
-        }
-    }
-    
-    if ( fft_tables->cfg[logm][1] )
-    {
-        unsigned int i;
-        faac_real fac = 1.0 / (faac_real)nfft;
-        
-        for ( i = 0; i < nfft; i++ )
-        {
-            fin[i].r = xr[i];    
-            fin[i].i = xi[i];
-        }
-        
-        kiss_fft( (kiss_fft_cfg)fft_tables->cfg[logm][1], fin, fout );
-
-        for ( i = 0; i < nfft; i++ )
-        {
-            xr[i]   = fout[i].r * fac;
-            xi[i]   = fout[i].i * fac;
-        }
-    }
-    else
-    {
-        fprintf( stderr, "bad config for logm = %d\n", logm);
-        exit( 1 );
-    }
-}
 
 #else /* !defined DRM || defined DRM_1024 */
 
@@ -416,24 +363,5 @@ void rfft( FFT_Tables *fft_tables, faac_real *x, int logm)
 	memcpy(x + (1 << (logm - 1)), xi, (1 << (logm - 1)) * sizeof(*x));
 }
 
-void ffti( FFT_Tables *fft_tables, faac_real *xr, faac_real *xi, int logm)
-{
-	int i, size;
-	faac_real fac;
-	faac_real *xrp, *xip;
-
-	fft( fft_tables, xi, xr, logm);
-
-	size = 1 << logm;
-	fac = 1.0 / size;
-	xrp = xr;
-	xip = xi;
-
-	for (i = 0; i < size; i++)
-	{
-		*xrp++ *= fac;
-		*xip++ *= fac;
-	}
-}
 
 #endif /* defined DRM && !defined DRM_1024 */
