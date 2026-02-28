@@ -27,6 +27,7 @@
 #include "fft.h"
 #include "util.h"
 #include <faac.h>
+#include "filtbank.h"
 
 typedef float psyfloat;
 
@@ -268,82 +269,6 @@ static void PsyCalculate(ChannelInfo * channelInfo, GlobalPsyInfo * gpsyInfo,
   }
 }
 
-// imported from filtbank.c
-static void mdct( FFT_Tables *fft_tables, faac_real *data, int N )
-{
-    faac_real tempr, tempi, c, s, cold, cfreq, sfreq; /* temps for pre and post twiddle */
-    faac_real freq = 2.0 * M_PI / N;
-    faac_real cosfreq8, sinfreq8;
-    int i, n;
-
-    faac_real xi[BLOCK_LEN_LONG / 2];
-    faac_real xr[BLOCK_LEN_LONG / 2];
-
-    /* prepare for recurrence relation in pre-twiddle */
-    cfreq = FAAC_COS(freq);
-    sfreq = FAAC_SIN(freq);
-    cosfreq8 = FAAC_COS(freq * 0.125);
-    sinfreq8 = FAAC_SIN(freq * 0.125);
-    c = cosfreq8;
-    s = sinfreq8;
-
-    for (i = 0; i < (N >> 2); i++) {
-        /* calculate real and imaginary parts of g(n) or G(p) */
-        n = 2 * i;
-
-        if (n < (N >> 2))
-            tempr = data [(N>>2) + (N>>1) - 1 - n] + data [N - (N>>2) + n];
-        else
-            tempr = data [(N>>2) + (N>>1) - 1 - n] - data [-(N>>2) + n];
-
-        if (n < (N >> 2))
-            tempi = data [(N>>2) + n] - data [(N>>2) - 1 - n];
-        else
-            tempi = data [(N>>2) + n] + data [N + (N>>2) - 1 - n];
-
-        /* calculate pre-twiddled FFT input */
-        xr[i] = tempr * c + tempi * s;
-        xi[i] = tempi * c - tempr * s;
-
-        /* use recurrence to prepare cosine and sine for next value of i */
-        cold = c;
-        c = c * cfreq - s * sfreq;
-        s = s * cfreq + cold * sfreq;
-    }
-
-    /* Perform in-place complex FFT of length N/4 */
-    switch (N) {
-    case BLOCK_LEN_SHORT * 2:
-        fft( fft_tables, xr, xi, 6);
-        break;
-    case BLOCK_LEN_LONG * 2:
-        fft( fft_tables, xr, xi, 9);
-    }
-
-    /* prepare for recurrence relations in post-twiddle */
-    c = cosfreq8;
-    s = sinfreq8;
-
-    /* post-twiddle FFT output and then get output data */
-    for (i = 0; i < (N >> 2); i++) {
-        /* get post-twiddled FFT output  */
-        tempr = 2. * (xr[i] * c + xi[i] * s);
-        tempi = 2. * (xi[i] * c - xr[i] * s);
-
-        /* fill in output values */
-        data [2 * i] = -tempr;   /* first half even */
-        data [(N >> 1) - 1 - 2 * i] = tempi;  /* first half odd */
-        data [(N >> 1) + 2 * i] = -tempi;  /* second half even */
-        data [N - 1 - 2 * i] = tempr;  /* second half odd */
-
-        /* use recurrence to prepare cosine and sine for next value of i */
-        cold = c;
-        c = c * cfreq - s * sfreq;
-        s = s * cfreq + cold * sfreq;
-    }
-}
-
-
 static void PsyBufferUpdate( FFT_Tables *fft_tables, GlobalPsyInfo * gpsyInfo, PsyInfo * psyInfo,
 			    faac_real *newSamples, unsigned int bandwidth,
 			    int *cb_width_short, int num_cb_short)
@@ -369,7 +294,7 @@ static void PsyBufferUpdate( FFT_Tables *fft_tables, GlobalPsyInfo * gpsyInfo, P
 	   2 * psyInfo->sizeS * sizeof(faac_real));
 
     Hann(gpsyInfo, transBuffS, 2 * psyInfo->sizeS);
-    mdct( fft_tables, transBuffS, 2 * psyInfo->sizeS);
+    MDCT( fft_tables, transBuffS, 2 * psyInfo->sizeS);
 
     // shift bufs
     tmp = psydata->engPrev[win];

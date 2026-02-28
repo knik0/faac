@@ -53,6 +53,9 @@ void			FilterBank( faacEncStruct* hEncoder,
 						int overlap_select );
 
 
+void MDCT( FFT_Tables *fft_tables, faac_real *data, int N );
+
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
