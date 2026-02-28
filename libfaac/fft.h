@@ -34,6 +34,8 @@ typedef struct
 {
     /*      cfg[Max FFT][FFT and inverse FFT] */
     void*   cfg[MAX_FFT][2];
+    faac_real *mdct_twiddles_long;
+    faac_real *mdct_twiddles_short;
 } FFT_Tables;
 
 #else  /* use own FFT */
@@ -43,6 +45,8 @@ typedef struct
     fftfloat **costbl;
     fftfloat **negsintbl;
     unsigned short **reordertbl;
+    faac_real *mdct_twiddles_long;
+    faac_real *mdct_twiddles_short;
 } FFT_Tables;
 
 #endif /* defined DRM && !defined DRM_1024 */

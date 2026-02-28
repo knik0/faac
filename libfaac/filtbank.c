@@ -46,9 +46,28 @@ Copyright(c)1996.
 
 static void		CalculateKBDWindow	( faac_real* win, faac_real alpha, int length );
 static faac_real	Izero				( faac_real x);
-static void		MDCT				( FFT_Tables *fft_tables, faac_real *data, int N );
+void MDCT( FFT_Tables *fft_tables, faac_real *data, int N );
 
 
+
+static void InitializeTwiddles(faac_real *twiddles, int N)
+{
+    faac_real freq = TWOPI / N;
+    faac_real cfreq = FAAC_COS(freq);
+    faac_real sfreq = FAAC_SIN(freq);
+    faac_real c = FAAC_COS(freq * 0.125);
+    faac_real s = FAAC_SIN(freq * 0.125);
+    int i;
+
+    for (i = 0; i < (N >> 2); i++) {
+        twiddles[2*i] = c;
+        twiddles[2*i+1] = s;
+
+        faac_real cold = c;
+        c = c * cfreq - s * sfreq;
+        s = s * cfreq + cold * sfreq;
+    }
+}
 
 void FilterBankInit(faacEncStruct* hEncoder)
 {
@@ -72,6 +91,12 @@ void FilterBankInit(faacEncStruct* hEncoder)
 
     CalculateKBDWindow(hEncoder->kbd_window_long, 4, BLOCK_LEN_LONG*2);
     CalculateKBDWindow(hEncoder->kbd_window_short, 6, BLOCK_LEN_SHORT*2);
+
+    hEncoder->fft_tables.mdct_twiddles_long = (faac_real*)AllocMemory(2*(2*BLOCK_LEN_LONG >> 2)*sizeof(faac_real));
+    hEncoder->fft_tables.mdct_twiddles_short = (faac_real*)AllocMemory(2*(2*BLOCK_LEN_SHORT >> 2)*sizeof(faac_real));
+
+    InitializeTwiddles(hEncoder->fft_tables.mdct_twiddles_long, 2*BLOCK_LEN_LONG);
+    InitializeTwiddles(hEncoder->fft_tables.mdct_twiddles_short, 2*BLOCK_LEN_SHORT);
 }
 
 void FilterBankEnd(faacEncStruct* hEncoder)
@@ -250,48 +275,53 @@ static void CalculateKBDWindow(faac_real* win, faac_real alpha, int length)
     }
 }
 
-static void MDCT( FFT_Tables *fft_tables, faac_real *data, int N )
+void MDCT( FFT_Tables *fft_tables, faac_real *data, int N )
 {
     faac_real *xi, *xr;
-    faac_real tempr, tempi, c, s, cold, cfreq, sfreq; /* temps for pre and post twiddle */
-    faac_real freq = TWOPI / N;
-    faac_real cosfreq8, sinfreq8;
+    faac_real tempr, tempi, c, s;
+    faac_real *twiddles;
     int i, n;
+    int N4 = N >> 2;
+    int N8 = N >> 3;
+    int N2 = N >> 1;
+    int N4_1 = (N >> 2) - 1;
+    int N_N4_1 = N + (N >> 2) - 1;
 
     xi = (faac_real*)AllocMemory((N >> 2)*sizeof(faac_real));
     xr = (faac_real*)AllocMemory((N >> 2)*sizeof(faac_real));
 
-    /* prepare for recurrence relation in pre-twiddle */
-    cfreq = FAAC_COS(freq);
-    sfreq = FAAC_SIN(freq);
-    cosfreq8 = FAAC_COS(freq * 0.125);
-    sinfreq8 = FAAC_SIN(freq * 0.125);
-    c = cosfreq8;
-    s = sinfreq8;
+    if (N == 2*BLOCK_LEN_LONG)
+        twiddles = fft_tables->mdct_twiddles_long;
+    else
+        twiddles = fft_tables->mdct_twiddles_short;
 
-    for (i = 0; i < (N >> 2); i++) {
+    for (i = 0; i < N8; i++) {
         /* calculate real and imaginary parts of g(n) or G(p) */
-        n = (N >> 1) - 1 - 2 * i;
+        int i2 = 2 * i;
+        n = N2 - 1 - i2;
+        tempr = data [(N >> 2) + n] + data [N_N4_1 - n];
 
-        if (i < (N >> 3))
-            tempr = data [(N >> 2) + n] + data [N + (N >> 2) - 1 - n]; /* use second form of e(n) for n = N / 2 - 1 - 2i */
-        else
-            tempr = data [(N >> 2) + n] - data [(N >> 2) - 1 - n]; /* use first form of e(n) for n = N / 2 - 1 - 2i */
-
-        n = 2 * i;
-        if (i < (N >> 3))
-            tempi = data [(N >> 2) + n] - data [(N >> 2) - 1 - n]; /* use first form of e(n) for n=2i */
-        else
-            tempi = data [(N >> 2) + n] + data [N + (N >> 2) - 1 - n]; /* use second form of e(n) for n=2i*/
+        tempi = data [(N >> 2) + i2] - data [N4_1 - i2];
 
         /* calculate pre-twiddled FFT input */
+        c = twiddles[i2];
+        s = twiddles[i2+1];
         xr[i] = tempr * c + tempi * s;
         xi[i] = tempi * c - tempr * s;
+    }
+    for (; i < N4; i++) {
+        /* calculate real and imaginary parts of g(n) or G(p) */
+        int i2 = 2 * i;
+        n = N2 - 1 - i2;
+        tempr = data [(N >> 2) + n] - data [N4_1 - n];
 
-        /* use recurrence to prepare cosine and sine for next value of i */
-        cold = c;
-        c = c * cfreq - s * sfreq;
-        s = s * cfreq + cold * sfreq;
+        tempi = data [(N >> 2) + i2] + data [N_N4_1 - i2];
+
+        /* calculate pre-twiddled FFT input */
+        c = twiddles[i2];
+        s = twiddles[i2+1];
+        xr[i] = tempr * c + tempi * s;
+        xi[i] = tempi * c - tempr * s;
     }
 
     /* Perform in-place complex FFT of length N/4 */
@@ -303,13 +333,11 @@ static void MDCT( FFT_Tables *fft_tables, faac_real *data, int N )
         fft( fft_tables, xr, xi, 9);
     }
 
-    /* prepare for recurrence relations in post-twiddle */
-    c = cosfreq8;
-    s = sinfreq8;
-
     /* post-twiddle FFT output and then get output data */
-    for (i = 0; i < (N >> 2); i++) {
+    for (i = 0; i < N4; i++) {
         /* get post-twiddled FFT output  */
+        c = twiddles[2*i];
+        s = twiddles[2*i+1];
         tempr = 2. * (xr[i] * c + xi[i] * s);
         tempi = 2. * (xi[i] * c - xr[i] * s);
 
@@ -318,11 +346,6 @@ static void MDCT( FFT_Tables *fft_tables, faac_real *data, int N )
         data [(N >> 1) - 1 - 2 * i] = tempi;  /* first half odd */
         data [(N >> 1) + 2 * i] = -tempi;  /* second half even */
         data [N - 1 - 2 * i] = tempr;  /* second half odd */
-
-        /* use recurrence to prepare cosine and sine for next value of i */
-        cold = c;
-        c = c * cfreq - s * sfreq;
-        s = s * cfreq + cold * sfreq;
     }
 
     if (xr) FreeMemory(xr);

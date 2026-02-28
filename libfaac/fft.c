@@ -47,6 +47,8 @@ static const int logm_to_nfft[] =
 void fft_initialize( FFT_Tables *fft_tables )
 {
     memset( fft_tables->cfg, 0, sizeof( fft_tables->cfg ) );
+    fft_tables->mdct_twiddles_long = NULL;
+    fft_tables->mdct_twiddles_short = NULL;
 }
 void fft_terminate( FFT_Tables *fft_tables )
 {
@@ -64,6 +66,11 @@ void fft_terminate( FFT_Tables *fft_tables )
             fft_tables->cfg[i][1] = NULL;
         }
     }
+
+    if (fft_tables->mdct_twiddles_long) FreeMemory(fft_tables->mdct_twiddles_long);
+    if (fft_tables->mdct_twiddles_short) FreeMemory(fft_tables->mdct_twiddles_short);
+    fft_tables->mdct_twiddles_long = NULL;
+    fft_tables->mdct_twiddles_short = NULL;
 }
 
 void rfft( FFT_Tables *fft_tables, faac_real *x, int logm )
@@ -189,6 +196,9 @@ void fft_initialize( FFT_Tables *fft_tables )
 		fft_tables->negsintbl[i]	= NULL;
 		fft_tables->reordertbl[i]	= NULL;
 	}
+
+	fft_tables->mdct_twiddles_long = NULL;
+	fft_tables->mdct_twiddles_short = NULL;
 }
 
 void fft_terminate( FFT_Tables *fft_tables )
@@ -214,6 +224,11 @@ void fft_terminate( FFT_Tables *fft_tables )
 	fft_tables->costbl		= NULL;
 	fft_tables->negsintbl	= NULL;
 	fft_tables->reordertbl	= NULL;
+
+	if (fft_tables->mdct_twiddles_long) FreeMemory(fft_tables->mdct_twiddles_long);
+	if (fft_tables->mdct_twiddles_short) FreeMemory(fft_tables->mdct_twiddles_short);
+	fft_tables->mdct_twiddles_long = NULL;
+	fft_tables->mdct_twiddles_short = NULL;
 }
 
 static void reorder( FFT_Tables *fft_tables, faac_real *x, int logm)
