@@ -26,6 +26,7 @@ jobs:
               compiler: gcc,
               shell: bash,
               options: -Dfloating-point=double,
+              cflags: -Wall
             }
           - {
               name: Linux GCC (Single Precision),
@@ -33,12 +34,14 @@ jobs:
               compiler: gcc,
               shell: bash,
               options: -Dfloating-point=single,
+              cflags: -Wall
             }
           - {
               name: macOS Clang,
               os: macos-latest,
               compiler: clang,
               shell: bash,
+              cflags: -Wall
             }
           - {
               name: MSYS2 UCRT64,
@@ -47,6 +50,15 @@ jobs:
               shell: 'msys2 {0}',
               msystem: ucrt64,
               msys-env: mingw-w64-ucrt-x86_64,
+              cflags: -Wall
+            }
+          - {
+              name: Windows MSVC,
+              os: windows-latest,
+              compiler: cl,
+              shell: pwsh,
+              options: -Dfloating-point=double,
+              cflags: /W4
             }
 
     steps:
@@ -73,23 +85,44 @@ jobs:
             ${{ matrix.config.msys-env }}-meson
             ${{ matrix.config.msys-env }}-gcc
 
+      - name: Install dependencies (MSVC)
+        if: matrix.config.compiler == 'cl'
+        run: |
+          pip install meson ninja
+
+      - name: Set up MSVC
+        if: matrix.config.compiler == 'cl'
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+
       - uses: actions/checkout@v3
 
-      - name: Build
+      - name: Build (MSYS2)
+        if: matrix.config.shell == 'msys2 {0}'
         env:
           CC: ${{ matrix.config.compiler }}
-          CFLAGS: -Wall
+          CFLAGS: ${{ matrix.config.cflags }}
         run: |
           mkdir -p build temp
           cd build
           meson setup .. -Dprefix=$(realpath ../temp) ${{ matrix.config.options }}
           meson install
 
+      - name: Build (General)
+        if: matrix.config.shell != 'msys2 {0}'
+        env:
+          CC: ${{ matrix.config.compiler }}
+          CFLAGS: ${{ matrix.config.cflags }}
+        run: |
+          meson setup build -Dprefix="${{ github.workspace }}/temp" ${{ matrix.config.options }}
+          meson install -C build
+
       - name: Upload artifacts (Windows)
         uses: actions/upload-artifact@v4
         if: runner.os == 'Windows'
         with:
-          name: faac-${{ github.sha }}-win64
+          name: faac-${{ github.sha }}-${{ matrix.config.name }}
           path: temp/*
 
   cppcheck:

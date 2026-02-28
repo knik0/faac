@@ -12,6 +12,7 @@ if target_machine.system() == 'windows'
         ['input.c', 'input.h', 'maingui.c', 'resource.h'] + resource_src,
         include_directories: ['..', '../include'],
         link_with: libfaac,
+        win_subsystem: 'windows',
         install: true
     )
 endif

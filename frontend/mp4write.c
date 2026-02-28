@@ -31,7 +31,13 @@
 #include <sys/time.h>
 #endif
 #include <time.h>
+#ifdef _WIN32
+#include <io.h>
+#define access _access
+#define W_OK 2
+#else
 #include <unistd.h>
+#endif
 
 #include "mp4write.h"
 
