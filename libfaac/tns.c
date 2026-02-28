@@ -74,7 +74,6 @@ static void StepUp(int fOrder, faac_real* kArray, faac_real* aArray);
 
 static void QuantizeReflectionCoeffs(int fOrder,int coeffRes,faac_real* rArray,int* indexArray);
 static int TruncateCoeffs(int fOrder,faac_real threshold,faac_real* kArray);
-static void TnsFilter(int length,faac_real* spec,TnsFilterData* filter);
 static void TnsInvFilter(int length,faac_real* spec,TnsFilterData* filter);
 
 
@@ -272,116 +271,6 @@ void TnsEncodeFilterOnly(TnsInfo* tnsInfo,           /* TNS info */
 }
 
 
-/*****************************************************/
-/* TnsDecodeFilterOnly:                              */
-/* This is a stripped-down version of TnsEncode()    */
-/* which performs TNS synthesis filtering only       */
-/*****************************************************/
-void TnsDecodeFilterOnly(TnsInfo* tnsInfo,           /* TNS info */
-                         int numberOfBands,          /* Number of bands per window */
-                         int maxSfb,                 /* max_sfb */
-                         enum WINDOW_TYPE blockType, /* block type */
-                         int* sfbOffsetTable,        /* Scalefactor band offset table */
-                         faac_real* spec)               /* Spectral data array */
-{
-    int numberOfWindows,windowSize;
-    int startBand,stopBand;    /* Bands over which to apply TNS */
-    int w;
-    int startIndex,length;
-
-    switch( blockType ) {
-    case ONLY_SHORT_WINDOW :
-        numberOfWindows = MAX_SHORT_WINDOWS;
-        windowSize = BLOCK_LEN_SHORT;
-        startBand = tnsInfo->tnsMinBandNumberShort;
-        stopBand = numberOfBands;
-        startBand = min(startBand,tnsInfo->tnsMaxBandsShort);
-        stopBand = min(stopBand,tnsInfo->tnsMaxBandsShort);
-        break;
-
-    default:
-        numberOfWindows = 1;
-        windowSize = BLOCK_LEN_LONG;
-        startBand = tnsInfo->tnsMinBandNumberLong;
-        stopBand = numberOfBands;
-        startBand = min(startBand,tnsInfo->tnsMaxBandsLong);
-        stopBand = min(stopBand,tnsInfo->tnsMaxBandsLong);
-        break;
-    }
-
-    /* Make sure that start and stop bands < maxSfb */
-    /* Make sure that start and stop bands >= 0 */
-    startBand = min(startBand,maxSfb);
-    stopBand = min(stopBand,maxSfb);
-    startBand = max(startBand,0);
-    stopBand = max(stopBand,0);
-
-
-    /* Perform filtering for each window */
-    for(w=0;w<numberOfWindows;w++)
-    {
-        TnsWindowData* windowData = &tnsInfo->windowData[w];
-        TnsFilterData* tnsFilter = windowData->tnsFilter;
-
-        startIndex = w * windowSize + sfbOffsetTable[startBand];
-        length = sfbOffsetTable[stopBand] - sfbOffsetTable[startBand];
-
-        if (tnsInfo->tnsDataPresent  &&  windowData->numFilters) {  /* Use TNS */
-            TnsFilter(length,&spec[startIndex],tnsFilter);
-        }
-    }
-}
-
-
-/*****************************************************/
-/* TnsFilter:                                        */
-/*   Filter the given spec with specified length     */
-/*   using the coefficients specified in filter.     */
-/*   Not that the order and direction are specified  */
-/*   withing the TNS_FILTER_DATA structure.          */
-/*****************************************************/
-static void TnsFilter(int length,faac_real* spec,TnsFilterData* filter)
-{
-    int i,j,k=0;
-    int order=filter->order;
-    faac_real* a=filter->aCoeffs;
-
-    /* Determine loop parameters for given direction */
-    if (filter->direction) {
-
-        /* Startup, initial state is zero */
-        for (i=length-2;i>(length-1-order);i--) {
-            k++;
-            for (j=1;j<=k;j++) {
-                spec[i]-=spec[i+j]*a[j];
-            }
-        }
-
-        /* Now filter completely inplace */
-        for (i=length-1-order;i>=0;i--) {
-            for (j=1;j<=order;j++) {
-                spec[i]-=spec[i+j]*a[j];
-            }
-        }
-
-
-    } else {
-
-        /* Startup, initial state is zero */
-        for (i=1;i<order;i++) {
-            for (j=1;j<=i;j++) {
-                spec[i]-=spec[i-j]*a[j];
-            }
-        }
-
-        /* Now filter completely inplace */
-        for (i=order;i<length;i++) {
-            for (j=1;j<=order;j++) {
-                spec[i]-=spec[i-j]*a[j];
-            }
-        }
-    }
-}
 
 
 /********************************************************/

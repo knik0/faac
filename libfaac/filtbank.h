@@ -52,17 +52,6 @@ void			FilterBank( faacEncStruct* hEncoder,
 						faac_real *p_overlap,
 						int overlap_select );
 
-void			IFilterBank( faacEncStruct* hEncoder,
-						CoderInfo *coderInfo,
-						faac_real *p_in_data,
-						faac_real *p_out_data,
-						faac_real *p_overlap,
-						int overlap_select );
-
-void			specFilter(	faac_real *freqBuff,
-						int sampleRate,
-						int lowpassFreq,
-						int specLen );
 
 #ifdef __cplusplus
 }

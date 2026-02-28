@@ -48,7 +48,6 @@ extern "C" {
 #define SetMemory(block, value, size) memset(block, value, size)
 
 int GetSRIndex(unsigned int sampleRate);
-int GetMaxPredSfb(int samplingRateIdx);
 unsigned int MaxBitrate(unsigned long sampleRate);
 unsigned int MinBitrate();
 unsigned int MaxBitresSize(unsigned long bitRate, unsigned long sampleRate);

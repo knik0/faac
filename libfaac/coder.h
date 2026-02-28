@@ -72,8 +72,6 @@ enum WINDOW_TYPE {
 #define LEN_TNS_NFILTL 2
 #define LEN_TNS_NFILTS 1
 
-#define LPC 2
-
 typedef struct {
     int order;                           /* Filter order */
     int direction;                       /* Filtering direction */

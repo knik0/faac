@@ -55,12 +55,7 @@ extern "C" {
 #define LEN_WIN_SH 1
 #define LEN_MAX_SFBL 6
 #define LEN_MAX_SFBS 4
-#define LEN_CB 4
-#define LEN_SCL_PCM 8
 #define LEN_PRED_PRES 1
-#define LEN_PRED_RST 1
-#define LEN_PRED_RSTGRP 5
-#define LEN_PRED_ENAB 1
 #define LEN_MASK_PRES 2
 #define LEN_MASK 1
 #define LEN_PULSE_PRES 1
@@ -77,28 +72,8 @@ extern "C" {
 #define LEN_TNS_COMPRESS 1
 #define LEN_GAIN_PRES 1
 
-#define LEN_NEC_NPULSE 2
-#define LEN_NEC_ST_SFB 6
-#define LEN_NEC_POFF 5
-#define LEN_NEC_PAMP 4
-#define NUM_NEC_LINES 4
-#define NEC_OFFSET_AMP 4
-
-#define LEN_NCC 3
-#define LEN_IS_CPE 1
-#define LEN_CC_LR 1
-#define LEN_CC_DOM 1
-#define LEN_CC_SGN 1
-#define LEN_CCH_GES 2
-#define LEN_CCH_CGP 1
-#define LEN_D_CNT 4
-#define LEN_D_ESC 12
 #define LEN_F_CNT 4
-#define LEN_F_ESC 8
 #define LEN_BYTE 8
-#define LEN_PAD_DATA 8
-
-#define LEN_PC_COMM 8
 
 #ifdef DRM
 # define LEN_HCR_REORDSD 14
