@@ -20,6 +20,7 @@
 
 #include <math.h>
 #include <stdio.h>
+#include <string.h>
 #include "quantize.h"
 #include "huff2.h"
 
@@ -272,18 +273,17 @@ static void qlevel(CoderInfo *coderInfo,
 #else
                       __m128 x = _mm_setr_ps((float)xr[cnt], (float)xr[cnt+1], (float)xr[cnt+2], (float)xr[cnt+3]);
 #endif
-                      x = _mm_max_ps(x, _mm_sub_ps(zero, x));
-                      x = _mm_mul_ps(x, sfac);
-                      x = _mm_mul_ps(x, _mm_sqrt_ps(x));
-                      x = _mm_sqrt_ps(x);
-                      x = _mm_add_ps(x, magic);
+                      __m128 abs_x = _mm_max_ps(x, _mm_sub_ps(zero, x));
+                      abs_x = _mm_mul_ps(abs_x, sfac);
+                      abs_x = _mm_mul_ps(abs_x, _mm_sqrt_ps(abs_x));
+                      abs_x = _mm_sqrt_ps(abs_x);
+                      abs_x = _mm_add_ps(abs_x, magic);
 
-                      _mm_storeu_si128((__m128i*)(xi + cnt), _mm_cvttps_epi32(x));
-                  }
-                  for (cnt = 0; cnt < end; cnt++)
-                  {
-                      if (xr[cnt] < 0)
-                          xi[cnt] = -xi[cnt];
+                      __m128i q = _mm_cvttps_epi32(abs_x);
+                      __m128i mask = _mm_castps_si128(_mm_cmplt_ps(x, zero));
+                      q = _mm_sub_epi32(_mm_xor_si128(q, mask), mask);
+
+                      _mm_storeu_si128((__m128i*)(xi + cnt), q);
                   }
               }
               else
@@ -301,7 +301,7 @@ static void qlevel(CoderInfo *coderInfo,
                           xi[cnt] = -xi[cnt];
                   }
               }
-              xi += cnt;
+              xi += end;
               xr += BLOCK_LEN_SHORT;
           }
       }
@@ -309,9 +309,8 @@ static void qlevel(CoderInfo *coderInfo,
       {
           for (win = 0; win < gsize; win++)
           {
-              for (cnt = 0; cnt < end; cnt++)
-                  xi[cnt] = 0;
-              xi += cnt;
+              memset(xi, 0, end * sizeof(int));
+              xi += end;
               xr += BLOCK_LEN_SHORT;
           }
       }
