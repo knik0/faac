@@ -296,9 +296,8 @@ static void qlevel(CoderInfo *coderInfo,
                       tmp *= sfacfix;
                       tmp = FAAC_SQRT(tmp * FAAC_SQRT(tmp));
 
-                      xi[cnt] = (int)(tmp + MAGIC_NUMBER);
-                      if (xr[cnt] < 0)
-                          xi[cnt] = -xi[cnt];
+                      int q = (int)(tmp + MAGIC_NUMBER);
+                      xi[cnt] = (xr[cnt] < 0) ? -q : q;
                   }
               }
               xi += end;
