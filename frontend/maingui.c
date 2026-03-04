@@ -159,8 +159,7 @@ static DWORD WINAPI EncodeFile(LPVOID pParam)
 
             config->mpegVersion = SendMessage(GetDlgItem(hWnd, IDC_MPEGVERSION), CB_GETCURSEL, 0, 0);
             config->aacObjectType = SendMessage(GetDlgItem(hWnd, IDC_OBJECTTYPE), CB_GETCURSEL, 0, 0);
-            if (config->aacObjectType == SSR) /* Set to LTP */
-                config->aacObjectType = LTP;
+            config->aacObjectType = LOW;
 
             GetDlgItemText(hWnd, IDC_QUALITY, szTemp, sizeof(szTemp));
 	    config->quantqual = atoi(szTemp);
@@ -336,9 +335,7 @@ static BOOL WINAPI DialogProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
         SendMessage(GetDlgItem(hWnd, IDC_MPEGVERSION), CB_ADDSTRING, 0, (LPARAM)(LPCTSTR)"MPEG2");
         SendMessage(GetDlgItem(hWnd, IDC_MPEGVERSION), CB_SETCURSEL, 0, 0);
 
-//        SendMessage(GetDlgItem(hWnd, IDC_OBJECTTYPE), CB_ADDSTRING, 0, (LPARAM)(LPCTSTR)"Main");
         SendMessage(GetDlgItem(hWnd, IDC_OBJECTTYPE), CB_ADDSTRING, 0, (LPARAM)(LPCTSTR)"Low Complexity");
-//        SendMessage(GetDlgItem(hWnd, IDC_OBJECTTYPE), CB_ADDSTRING, 0, (LPARAM)(LPCTSTR)"LTP");
         SendMessage(GetDlgItem(hWnd, IDC_OBJECTTYPE), CB_SETCURSEL, 0, 0);
 
         CheckDlgButton(hWnd, IDC_ALLOWMIDSIDE, TRUE);

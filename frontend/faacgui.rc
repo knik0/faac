@@ -94,8 +94,8 @@ BEGIN
     COMBOBOX        IDC_MPEGVERSION,183,82,67,63,CBS_DROPDOWNLIST | 
                     WS_VSCROLL | WS_TABSTOP
     COMBOBOX        IDC_OBJECTTYPE,183,109,67,59,CBS_DROPDOWNLIST | 
-                    WS_VSCROLL | WS_TABSTOP
-    LTEXT           "MPEG Verion",IDC_STATIC,183,73,44,8
+                    WS_VSCROLL | WS_TABSTOP | WS_DISABLED
+    LTEXT           "MPEG Version",IDC_STATIC,183,73,56,8
     LTEXT           "AAC Object Type",IDC_STATIC,183,100,56,8
     CONTROL         "Use LFE channel",IDC_USELFE,"Button",BS_AUTOCHECKBOX | 
                     BS_LEFTTEXT | WS_DISABLED | WS_TABSTOP,14,114,71,10
