@@ -1,4 +1,4 @@
-project('faac', 'c', version: '1.31.1')
+project('faac', 'c', version: '1.31.1', default_options: ['default_library=both'])
 
 add_global_arguments('-DHAVE_CONFIG_H', language: 'c')
 
@@ -33,6 +33,9 @@ if cc.get_argument_syntax() == 'msvc'
     c_args += ['-DWIN32', '-DNDEBUG', '-D_WINDOWS', '-D_USRDLL', '-DLIBFAAC_DLL_EXPORTS']
 else
     c_args += ['-fvisibility=hidden']
+    if doSse
+        c_args += ['-msse2']
+    endif
 endif
 
 configure_file(

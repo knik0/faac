@@ -85,7 +85,7 @@ jobs:
 
       - name: Install dependencies (MSYS2)
         if: matrix.config.shell == 'msys2 {0}'
-        uses: msys2/setup-msys2@v2
+        uses: msys2/setup-msys2@v2.30.0
         with:
           msystem: ${{ matrix.config.msystem }}
           update: false
@@ -104,7 +104,7 @@ jobs:
         with:
           arch: x64
 
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v6
 
       - name: Build (MSYS2)
         if: matrix.config.shell == 'msys2 {0}'
@@ -127,7 +127,7 @@ jobs:
           meson install -C build
 
       - name: Upload artifacts (Windows)
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         if: runner.os == 'Windows'
         with:
           name: faac-${{ github.sha }}-${{ matrix.config.name }}
@@ -143,7 +143,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install cppcheck
 
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v6
 
       - name: Run cppcheck
         shell: bash

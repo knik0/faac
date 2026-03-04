@@ -92,18 +92,6 @@ extern "C" {
 #define ID_FIL 6
 #define ID_END 7
 
-
-/* MPEG ID's */
-#define MPEG2 1
-#define MPEG4 0
-
-/* AAC object types */
-#define MAIN 1
-#define LOW  2
-#define SSR  3
-#define LTP  4
-
-
 #define BYTE_NUMBIT 8       /* bits in byte (char) */
 #define LONG_NUMBIT 32      /* bits in unsigned long */
 #define bit2byte(a) (((a)+BYTE_NUMBIT-1)/BYTE_NUMBIT)
