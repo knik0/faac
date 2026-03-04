@@ -1,0 +1,180 @@
+name: Benchmark
+
+on:
+  pull_request:
+    branches: [ "master" ]
+    paths:
+      - "libfaac/**"
+      - "tests/**"
+
+jobs:
+  benchmark:
+    # NOTE: ViSQOL via visqol-py is currently most reliable on ubuntu-22.04.
+    name: ${{ matrix.arch }} / ${{ matrix.precision }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [amd64]
+        precision: [single, double]
+        include:
+          - arch: amd64
+            os: ubuntu-22.04
+
+    steps:
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y meson ninja-build bc ffmpeg
+
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+          cache-dependency-path: 'tests/requirements.txt'
+
+      - name: Install Python dependencies
+        run: |
+          pip install --upgrade pip setuptools wheel
+          pip install -r tests/requirements.txt
+
+      - name: Restore Datasets
+        id: cache-datasets
+        uses: actions/cache/restore@v4
+        with:
+          path: tests/data/external
+          key: ${{ runner.os }}-datasets-${{ hashFiles('tests/setup_datasets.py') }}
+
+      - name: Setup Datasets
+        if: steps.cache-datasets.outputs.cache-hit != 'true'
+        run: |
+          python3 tests/setup_datasets.py
+
+      - name: Save Datasets
+        if: steps.cache-datasets.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: tests/data/external
+          key: ${{ runner.os }}-datasets-${{ hashFiles('tests/setup_datasets.py') }}
+
+      - name: Determine Baseline SHA
+        id: baseline-sha
+        run: |
+          git checkout ${{ github.base_ref || 'master' }}
+          echo "sha=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
+          git checkout ${{ github.sha }}
+
+      - name: Restore Baseline Results
+        id: cache-baseline
+        uses: actions/cache/restore@v4
+        with:
+          path: tests/results/${{ matrix.arch }}_${{ matrix.precision }}_base.json
+          key: ${{ runner.os }}-baseline-${{ matrix.precision }}-${{ steps.baseline-sha.outputs.sha }}-${{ hashFiles('tests/*.py', 'tests/requirements.txt') }}
+
+      - name: Run Benchmark (Baseline)
+        if: steps.cache-baseline.outputs.cache-hit != 'true'
+        run: |
+          git checkout ${{ steps.baseline-sha.outputs.sha }}
+          meson setup build_base -Dfloating-point=${{ matrix.precision }} --buildtype=release
+          ninja -C build_base
+          LIB_PATH="build_base/libfaac/libfaac.so"
+          FAAC_PATH="build_base/frontend/faac"
+          # Restore benchmark scripts and config from PR branch to ensure consistent comparison logic
+          git checkout ${{ github.sha }} -- tests/
+          python3 tests/run_benchmark.py $FAAC_PATH $LIB_PATH "${{ matrix.arch }}_${{ matrix.precision }}_base" "tests/results/${{ matrix.arch }}_${{ matrix.precision }}_base.json" --coverage 100
+
+      - name: Save Baseline Results
+        if: always() && steps.cache-baseline.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: tests/results/${{ matrix.arch }}_${{ matrix.precision }}_base.json
+          key: ${{ runner.os }}-baseline-${{ matrix.precision }}-${{ steps.baseline-sha.outputs.sha }}-${{ hashFiles('tests/*.py', 'tests/requirements.txt') }}
+
+      - name: Run Benchmark (Candidate)
+        run: |
+          git checkout ${{ github.sha }}
+          mkdir -p tests/results
+          meson setup build_cand -Dfloating-point=${{ matrix.precision }} --buildtype=release
+          ninja -C build_cand
+          LIB_PATH="build_cand/libfaac/libfaac.so"
+          FAAC_PATH="build_cand/frontend/faac"
+          python3 tests/run_benchmark.py $FAAC_PATH $LIB_PATH "${{ matrix.arch }}_${{ matrix.precision }}_cand" "tests/results/${{ matrix.arch }}_${{ matrix.precision }}_cand.json" --coverage 100
+
+      - name: Upload Results
+        uses: actions/upload-artifact@v4
+        with:
+          name: results-${{ matrix.arch }}-${{ matrix.precision }}
+          path: tests/results/*.json
+
+  report:
+    name: Consolidated Report
+    needs: benchmark
+    runs-on: ubuntu-latest
+    env:
+      BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+      CAND_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+    if: always()
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download all results
+        uses: actions/download-artifact@v4
+        with:
+          path: tests/results
+          pattern: results-*
+          merge-multiple: true
+
+      - name: Generate Report
+        id: generate
+        run: |
+          # Summary report for PR comment (high-signal only)
+          python3 tests/compare_results.py tests/results --summary-only --base-sha "${{ env.BASE_SHA }}" --cand-sha "${{ env.CAND_SHA }}" > report-summary.md || echo "REGRESSION_DETECTED=1" >> $GITHUB_ENV
+          # Full report for artifact (all details)
+          python3 tests/compare_results.py tests/results --base-sha "${{ env.BASE_SHA }}" --cand-sha "${{ env.CAND_SHA }}" > report-full.md || true
+          if [ ! -s report-summary.md ]; then
+            echo "Error: report-summary.md is empty"
+            exit 1
+          fi
+          cat report-summary.md
+
+      - name: Upload Full Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-report-full
+          path: report-full.md
+
+      - name: PR Feedback
+        if: always() && github.event_name == 'pull_request'
+        continue-on-error: true
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            if (fs.existsSync('report-summary.md')) {
+              let report = fs.readFileSync('report-summary.md', 'utf8').trim();
+              if (report.length > 0) {
+                const jobUrl = `${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}`;
+                const readmeUrl = `${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/blob/${process.env.GITHUB_SHA}/tests/README.md`;
+                report += `\n\n---\n[View Detailed Job Log and Full Report](${jobUrl}) | [What Is This?](${readmeUrl})`;
+                github.rest.issues.createComment({
+                  issue_number: context.issue.number,
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  body: report
+                })
+              }
+            }
+
+      - name: Check for Regressions
+        run: |
+          if [ "${{ env.REGRESSION_DETECTED }}" == "1" ]; then
+            echo "Regressions or missing data detected. Failing job."
+            exit 1
+          fi
