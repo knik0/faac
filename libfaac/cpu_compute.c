@@ -23,7 +23,7 @@
 
 #include "cpu_compute.h"
 
-#if defined(_M_X64) || defined(__x86_64__) || defined(_M_IX86) || defined(__i386__)
+#if defined(SSE2_ARCH)
 # ifdef _MSC_VER
 #  include <intrin.h>
 # elif defined(__GNUC__) || defined(__clang__)
@@ -31,11 +31,11 @@
 # endif
 #endif
 
-unsigned int get_cpu_caps(void)
+CPUCaps get_cpu_caps(void)
 {
-    unsigned int caps = CPU_CAP_NONE;
+    CPUCaps caps = CPU_CAP_NONE;
 
-#if defined(_M_X64) || defined(__x86_64__) || defined(_M_IX86) || defined(__i386__)
+#if defined(SSE2_ARCH)
     unsigned int eax, ebx, ecx, edx;
     unsigned int max_leaf;
 

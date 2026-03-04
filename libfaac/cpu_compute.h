@@ -20,11 +20,15 @@
 #ifndef CPU_COMPUTE_H
 #define CPU_COMPUTE_H
 
+#if defined(_M_X64) || defined(__x86_64__) || defined(_M_IX86) || defined(__i386__)
+# define SSE2_ARCH
+#endif
+
 typedef enum {
     CPU_CAP_NONE = 0,
     CPU_CAP_SSE2 = (1 << 0)
 } CPUCaps;
 
-unsigned int get_cpu_caps(void);
+CPUCaps get_cpu_caps(void);
 
 #endif
