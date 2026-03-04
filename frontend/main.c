@@ -167,9 +167,7 @@ static help_t help_io[] = {
 };
 
 static help_t help_mp4[] = {
-    {"-w\t\tWrap AAC data in MP4 container. (default for *.mp4 and *.m4a)\n",
-    "\t\tWrap AAC data in MP4 container. (default for *.mp4, *.m4a and\n"
-    "\t\t*.m4b)\n"},
+    {"-w\tWrap AAC data in MP4 container (default for *.mp4, *.m4a and *.m4b)\n"},
     {"--tag <tagname,tagvalue> Add named tag (iTunes '----')\n"},
     {"--artist <name>\tSet artist name\n"},
     {"--artistsort <name>\tSet artist sort order\n"},
@@ -1021,7 +1019,7 @@ int main(int argc, char *argv[])
         fprintf(stderr, "LTP");
         break;
     }
-    fprintf(stderr, "(MPEG-%d)", (mpegVersion == MPEG4) ? 4 : 2);
+    fprintf(stderr, " (MPEG-%d)", (mpegVersion == MPEG4) ? 4 : 2);
     if (myFormat->useTns)
         fprintf(stderr, " + TNS");
 
