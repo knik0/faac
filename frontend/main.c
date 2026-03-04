@@ -503,7 +503,9 @@ int main(int argc, char *argv[])
     }
     else
     {
-        fprintf(stderr, __FILE__ "(%d): wrong libfaac version\n", __LINE__);
+        fprintf(stderr, __FILE__ "(%d): wrong libfaac version "
+                "(expected %s, found %s)\n", __LINE__,
+                PACKAGE_VERSION, faac_id_string);
         return 1;
     }
 
