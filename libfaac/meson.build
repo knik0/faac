@@ -40,7 +40,8 @@ libfaac = library('faac', common_src,
     dependencies: [ libm ],
     vs_module_defs: 'libfaac.def',
     install: true,
-    version: '0.0.0'
+    version: '0.0.0',
+    gnu_symbol_visibility: 'hidden'
 )
 
 if get_option('drm')
@@ -56,7 +57,8 @@ if get_option('drm')
         dependencies: [ libm ],
         vs_module_defs: 'libfaac.def',
         install: true,
-        version: '0.0.0'
+        version: '0.0.0',
+        gnu_symbol_visibility: 'hidden'
     )
 endif
 

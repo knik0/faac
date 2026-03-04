@@ -35,7 +35,6 @@ else
     if doSse
         c_args += ['-msse2']
     endif
-    c_args += ['-fvisibility=hidden']
 endif
 
 configure_file(
