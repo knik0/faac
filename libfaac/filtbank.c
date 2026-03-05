@@ -34,6 +34,7 @@ Copyright(c)1996.
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "coder.h"
 #include "filtbank.h"
@@ -46,8 +47,6 @@ Copyright(c)1996.
 
 static void		CalculateKBDWindow	( faac_real* win, faac_real alpha, int length );
 static faac_real	Izero				( faac_real x);
-static void		MDCT				( FFT_Tables *fft_tables, faac_real *data, int N );
-
 
 
 void FilterBankInit(faacEncStruct* hEncoder)
@@ -72,6 +71,11 @@ void FilterBankInit(faacEncStruct* hEncoder)
 
     CalculateKBDWindow(hEncoder->kbd_window_long, 4, BLOCK_LEN_LONG*2);
     CalculateKBDWindow(hEncoder->kbd_window_short, 6, BLOCK_LEN_SHORT*2);
+
+    hEncoder->gpsyInfo.sharedWorkBuffLong = (faac_real*)AllocMemory(2*BLOCK_LEN_LONG*sizeof(faac_real));
+    hEncoder->gpsyInfo.sharedWorkBuffShort = (faac_real*)AllocMemory(2*BLOCK_LEN_SHORT*sizeof(faac_real));
+    hEncoder->gpsyInfo.mdctXr = (faac_real*)AllocMemory((BLOCK_LEN_LONG / 2)*sizeof(faac_real));
+    hEncoder->gpsyInfo.mdctXi = (faac_real*)AllocMemory((BLOCK_LEN_LONG / 2)*sizeof(faac_real));
 }
 
 void FilterBankEnd(faacEncStruct* hEncoder)
@@ -87,6 +91,11 @@ void FilterBankEnd(faacEncStruct* hEncoder)
     if (hEncoder->sin_window_short) FreeMemory(hEncoder->sin_window_short);
     if (hEncoder->kbd_window_long) FreeMemory(hEncoder->kbd_window_long);
     if (hEncoder->kbd_window_short) FreeMemory(hEncoder->kbd_window_short);
+
+    if (hEncoder->gpsyInfo.sharedWorkBuffLong) FreeMemory(hEncoder->gpsyInfo.sharedWorkBuffLong);
+    if (hEncoder->gpsyInfo.sharedWorkBuffShort) FreeMemory(hEncoder->gpsyInfo.sharedWorkBuffShort);
+    if (hEncoder->gpsyInfo.mdctXr) FreeMemory(hEncoder->gpsyInfo.mdctXr);
+    if (hEncoder->gpsyInfo.mdctXi) FreeMemory(hEncoder->gpsyInfo.mdctXi);
 }
 
 void FilterBank(faacEncStruct* hEncoder,
@@ -101,7 +110,7 @@ void FilterBank(faacEncStruct* hEncoder,
     int k, i;
     int block_type = coderInfo->block_type;
 
-    transf_buf = (faac_real*)AllocMemory(2*BLOCK_LEN_LONG*sizeof(faac_real));
+    transf_buf = hEncoder->gpsyInfo.sharedWorkBuffLong;
 
     /* create / shift old values */
     /* We use p_overlap here as buffer holding the last frame time signal*/
@@ -162,7 +171,7 @@ void FilterBank(faacEncStruct* hEncoder,
             p_out_mdct[i] = p_o_buf[i] * first_window[i];
             p_out_mdct[i+BLOCK_LEN_LONG] = p_o_buf[i+BLOCK_LEN_LONG] * second_window[BLOCK_LEN_LONG-i-1];
         }
-        MDCT( &hEncoder->fft_tables, p_out_mdct, 2*BLOCK_LEN_LONG );
+        MDCT( &hEncoder->fft_tables, p_out_mdct, 2*BLOCK_LEN_LONG, hEncoder->gpsyInfo.mdctXr, hEncoder->gpsyInfo.mdctXi );
         break;
 
     case LONG_SHORT_WINDOW :
@@ -172,7 +181,7 @@ void FilterBank(faacEncStruct* hEncoder,
         for ( i = 0 ; i < BLOCK_LEN_SHORT ; i++)
             p_out_mdct[i+BLOCK_LEN_LONG+NFLAT_LS] = p_o_buf[i+BLOCK_LEN_LONG+NFLAT_LS] * second_window[BLOCK_LEN_SHORT-i-1];
         SetMemory(p_out_mdct+BLOCK_LEN_LONG+NFLAT_LS+BLOCK_LEN_SHORT,0,NFLAT_LS*sizeof(faac_real));
-        MDCT( &hEncoder->fft_tables, p_out_mdct, 2*BLOCK_LEN_LONG );
+        MDCT( &hEncoder->fft_tables, p_out_mdct, 2*BLOCK_LEN_LONG, hEncoder->gpsyInfo.mdctXr, hEncoder->gpsyInfo.mdctXi );
         break;
 
     case SHORT_LONG_WINDOW :
@@ -182,7 +191,7 @@ void FilterBank(faacEncStruct* hEncoder,
         memcpy(p_out_mdct+NFLAT_LS+BLOCK_LEN_SHORT,p_o_buf+NFLAT_LS+BLOCK_LEN_SHORT,NFLAT_LS*sizeof(faac_real));
         for ( i = 0 ; i < BLOCK_LEN_LONG ; i++)
             p_out_mdct[i+BLOCK_LEN_LONG] = p_o_buf[i+BLOCK_LEN_LONG] * second_window[BLOCK_LEN_LONG-i-1];
-        MDCT( &hEncoder->fft_tables, p_out_mdct, 2*BLOCK_LEN_LONG );
+        MDCT( &hEncoder->fft_tables, p_out_mdct, 2*BLOCK_LEN_LONG, hEncoder->gpsyInfo.mdctXr, hEncoder->gpsyInfo.mdctXi );
         break;
 
     case ONLY_SHORT_WINDOW :
@@ -192,15 +201,13 @@ void FilterBank(faacEncStruct* hEncoder,
                 p_out_mdct[i] = p_o_buf[i] * first_window[i];
                 p_out_mdct[i+BLOCK_LEN_SHORT] = p_o_buf[i+BLOCK_LEN_SHORT] * second_window[BLOCK_LEN_SHORT-i-1];
             }
-            MDCT( &hEncoder->fft_tables, p_out_mdct, 2*BLOCK_LEN_SHORT );
+            MDCT( &hEncoder->fft_tables, p_out_mdct, 2*BLOCK_LEN_SHORT, hEncoder->gpsyInfo.mdctXr, hEncoder->gpsyInfo.mdctXi );
             p_out_mdct += BLOCK_LEN_SHORT;
             p_o_buf += BLOCK_LEN_SHORT;
             first_window = second_window;
         }
         break;
     }
-
-    if (transf_buf) FreeMemory(transf_buf);
 }
 
 
@@ -250,16 +257,12 @@ static void CalculateKBDWindow(faac_real* win, faac_real alpha, int length)
     }
 }
 
-static void MDCT( FFT_Tables *fft_tables, faac_real *data, int N )
+void MDCT( FFT_Tables *fft_tables, faac_real *data, int N, faac_real *xr, faac_real *xi )
 {
-    faac_real *xi, *xr;
     faac_real tempr, tempi, c, s, cold, cfreq, sfreq; /* temps for pre and post twiddle */
     faac_real freq = TWOPI / N;
     faac_real cosfreq8, sinfreq8;
     int i, n;
-
-    xi = (faac_real*)AllocMemory((N >> 2)*sizeof(faac_real));
-    xr = (faac_real*)AllocMemory((N >> 2)*sizeof(faac_real));
 
     /* prepare for recurrence relation in pre-twiddle */
     cfreq = FAAC_COS(freq);
@@ -324,8 +327,4 @@ static void MDCT( FFT_Tables *fft_tables, faac_real *data, int N )
         c = c * cfreq - s * sfreq;
         s = s * cfreq + cold * sfreq;
     }
-
-    if (xr) FreeMemory(xr);
-    if (xi) FreeMemory(xi);
 }
-
