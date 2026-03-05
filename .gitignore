@@ -38,10 +38,3 @@ Makefile*
 *.user
 /libfaac/win32_ver.h
 /libfaac/faac.pc
-.DS_Store
-/build*/
-/venv/
-/tests/__pycache__/
-/tests/data/external/
-/tests/output/
-/tests/results/
