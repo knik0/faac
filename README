@@ -79,3 +79,12 @@ General FAAC compiling instructions
 	cd build
 	meson setup ..
 	meson install
+
+___________________________________
+Benchmarking
+
+FAAC uses a dedicated benchmark suite to ensure quality and performance.
+The suite is hosted in a separate repository: https://github.com/nschimme/faac-benchmark
+
+Automated benchmarks run on every pull request. For instructions on how to
+run benchmarks locally, please refer to the README in the benchmark repository.

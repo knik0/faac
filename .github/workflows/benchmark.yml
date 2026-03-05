@@ -1,0 +1,136 @@
+name: Continuous Integration
+
+on:
+  push:
+    branches: [ "master" ]
+    paths:
+      - "libfaac/**"
+      - ".github/workflows/benchmark.yml"
+  pull_request:
+    branches: [ "*" ]
+    paths:
+      - "libfaac/**"
+      - ".github/workflows/benchmark.yml"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  benchmark:
+    name: Benchmark ${{ matrix.arch }} / ${{ matrix.precision }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [amd64]
+        precision: [single, double]
+
+    steps:
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y meson ninja-build bc ffmpeg
+
+      - name: Checkout Candidate
+        uses: actions/checkout@v4
+        with:
+          path: candidate
+
+      - name: Build Candidate
+        run: |
+          cd candidate
+          meson setup build_cand -Dfloating-point=${{ matrix.precision }} --buildtype=release
+          ninja -C build_cand
+
+      - name: Determine Baseline SHA
+        id: baseline-sha
+        run: |
+          if [ "${{ github.event_name }}" == "push" ]; then
+            echo "sha=${{ github.sha }}" >> $GITHUB_OUTPUT
+          else
+            echo "sha=${{ github.event.pull_request.base.sha }}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Restore Baseline Results
+        id: cache-baseline
+        uses: actions/cache/restore@v4
+        with:
+          path: results/${{ matrix.arch }}_${{ matrix.precision }}_base.json
+          key: ${{ runner.os }}-baseline-${{ matrix.arch }}-${{ matrix.precision }}-${{ steps.baseline-sha.outputs.sha }}
+
+      - name: Checkout Baseline
+        if: steps.cache-baseline.outputs.cache-hit != 'true'
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.baseline-sha.outputs.sha }}
+          path: baseline
+
+      - name: Build Baseline
+        if: steps.cache-baseline.outputs.cache-hit != 'true'
+        run: |
+          cd baseline
+          meson setup build_base -Dfloating-point=${{ matrix.precision }} --buildtype=release
+          ninja -C build_base
+
+      - name: Run Benchmark (Baseline)
+        if: steps.cache-baseline.outputs.cache-hit != 'true'
+        uses: nschimme/faac-benchmark@master
+        with:
+          faac-bin: ./baseline/build_base/frontend/faac
+          libfaac-so: ./baseline/build_base/libfaac/libfaac.so
+          run-name: ${{ matrix.arch }}_${{ matrix.precision }}_base
+          output-json: ./results/${{ matrix.arch }}_${{ matrix.precision }}_base.json
+          visqol-image: ghcr.io/nschimme/faac-benchmark-visqol:latest
+
+      - name: Save Baseline Results
+        if: success() && steps.cache-baseline.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: results/${{ matrix.arch }}_${{ matrix.precision }}_base.json
+          key: ${{ runner.os }}-baseline-${{ matrix.arch }}-${{ matrix.precision }}-${{ steps.baseline-sha.outputs.sha }}
+
+      - name: Run Benchmark (Candidate)
+        if: github.event_name == 'pull_request'
+        uses: nschimme/faac-benchmark@master
+        with:
+          faac-bin: ./candidate/build_cand/frontend/faac
+          libfaac-so: ./candidate/build_cand/libfaac/libfaac.so
+          run-name: ${{ matrix.arch }}_${{ matrix.precision }}_cand
+          output-json: ./results/${{ matrix.arch }}_${{ matrix.precision }}_cand.json
+          visqol-image: ghcr.io/nschimme/faac-benchmark-visqol:latest
+
+      - name: Upload Results
+        if: github.event_name == 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: results-${{ matrix.arch }}-${{ matrix.precision }}
+          path: results/*.json
+
+  report:
+    name: Consolidated Report
+    needs: benchmark
+    runs-on: ubuntu-latest
+    if: always() && github.event_name == 'pull_request'
+    steps:
+      - name: Download all results
+        uses: actions/download-artifact@v4
+        with:
+          path: results
+          pattern: results-*
+          merge-multiple: true
+
+      - name: Generate Report
+        id: generate
+        uses: nschimme/faac-benchmark/report@master
+        with:
+          results-path: ./results
+          base-sha: ${{ github.event.pull_request.base.sha }}
+          cand-sha: ${{ github.event.pull_request.head.sha }}
+          summary-only: false
+
+      - name: Upload Full Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-report-full
+          path: report.md
