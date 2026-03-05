@@ -23,8 +23,7 @@
 
 #include <immintrin.h>
 #include "faac_real.h"
-
-#define MAGIC_NUMBER 0.4054
+#include "quantize.h"
 
 void quantize_sse2(const faac_real * __restrict xr, int * __restrict xi, int n, faac_real sfacfix)
 {

@@ -32,8 +32,6 @@
                      + __GNUC_PATCHLEVEL__)
 #endif
 
-#define MAGIC_NUMBER  0.4054
-
 typedef void (*QuantizeFunc)(const faac_real * __restrict xr, int * __restrict xi, int n, faac_real sfacfix);
 
 #if defined(HAVE_SSE2)

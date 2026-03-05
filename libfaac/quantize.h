@@ -33,6 +33,12 @@ typedef struct
     int pnslevel;
 } AACQuantCfg;
 
+#ifdef FAAC_PRECISION_SINGLE
+#define MAGIC_NUMBER 0.4054f
+#else
+#define MAGIC_NUMBER 0.4054
+#endif
+
 enum {
     DEFQUAL = 100,
     MAXQUAL = 5000,

@@ -36,14 +36,14 @@ CPUCaps get_cpu_caps(void)
     CPUCaps caps = CPU_CAP_NONE;
 
 #if defined(SSE2_ARCH)
-    unsigned int eax, ebx, ecx, edx;
-    unsigned int max_leaf;
+    unsigned int eax = 0, ebx = 0, ecx = 0, edx = 0;
+    unsigned int max_leaf = 0;
 
 # ifdef _MSC_VER
-    int cpu_info[4];
+    int cpu_info[4] = {0};
     __cpuid(cpu_info, 0);
     max_leaf = (unsigned int)cpu_info[0];
-# else
+# elif defined(__GNUC__) || defined(__clang__)
     __cpuid(0, max_leaf, ebx, ecx, edx);
 # endif
 
@@ -54,7 +54,7 @@ CPUCaps get_cpu_caps(void)
         ebx = (unsigned int)cpu_info[1];
         ecx = (unsigned int)cpu_info[2];
         edx = (unsigned int)cpu_info[3];
-# else
+# elif defined(__GNUC__) || defined(__clang__)
         __get_cpuid(1, &eax, &ebx, &ecx, &edx);
 # endif
         if (edx & (1 << 26)) // SSE2
