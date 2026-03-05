@@ -75,7 +75,7 @@ jobs:
 
       - name: Run Benchmark (Baseline)
         if: steps.cache-baseline.outputs.cache-hit != 'true'
-        uses: nschimme/faac-benchmark@master
+        uses: nschimme/faac-benchmark@v1
         with:
           faac-bin: ./baseline/build_base/frontend/faac
           libfaac-so: ./baseline/build_base/libfaac/libfaac.so
@@ -92,7 +92,7 @@ jobs:
 
       - name: Run Benchmark (Candidate)
         if: github.event_name == 'pull_request'
-        uses: nschimme/faac-benchmark@master
+        uses: nschimme/faac-benchmark@v1
         with:
           faac-bin: ./candidate/build_cand/frontend/faac
           libfaac-so: ./candidate/build_cand/libfaac/libfaac.so
@@ -122,7 +122,7 @@ jobs:
 
       - name: Generate Report
         id: generate
-        uses: nschimme/faac-benchmark/report@master
+        uses: nschimme/faac-benchmark/report@v1
         with:
           results-path: ./results
           base-sha: ${{ github.event.pull_request.base.sha }}
