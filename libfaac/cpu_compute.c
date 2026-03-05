@@ -28,6 +28,8 @@
 #  include <intrin.h>
 # elif defined(__GNUC__) || defined(__clang__)
 #  include <cpuid.h>
+# else
+#  error "Unsupported compiler for cpuid"
 # endif
 #endif
 
