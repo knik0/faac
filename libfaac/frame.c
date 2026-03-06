@@ -318,6 +318,8 @@ faacEncHandle FAACAPI faacEncOpen(unsigned long sampleRate,
 
     TnsInit(hEncoder);
 
+    QuantizeInit();
+
     /* Return handle */
     return hEncoder;
 }
@@ -557,7 +559,7 @@ int FAACAPI faacEncEncode(faacEncHandle hpEncoder,
                       coderInfo[channel].sfbn,
                       coderInfo[channel].block_type,
                       coderInfo[channel].sfb_offset,
-                      hEncoder->freqBuff[channel]);
+                      hEncoder->freqBuff[channel], hEncoder->gpsyInfo.sharedWorkBuffLong);
         } else {
             coderInfo[channel].tnsInfo.tnsDataPresent = 0;      /* TNS not used for LFE */
         }
