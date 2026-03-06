@@ -261,31 +261,39 @@ void MDCT( FFT_Tables *fft_tables, faac_real *data, int N, faac_real *xr, faac_r
 {
     faac_real tempr, tempi, c, s, cold, cfreq, sfreq; /* temps for pre and post twiddle */
     faac_real freq = TWOPI / N;
-    faac_real cosfreq8, sinfreq8;
-    int i, n;
+    int i;
+
+    /* Hoisted constants */
+    const int N2 = N >> 1;
+    const int N4 = N >> 2;
+    const int N8 = N >> 3;
+
+    /* Base pointers for address simplification */
+    faac_real *base0 = data + N4;
+    faac_real *base1 = data + (N4 - 1);
+    faac_real *base2 = data + (N + N4 - 1);
 
     /* prepare for recurrence relation in pre-twiddle */
     cfreq = FAAC_COS(freq);
     sfreq = FAAC_SIN(freq);
-    cosfreq8 = FAAC_COS(freq * 0.125);
-    sinfreq8 = FAAC_SIN(freq * 0.125);
-    c = cosfreq8;
-    s = sinfreq8;
 
-    for (i = 0; i < (N >> 2); i++) {
+    c = FAAC_COS(freq * 0.125);
+    s = FAAC_SIN(freq * 0.125);
+
+    /* Induction variables */
+    int n1 = N2 - 1;  /* descending: N/2 - 1 - 2i */
+    int n2 = 0;       /* ascending: 2i */
+
+    /* Phase 1: i < N/8 */
+    for (i = 0; i < N8; i++) {
+
         /* calculate real and imaginary parts of g(n) or G(p) */
-        n = (N >> 1) - 1 - 2 * i;
 
-        if (i < (N >> 3))
-            tempr = data [(N >> 2) + n] + data [N + (N >> 2) - 1 - n]; /* use second form of e(n) for n = N / 2 - 1 - 2i */
-        else
-            tempr = data [(N >> 2) + n] - data [(N >> 2) - 1 - n]; /* use first form of e(n) for n = N / 2 - 1 - 2i */
+        /* use second form of e(n) for n = N / 2 - 1 - 2i */
+        tempr = base0[n1] + base2[-n1];
 
-        n = 2 * i;
-        if (i < (N >> 3))
-            tempi = data [(N >> 2) + n] - data [(N >> 2) - 1 - n]; /* use first form of e(n) for n=2i */
-        else
-            tempi = data [(N >> 2) + n] + data [N + (N >> 2) - 1 - n]; /* use second form of e(n) for n=2i*/
+        /* use first form of e(n) for n = 2i */
+        tempi = base0[n2] - base1[-n2];
 
         /* calculate pre-twiddled FFT input */
         xr[i] = tempr * c + tempi * s;
@@ -295,6 +303,33 @@ void MDCT( FFT_Tables *fft_tables, faac_real *data, int N, faac_real *xr, faac_r
         cold = c;
         c = c * cfreq - s * sfreq;
         s = s * cfreq + cold * sfreq;
+
+        n1 -= 2;
+        n2 += 2;
+    }
+
+    /* Phase 2: i >= N/8 */
+    for (; i < N4; i++) {
+
+        /* calculate real and imaginary parts of g(n) or G(p) */
+
+        /* use first form of e(n) for n = N / 2 - 1 - 2i */
+        tempr = base0[n1] - base1[-n1];
+
+        /* use second form of e(n) for n = 2i */
+        tempi = base0[n2] + base2[-n2];
+
+        /* calculate pre-twiddled FFT input */
+        xr[i] = tempr * c + tempi * s;
+        xi[i] = tempi * c - tempr * s;
+
+        /* use recurrence to prepare cosine and sine for next value of i */
+        cold = c;
+        c = c * cfreq - s * sfreq;
+        s = s * cfreq + cold * sfreq;
+
+        n1 -= 2;
+        n2 += 2;
     }
 
     /* Perform in-place complex FFT of length N/4 */
@@ -304,27 +339,39 @@ void MDCT( FFT_Tables *fft_tables, faac_real *data, int N, faac_real *xr, faac_r
         break;
     case BLOCK_LEN_LONG * 2:
         fft( fft_tables, xr, xi, 9);
+        break;
     }
 
     /* prepare for recurrence relations in post-twiddle */
-    c = cosfreq8;
-    s = sinfreq8;
+    c = FAAC_COS(freq * 0.125);
+    s = FAAC_SIN(freq * 0.125);
+
+    /* Base pointers for output mapping */
+    faac_real *base_even0 = data;
+    faac_real *base_odd0  = data + (N2 - 1);
+    faac_real *base_even1 = data + N2;
+    faac_real *base_odd1  = data + (N - 1);
+
+    n2 = 0;
 
     /* post-twiddle FFT output and then get output data */
-    for (i = 0; i < (N >> 2); i++) {
-        /* get post-twiddled FFT output  */
+    for (i = 0; i < N4; i++) {
+
+        /* get post-twiddled FFT output */
         tempr = 2. * (xr[i] * c + xi[i] * s);
         tempi = 2. * (xi[i] * c - xr[i] * s);
 
         /* fill in output values */
-        data [2 * i] = -tempr;   /* first half even */
-        data [(N >> 1) - 1 - 2 * i] = tempi;  /* first half odd */
-        data [(N >> 1) + 2 * i] = -tempi;  /* second half even */
-        data [N - 1 - 2 * i] = tempr;  /* second half odd */
+        base_even0[n2] = -tempr;  /* first half even */
+        base_odd0[-n2] =  tempi;  /* first half odd */
+        base_even1[n2] = -tempi;  /* second half even */
+        base_odd1[-n2] =  tempr;  /* second half odd */
 
         /* use recurrence to prepare cosine and sine for next value of i */
         cold = c;
         c = c * cfreq - s * sfreq;
         s = s * cfreq + cold * sfreq;
+
+        n2 += 2;
     }
 }
