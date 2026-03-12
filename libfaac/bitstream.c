@@ -89,9 +89,6 @@ static int WriteAACFillBits(BitStream* bitStream,
                             int writeFlag);
 static int FindGroupingBits(CoderInfo *coderInfo);
 static long BufferNumBit(BitStream *bitStream);
-static int WriteByte(BitStream *bitStream,
-                     unsigned long data,
-                     int numBit);
 static int ByteAlign(BitStream* bitStream,
                      int writeFlag, int bitsSoFar);
 #ifdef DRM
@@ -248,7 +245,6 @@ static int CountBitstream(faacEncStruct* hEncoder,
     int channel;
     int bits = 0;
     int bitsLeftAfterFill, numFillBits;
-
 
     if(hEncoder->config.outputFormat == 1){
         bits += WriteADTSHeader(hEncoder, bitStream, 0);
@@ -878,47 +874,49 @@ static long BufferNumBit(BitStream *bitStream)
     return bitStream->numBit;
 }
 
-static int WriteByte(BitStream *bitStream,
-                     unsigned long data,
-                     int numBit)
-{
-    long numUsed,idx;
-
-    idx = (bitStream->currentBit / BYTE_NUMBIT) % bitStream->size;
-    numUsed = bitStream->currentBit % BYTE_NUMBIT;
-#ifndef DRM
-    if (numUsed == 0)
-        bitStream->data[idx] = 0;
-#endif
-    bitStream->data[idx] |= (data & ((1<<numBit)-1)) <<
-        (BYTE_NUMBIT-numUsed-numBit);
-    bitStream->currentBit += numBit;
-    bitStream->numBit = bitStream->currentBit;
-
-    return 0;
-}
-
 int PutBit(BitStream *bitStream,
            unsigned long data,
            int numBit)
 {
-    int num,maxNum,curNum;
-    unsigned long bits;
+    /* write bits in packets according to buffer byte boundaries */
 
     if (numBit == 0)
         return 0;
 
-    /* write bits in packets according to buffer byte boundaries */
-    num = 0;
-    maxNum = BYTE_NUMBIT - bitStream->currentBit % BYTE_NUMBIT;
-    while (num < numBit) {
-        curNum = min(numBit-num,maxNum);
-        bits = data>>(numBit-num-curNum);
-        if (WriteByte(bitStream, bits, curNum)) {
-            return 1;
+    /* Hoist bitstream state for faster access */
+    unsigned int currentBit = (unsigned int)bitStream->currentBit;
+    unsigned int bitOffset = currentBit & 7;
+    unsigned char *ptr = bitStream->data + (currentBit >> 3);
+
+    /* Update bitstream state immediately */
+    bitStream->currentBit += numBit;
+    bitStream->numBit = bitStream->currentBit;
+
+    /* Mask input data to ensure no extra bits are set */
+    data &= (1UL << numBit) - 1;
+
+    /* Fast path: bit write fits within the current byte */
+    if (bitOffset + numBit <= 8) {
+        if (bitOffset == 0) *ptr = 0;
+        *ptr |= (unsigned char)(data << (8 - bitOffset - numBit));
+    } else {
+        /* General case: multi-byte write */
+        /* Handle first partial byte */
+        int firstBits = 8 - bitOffset;
+        if (bitOffset == 0) *ptr = 0;
+        *ptr++ |= (unsigned char)(data >> (numBit - firstBits));
+        numBit -= firstBits;
+
+        /* Handle full bytes */
+        while (numBit >= 8) {
+            *ptr++ = (unsigned char)((data >> (numBit - 8)) & 0xFF);
+            numBit -= 8;
         }
-        num += curNum;
-        maxNum = BYTE_NUMBIT;
+
+        /* Handle remaining bits in last byte */
+        if (numBit > 0) {
+            *ptr = (unsigned char)((data & ((1UL << numBit) - 1)) << (8 - numBit));
+        }
     }
 
     return 0;
