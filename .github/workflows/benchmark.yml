@@ -112,7 +112,13 @@ jobs:
     needs: benchmark
     runs-on: ubuntu-latest
     if: always() && github.event_name == 'pull_request'
+    permissions:
+      pull-requests: write
     steps:
+      - name: Checkout Code
+        if: github.event_name == 'pull_request'
+        uses: actions/checkout@v4
+
       - name: Download all results
         uses: actions/download-artifact@v4
         with:
@@ -134,3 +140,13 @@ jobs:
         with:
           name: benchmark-report-full
           path: report.md
+
+      - name: Post Summary to PR
+        if: always() && github.event_name == 'pull_request'
+        continue-on-error: true
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh pr comment ${{ github.event.pull_request.number }} --body-file summary.md
+
