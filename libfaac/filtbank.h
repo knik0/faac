@@ -28,11 +28,7 @@ extern "C" {
 
 #include "frame.h"
 
-#ifdef DRM
-#define NFLAT_LS (( BLOCK_LEN_LONG - BLOCK_LEN_SHORT ) / 2)
-#else
 #define NFLAT_LS 448
-#endif
 
 #define MOVERLAPPED     0
 #define MNON_OVERLAPPED 1

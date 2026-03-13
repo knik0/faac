@@ -24,10 +24,6 @@
 #include "huff2.h"
 #include "bitstream.h"
 
-#ifdef DRM
-static int vcb11;
-#endif
-
 static int escape(int x, int *code)
 {
     int preflen = 0;
@@ -58,14 +54,6 @@ static int escape(int x, int *code)
     return (preflen << 1) + 5;
 }
 
-#ifdef DRM
-# define DRMDATA if(coder){coder->num_data_cw[coder->cur_cw++]=1;\
-    coder->iLenReordSpData+=blen;if(coder->iLenLongestCW<blen)\
-    coder->iLenLongestCW=blen;}
-#else
-# define DRMDATA
-#endif
-
 #define arrlen(array) (sizeof(array) / sizeof(*array))
 
 static int huffcode(int *qs /* quantized spectrum */,
@@ -82,10 +70,6 @@ static int huffcode(int *qs /* quantized spectrum */,
     int data;
     int idx;
     int datacnt;
-#ifdef DRM
-    int drmbits = 0;
-    int maxesc = 0;
-#endif
 
     if (coder)
         datacnt = coder->datacnt;
@@ -95,18 +79,6 @@ static int huffcode(int *qs /* quantized spectrum */,
     book = hmap[bnum];
     switch (bnum)
     {
-#ifdef DRM
-    case HCB_ZERO:
-    case HCB_INTENSITY:
-    case HCB_INTENSITY2:
-        for(ofs = 0; ofs < len; ofs += 4)
-        {
-            coder->s[datacnt].data = 0;
-            coder->s[datacnt++].len = 0;
-            coder->num_data_cw[coder->cur_cw++] = 1;
-        }
-        break;
-#endif
     case 1:
     case 2:
         for(ofs = 0; ofs < len; ofs += 4)
@@ -123,7 +95,6 @@ static int huffcode(int *qs /* quantized spectrum */,
                 data = book[idx].data;
                 coder->s[datacnt].data = data;
                 coder->s[datacnt++].len = blen;
-                DRMDATA;
             }
             bits += blen;
         }
@@ -162,7 +133,6 @@ static int huffcode(int *qs /* quantized spectrum */,
                 }
                 coder->s[datacnt].data = data;
                 coder->s[datacnt++].len = blen;
-                DRMDATA;
             }
             bits += blen;
         }
@@ -183,7 +153,6 @@ static int huffcode(int *qs /* quantized spectrum */,
                 data = book[idx].data;
                 coder->s[datacnt].data = data;
                 coder->s[datacnt++].len = blen;
-                DRMDATA;
             }
             bits += blen;
         }
@@ -220,7 +189,6 @@ static int huffcode(int *qs /* quantized spectrum */,
                 }
                 coder->s[datacnt].data = data;
                 coder->s[datacnt++].len = blen;
-                DRMDATA;
             }
             bits += blen;
         }
@@ -257,7 +225,6 @@ static int huffcode(int *qs /* quantized spectrum */,
                 }
                 coder->s[datacnt].data = data;
                 coder->s[datacnt++].len = blen;
-                DRMDATA;
             }
             bits += blen;
         }
@@ -303,10 +270,6 @@ static int huffcode(int *qs /* quantized spectrum */,
                 }
                 coder->s[datacnt].data = data;
                 coder->s[datacnt++].len = blen;
-#ifdef DRM
-                coder->num_data_cw[coder->cur_cw] = 1;
-                drmbits = blen;
-#endif
             }
             bits += blen;
 
@@ -317,13 +280,6 @@ static int huffcode(int *qs /* quantized spectrum */,
                 {
                     coder->s[datacnt].data = data;
                     coder->s[datacnt++].len = blen;
-#ifdef DRM
-                    coder->num_data_cw[coder->cur_cw]++;
-                    drmbits += blen;
-
-                    if (maxesc < data)
-                        maxesc = data;
-#endif
                 }
                 bits += blen;
             }
@@ -335,61 +291,10 @@ static int huffcode(int *qs /* quantized spectrum */,
                 {
                     coder->s[datacnt].data = data;
                     coder->s[datacnt++].len = blen;
-#ifdef DRM
-                    coder->num_data_cw[coder->cur_cw]++;
-                    drmbits += blen;
-
-                    if (maxesc < data)
-                        maxesc = data;
-#endif
                 }
                 bits += blen;
             }
-#ifdef DRM
-            coder->iLenReordSpData += drmbits;
-            if (coder->iLenLongestCW < drmbits)
-                coder->iLenLongestCW = drmbits;
-
-            coder->cur_cw++;
-#endif
         }
-#ifdef DRM
-        /* VCB11: check which codebook should be used using max escape sequence */
-        /* 8.5.3.1.3, table 157 */
-        if (maxesc <= 15)
-            vcb11 = 16;
-        else if (maxesc <= 31)
-            vcb11 = 17;
-        else if (maxesc <= 47)
-            vcb11 = 18;
-        else if (maxesc <= 63)
-            vcb11 = 19;
-        else if (maxesc <= 95)
-            vcb11 = 20;
-        else if (maxesc <= 127)
-            vcb11 = 21;
-        else if (maxesc <= 159)
-            vcb11 = 22;
-        else if (maxesc <= 191)
-            vcb11 = 23;
-        else if (maxesc <= 223)
-            vcb11 = 24;
-        else if (maxesc <= 255)
-            vcb11 = 25;
-        else if (maxesc <= 319)
-            vcb11 = 26;
-        else if (maxesc <= 383)
-            vcb11 = 27;
-        else if (maxesc <= 511)
-            vcb11 = 28;
-        else if (maxesc <= 767)
-            vcb11 = 29;
-        else if (maxesc <= 1023)
-            vcb11 = 30;
-        else if (maxesc <= 2047)
-            vcb11 = 31;
-        /* else: codebook 11 -> it is already 11 */
-#endif
         break;
     default:
         fprintf(stderr, "%s(%d) book %d out of range\n", __FILE__, __LINE__, bnum);
@@ -450,15 +355,8 @@ int huffbook(CoderInfo *coder,
         bookmin = HCB_ESC;
     }
 
-#ifdef DRM
-    vcb11 = 0;
-    huffcode(qs, len, bookmin, coder);
-    if (vcb11)
-        bookmin = vcb11;
-#else
     if (bookmin > HCB_ZERO)
         huffcode(qs, len, bookmin, coder);
-#endif
     coder->book[coder->bandcnt] = bookmin;
 
     return 0;
@@ -470,10 +368,6 @@ int writebooks(CoderInfo *coder, BitStream *stream, int write)
     int maxcnt, cntbits;
     int group;
     int bookbits = 4;
-
-#ifdef DRM
-    bookbits = 5; /* 5 bits in case of VCB11 */
-#endif
 
     if (coder->block_type == ONLY_SHORT_WINDOW){
         maxcnt = 7;
@@ -496,13 +390,6 @@ int writebooks(CoderInfo *coder, BitStream *stream, int write)
                 PutBit(stream, book, bookbits);
             }
             bits += bookbits;
-
-#ifdef DRM
-            /* sect_len is not transmitted in case the codebook for a */
-            /* section is 11 or in the range of 16 and 31 */
-            if ((book == 11) || ((book >= 16) && (book <= 32)))
-                continue;
-#endif
 
             if (band < maxband)
             {

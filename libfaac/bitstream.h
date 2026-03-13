@@ -75,13 +75,6 @@ extern "C" {
 #define LEN_F_CNT 4
 #define LEN_BYTE 8
 
-#ifdef DRM
-# define LEN_HCR_REORDSD 14
-# define LEN_HCR_LONGCW 6
-# define FIRST_PAIR_HCB 5
-# define QUAD_LEN 4
-# define PAIR_LEN 2
-#endif
 
 #define ID_SCE 0
 #define ID_CPE 1
