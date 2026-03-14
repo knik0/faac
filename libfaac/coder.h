@@ -28,29 +28,11 @@
 extern "C" {
 #endif /* __cplusplus */
 
-/* Allow encoding of Digital Radio Mondiale (DRM) */
-//#define DRM
-
-/* Allow encoding of Digital Radio Mondiale (DRM) with transform length 1024 */
-//#define DRM_1024
-
 #define MAX_CHANNELS 64
 
-#ifdef DRM
-#ifdef DRM_1024
-# define FRAME_LEN 1024
-# define BLOCK_LEN_LONG 1024
-# define BLOCK_LEN_SHORT 128
-#else
-# define FRAME_LEN 960
-# define BLOCK_LEN_LONG 960
-# define BLOCK_LEN_SHORT 120
-#endif /* DRM_1024 */
-#else
-# define FRAME_LEN 1024
-# define BLOCK_LEN_LONG 1024
-# define BLOCK_LEN_SHORT 128
-#endif
+#define FRAME_LEN 1024
+#define BLOCK_LEN_LONG 1024
+#define BLOCK_LEN_SHORT 128
 
 #define NSFB_LONG  51
 #define NSFB_SHORT 15
@@ -126,14 +108,6 @@ typedef struct {
     } s[DATASIZE];
     int datacnt;
 
-#ifdef DRM
-    int num_data_cw[FRAME_LEN];
-    int cur_cw;
-    int all_sfb;
-
-    int iLenLongestCW;
-    int iLenReordSpData;
-#endif
 
     TnsInfo tnsInfo;
 } CoderInfo;

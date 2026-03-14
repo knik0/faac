@@ -143,10 +143,6 @@ int FAACAPI faacEncSetConfiguration(faacEncHandle hpEncoder,
     if (hEncoder->config.aacObjectType != LOW)
         return 0;
 
-#ifdef DRM
-    config->pnslevel = 0;
-#endif
-
     /* Re-init TNS for new profile */
     TnsInit(hEncoder);
 
@@ -246,10 +242,6 @@ faacEncHandle FAACAPI faacEncOpen(unsigned long sampleRate,
 
     *inputSamples = FRAME_LEN*numChannels;
     *maxOutputBytes = ADTS_FRAMESIZE;
-
-#ifdef DRM
-    *maxOutputBytes += 1; /* for CRC */
-#endif
 
     hEncoder = (faacEncStruct*)AllocMemory(sizeof(faacEncStruct));
     SetMemory(hEncoder, 0, sizeof(faacEncStruct));
@@ -366,10 +358,6 @@ int FAACAPI faacEncEncode(faacEncHandle hpEncoder,
     int sb, frameBytes;
     unsigned int offset;
     BitStream *bitStream; /* bitstream used for writing the frame to */
-#ifdef DRM
-    int desbits, diff;
-    faac_real fix;
-#endif
 
     /* local copy's of parameters */
     ChannelInfo *channelInfo = hEncoder->channelInfo;
@@ -380,9 +368,7 @@ int FAACAPI faacEncEncode(faacEncHandle hpEncoder,
     unsigned int jointmode = hEncoder->config.jointmode;
     unsigned int bandWidth = hEncoder->config.bandWidth;
     unsigned int shortctl = hEncoder->config.shortctl;
-#ifndef DRM
     int maxqual = hEncoder->config.outputFormat ? MAXQUALADTS : MAXQUAL;
-#endif
 
     /* Increase frame number */
     hEncoder->frameNum++;
@@ -576,45 +562,10 @@ int FAACAPI faacEncEncode(faacEncHandle hpEncoder,
     AACstereo(coderInfo, channelInfo, hEncoder->freqBuff, numChannels,
               (faac_real)hEncoder->aacquantCfg.quality/DEFQUAL, jointmode);
 
-#ifdef DRM
-    /* loop the quantization until the desired bit-rate is reached */
-    diff = 1; /* to enter while loop */
-    hEncoder->aacquantCfg.quality = 120; /* init quality setting */
-    while (diff > 0) { /* if too many bits, do it again */
-#endif
     for (channel = 0; channel < numChannels; channel++) {
         BlocQuant(&coderInfo[channel], hEncoder->freqBuff[channel],
                   &(hEncoder->aacquantCfg));
     }
-
-#ifdef DRM
-    /* Write the AAC bitstream */
-    bitStream = OpenBitStream(bufferSize, outputBuffer);
-    WriteBitstream(hEncoder, coderInfo, channelInfo, bitStream, numChannels);
-
-    /* Close the bitstream and return the number of bytes written */
-    frameBytes = CloseBitStream(bitStream);
-
-    /* now calculate desired bits and compare with actual encoded bits */
-    desbits = (int) ((faac_real) numChannels * (hEncoder->config.bitRate * FRAME_LEN)
-            / hEncoder->sampleRate);
-
-    diff = ((frameBytes - 1 /* CRC */) * 8) - desbits;
-
-    /* do linear correction according to relative difference */
-    fix = (faac_real) desbits / ((frameBytes - 1 /* CRC */) * 8);
-
-    /* speed up convergence. A value of 0.92 gives approx up to 10 iterations */
-    if (fix > 0.92)
-        fix = 0.92;
-
-    hEncoder->aacquantCfg.quality *= fix;
-
-    /* quality should not go lower than 1, set diff to exit loop */
-    if (hEncoder->aacquantCfg.quality <= 1)
-        diff = -1;
-    }
-#endif
 
     // fix max_sfb in CPE mode
     for (channel = 0; channel < numChannels; channel++)
@@ -631,7 +582,6 @@ int FAACAPI faacEncEncode(faacEncHandle hpEncoder,
                         cil->sfbn = cir->sfbn = max(cil->sfbn, cir->sfbn);
 		}
     }
-#ifndef DRM
     /* Write the AAC bitstream */
     bitStream = OpenBitStream(bufferSize, outputBuffer);
 
@@ -665,120 +615,11 @@ int FAACAPI faacEncEncode(faacEncHandle hpEncoder,
         if (hEncoder->aacquantCfg.quality < 10)
             hEncoder->aacquantCfg.quality = 10;
     }
-#endif
 
     return frameBytes;
 }
 
 
-#ifdef DRM
-/* Scalefactorband data table for 960 transform length */
-/* all parameters which are different from the 1024 transform length table are
-   marked with an "x" */
-static SR_INFO srInfo[12+1] =
-{
-    { 96000, 40/*x*/, 12,
-        {
-            4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
-            8, 8, 8, 8, 8, 12, 12, 12, 12, 12, 16, 16, 24, 28,
-            36, 44, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 0/*x*/
-        },{
-            4, 4, 4, 4, 4, 4, 8, 8, 8, 16, 28, 28/*x*/
-        }
-    }, { 88200, 40/*x*/, 12,
-        {
-            4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
-            8, 8, 8, 8, 8, 12, 12, 12, 12, 12, 16, 16, 24, 28,
-            36, 44, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 0/*x*/
-        },{
-            4, 4, 4, 4, 4, 4, 8, 8, 8, 16, 28, 28/*x*/
-        }
-    }, { 64000, 45/*x*/, 12,
-        {
-            4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
-            8, 8, 8, 8, 12, 12, 12, 16, 16, 16, 20, 24, 24, 28,
-            36, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40, 40,
-            40, 40, 40, 16/*x*/, 0/*x*/
-        },{
-            4, 4, 4, 4, 4, 4, 8, 8, 8, 16, 28, 28/*x*/
-        }
-    }, { 48000, 49, 14,
-        {
-            4,  4,  4,  4,  4,  4,  4,  4,  4,  4,  8,  8,  8,  8,  8,  8,  8,
-            12, 12, 12, 12, 16, 16, 20, 20, 24, 24, 28, 28, 32, 32, 32, 32, 32, 32,
-            32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32/*x*/
-        }, {
-            4,  4,  4,  4,  4,  8,  8,  8, 12, 12, 12, 16, 16, 8/*x*/
-        }
-    }, { 44100, 49, 14,
-        {
-            4,  4,  4,  4,  4,  4,  4,  4,  4,  4,  8,  8,  8,  8,  8,  8,  8,
-            12, 12, 12, 12, 16, 16, 20, 20, 24, 24, 28, 28, 32, 32, 32, 32, 32, 32,
-            32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32/*x*/
-        }, {
-            4,  4,  4,  4,  4,  8,  8,  8, 12, 12, 12, 16, 16, 8/*x*/
-        }
-    }, { 32000, 49/*x*/, 14,
-        {
-            4,  4,  4,  4,  4,  4,  4,  4,  4,  4,  8,  8,  8,  8,
-            8,  8,  8,  12, 12, 12, 12, 16, 16, 20, 20, 24, 24, 28,
-            28, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32,
-            32, 32, 32, 32, 32, 32, 32, 0/*x*/, 0/*x*/
-        },{
-            4,  4,  4,  4,  4,  8,  8,  8,  12, 12, 12, 16, 16, 16
-        }
-    }, { 24000, 46/*x*/, 15,
-        {
-            4,  4,  4,  4,  4,  4,  4,  4,  4,  4,  4,  8,  8,  8,  8,  8,  8,  8,
-            8,  8,  8,  12, 12, 12, 12, 16, 16, 16, 20, 20, 24, 24, 28, 28, 32,
-            36, 36, 40, 44, 48, 52, 52, 64, 64, 64, 64, 0/*x*/
-        }, {
-            4,  4,  4,  4,  4,  4,  4,  8,  8,  8, 12, 12, 16, 16, 12/*x*/
-        }
-    }, { 22050, 46/*x*/, 15,
-        {
-            4,  4,  4,  4,  4,  4,  4,  4,  4,  4,  4,  8,  8,  8,  8,  8,  8,  8,
-            8,  8,  8,  12, 12, 12, 12, 16, 16, 16, 20, 20, 24, 24, 28, 28, 32,
-            36, 36, 40, 44, 48, 52, 52, 64, 64, 64, 64, 0/*x*/
-        }, {
-            4,  4,  4,  4,  4,  4,  4,  8,  8,  8, 12, 12, 16, 16, 12/*x*/
-        }
-    }, { 16000, 42/*x*/, 15,
-        {
-            8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 12, 12, 12,
-            12, 12, 12, 12, 12, 12, 16, 16, 16, 16, 20, 20, 20, 24,
-            24, 28, 28, 32, 36, 40, 40, 44, 48, 52, 56, 60, 64, 64, 0/*x*/
-        }, {
-            4, 4, 4, 4, 4, 4, 4, 4, 8, 8, 12, 12, 16, 20, 12/*x*/
-        }
-    }, { 12000, 42/*x*/, 15,
-        {
-            8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 12, 12, 12,
-            12, 12, 12, 12, 12, 12, 16, 16, 16, 16, 20, 20, 20, 24,
-            24, 28, 28, 32, 36, 40, 40, 44, 48, 52, 56, 60, 64, 64, 0/*x*/
-        }, {
-            4, 4, 4, 4, 4, 4, 4, 4, 8, 8, 12, 12, 16, 20, 12/*x*/
-        }
-    }, { 11025, 42/*x*/, 15,
-        {
-            8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 12, 12, 12,
-            12, 12, 12, 12, 12, 12, 16, 16, 16, 16, 20, 20, 20, 24,
-            24, 28, 28, 32, 36, 40, 40, 44, 48, 52, 56, 60, 64, 64, 0/*x*/
-        }, {
-            4, 4, 4, 4, 4, 4, 4, 4, 8, 8, 12, 12, 16, 20, 12/*x*/
-        }
-    }, { 8000, 40, 15,
-        {
-            12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 16,
-            16, 16, 16, 16, 16, 16, 20, 20, 20, 20, 24, 24, 24, 28,
-            28, 32, 36, 36, 40, 44, 48, 52, 56, 60, 64, 16/*x*/
-        }, {
-            4, 4, 4, 4, 4, 4, 4, 8, 8, 8, 8, 12, 16, 20, 12/*x*/
-        }
-    },
-    { -1 }
-};
-#else
 /* Scalefactorband data table for 1024 transform length */
 static SR_INFO srInfo[12+1] =
 {
@@ -883,4 +724,3 @@ static SR_INFO srInfo[12+1] =
     },
     { -1 }
 };
-#endif
