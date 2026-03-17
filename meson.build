@@ -1,4 +1,4 @@
-project('faac', 'c', version: '1.31.1', default_options: ['default_library=both'])
+project('faac', 'c', version: '1.40.0', default_options: ['default_library=both'])
 
 add_global_arguments('-DHAVE_CONFIG_H', language: 'c')
 

@@ -1,3 +1,44 @@
+1.40 (Mar 17, 2026)
+
+	[ tatsuz ]
+	* Fix compilation with Visual Studio
+
+	[ enWILLYado ]
+	* Fix SIMD calls
+
+	[ David Fort ]
+	* Add meson as build system
+
+	[ KokonoeTooru ]
+	* Meson: Install faac executable
+
+	[ Fabian Greffrath ]
+	* CI: fix artifact path
+	* Remove autoconf/automake build system
+	* Remove plugins stuff, unmaintained for decades
+	* Remove MSVC projects, deprecated in favour of meson
+	* Do not check for unused headers
+	* Generalize OS check in CI rule
+	* Remove redundant defines
+	* Make `faacgui` usable again
+	* Report library version on version mismatch
+	* Maintain library SONAME version 0.0.0
+	* Build both static and shared library by default
+	* Properly declare symbol visibility as hidden
+
+	[ Nils Schimmelmann ]
+	* Add options to disable DRM and opt for single floating-point precision
+	* CI: add native MSVC build and fix Windows compatibility
+	* Remove dead code
+	* Optimize FFT reordering by combining real and imaginary passes
+	* Optimize FFT performance
+	* CI: update GitHub Actions and add Dependabot configuration
+	* Refactor quantizer for portable C and extensible SIMD dispatch
+	* Optimize memory allocation and unify MDCT implementation
+	* Optimize MDCT by removing conditional branches and hoisting logic
+	* Rrefactor the hot path for writing bits to the output stream
+	* Remove Digital Radio Mondiale (DRM) support
+
 1.31.1 (Mar 03, 2025)
 
 	[ Fabian Greffrath ]
