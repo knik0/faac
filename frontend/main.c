@@ -431,7 +431,7 @@ int main(int argc, char *argv[])
     unsigned long samplesInput, maxBytesOutput, totalBytesWritten = 0;
 
     faacEncConfigurationPtr myFormat;
-    unsigned int mpegVersion = MPEG2;
+    unsigned int mpegVersion = MPEG4;
     unsigned int objectType = LOW;
     int jointmode = -1;
     int pnslevel = -1;
