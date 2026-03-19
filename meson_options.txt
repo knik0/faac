@@ -8,3 +8,10 @@ option('floating-point',
     type: 'combo',
     choices: ['single', 'double'],
     value: 'double')
+
+option('max-channels',
+    description: 'Maximum number of channels',
+    type: 'integer',
+    min: 1,
+    max: 64,
+    value: 64)

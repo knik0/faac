@@ -60,6 +60,14 @@ jobs:
               options: -Dfloating-point=double,
               cflags: /W4
             }
+          - {
+              name: Linux GCC (2 Channels),
+              os: ubuntu-latest,
+              compiler: gcc,
+              shell: bash,
+              options: -Dmax-channels=2,
+              cflags: -Wall
+            }
 
     steps:
       - name: Install dependencies (Ubuntu)
