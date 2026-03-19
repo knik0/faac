@@ -28,8 +28,6 @@
 extern "C" {
 #endif /* __cplusplus */
 
-#define MAX_CHANNELS 64
-
 #define FRAME_LEN 1024
 #define BLOCK_LEN_LONG 1024
 #define BLOCK_LEN_SHORT 128
