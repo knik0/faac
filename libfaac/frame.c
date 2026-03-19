@@ -195,6 +195,8 @@ int FAACAPI faacEncSetConfiguration(faacEncHandle hpEncoder,
 
     hEncoder->config.quantqual = config->quantqual;
 
+    if (config->mpegVersion == MPEG2)
+        config->pnslevel = 0;
     if (config->jointmode == JOINT_MS)
         config->pnslevel = 0;
     if (config->pnslevel < 0)

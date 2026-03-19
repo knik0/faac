@@ -936,6 +936,13 @@ int main(int argc, char *argv[])
         myFormat->useLfe = 1;
     if (jointmode >= 0)
         myFormat->jointmode = jointmode;
+
+    if (pnslevel > 0 && mpegVersion == MPEG2)
+    {
+        fprintf(stderr, "PNS not allowed in MPEG-2 mode, disabling PNS\n");
+        pnslevel = 0;
+    }
+
     if (pnslevel >= 0)
         myFormat->pnslevel = pnslevel;
     if (quantqual > 0)
