@@ -39,9 +39,10 @@ static int CountBitstream(faacEncStruct* hEncoder,
                           ChannelInfo *channelInfo,
                           BitStream *bitStream,
                           int numChannels);
-static int WriteADTSHeader(faacEncStruct* hEncoder,
-                           BitStream *bitStream,
-                           int writeFlag);
+FAAC_INTERNAL
+int WriteADTSHeader(faacEncStruct* hEncoder,
+                    BitStream *bitStream,
+                    int writeFlag);
 static int WriteCPE(CoderInfo *coderInfoL,
                     CoderInfo *coderInfoR,
                     ChannelInfo *channelInfo,
@@ -155,9 +156,9 @@ int WriteBitstream(faacEncStruct* hEncoder,
         if (channelInfo[channel].present) {
 
             /* Write out a single_channel_element */
-            if (!channelInfo[channel].cpe) {
+            if (channelInfo[channel].type != ELEMENT_CPE) {
 
-                if (channelInfo[channel].lfe) {
+                if (channelInfo[channel].type == ELEMENT_LFE) {
                     /* Write out lfe */
                     bits += WriteLFE(&coderInfo[channel],
                         &channelInfo[channel],
@@ -242,9 +243,9 @@ static int CountBitstream(faacEncStruct* hEncoder,
         if (channelInfo[channel].present) {
 
             /* Write out a single_channel_element */
-            if (!channelInfo[channel].cpe) {
+            if (channelInfo[channel].type != ELEMENT_CPE) {
 
-                if (channelInfo[channel].lfe) {
+                if (channelInfo[channel].type == ELEMENT_LFE) {
                     /* Write out lfe */
                     bits += WriteLFE(&coderInfo[channel],
                         &channelInfo[channel],
@@ -311,9 +312,10 @@ static int CountBitstream(faacEncStruct* hEncoder,
     return bits;
 }
 
-static int WriteADTSHeader(faacEncStruct* hEncoder,
-                           BitStream *bitStream,
-                           int writeFlag)
+FAAC_INTERNAL
+int WriteADTSHeader(faacEncStruct* hEncoder,
+                    BitStream *bitStream,
+                    int writeFlag)
 {
     int bits = 56;
 
@@ -800,14 +802,30 @@ static long BufferNumBit(BitStream *bitStream)
     return bitStream->numBit;
 }
 
+static const uint32_t bitmask[] = {
+    0x00000000, 0x00000001, 0x00000003, 0x00000007,
+    0x0000000f, 0x0000001f, 0x0000003f, 0x0000007f,
+    0x000000ff, 0x000001ff, 0x000003ff, 0x000007ff,
+    0x00000fff, 0x00001fff, 0x00003fff, 0x00007fff,
+    0x0000ffff, 0x0001ffff, 0x0003ffff, 0x0007ffff,
+    0x000fffff, 0x001fffff, 0x003fffff, 0x007fffff,
+    0x00ffffff, 0x01ffffff, 0x03ffffff, 0x07ffffff,
+    0x0fffffff, 0x1fffffff, 0x3fffffff, 0x7fffffff,
+    0xffffffff
+};
+
 int PutBit(BitStream *bitStream,
-           unsigned long data,
+           uint32_t data,
            int numBit)
 {
     /* write bits in packets according to buffer byte boundaries */
 
-    if (numBit == 0)
+    if (numBit <= 0)
         return 0;
+
+    /* Range guard: Prevent out-of-bounds access on bitmask table */
+    if (numBit > 32)
+        numBit = 32;
 
     /* Hoist bitstream state for faster access */
     unsigned int currentBit = (unsigned int)bitStream->currentBit;
@@ -819,7 +837,7 @@ int PutBit(BitStream *bitStream,
     bitStream->numBit = bitStream->currentBit;
 
     /* Mask input data to ensure no extra bits are set */
-    data &= (1UL << numBit) - 1;
+    data &= bitmask[numBit];
 
     /* Fast path: bit write fits within the current byte */
     if (bitOffset + numBit <= 8) {

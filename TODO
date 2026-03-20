@@ -6,3 +6,6 @@
 - Add resampler and downmixer (hans-juergen, Oct 17, 2004)
 - Add HE AAC (hans-juergen, Oct 17, 2004)
 - Test TNS(arcen, Apr 8th, 2012)
+- Test 3.0 and 5.1 channel numbers
+- add PCE (Program Config Element) for 7.1 channel surround sound
+

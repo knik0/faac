@@ -107,6 +107,7 @@ jobs:
           mkdir -p build temp
           cd build
           meson setup .. -Dprefix=$(realpath ../temp) ${{ matrix.config.options }}
+          meson test
           meson install
 
       - name: Build (General)
@@ -116,6 +117,7 @@ jobs:
           CFLAGS: ${{ matrix.config.cflags }}
         run: |
           meson setup build -Dprefix="${{ github.workspace }}/temp" ${{ matrix.config.options }}
+          meson test -C build
           meson install -C build
 
       - name: Upload artifacts (Windows)
