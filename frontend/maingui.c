@@ -105,6 +105,7 @@ static void AwakeDialogControls(HWND hWnd)
     SetDlgItemText (hWnd, IDC_INPUTFILENAME, inputFilename);
 
     strncpy(outputFilename, inputFilename, sizeof(outputFilename) - 5);
+    outputFilename[sizeof(outputFilename) - 5] = '\0';
 
     pExt = strrchr(outputFilename, '.');
 
@@ -178,7 +179,7 @@ static DWORD WINAPI EncodeFile(LPVOID pParam)
 
                 MessageBox (hWnd, "faacEncSetConfiguration failed!", "Error", MB_OK | MB_ICONSTOP);
 
-                SendMessage(hWnd,WM_SETTEXT,0,(long)"FAAC GUI");
+                SendMessage(hWnd,WM_SETTEXT,0,(LPARAM)"FAAC GUI");
                 Encoding = FALSE;
                 SetDlgItemText(hWnd, IDOK, "Encode");
 
@@ -227,7 +228,7 @@ static DWORD WINAPI EncodeFile(LPVOID pParam)
                     lstrcpy(HeaderText,"FAAC GUI: ");
                     lstrcat(HeaderText,Percentage);
                     lstrcat(HeaderText,"%");
-                    SendMessage(hWnd,WM_SETTEXT,0,(long)HeaderText);
+                    SendMessage(hWnd,WM_SETTEXT,0,(LPARAM)HeaderText);
 
                     totalBytesRead += bytesInput;
 
@@ -296,7 +297,7 @@ static DWORD WINAPI EncodeFile(LPVOID pParam)
         MessageBox(hWnd, "Couldn't open input file!", "Error", MB_OK | MB_ICONSTOP);
     }
 
-    SendMessage(hWnd,WM_SETTEXT,0,(long)"FAAC GUI");
+    SendMessage(hWnd,WM_SETTEXT,0,(LPARAM)"FAAC GUI");
     Encoding = FALSE;
     SetDlgItemText(hWnd, IDOK, "Encode");
     return 0;
