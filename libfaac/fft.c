@@ -245,8 +245,9 @@ void fft( FFT_Tables *fft_tables, faac_real *xr, faac_real *xi, int logm)
 {
 	if (logm > MAXLOGM)
 	{
-		fprintf(stderr, "fft size too big\n");
-		exit(1);
+		fprintf(stderr, "%s%d: fft size too big (%d)\n",
+		        __FILE__, __LINE__, logm);
+		return;
 	}
 
 	if (logm < 1)
@@ -268,8 +269,9 @@ void rfft( FFT_Tables *fft_tables, faac_real *x, int logm)
 
 	if (logm > MAXLOGR)
 	{
-		fprintf(stderr, "rfft size too big\n");
-		exit(1);
+		fprintf(stderr, "%s%d: rfft size too big (%d)\n",
+		        __FILE__, __LINE__, logm);
+		return;
 	}
 
 	memset(xi, 0, (1 << logm) * sizeof(xi[0]));
