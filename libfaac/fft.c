@@ -245,7 +245,7 @@ void fft( FFT_Tables *fft_tables, faac_real *xr, faac_real *xi, int logm)
 {
 	if (logm > MAXLOGM)
 	{
-		fprintf(stderr, "%s%d: fft size too big (%d)\n",
+		fprintf(stderr, "%s:%d: fft size too big (%d)\n",
 		        __FILE__, __LINE__, logm);
 		return;
 	}
@@ -269,7 +269,7 @@ void rfft( FFT_Tables *fft_tables, faac_real *x, int logm)
 
 	if (logm > MAXLOGR)
 	{
-		fprintf(stderr, "%s%d: rfft size too big (%d)\n",
+		fprintf(stderr, "%s:%d: rfft size too big (%d)\n",
 		        __FILE__, __LINE__, logm);
 		return;
 	}
