@@ -56,10 +56,11 @@ static int escape(int x, int *code)
 
 #define arrlen(array) (sizeof(array) / sizeof(*array))
 
-static int huffcode(int *qs /* quantized spectrum */,
-                    int len,
-                    int bnum,
-                    CoderInfo *coder)
+FAAC_INTERNAL
+int huffcode(int *qs /* quantized spectrum */,
+             int len,
+             int bnum,
+             CoderInfo *coder)
 {
     static hcode16_t * const hmap[12] = {0, book01, book02, book03, book04,
       book05, book06, book07, book08, book09, book10, book11};

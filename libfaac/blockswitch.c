@@ -30,23 +30,6 @@
 #include "filtbank.h"
 #include <faac.h>
 
-typedef float psyfloat;
-
-typedef struct
-{
-  /* bandwidth */
-  int bandS;
-  int lastband;
-
-  /* band volumes */
-  psyfloat *engPrev[8];
-  psyfloat *eng[8];
-  psyfloat *engNext[8];
-  psyfloat *engNext2[8];
-}
-psydata_t;
-
-
 static void Hann(GlobalPsyInfo * gpsyInfo, faac_real *inSamples, int size)
 {
   int i;
@@ -72,7 +55,8 @@ static struct {
 } frames;
 #endif
 
-static void PsyCheckShort(PsyInfo * psyInfo, faac_real quality)
+FAAC_INTERNAL
+void PsyCheckShort(PsyInfo * psyInfo, faac_real quality)
 {
   enum {PREVS = 2, NEXTS = 2};
   psydata_t *psydata = psyInfo->data;
@@ -246,7 +230,7 @@ static void PsyCalculate(ChannelInfo * channelInfo, GlobalPsyInfo * gpsyInfo,
     if (channelInfo[channel].present)
     {
 
-      if (channelInfo[channel].cpe &&
+      if (channelInfo[channel].type == ELEMENT_CPE &&
 	  channelInfo[channel].ch_is_left)
       {				/* CPE */
 
@@ -256,13 +240,12 @@ static void PsyCalculate(ChannelInfo * channelInfo, GlobalPsyInfo * gpsyInfo,
 	PsyCheckShort(&psyInfo[leftChan], quality);
 	PsyCheckShort(&psyInfo[rightChan], quality);
       }
-      else if (!channelInfo[channel].cpe &&
-	       channelInfo[channel].lfe)
+      else if (channelInfo[channel].type == ELEMENT_LFE)
       {				/* LFE */
         // Only set block type and it should be OK
 	psyInfo[channel].block_type = ONLY_LONG_WINDOW;
       }
-      else if (!channelInfo[channel].cpe)
+      else if (channelInfo[channel].type == ELEMENT_SCE)
       {				/* SCE */
 	PsyCheckShort(&psyInfo[channel], quality);
       }

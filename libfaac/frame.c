@@ -459,7 +459,7 @@ int FAACAPI faacEncEncode(faacEncHandle hpEncoder,
 		/* Psychoacoustics */
 		/* Update buffers and run FFT on new samples */
 		/* LFE psychoacoustic can run without it */
-		if (!channelInfo[channel].lfe || channelInfo[channel].cpe)
+		if (channelInfo[channel].type != ELEMENT_LFE)
 		{
 			hEncoder->psymodel->PsyBufferUpdate(
 					&hEncoder->fft_tables,
@@ -539,7 +539,7 @@ int FAACAPI faacEncEncode(faacEncHandle hpEncoder,
 
     /* Perform TNS analysis and filtering */
     for (channel = 0; channel < numChannels; channel++) {
-        if ((!channelInfo[channel].lfe) && (useTns)) {
+        if ((channelInfo[channel].type != ELEMENT_LFE) && (useTns)) {
             TnsEncode(&(coderInfo[channel].tnsInfo),
                       coderInfo[channel].sfbn,
                       coderInfo[channel].sfbn,
@@ -553,7 +553,7 @@ int FAACAPI faacEncEncode(faacEncHandle hpEncoder,
 
     for (channel = 0; channel < numChannels; channel++) {
       // reduce LFE bandwidth
-		if (!channelInfo[channel].cpe && channelInfo[channel].lfe)
+		if (channelInfo[channel].type == ELEMENT_LFE)
 		{
                     coderInfo[channel].sfbn = 3;
 		}
@@ -571,7 +571,7 @@ int FAACAPI faacEncEncode(faacEncHandle hpEncoder,
     for (channel = 0; channel < numChannels; channel++)
     {
 		if (channelInfo[channel].present
-				&& (channelInfo[channel].cpe)
+				&& (channelInfo[channel].type == ELEMENT_CPE)
 				&& (channelInfo[channel].ch_is_left))
 		{
 			CoderInfo *cil, *cir;

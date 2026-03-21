@@ -36,6 +36,22 @@ extern "C" {
 #include "channels.h"
 #include "fft.h"
 
+typedef float psyfloat;
+
+typedef struct
+{
+  /* bandwidth */
+  int bandS;
+  int lastband;
+
+  /* band volumes */
+  psyfloat *engPrev[8];
+  psyfloat *eng[8];
+  psyfloat *engNext[8];
+  psyfloat *engNext2[8];
+}
+psydata_t;
+
 typedef struct {
 	int size;
 	int sizeS;
@@ -84,6 +100,9 @@ void (*BlockSwitch) (CoderInfo *coderInfo, PsyInfo *psyInfo,
 } psymodel_t;
 
 extern psymodel_t psymodel2;
+
+FAAC_INTERNAL
+void PsyCheckShort(PsyInfo * psyInfo, faac_real quality);
 
 #ifdef __cplusplus
 }
