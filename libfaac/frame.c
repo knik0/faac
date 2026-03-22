@@ -219,8 +219,8 @@ int FAACAPI faacEncSetConfiguration(faacEncHandle hpEncoder,
     #undef POWM_HI
     #undef FP_LO
     #undef FP_HI
-    #undef ANCHOR_LO_BPC
-    #undef ANCHOR_HI_BPC
+    #undef ANCHOR_LO
+    #undef ANCHOR_HI
 
     /* Bandwidth resolution */
     if (!hEncoder->config.bandWidth) {
