@@ -50,12 +50,6 @@ static const psymodellist_t psymodellist[] = {
 
 static SR_INFO srInfo[12+1];
 
-// default bandwidth/samplerate ratio
-static const struct {
-    faac_real fac;
-    faac_real freq;
-} g_bw = {0.42, 18000};
-
 int FAACAPI faacEncGetVersion( char **faac_id_string,
 			      				char **faac_copyright_string)
 {
@@ -156,12 +150,8 @@ int FAACAPI faacEncSetConfiguration(faacEncHandle hpEncoder,
         return 0;
 #endif
 
-    if (config->bitRate && !config->bandWidth)
+    if (config->bitRate)
     {
-        config->bandWidth = (faac_real)config->bitRate * hEncoder->sampleRate * g_bw.fac / 50000.0;
-        if (config->bandWidth > g_bw.freq)
-            config->bandWidth = g_bw.freq;
-
         if (!config->quantqual)
         {
             config->quantqual = (faac_real)config->bitRate * hEncoder->numChannels / 1280;
@@ -174,19 +164,7 @@ int FAACAPI faacEncSetConfiguration(faacEncHandle hpEncoder,
         config->quantqual = DEFQUAL;
 
     hEncoder->config.bitRate = config->bitRate;
-
-    if (!config->bandWidth)
-    {
-        config->bandWidth = g_bw.fac * hEncoder->sampleRate;
-    }
-
     hEncoder->config.bandWidth = config->bandWidth;
-
-    // check bandwidth
-    if (hEncoder->config.bandWidth < 100)
-		hEncoder->config.bandWidth = 100;
-    if (hEncoder->config.bandWidth > (hEncoder->sampleRate / 2))
-		hEncoder->config.bandWidth = hEncoder->sampleRate / 2;
 
     if (config->quantqual > maxqual)
         config->quantqual = maxqual;
@@ -194,6 +172,79 @@ int FAACAPI faacEncSetConfiguration(faacEncHandle hpEncoder,
         config->quantqual = MINQUAL;
 
     hEncoder->config.quantqual = config->quantqual;
+
+    /* Bitrate-dependent parameter interpolation (anchored 16k-128k).
+     * Tuning Guide:
+     * - NF (Noise Floor):  Lower = less quantization noise (more detail).
+     * - FAC (BW Factor):   Higher = extended spectral cutoff frequency.
+     * - POWM (Power Exp):  Lower = flatter masking curve (more transparency).
+     * - FP (Freq Penalty): Lower = better high-frequency sibilance retention. */
+    #define ANCHOR_LO  16000.0
+    #define ANCHOR_HI 128000.0
+
+    #define NF_LO    0.010
+    #define NF_HI    0.001
+    #define FAC_LO   0.90
+    #define FAC_HI   0.99
+    #define POWM_LO  0.27
+    #define POWM_HI  0.30
+    #define FP_LO    0.75
+    #define FP_HI    0.70
+
+    faac_real t = (hEncoder->config.bitRate - (faac_real)ANCHOR_LO)
+                   / ((faac_real)ANCHOR_HI - (faac_real)ANCHOR_LO);
+    if (t < 0.0) t = 0.0;
+    if (t > 1.0) t = 1.0;
+
+    #define INTERP(lo, hi)      ((lo) + t * ((hi) - (lo)))
+    #define INTERP_LOG(lo, hi)  FAAC_POW((lo), 1.0-t) * FAAC_POW((hi), t)
+
+    faac_real nf   = INTERP_LOG(NF_LO,  NF_HI);
+    faac_real fac  = INTERP(FAC_LO,  FAC_HI);
+    faac_real powm = INTERP(POWM_LO, POWM_HI);
+    faac_real fp   = INTERP(FP_LO,   FP_HI);
+
+    #undef INTERP
+    #undef INTERP_LOG
+
+    hEncoder->aacquantCfg.noise_floor  = nf;
+    hEncoder->aacquantCfg.powm         = powm;
+    hEncoder->aacquantCfg.freq_penalty = fp;
+
+    #undef NF_LO
+    #undef NF_HI
+    #undef FAC_LO
+    #undef FAC_HI
+    #undef POWM_LO
+    #undef POWM_HI
+    #undef FP_LO
+    #undef FP_HI
+    #undef ANCHOR_LO_BPC
+    #undef ANCHOR_HI_BPC
+
+    /* Bandwidth resolution */
+    if (!hEncoder->config.bandWidth) {
+        faac_real nyquist      = (faac_real)hEncoder->sampleRate * 0.5;
+
+        /* Cap at 20 kHz: AAC does not efficiently encode near Nyquist */
+        faac_real maxBandwidth = (nyquist > 20000.0) ? 20000.0 : nyquist;
+        hEncoder->config.bandWidth = (unsigned int)(fac * maxBandwidth);
+
+        /* Prevents bandwidth falling below useful speech range.
+           Uses min(3500, 40% of Nyquist) to adapt to low sample rates. */
+        unsigned int bw_floor = 3500;
+        unsigned int sr_frac  = (unsigned int)(nyquist * 0.4);
+        if (sr_frac < bw_floor)
+            bw_floor = sr_frac;
+        if (hEncoder->config.bandWidth < bw_floor)
+            hEncoder->config.bandWidth = bw_floor;
+    }
+
+    /* Ensure bandwidth is within valid Nyquist limits */
+    if (hEncoder->config.bandWidth < 100)
+        hEncoder->config.bandWidth = 100;
+    if (hEncoder->config.bandWidth > (hEncoder->sampleRate / 2))
+        hEncoder->config.bandWidth = hEncoder->sampleRate / 2;
 
     if (config->mpegVersion == MPEG2)
         config->pnslevel = 0;
@@ -265,7 +316,7 @@ faacEncHandle FAACAPI faacEncOpen(unsigned long sampleRate,
     hEncoder->config.useLfe = 1;
     hEncoder->config.useTns = 0;
     hEncoder->config.bitRate = 64000;
-    hEncoder->config.bandWidth = g_bw.fac * hEncoder->sampleRate;
+    hEncoder->config.bandWidth = 0;
     hEncoder->config.quantqual = 0;
     hEncoder->config.psymodellist = (psymodellist_t *)psymodellist;
     hEncoder->config.psymodelidx = 0;

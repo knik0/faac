@@ -31,6 +31,9 @@ typedef struct
     int max_cbs;
     int max_l;
     int pnslevel;
+    faac_real noise_floor;
+    faac_real powm;
+    faac_real freq_penalty;
 } AACQuantCfg;
 
 #ifdef FAAC_PRECISION_SINGLE
