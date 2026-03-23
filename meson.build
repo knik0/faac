@@ -4,7 +4,9 @@ project('faac', 'c',
         'default_library=both',
         'buildtype=debugoptimized',
         'warning_level=1',
-        'c_std=gnu99,c99'
+        'c_std=gnu99,c99',
+        'b_lto=true',
+        'b_pie=true'
     ])
 
 add_global_arguments('-DHAVE_CONFIG_H', language: 'c')
@@ -50,6 +52,10 @@ configure_file(
 subdir('docs')
 subdir('include')
 subdir('libfaac')
+
+if get_option('tests')
+    subdir('tests')
+endif
 
 if get_option('frontend')
     subdir('frontend')

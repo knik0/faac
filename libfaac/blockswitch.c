@@ -30,23 +30,6 @@
 #include "filtbank.h"
 #include <faac.h>
 
-typedef float psyfloat;
-
-typedef struct
-{
-  /* bandwidth */
-  int bandS;
-  int lastband;
-
-  /* band volumes */
-  psyfloat *engPrev[8];
-  psyfloat *eng[8];
-  psyfloat *engNext[8];
-  psyfloat *engNext2[8];
-}
-psydata_t;
-
-
 static void Hann(GlobalPsyInfo * gpsyInfo, faac_real *inSamples, int size)
 {
   int i;
@@ -72,7 +55,8 @@ static struct {
 } frames;
 #endif
 
-static void PsyCheckShort(PsyInfo * psyInfo, faac_real quality)
+FAAC_INTERNAL
+void PsyCheckShort(PsyInfo * psyInfo, faac_real quality)
 {
   enum {PREVS = 2, NEXTS = 2};
   psydata_t *psydata = psyInfo->data;

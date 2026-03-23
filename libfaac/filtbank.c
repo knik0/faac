@@ -45,10 +45,6 @@ Copyright(c)1996.
 #define  TWOPI       2*M_PI
 
 
-static void		CalculateKBDWindow	( faac_real* win, faac_real alpha, int length );
-static faac_real	Izero				( faac_real x);
-
-
 void FilterBankInit(faacEncStruct* hEncoder)
 {
     unsigned int i, channel;
@@ -230,7 +226,8 @@ static faac_real Izero(faac_real x)
     return(sum);
 }
 
-static void CalculateKBDWindow(faac_real* win, faac_real alpha, int length)
+FAAC_INTERNAL
+void CalculateKBDWindow(faac_real* win, faac_real alpha, int length)
 {
     int i;
     faac_real IBeta;

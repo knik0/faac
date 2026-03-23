@@ -35,6 +35,8 @@ Copyright (c) 1996.
 #ifndef BITSTREAM_H
 #define BITSTREAM_H
 
+#include <stdint.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
@@ -86,7 +88,7 @@ extern "C" {
 #define ID_END 7
 
 #define BYTE_NUMBIT 8       /* bits in byte (char) */
-#define LONG_NUMBIT 32      /* bits in unsigned long */
+#define LONG_NUMBIT 32      /* bits in uint32_t */
 #define bit2byte(a) (((a)+BYTE_NUMBIT-1)/BYTE_NUMBIT)
 
 enum {ADTS_FRAMESIZE = 1 << 13};
@@ -114,8 +116,13 @@ BitStream *OpenBitStream(int size, unsigned char *buffer);
 int CloseBitStream(BitStream *bitStream);
 
 int PutBit(BitStream *bitStream,
-           unsigned long data,
+           uint32_t data,
            int numBit);
+
+FAAC_INTERNAL
+int WriteADTSHeader(faacEncStruct* hEncoder,
+                    BitStream *bitStream,
+                    int writeFlag);
 
 #ifdef __cplusplus
 }
