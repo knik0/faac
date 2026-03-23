@@ -6,3 +6,4 @@
 - Add resampler and downmixer (hans-juergen, Oct 17, 2004)
 - Add HE AAC (hans-juergen, Oct 17, 2004)
 - Test TNS(arcen, Apr 8th, 2012)
+- add PCE (Program Config Element) or 4-bit AudioSpecificConfig
