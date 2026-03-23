@@ -416,25 +416,24 @@ static faac_real LevinsonDurbin(int fOrder,          /* Filter order */
     faac_real error, kTemp;                /* Prediction error */
     faac_real aArray1[TNS_MAX_ORDER+1];    /* Predictor coeff array */
     faac_real aArray2[TNS_MAX_ORDER+1];    /* Predictor coeff array 2 */
-    faac_real rArray[TNS_MAX_ORDER+1] = {0}; /* Autocorrelation coeffs */
-    faac_real* aPtr = aArray1;             /* Ptr to aArray1 */
-    faac_real* aLastPtr = aArray2;         /* Ptr to aArray2 */
+    faac_real rArray[TNS_MAX_ORDER+1];     /* Autocorrelation coeffs */
+
+    faac_real *restrict aPtr = aArray1;    /* Ptr to aArray1 */
+    faac_real *restrict aLastPtr = aArray2;/* Ptr to aArray2 */
     faac_real* aTemp;
 
     /* Compute autocorrelation coefficients */
     Autocorrelation(fOrder,dataSize,data,rArray);
     signal=rArray[0];   /* signal energy */
 
-    /* Set up pointers to current and last iteration */
-    /* predictor coefficients.                       */
-    aPtr = aArray1;
-    aLastPtr = aArray2;
+    /* Initialize kArray: Zero out to prevent 'ghost' coefficients
+       if the recursion terminates early. */
+    for (i = 0; i <= fOrder; i++)
+        kArray[i] = 0.0;
+
     /* If there is no signal energy, return */
-    if (!signal) {
+    if (signal <= 0.0) {
         kArray[0]=1.0;
-        for (order=1;order<=fOrder;order++) {
-            kArray[order]=0.0;
-        }
         return 0;
 
     } else {
@@ -447,25 +446,42 @@ static faac_real LevinsonDurbin(int fOrder,          /* Filter order */
 
         /* Now perform recursion */
         for (order=1;order<=fOrder;order++) {
-            kTemp = aLastPtr[0]*rArray[order-0];
-            for (i=1;i<order;i++) {
+            kTemp = 0.0;
+            for (i=0;i<order;i++)
                 kTemp += aLastPtr[i]*rArray[order-i];
+
+            /* Stability Guard: check for perfect prediction or instability */
+            if (FAAC_FABS(kTemp) >= error || error <= 0.0) {
+                error = 0.0;
+                break;
             }
-            kTemp = -kTemp/error;
-            kArray[order]=kTemp;
-            aPtr[order]=kTemp;
-            for (i=1;i<order;i++) {
-                aPtr[i] = aLastPtr[i] + kTemp*aLastPtr[order-i];
+
+            /* Compute and store reflection coefficient */
+            kArray[order] = aPtr[order] = -kTemp / error;
+
+            /* Step-up recursion for predictor coefficients */
+            for (i = 1; i < order; i++) {
+                aPtr[i] = aLastPtr[i] + kArray[order] * aLastPtr[order - i];
             }
-            error = error * (1 - kTemp*kTemp);
-            /* Prevent numerical instability or division-by-zero with highly correlated signals */
-            if (error < 1e-10) error = 1e-10;
+
+            /* Update error energy: error = error * (1 - k^2) */
+            error = error * (1 - kArray[order] * kArray[order]);
+
+            /* Early exit if prediction is numerically perfect */
+            if (error <= 0.0) {
+                error = 0.0;
+                break;
+            }
 
             /* Now make current iteration the last one */
             aTemp=aLastPtr;
             aLastPtr=aPtr;      /* Current becomes last */
             aPtr=aTemp;         /* Last becomes current */
         }
+
+        /* If error vanished, return INFINITY to trigger TNS gain threshold */
+        if (error <= 0.0) return (faac_real)INFINITY;
+
         return signal/error;    /* return the gain */
     }
 }
