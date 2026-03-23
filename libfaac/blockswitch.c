@@ -246,7 +246,7 @@ static void PsyCalculate(ChannelInfo * channelInfo, GlobalPsyInfo * gpsyInfo,
     if (channelInfo[channel].present)
     {
 
-      if (channelInfo[channel].cpe &&
+      if (channelInfo[channel].type == ELEMENT_CPE &&
 	  channelInfo[channel].ch_is_left)
       {				/* CPE */
 
@@ -256,13 +256,12 @@ static void PsyCalculate(ChannelInfo * channelInfo, GlobalPsyInfo * gpsyInfo,
 	PsyCheckShort(&psyInfo[leftChan], quality);
 	PsyCheckShort(&psyInfo[rightChan], quality);
       }
-      else if (!channelInfo[channel].cpe &&
-	       channelInfo[channel].lfe)
+      else if (channelInfo[channel].type == ELEMENT_LFE)
       {				/* LFE */
         // Only set block type and it should be OK
 	psyInfo[channel].block_type = ONLY_LONG_WINDOW;
       }
-      else if (!channelInfo[channel].cpe)
+      else if (channelInfo[channel].type == ELEMENT_SCE)
       {				/* SCE */
 	PsyCheckShort(&psyInfo[channel], quality);
       }
