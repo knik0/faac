@@ -33,15 +33,19 @@ typedef struct {
     int ms_used[MAX_SCFAC_BANDS];
 } MSInfo;
 
+typedef enum {
+    ELEMENT_SCE,
+    ELEMENT_CPE,
+    ELEMENT_LFE
+} ElementType;
+
 typedef struct {
     int tag;
     int present;
     int ch_is_left;
     int paired_ch;
     int common_window;
-    int cpe;
-    int sce;
-    int lfe;
+    ElementType type;
     MSInfo msInfo;
 } ChannelInfo;
 

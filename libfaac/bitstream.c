@@ -155,9 +155,9 @@ int WriteBitstream(faacEncStruct* hEncoder,
         if (channelInfo[channel].present) {
 
             /* Write out a single_channel_element */
-            if (!channelInfo[channel].cpe) {
+            if (channelInfo[channel].type != ELEMENT_CPE) {
 
-                if (channelInfo[channel].lfe) {
+                if (channelInfo[channel].type == ELEMENT_LFE) {
                     /* Write out lfe */
                     bits += WriteLFE(&coderInfo[channel],
                         &channelInfo[channel],
@@ -242,9 +242,9 @@ static int CountBitstream(faacEncStruct* hEncoder,
         if (channelInfo[channel].present) {
 
             /* Write out a single_channel_element */
-            if (!channelInfo[channel].cpe) {
+            if (channelInfo[channel].type != ELEMENT_CPE) {
 
-                if (channelInfo[channel].lfe) {
+                if (channelInfo[channel].type == ELEMENT_LFE) {
                     /* Write out lfe */
                     bits += WriteLFE(&coderInfo[channel],
                         &channelInfo[channel],

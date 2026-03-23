@@ -327,7 +327,7 @@ void AACstereo(CoderInfo *coder,
 
         if (!channel[chn].present)
             continue;
-        if (!((channel[chn].cpe) && (channel[chn].ch_is_left)))
+        if (!((channel[chn].type == ELEMENT_CPE) && (channel[chn].ch_is_left)))
             continue;
 
         rch = channel[chn].paired_ch;
