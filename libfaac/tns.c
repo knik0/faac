@@ -451,6 +451,10 @@ static faac_real LevinsonDurbin(int fOrder,          /* Filter order */
             for (i=1;i<order;i++) {
                 kTemp += aLastPtr[i]*rArray[order-i];
             }
+            if (error <= 0.0 || FAAC_FABS(kTemp) >= error) {
+                error = 0.0;
+                break;
+            }
             kTemp = -kTemp/error;
             kArray[order]=kTemp;
             aPtr[order]=kTemp;
@@ -458,12 +462,15 @@ static faac_real LevinsonDurbin(int fOrder,          /* Filter order */
                 aPtr[i] = aLastPtr[i] + kTemp*aLastPtr[order-i];
             }
             error = error * (1 - kTemp*kTemp);
+            if (error <= 0.0) break;
 
             /* Now make current iteration the last one */
             aTemp=aLastPtr;
             aLastPtr=aPtr;      /* Current becomes last */
             aPtr=aTemp;         /* Last becomes current */
         }
+        /* If perfect prediction, trigger TNS */
+        if (error <= 0.0) return DEF_TNS_GAIN_THRESH + 1.0;
         return signal/error;    /* return the gain */
     }
 }
