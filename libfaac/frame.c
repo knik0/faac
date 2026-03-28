@@ -625,14 +625,14 @@ int FAACAPI faacEncEncode(faacEncHandle hpEncoder,
             / hEncoder->sampleRate;
         faac_real fix = (faac_real)desbits / (faac_real)(frameBytes * 8);
 
-        if (fix < 0.9)
-            fix += 0.1;
-        else if (fix > 1.1)
-            fix -= 0.1;
+        if (fix < 0.95)
+            fix += 0.05;
+        else if (fix > 1.05)
+            fix -= 0.05;
         else
             fix = 1.0;
 
-        fix = (fix - 1.0) * 0.5 + 1.0;
+        fix = (fix - 1.0) * 0.6 + 1.0;
         // printf("q: %.1f(f:%.4f)\n", hEncoder->aacquantCfg.quality, fix);
 
         hEncoder->aacquantCfg.quality *= fix;
