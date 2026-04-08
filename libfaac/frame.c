@@ -36,6 +36,10 @@
 #include "win32_ver.h"
 #endif
 
+/* Rate control tuning constants */
+#define RC_DEADBAND_THRESHOLD  0.05  /* +/- 5% deadband */
+#define RC_DAMPING_FACTOR      0.6   /* Control loop damping */
+
 static char *libfaacName = PACKAGE_VERSION;
 static char *libCopyright =
   "FAAC - Freeware Advanced Audio Coder (http://faac.sourceforge.net/)\n"
@@ -625,22 +629,24 @@ int FAACAPI faacEncEncode(faacEncHandle hpEncoder,
             / hEncoder->sampleRate;
         faac_real fix = (faac_real)desbits / (faac_real)(frameBytes * 8);
 
-        if (fix < 0.95)
-            fix += 0.05;
-        else if (fix > 1.05)
-            fix -= 0.05;
-        else
+        if (fix < (1.0 - RC_DEADBAND_THRESHOLD)) {
+            fix += RC_DEADBAND_THRESHOLD;
+        } else if (fix > (1.0 + RC_DEADBAND_THRESHOLD)) {
+            fix -= RC_DEADBAND_THRESHOLD;
+        } else {
             fix = 1.0;
+        }
 
-        fix = (fix - 1.0) * 0.6 + 1.0;
+        /* Apply damping to the quality adjustment */
+        fix = (fix - 1.0) * RC_DAMPING_FACTOR + 1.0;
         // printf("q: %.1f(f:%.4f)\n", hEncoder->aacquantCfg.quality, fix);
 
         hEncoder->aacquantCfg.quality *= fix;
 
         if (hEncoder->aacquantCfg.quality > maxqual)
             hEncoder->aacquantCfg.quality = maxqual;
-        if (hEncoder->aacquantCfg.quality < 10)
-            hEncoder->aacquantCfg.quality = 10;
+        if (hEncoder->aacquantCfg.quality < MINQUAL)
+            hEncoder->aacquantCfg.quality = MINQUAL;
     }
 
     return frameBytes;
