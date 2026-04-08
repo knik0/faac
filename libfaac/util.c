@@ -54,28 +54,3 @@ unsigned int MinBitrate()
     return 8000;
 }
 
-/* Calculate bit_allocation based on PE */
-unsigned int BitAllocation(faac_real pe, int short_block)
-{
-    faac_real pew1;
-    faac_real pew2;
-    faac_real bit_allocation;
-
-    if (short_block) {
-        pew1 = 0.6;
-        pew2 = 24.0;
-    } else {
-        pew1 = 0.3;
-        pew2 = 6.0;
-    }
-    bit_allocation = pew1 * pe + pew2 * FAAC_SQRT(pe);
-    bit_allocation = min(max(0.0, bit_allocation), 6144.0);
-
-    return (unsigned int)(bit_allocation+0.5);
-}
-
-/* Returns the maximum bit reservoir size */
-unsigned int MaxBitresSize(unsigned long bitRate, unsigned long sampleRate)
-{
-    return 6144 - (unsigned int)((faac_real)bitRate/(faac_real)sampleRate*(faac_real)FRAME_LEN);
-}
