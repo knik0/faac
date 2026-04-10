@@ -17,8 +17,12 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ****************************************************************************/
 
+#ifndef HUFF2_H
+#define HUFF2_H
+
 #include "bitstream.h"
 
+/* Huffman Codebooks */
 enum {
     HCB_ZERO = 0,
     HCB_ESC = 11,
@@ -28,8 +32,35 @@ enum {
     HCB_NONE
 };
 
+/* Scalefactor Management */
+enum {
+    /* Baseline scalefactor value used in bitstream */
+    SF_OFFSET = 100,
+    /* Minimum allowable scalefactor to prevent underflow */
+    SF_MIN = 10,
+    /* PNS predictor initialization offset (starts at floor) */
+    SF_PNS_OFFSET = SF_OFFSET - SF_MIN,
+    /* Max allowed difference between successive scalefactors (AAC spec) */
+    SF_DELTA = 60,
+};
+
+/**
+ * Restrict scalefactor delta to the spec-defined +/- SF_DELTA range.
+ * This ensures the delta remains valid for Book 12 Huffman encoding.
+ */
+static inline int clamp_sf_diff(int diff)
+{
+    if (diff > SF_DELTA)
+        return SF_DELTA;
+    if (diff < -SF_DELTA)
+        return -SF_DELTA;
+    return diff;
+}
+
 int huffbook(CoderInfo *coderInfo,
              int *qs /* quantized spectrum */,
              int len);
 int writebooks(CoderInfo *coder, BitStream *stream, int writeFlag);
 int writesf(CoderInfo *coder, BitStream *bitStream, int writeFlag);
+
+#endif /* HUFF2_H */
