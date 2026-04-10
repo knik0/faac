@@ -83,6 +83,13 @@ static void stereo(CoderInfo *cl, CoderInfo *cr,
         ethr *= ethr;
         ethr *= phthr;
         efix = enrgl + enrgr;
+        /* Skip completely silent bands: efix==0 makes ethr==0 so IS would
+         * trigger spuriously, and vfix=sqrt(0/0) would be NaN. */
+        if (efix <= 0.0)
+        {
+            (*sfcnt)++;
+            continue;
+        }
         if (enrgs >= ethr)
         {
             hcb = HCB_INTENSITY;
@@ -96,6 +103,13 @@ static void stereo(CoderInfo *cl, CoderInfo *cr,
 
         if (hcb != HCB_NONE)
         {
+            /* If either channel is zero its log10 ratio is -inf; FAAC_LRINT
+             * on -inf is undefined behaviour.  Skip to L/R coding instead. */
+            if (enrgl == 0.0 || enrgr == 0.0)
+            {
+                (*sfcnt)++;
+                continue;
+            }
             int sf = FAAC_LRINT(FAAC_LOG10(enrgl / efix) * step);
             int pan = FAAC_LRINT(FAAC_LOG10(enrgr/efix) * step) - sf;
 
