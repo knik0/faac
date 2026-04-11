@@ -29,9 +29,9 @@ static int escape(int x, int *code)
     int preflen = 0;
     int base = 32;
 
-    if (x >= 8192)
+    if (x > MAX_HUFF_ESC_VAL)
     {
-        fprintf(stderr, "%s(%d): x_quant >= 8192\n", __FILE__, __LINE__);
+        fprintf(stderr, "%s(%d): x_quant > %d\n", __FILE__, __LINE__, MAX_HUFF_ESC_VAL);
         return 0;
     }
 

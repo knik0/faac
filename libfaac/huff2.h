@@ -32,6 +32,10 @@ enum {
     HCB_NONE
 };
 
+/* Maximum value representable by Huffman Book 11 escape sequences.
+ * Values >= 8192 would cause bitstream overflow/sync loss. */
+#define MAX_HUFF_ESC_VAL 8191
+
 /* Scalefactor Management */
 enum {
     /* Baseline scalefactor value used in bitstream */
