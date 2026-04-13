@@ -37,8 +37,11 @@
 #define __unix__
 #endif
 
-#ifdef __unix__
+#ifdef HAVE_SYS_TIME_H
 #include <sys/time.h>
+#endif
+
+#ifdef __unix__
 #include <sys/resource.h>
 #include <unistd.h>
 #endif
@@ -57,10 +60,6 @@
 #endif
 
 #include "mp4write.h"
-
-#if !defined(HAVE_STRCASECMP) && !defined(_WIN32)
-# define strcasecmp strcmp
-#endif
 
 #ifdef _WIN32
 # undef stderr

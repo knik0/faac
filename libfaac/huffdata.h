@@ -15,6 +15,11 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ****************************************************************************/
 
+#ifndef HUFFDATA_H
+#define HUFFDATA_H
+
+#include "huff2.h"
+
 #include <stdint.h>
 
 typedef struct {
@@ -38,4 +43,6 @@ extern hcode16_t book08[64];
 extern hcode16_t book09[169];
 extern hcode16_t book10[169];
 extern hcode16_t book11[289];
-extern hcode32_t book12[121];
+extern hcode32_t book12[2 * SF_DELTA + 1];
+
+#endif /* HUFFDATA_H */

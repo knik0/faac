@@ -56,6 +56,8 @@ static void quantize_scalar(const faac_real * __restrict xr, int * __restrict xi
 }
 
 static QuantizeFunc qfunc = quantize_scalar;
+static faac_real sfstep;
+static faac_real max_quant_limit;
 
 void QuantizeInit(void)
 {
@@ -66,12 +68,19 @@ void QuantizeInit(void)
     else
 #endif
         qfunc = quantize_scalar;
+
+    /* 2^0.25 (1.50515 dB) step from AAC specs */
+    sfstep = 1.0 / FAAC_LOG10(FAAC_SQRT(FAAC_SQRT(2.0)));
+
+    /* Inverse-quantizer headroom: ensures (x * gain)^0.75 + 0.4054 <= 8191.
+     * Pre-calculated to avoid redundant runtime power functions. */
+    max_quant_limit = FAAC_POW((faac_real)MAX_HUFF_ESC_VAL + 1.0 - MAGIC_NUMBER, 4.0/3.0);
 }
 #define NOISEFLOOR 0.4
 
 // band sound masking
 static void bmask(CoderInfo * __restrict coderInfo, faac_real * __restrict xr0, faac_real * __restrict bandqual,
-                  faac_real * __restrict bandenrg, int gnum, faac_real quality)
+                  faac_real * __restrict bandenrg, faac_real * __restrict bandmaxe, int gnum, faac_real quality)
 {
   int sfb, start, end, cnt;
   int *cb_offset = coderInfo->sfb_offset;
@@ -130,6 +139,8 @@ static void bmask(CoderInfo * __restrict coderInfo, faac_real * __restrict xr0, 
         }
     }
     bandenrg[sfb] = avge;
+    /* Track peak magnitude to identify potential Huffman overflows. */
+    bandmaxe[sfb] = FAAC_SQRT(maxe);
     maxe *= gsize;
 
 #define NOISETONE 0.2
@@ -166,21 +177,16 @@ static void qlevel(CoderInfo * __restrict coderInfo,
                    const faac_real * __restrict xr0,
                    const faac_real * __restrict bandqual,
                    const faac_real * __restrict bandenrg,
+                   const faac_real * __restrict bandmaxe,
                    int gnum,
                    int pnslevel
                   )
 {
     int sb;
-#if !defined(__clang__) && defined(__GNUC__) && (GCC_VERSION >= 40600)
-    /* 2^0.25 (1.50515 dB) step from AAC specs */
-    static const faac_real sfstep = 1.0 / FAAC_LOG10(FAAC_SQRT(FAAC_SQRT(2.0)));
-#else
-    static const faac_real sfstep = 20 / 1.50515;
-#endif
     int gsize = coderInfo->groups.len[gnum];
     faac_real pnsthr = 0.1 * pnslevel;
 
-    for (sb = 0; sb < coderInfo->sfbn; sb++)
+    for (sb = 0; sb < coderInfo->sfbn && coderInfo->bandcnt < MAX_SCFAC_BANDS; sb++)
     {
       faac_real sfacfix;
       int sfac;
@@ -220,10 +226,24 @@ static void qlevel(CoderInfo * __restrict coderInfo,
       }
 
       sfac = FAAC_LRINT(FAAC_LOG10(bandqual[sb] / rmsx) * sfstep);
-      if ((SF_OFFSET - sfac) < 10)
+
+      if ((SF_OFFSET - sfac) < SF_MIN)
           sfacfix = 0.0;
       else
+      {
           sfacfix = FAAC_POW(10, sfac / sfstep);
+
+          /* Bitstream saturation check: if gain * peak exceeds the Huffman limit,
+           * clamp gain and re-sync the integer scalefactor to prevent overflow. */
+          if (sfacfix * bandmaxe[sb] > max_quant_limit)
+          {
+              sfacfix = max_quant_limit / bandmaxe[sb];
+              sfac = (int)FAAC_FLOOR(FAAC_LOG10(sfacfix) * sfstep);
+              /* Re-derive gain from the floored scalefactor to ensure bit-exact
+               * sync with the decoder's inverse quantizer. */
+              sfacfix = FAAC_POW(10, sfac / sfstep);
+          }
+      }
 
       end -= start;
       xi = xitab;
@@ -249,6 +269,7 @@ int BlocQuant(CoderInfo * __restrict coder, faac_real * __restrict xr, AACQuantC
 {
     faac_real bandlvl[MAX_SCFAC_BANDS];
     faac_real bandenrg[MAX_SCFAC_BANDS];
+    faac_real bandmaxe[MAX_SCFAC_BANDS];
     int cnt;
     faac_real *gxr;
 
@@ -264,9 +285,9 @@ int BlocQuant(CoderInfo * __restrict coder, faac_real * __restrict xr, AACQuantC
         gxr = xr;
         for (cnt = 0; cnt < coder->groups.n; cnt++)
         {
-            bmask(coder, gxr, bandlvl, bandenrg, cnt,
+            bmask(coder, gxr, bandlvl, bandenrg, bandmaxe, cnt,
                   (faac_real)aacquantCfg->quality/DEFQUAL);
-            qlevel(coder, gxr, bandlvl, bandenrg, cnt, aacquantCfg->pnslevel);
+            qlevel(coder, gxr, bandlvl, bandenrg, bandmaxe, cnt, aacquantCfg->pnslevel);
             gxr += coder->groups.len[cnt] * BLOCK_LEN_SHORT;
         }
 
@@ -285,31 +306,28 @@ int BlocQuant(CoderInfo * __restrict coder, faac_real * __restrict xr, AACQuantC
 
         lastsf = coder->global_gain;
         lastis = 0;
-        // fixme: move SF range check to quantizer
+        int lastpns = coder->global_gain - SF_PNS_OFFSET;
         for (cnt = 0; cnt < coder->bandcnt; cnt++)
         {
             int book = coder->book[cnt];
             if ((book == HCB_INTENSITY) || (book == HCB_INTENSITY2))
             {
                 int diff = coder->sf[cnt] - lastis;
-
-                if (diff < -60)
-                    diff = -60;
-                if (diff > 60)
-                    diff = 60;
-
+                diff = clamp_sf_diff(diff);
                 lastis += diff;
                 coder->sf[cnt] = lastis;
             }
-            else if (book == HCB_ESC)
+            else if (book == HCB_PNS)
+            {
+                int diff = coder->sf[cnt] - lastpns;
+                diff = clamp_sf_diff(diff);
+                lastpns += diff;
+                coder->sf[cnt] = lastpns;
+            }
+            else if ((book != HCB_ZERO) && (book != HCB_NONE))
             {
                 int diff = coder->sf[cnt] - lastsf;
-
-                if (diff < -60)
-                    diff = -60;
-                if (diff > 60)
-                    diff = 60;
-
+                diff = clamp_sf_diff(diff);
                 lastsf += diff;
                 coder->sf[cnt] = lastsf;
             }

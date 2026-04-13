@@ -44,7 +44,6 @@ enum {
     MAXQUAL = 5000,
     MAXQUALADTS = MAXQUAL,
     MINQUAL = 10,
-    SF_OFFSET = 100,
 };
 
 int BlocQuant(CoderInfo *coderInfo, faac_real *xr, AACQuantCfg *aacquantCfg);

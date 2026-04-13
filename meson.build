@@ -15,12 +15,9 @@ config_h.set_quoted('PACKAGE', meson.project_name())
 config_h.set_quoted('PACKAGE_VERSION', meson.project_version())
 
 cc = meson.get_compiler('c')
-foreach h: ['getopt.h', 'immintrin.h', 'stdint.h', 'sys/time.h', 'sys/types.h']
+foreach h: ['getopt.h', 'immintrin.h', 'sys/time.h']
     config_h.set('HAVE_' + h.underscorify().to_upper(), cc.has_header(h))
 endforeach
-
-
-config_h.set('HAVE_STRCASECMP', cc.has_function('strcasestr'))
 
 
 libm = cc.find_library('m', required: false)

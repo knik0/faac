@@ -28,6 +28,7 @@
 #include "channels.h"
 #include "bitstream.h"
 #include "filtbank.h"
+#include "quantize.h"
 #include "util.h"
 #include "tns.h"
 #include "stereo.h"
@@ -196,8 +197,8 @@ int FAACAPI faacEncSetConfiguration(faacEncHandle hpEncoder,
         if (!config->quantqual)
         {
             config->quantqual = (faac_real)config->bitRate * hEncoder->numChannels / 1280;
-            if (config->quantqual > 100)
-                config->quantqual = (config->quantqual - 100) * 3.0 + 100;
+            if (config->quantqual > DEFQUAL)
+                config->quantqual = (config->quantqual - DEFQUAL) * 3.0 + DEFQUAL;
         }
     }
 
