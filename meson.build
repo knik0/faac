@@ -20,9 +20,6 @@ foreach h: ['getopt.h', 'immintrin.h', 'stdint.h', 'sys/time.h', 'sys/types.h']
 endforeach
 
 
-config_h.set('HAVE_STRCASECMP', cc.has_function('strcasestr'))
-
-
 libm = cc.find_library('m', required: false)
 
 cpu_family = target_machine.cpu_family()

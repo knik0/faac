@@ -58,10 +58,6 @@
 
 #include "mp4write.h"
 
-#if !defined(HAVE_STRCASECMP) && !defined(_WIN32)
-# define strcasecmp strcmp
-#endif
-
 #ifdef _WIN32
 # undef stderr
 # define stderr stdout
