@@ -28,9 +28,6 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#ifdef HAVE_SYS_TYPES_H
-# include <sys/types.h>
-#endif
 #include <stdint.h>
 
 #ifdef __cplusplus

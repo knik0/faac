@@ -27,7 +27,7 @@
 //#include <byteswap.h>
 #endif
 #include <string.h>
-#if !defined (_MSC_VER)
+#ifdef HAVE_SYS_TIME_H
 #include <sys/time.h>
 #endif
 #include <time.h>
