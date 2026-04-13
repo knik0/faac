@@ -29,9 +29,9 @@ static int escape(int x, int *code)
     int preflen = 0;
     int base = 32;
 
-    if (x >= 8192)
+    if (x > MAX_HUFF_ESC_VAL)
     {
-        fprintf(stderr, "%s(%d): x_quant >= 8192\n", __FILE__, __LINE__);
+        fprintf(stderr, "%s(%d): x_quant > %d\n", __FILE__, __LINE__, MAX_HUFF_ESC_VAL);
         return 0;
     }
 
@@ -430,7 +430,7 @@ int writesf(CoderInfo *coder, BitStream *stream, int write)
 
     lastsf = coder->global_gain;
     lastis = 0;
-    lastpns = coder->global_gain - 90;
+    lastpns = coder->global_gain - SF_PNS_OFFSET;
 
     // fixme: move range check to quantizer
     for (cnt = 0; cnt < coder->bandcnt; cnt++)
@@ -440,18 +440,15 @@ int writesf(CoderInfo *coder, BitStream *stream, int write)
         if ((book == HCB_INTENSITY) || (book== HCB_INTENSITY2))
         {
             diff = coder->sf[cnt] - lastis;
-            if (diff > 60)
-                diff = 60;
-            if (diff < -60)
-                diff = -60;
-            length = book12[60 + diff].len;
+            diff = clamp_sf_diff(diff);
+            length = book12[SF_DELTA + diff].len;
 
             bits += length;
 
             lastis += diff;
 
             if (write)
-                PutBit(stream, book12[60 + diff].data, length);
+                PutBit(stream, book12[SF_DELTA + diff].data, length);
         }
         else if (book == HCB_PNS)
         {
@@ -470,32 +467,26 @@ int writesf(CoderInfo *coder, BitStream *stream, int write)
                 continue;
             }
 
-            if (diff > 60)
-                diff = 60;
-            if (diff < -60)
-                diff = -60;
+            diff = clamp_sf_diff(diff);
 
-            length = book12[60 + diff].len;
+            length = book12[SF_DELTA + diff].len;
             bits += length;
             lastpns += diff;
 
             if (write)
-                PutBit(stream, book12[60 + diff].data, length);
+                PutBit(stream, book12[SF_DELTA + diff].data, length);
         }
-        else if (book)
+        else if ((book != HCB_ZERO) && (book != HCB_NONE))
         {
             diff = coder->sf[cnt] - lastsf;
-            if (diff > 60)
-                diff = 60;
-            if (diff < -60)
-                diff = -60;
-            length = book12[60 + diff].len;
+            diff = clamp_sf_diff(diff);
+            length = book12[SF_DELTA + diff].len;
 
             bits += length;
             lastsf += diff;
 
             if (write)
-                PutBit(stream, book12[60 + diff].data, length);
+                PutBit(stream, book12[SF_DELTA + diff].data, length);
         }
 
     }
