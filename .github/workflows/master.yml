@@ -26,7 +26,6 @@ jobs:
               compiler: gcc,
               shell: bash,
               options: -Dfloating-point=double,
-              cflags: -Wall
             }
           - {
               name: Linux GCC (Single Precision),
@@ -34,14 +33,12 @@ jobs:
               compiler: gcc,
               shell: bash,
               options: -Dfloating-point=single,
-              cflags: -Wall
             }
           - {
               name: macOS Clang,
               os: macos-latest,
               compiler: clang,
               shell: bash,
-              cflags: -Wall
             }
           - {
               name: MSYS2 UCRT64,
@@ -50,7 +47,6 @@ jobs:
               shell: 'msys2 {0}',
               msystem: ucrt64,
               msys-env: mingw-w64-ucrt-x86_64,
-              cflags: -Wall
             }
           - {
               name: Windows MSVC,
@@ -58,7 +54,6 @@ jobs:
               compiler: cl,
               shell: pwsh,
               options: -Dfloating-point=double,
-              cflags: /W4
             }
 
     steps:
@@ -102,7 +97,6 @@ jobs:
         if: matrix.config.shell == 'msys2 {0}'
         env:
           CC: ${{ matrix.config.compiler }}
-          CFLAGS: ${{ matrix.config.cflags }}
         run: |
           mkdir -p build temp
           cd build
@@ -113,7 +107,6 @@ jobs:
         if: matrix.config.shell != 'msys2 {0}'
         env:
           CC: ${{ matrix.config.compiler }}
-          CFLAGS: ${{ matrix.config.cflags }}
         run: |
           meson setup build -Dprefix="${{ github.workspace }}/temp" ${{ matrix.config.options }}
           meson install -C build
