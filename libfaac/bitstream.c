@@ -205,7 +205,7 @@ int WriteBitstream(faacEncStruct* hEncoder,
 
     /* Write SBR extension payload for HE-AAC (fill element with EXT_SBR_DATA) */
     if (hEncoder->config.aacObjectType == HE_AAC && hEncoder->sbrInfo) {
-        int id_aac = (numChannel > 1) ? 1 /* ID_CPE */ : 0 /* ID_SCE */;
+        int id_aac = (numChannel > 1) ? ID_CPE : ID_SCE;
         bits += SBRWriteBitstream(hEncoder->sbrInfo, bitStream, id_aac, 1);
     }
 
@@ -298,7 +298,7 @@ static int CountBitstream(faacEncStruct* hEncoder,
 
     /* Count SBR extension payload for HE-AAC */
     if (hEncoder->config.aacObjectType == HE_AAC && hEncoder->sbrInfo) {
-        int id_aac = (numChannel > 1) ? 1 /* ID_CPE */ : 0 /* ID_SCE */;
+        int id_aac = (numChannel > 1) ? ID_CPE : ID_SCE;
         bits += SBRWriteBitstream(hEncoder->sbrInfo, NULL, id_aac, 0);
     }
 

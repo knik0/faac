@@ -598,7 +598,7 @@ static int write_sbr_data(SBRInfo *sbr, BitStream *bs, int id_aac, int wf)
     int bits = 0;
     WBL(0, 1);  /* bs_data_extra = 0 */
 
-    if (id_aac == 1 /* ID_CPE */) {
+    if (id_aac == ID_CPE) {
         WBL(0, 1);  /* bs_coupling = 0 (independent per-channel coding) */
         /* Interleaved order: grid, dtdf, invf, envelope, noise, harmonic
          * must match FFmpeg read_sbr_channel_pair_element() non-coupling path */

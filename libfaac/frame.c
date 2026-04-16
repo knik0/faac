@@ -489,6 +489,68 @@ int FAACAPI faacEncClose(faacEncHandle hpEncoder)
     return 0;
 }
 
+/* HE-AAC pre-processing: deinterleave full-rate input, run SBR analysis,
+ * then 2:1 downsample → FRAME_LEN per channel.  Marked cold+noinline so the
+ * compiler places this in .text.unlikely, keeping it out of the L1 icache
+ * on the AAC-LC path. */
+__attribute__((cold, noinline))
+static int doHEAACPreprocess(faacEncStruct *hEncoder,
+                              int32_t *inputBuffer,
+                              unsigned int samplesInput,
+                              faac_real *heHalfRate[MAX_CHANNELS])
+{
+    unsigned int channel, i;
+    unsigned int numChannels = hEncoder->numChannels;
+    int full_spch = (int)(samplesInput / numChannels);
+
+    /* HE-AAC buffer is sized for 2*FRAME_LEN full-rate samples per channel.
+     * Partial frames at end-of-file (full_spch < 2*FRAME_LEN) are acceptable;
+     * overflow into out-of-bounds memory is not. */
+    if (full_spch <= 0 || full_spch > 2 * FRAME_LEN)
+        return -1;
+
+    for (channel = 0; channel < numChannels; channel++) {
+        faac_real *fullRate = hEncoder->heFullRatePtr[channel];
+
+        switch (hEncoder->config.inputFormat) {
+            case FAAC_INPUT_16BIT: {
+                short *src = (short *)inputBuffer
+                             + hEncoder->config.channel_map[channel];
+                for (i = 0; i < (unsigned)full_spch; i++) {
+                    fullRate[i] = (faac_real)*src;
+                    src += numChannels;
+                }
+                break;
+            }
+            case FAAC_INPUT_32BIT: {
+                int32_t *src = (int32_t *)inputBuffer
+                               + hEncoder->config.channel_map[channel];
+                for (i = 0; i < (unsigned)full_spch; i++) {
+                    fullRate[i] = (1.0f/256) * (faac_real)*src;
+                    src += numChannels;
+                }
+                break;
+            }
+            case FAAC_INPUT_FLOAT: {
+                float *src = (float *)inputBuffer
+                             + hEncoder->config.channel_map[channel];
+                for (i = 0; i < (unsigned)full_spch; i++) {
+                    fullRate[i] = (faac_real)*src;
+                    src += numChannels;
+                }
+                break;
+            }
+            default:
+                break;
+        }
+        heHalfRate[channel] = hEncoder->heHalfRatePtr[channel];
+    }
+
+    SBRAnalysis(hEncoder->sbrInfo, hEncoder->heFullRatePtr, numChannels, full_spch);
+    Resample2to1(hEncoder->resampler, hEncoder->heFullRatePtr, full_spch, hEncoder->heHalfRatePtr);
+    return 0;
+}
+
 int FAACAPI faacEncEncode(faacEncHandle hpEncoder,
                           int32_t *inputBuffer,
                           unsigned int samplesInput,
@@ -527,66 +589,14 @@ int FAACAPI faacEncEncode(faacEncHandle hpEncoder,
     /* Determine the channel configuration */
     GetChannelInfo(channelInfo, numChannels, useLfe);
 
-    /* HE-AAC pre-processing: caller provides 2*FRAME_LEN full-rate samples.
-     * Deinterleave, run SBR analysis, then 2:1 downsample → FRAME_LEN per channel.
-     * The downsampled result (heHalfRatePtr[]) is used inside the loading loop below
-     * instead of re-reading from inputBuffer. */
-    faac_real *heHalfRate[MAX_CHANNELS];
-    memset(heHalfRate, 0, sizeof(heHalfRate));
+    /* HE-AAC pre-processing (cold path): deinterleave, SBR analysis, 2:1 downsample.
+     * heHalfRate[ch] is non-NULL only when HE-AAC preprocessing ran successfully. */
+    faac_real *heHalfRate[MAX_CHANNELS] = {0};
 
     if (hEncoder->config.aacObjectType == HE_AAC &&
-        hEncoder->sbrInfo && hEncoder->resampler && samplesInput > 0) {
-
-        int full_spch = (int)(samplesInput / numChannels); /* = 2*FRAME_LEN */
-
-        /* Safety check for buffer size */
-        if (full_spch > 2 * FRAME_LEN)
-            full_spch = 2 * FRAME_LEN;
-
-        /* Deinterleave input into per-channel full-rate buffers */
-        for (channel = 0; channel < numChannels; channel++) {
-            faac_real *fullRate = hEncoder->heFullRatePtr[channel];
-
-            switch (hEncoder->config.inputFormat) {
-                case FAAC_INPUT_16BIT: {
-                    short *src = (short *)inputBuffer
-                                 + hEncoder->config.channel_map[channel];
-                    for (i = 0; i < full_spch; i++) {
-                        fullRate[i] = (faac_real)*src;
-                        src += numChannels;
-                    }
-                    break;
-                }
-                case FAAC_INPUT_32BIT: {
-                    int32_t *src = (int32_t *)inputBuffer
-                                   + hEncoder->config.channel_map[channel];
-                    for (i = 0; i < full_spch; i++) {
-                        fullRate[i] = (1.0f/256) * (faac_real)*src;
-                        src += numChannels;
-                    }
-                    break;
-                }
-                case FAAC_INPUT_FLOAT: {
-                    float *src = (float *)inputBuffer
-                                 + hEncoder->config.channel_map[channel];
-                    for (i = 0; i < full_spch; i++) {
-                        fullRate[i] = (faac_real)*src;
-                        src += numChannels;
-                    }
-                    break;
-                }
-                default:
-                    break;
-            }
-            heHalfRate[channel] = hEncoder->heHalfRatePtr[channel];
-        }
-
-        /* SBR analysis on full-rate buffer */
-        SBRAnalysis(hEncoder->sbrInfo, hEncoder->heFullRatePtr, numChannels, full_spch);
-
-        /* Downsample 2*FRAME_LEN → FRAME_LEN per channel */
-        Resample2to1(hEncoder->resampler, hEncoder->heFullRatePtr, full_spch, hEncoder->heHalfRatePtr);
-    }
+        hEncoder->sbrInfo && hEncoder->resampler && samplesInput > 0)
+        if (doHEAACPreprocess(hEncoder, inputBuffer, samplesInput, heHalfRate) < 0)
+            return -1;
 
     /* Update current sample buffers */
     for (channel = 0; channel < numChannels; channel++)
