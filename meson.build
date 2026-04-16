@@ -1,5 +1,5 @@
 project('faac', 'c',
-    version: '1.40.0',
+    version: '1.50.0',
     default_options: [
         'default_library=both',
         'buildtype=release',

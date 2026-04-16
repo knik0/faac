@@ -1,3 +1,31 @@
+1.50 (Apr 16, 2026)
+
+	[ Fabian Greffrath ]
+	* Build quantize_sse library with hidden symbols
+	* Don't call `exit()` from the library
+	* Define some more `default_options` in Meson build
+	* Fix some warnings in `frontend/maingui.c`
+	* Default to `buildtype=release` in Meson build
+	* Initialize `data` variable in `huffcode()`
+	* Remove the faulty `HAVE_STRCASECMP` check and other pointless header checks
+	* CI: Let Meson build set `CFLAGS`
+
+	[ Nils Schimmelmann ]
+	* Disallow PNS in MPEG-2 mode to match spec
+	* frontend: Change default to MPEG-4 as MPEG-2 is obsolete
+	* Add `max-channels` option to change `MAX_CHANNELS` from 64
+	* Fix PNS to stay on in `JOINT_MS` for low-bitrate accuracy
+	* Replace redundant `cpe`, `sce`, and `lfe` boolean flags in `ChannelInfo` with an `enum`
+	* Reduce `MAX_CHANNELS` to 8 for ADTS compliance
+	* tns: Prevent division-by-zero or instability on highly correlated signals
+	* Implement MOS-optimized bandwidth calculation
+	* Fine-tune rate controller to restore bitrate accuracy
+	* Fix channel-specific group metadata in joint-stereo
+	* Enable link-time optimization (LTO) in Meson build
+	* stereo: Fix undefined behaviour in intensity stereo for degenerate bands
+	* Fix scalefactor delta overflows to comply with AAC spec (ISO 14496-3)
+	* quantize: Pre-clamp scalefactor deltas to fix encoder/decoder mismatch
+
 1.40 (Mar 17, 2026)
 
 	[ tatsuz ]
