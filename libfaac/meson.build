@@ -18,6 +18,11 @@ if config_h.get('HAVE_SSE2')
 endif
 
 common_src = [
+    'sbr.c',
+    'sbr.h',
+    'sbr_tables.h',
+    'resample.c',
+    'resample.h',
     'bitstream.c',
     'bitstream.h',
     'blockswitch.c',

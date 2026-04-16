@@ -37,6 +37,10 @@ extern "C" {
 #define MAX_SHORT_WINDOWS 8
 #define MAX_SCFAC_BANDS ((NSFB_SHORT+1)*MAX_SHORT_WINDOWS)
 
+/* SBR extension type identifiers (ISO 14496-3 §4.6.18) */
+#define SBR_EXT_TYPE_SBR     0xd   /* EXT_SBR_DATA     */
+#define SBR_EXT_TYPE_SBR_CRC 0xe   /* EXT_SBR_DATA_CRC */
+
 enum WINDOW_TYPE {
     ONLY_LONG_WINDOW,
     LONG_SHORT_WINDOW,

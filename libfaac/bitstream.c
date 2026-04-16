@@ -33,6 +33,7 @@ Copyright (c) 1997.
 #include "huff2.h"
 #include "bitstream.h"
 #include "util.h"
+#include "sbr.h"
 
 static int CountBitstream(faacEncStruct* hEncoder,
                           CoderInfo *coderInfo,
@@ -202,6 +203,12 @@ int WriteBitstream(faacEncStruct* hEncoder,
     bitsLeftAfterFill = WriteAACFillBits(bitStream, numFillBits, 1);
     bits += (numFillBits - bitsLeftAfterFill);
 
+    /* Write SBR extension payload for HE-AAC (fill element with EXT_SBR_DATA) */
+    if (hEncoder->config.aacObjectType == HE_AAC && hEncoder->sbrInfo) {
+        int id_aac = (numChannel > 1) ? 1 /* ID_CPE */ : 0 /* ID_SCE */;
+        bits += SBRWriteBitstream(hEncoder->sbrInfo, bitStream, id_aac, 1);
+    }
+
     /* Write ID_END terminator */
     bits += LEN_SE_ID;
     PutBit(bitStream, ID_END, LEN_SE_ID);
@@ -289,6 +296,12 @@ static int CountBitstream(faacEncStruct* hEncoder,
     bitsLeftAfterFill = WriteAACFillBits(bitStream, numFillBits, 0);
     bits += (numFillBits - bitsLeftAfterFill);
 
+    /* Count SBR extension payload for HE-AAC */
+    if (hEncoder->config.aacObjectType == HE_AAC && hEncoder->sbrInfo) {
+        int id_aac = (numChannel > 1) ? 1 /* ID_CPE */ : 0 /* ID_SCE */;
+        bits += SBRWriteBitstream(hEncoder->sbrInfo, NULL, id_aac, 0);
+    }
+
     /* Write ID_END terminator */
     bits += LEN_SE_ID;
 
@@ -323,7 +336,12 @@ static int WriteADTSHeader(faacEncStruct* hEncoder,
         PutBit(bitStream, hEncoder->config.mpegVersion, 1); /* ID == 0 for MPEG4 AAC, 1 for MPEG2 AAC */
         PutBit(bitStream, 0, 2); /* layer == 0 */
         PutBit(bitStream, 1, 1); /* protection absent */
-        PutBit(bitStream, hEncoder->config.aacObjectType - 1, 2); /* profile */
+        /* ADTS profile: always AAC-LC (1) for both LC and HE-AAC.
+         * HE-AAC core is AAC-LC at Fs/2; SBR data lives in fill elements.
+         * Using aacObjectType-1 would overflow the 2-bit field for HE_AAC=5. */
+        int adts_profile = (hEncoder->config.aacObjectType == HE_AAC) ? LOW - 1
+                                                                       : hEncoder->config.aacObjectType - 1;
+        PutBit(bitStream, adts_profile, 2); /* profile */
         PutBit(bitStream, hEncoder->sampleRateIdx, 4); /* sampling rate */
         PutBit(bitStream, 0, 1); /* private bit */
         PutBit(bitStream, hEncoder->numChannels, 3); /* ch. config (must be > 0) */

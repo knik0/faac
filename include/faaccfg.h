@@ -29,10 +29,11 @@
 #define MPEG4 0
 
 /* AAC object types */
-#define MAIN 1
-#define LOW  2
-#define SSR  3
-#define LTP  4
+#define MAIN   1
+#define LOW    2
+#define SSR    3
+#define LTP    4
+#define HE_AAC 5  /* HE-AAC v1: AAC-LC core + SBR (non-patent-encumbered as of 2026) */
 
 /* Input Formats */
 #define FAAC_INPUT_NULL    0
