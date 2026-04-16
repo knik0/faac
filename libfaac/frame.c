@@ -92,6 +92,43 @@ static unsigned int CalcBandwidth(unsigned long bitRate, unsigned long sampleRat
     return (bw > nyquist) ? nyquist : bw;
 }
 
+static void HeAacBuffersFree(faacEncStruct *hEncoder)
+{
+    int channel;
+    for (channel = 0; channel < MAX_CHANNELS; channel++) {
+        if (hEncoder->heFullRatePtr[channel]) {
+            FreeMemory(hEncoder->heFullRatePtr[channel]);
+            hEncoder->heFullRatePtr[channel] = NULL;
+        }
+        if (hEncoder->heHalfRatePtr[channel]) {
+            FreeMemory(hEncoder->heHalfRatePtr[channel]);
+            hEncoder->heHalfRatePtr[channel] = NULL;
+        }
+    }
+}
+
+static int HeAacBuffersAlloc(faacEncStruct *hEncoder)
+{
+    unsigned int i;
+    for (i = 0; i < hEncoder->numChannels; i++) {
+        if (!hEncoder->heFullRatePtr[i]) {
+            hEncoder->heFullRatePtr[i] = (faac_real *)AllocMemory(2 * FRAME_LEN * sizeof(faac_real));
+            if (!hEncoder->heFullRatePtr[i]) {
+                HeAacBuffersFree(hEncoder);
+                return 0;
+            }
+        }
+        if (!hEncoder->heHalfRatePtr[i]) {
+            hEncoder->heHalfRatePtr[i] = (faac_real *)AllocMemory(FRAME_LEN * sizeof(faac_real));
+            if (!hEncoder->heHalfRatePtr[i]) {
+                HeAacBuffersFree(hEncoder);
+                return 0;
+            }
+        }
+    }
+    return 1;
+}
+
 int FAACAPI faacEncGetVersion( char **faac_id_string,
 			      				char **faac_copyright_string)
 {
@@ -311,24 +348,11 @@ int FAACAPI faacEncSetConfiguration(faacEncHandle hpEncoder,
                                         hEncoder->fullSampleRate,
                                         hEncoder->sampleRate);
 
-        for (i = 0; i < hEncoder->numChannels; i++) {
-            if (!hEncoder->heFullRatePtr[i])
-                hEncoder->heFullRatePtr[i] = (faac_real *)AllocMemory(2 * FRAME_LEN * sizeof(faac_real));
-            if (!hEncoder->heHalfRatePtr[i])
-                hEncoder->heHalfRatePtr[i] = (faac_real *)AllocMemory(FRAME_LEN * sizeof(faac_real));
-        }
+        if (!HeAacBuffersAlloc(hEncoder))
+            return 0;
     } else {
         /* If switched away from HE-AAC, free these buffers */
-        for (i = 0; i < MAX_CHANNELS; i++) {
-            if (hEncoder->heFullRatePtr[i]) {
-                FreeMemory(hEncoder->heFullRatePtr[i]);
-                hEncoder->heFullRatePtr[i] = NULL;
-            }
-            if (hEncoder->heHalfRatePtr[i]) {
-                FreeMemory(hEncoder->heHalfRatePtr[i]);
-                hEncoder->heHalfRatePtr[i] = NULL;
-            }
-        }
+        HeAacBuffersFree(hEncoder);
     }
 
     /* OK */
@@ -379,10 +403,7 @@ faacEncHandle FAACAPI faacEncOpen(unsigned long sampleRate,
       (psymodel_t *)hEncoder->config.psymodellist[hEncoder->config.psymodelidx].ptr;
     hEncoder->config.shortctl = SHORTCTL_NORMAL;
 
-    for (channel = 0; channel < MAX_CHANNELS; channel++) {
-        hEncoder->heFullRatePtr[channel] = NULL;
-        hEncoder->heHalfRatePtr[channel] = NULL;
-    }
+    HeAacBuffersFree(hEncoder);
 
 	/* default channel map is straight-through */
 	for( channel = 0; channel < MAX_CHANNELS; channel++ )
@@ -457,16 +478,7 @@ int FAACAPI faacEncClose(faacEncHandle hpEncoder)
         SBREnd(hEncoder->sbrInfo);
         hEncoder->sbrInfo = NULL;
     }
-    for (channel = 0; channel < MAX_CHANNELS; channel++) {
-        if (hEncoder->heFullRatePtr[channel]) {
-            FreeMemory(hEncoder->heFullRatePtr[channel]);
-            hEncoder->heFullRatePtr[channel] = NULL;
-        }
-        if (hEncoder->heHalfRatePtr[channel]) {
-            FreeMemory(hEncoder->heHalfRatePtr[channel]);
-            hEncoder->heHalfRatePtr[channel] = NULL;
-        }
-    }
+    HeAacBuffersFree(hEncoder);
 
     /* Free handle */
     if (hEncoder)
@@ -534,7 +546,6 @@ int FAACAPI faacEncEncode(faacEncHandle hpEncoder,
         /* Deinterleave input into per-channel full-rate buffers */
         for (channel = 0; channel < numChannels; channel++) {
             faac_real *fullRate = hEncoder->heFullRatePtr[channel];
-            if (!fullRate) continue;
 
             switch (hEncoder->config.inputFormat) {
                 case FAAC_INPUT_16BIT: {
