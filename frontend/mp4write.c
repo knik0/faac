@@ -23,14 +23,9 @@
 
 #include <stdlib.h>
 #include <stdio.h>
-#ifndef WORDS_BIGENDIAN
-//#include <byteswap.h>
-#endif
 #include <string.h>
-#ifdef HAVE_SYS_TIME_H
-#include <sys/time.h>
-#endif
 #include <time.h>
+
 #ifdef _WIN32
 #include <io.h>
 #define access _access
