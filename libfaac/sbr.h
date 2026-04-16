@@ -80,6 +80,10 @@ typedef struct SBRInfo {
 
     /* Previous envelope (for delta coding across frames) */
     int prevEnv[MAX_CHANNELS][SBR_MAX_BANDS];
+
+    /* Precomputed QMF modulation tables */
+    faac_real cos_table[SBR_QMF_BANDS][SBR_QMF_FILTER_LEN];
+    faac_real sin_table[SBR_QMF_BANDS][SBR_QMF_FILTER_LEN];
 } SBRInfo;
 
 /* ---- API --------------------------------------------------------- */

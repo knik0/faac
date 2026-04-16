@@ -302,7 +302,7 @@ int FAACAPI faacEncSetConfiguration(faacEncHandle hpEncoder,
 	for( i = 0; i < MAX_CHANNELS; i++ )
 		hEncoder->config.channel_map[i] = config->channel_map[i];
 
-    /* HE-AAC: initialise resampler and SBR state (after sample-rate switch) */
+    /* HE-AAC: initialise resampler, SBR state and buffers (after sample-rate switch) */
     if (hEncoder->config.aacObjectType == HE_AAC) {
         if (!hEncoder->resampler)
             hEncoder->resampler = ResampleOpen(hEncoder->numChannels);
@@ -310,6 +310,25 @@ int FAACAPI faacEncSetConfiguration(faacEncHandle hpEncoder,
             hEncoder->sbrInfo = SBRInit(hEncoder->numChannels,
                                         hEncoder->fullSampleRate,
                                         hEncoder->sampleRate);
+
+        for (i = 0; i < hEncoder->numChannels; i++) {
+            if (!hEncoder->heFullRatePtr[i])
+                hEncoder->heFullRatePtr[i] = (faac_real *)AllocMemory(2 * FRAME_LEN * sizeof(faac_real));
+            if (!hEncoder->heHalfRatePtr[i])
+                hEncoder->heHalfRatePtr[i] = (faac_real *)AllocMemory(FRAME_LEN * sizeof(faac_real));
+        }
+    } else {
+        /* If switched away from HE-AAC, free these buffers */
+        for (i = 0; i < MAX_CHANNELS; i++) {
+            if (hEncoder->heFullRatePtr[i]) {
+                FreeMemory(hEncoder->heFullRatePtr[i]);
+                hEncoder->heFullRatePtr[i] = NULL;
+            }
+            if (hEncoder->heHalfRatePtr[i]) {
+                FreeMemory(hEncoder->heHalfRatePtr[i]);
+                hEncoder->heHalfRatePtr[i] = NULL;
+            }
+        }
     }
 
     /* OK */
@@ -359,6 +378,11 @@ faacEncHandle FAACAPI faacEncOpen(unsigned long sampleRate,
     hEncoder->psymodel =
       (psymodel_t *)hEncoder->config.psymodellist[hEncoder->config.psymodelidx].ptr;
     hEncoder->config.shortctl = SHORTCTL_NORMAL;
+
+    for (channel = 0; channel < MAX_CHANNELS; channel++) {
+        hEncoder->heFullRatePtr[channel] = NULL;
+        hEncoder->heHalfRatePtr[channel] = NULL;
+    }
 
 	/* default channel map is straight-through */
 	for( channel = 0; channel < MAX_CHANNELS; channel++ )
@@ -433,6 +457,16 @@ int FAACAPI faacEncClose(faacEncHandle hpEncoder)
         SBREnd(hEncoder->sbrInfo);
         hEncoder->sbrInfo = NULL;
     }
+    for (channel = 0; channel < MAX_CHANNELS; channel++) {
+        if (hEncoder->heFullRatePtr[channel]) {
+            FreeMemory(hEncoder->heFullRatePtr[channel]);
+            hEncoder->heFullRatePtr[channel] = NULL;
+        }
+        if (hEncoder->heHalfRatePtr[channel]) {
+            FreeMemory(hEncoder->heHalfRatePtr[channel]);
+            hEncoder->heHalfRatePtr[channel] = NULL;
+        }
+    }
 
     /* Free handle */
     if (hEncoder)
@@ -483,7 +517,7 @@ int FAACAPI faacEncEncode(faacEncHandle hpEncoder,
 
     /* HE-AAC pre-processing: caller provides 2*FRAME_LEN full-rate samples.
      * Deinterleave, run SBR analysis, then 2:1 downsample → FRAME_LEN per channel.
-     * The downsampled result (heHalfRate[]) is used inside the loading loop below
+     * The downsampled result (heHalfRatePtr[]) is used inside the loading loop below
      * instead of re-reading from inputBuffer. */
     faac_real *heHalfRate[MAX_CHANNELS];
     memset(heHalfRate, 0, sizeof(heHalfRate));
@@ -492,17 +526,22 @@ int FAACAPI faacEncEncode(faacEncHandle hpEncoder,
         hEncoder->sbrInfo && hEncoder->resampler && samplesInput > 0) {
 
         int full_spch = (int)(samplesInput / numChannels); /* = 2*FRAME_LEN */
-        faac_real *fullRate[MAX_CHANNELS];
+
+        /* Safety check for buffer size */
+        if (full_spch > 2 * FRAME_LEN)
+            full_spch = 2 * FRAME_LEN;
 
         /* Deinterleave input into per-channel full-rate buffers */
         for (channel = 0; channel < numChannels; channel++) {
-            fullRate[channel] = (faac_real *)AllocMemory(full_spch * sizeof(faac_real));
+            faac_real *fullRate = hEncoder->heFullRatePtr[channel];
+            if (!fullRate) continue;
+
             switch (hEncoder->config.inputFormat) {
                 case FAAC_INPUT_16BIT: {
                     short *src = (short *)inputBuffer
                                  + hEncoder->config.channel_map[channel];
                     for (i = 0; i < full_spch; i++) {
-                        fullRate[channel][i] = (faac_real)*src;
+                        fullRate[i] = (faac_real)*src;
                         src += numChannels;
                     }
                     break;
@@ -511,7 +550,7 @@ int FAACAPI faacEncEncode(faacEncHandle hpEncoder,
                     int32_t *src = (int32_t *)inputBuffer
                                    + hEncoder->config.channel_map[channel];
                     for (i = 0; i < full_spch; i++) {
-                        fullRate[channel][i] = (1.0f/256) * (faac_real)*src;
+                        fullRate[i] = (1.0f/256) * (faac_real)*src;
                         src += numChannels;
                     }
                     break;
@@ -520,29 +559,22 @@ int FAACAPI faacEncEncode(faacEncHandle hpEncoder,
                     float *src = (float *)inputBuffer
                                  + hEncoder->config.channel_map[channel];
                     for (i = 0; i < full_spch; i++) {
-                        fullRate[channel][i] = (faac_real)*src;
+                        fullRate[i] = (faac_real)*src;
                         src += numChannels;
                     }
                     break;
                 }
                 default:
-                    FreeMemory(fullRate[channel]);
-                    fullRate[channel] = NULL;
                     break;
             }
+            heHalfRate[channel] = hEncoder->heHalfRatePtr[channel];
         }
 
         /* SBR analysis on full-rate buffer */
-        SBRAnalysis(hEncoder->sbrInfo, fullRate, numChannels, full_spch);
+        SBRAnalysis(hEncoder->sbrInfo, hEncoder->heFullRatePtr, numChannels, full_spch);
 
         /* Downsample 2*FRAME_LEN → FRAME_LEN per channel */
-        for (channel = 0; channel < numChannels; channel++)
-            heHalfRate[channel] = (faac_real *)AllocMemory(FRAME_LEN * sizeof(faac_real));
-
-        Resample2to1(hEncoder->resampler, fullRate, full_spch, heHalfRate);
-
-        for (channel = 0; channel < numChannels; channel++)
-            FreeMemory(fullRate[channel]);
+        Resample2to1(hEncoder->resampler, hEncoder->heFullRatePtr, full_spch, hEncoder->heHalfRatePtr);
     }
 
     /* Update current sample buffers */
@@ -565,13 +597,11 @@ int FAACAPI faacEncEncode(faacEncHandle hpEncoder,
             for (i = 0; i < FRAME_LEN; i++)
                 hEncoder->next3SampleBuff[channel][i] = 0.0;
         }
-        else if (heHalfRate[channel])
+        else if (hEncoder->config.aacObjectType == HE_AAC && heHalfRate[channel])
         {
             /* HE-AAC: load pre-computed half-rate samples */
             memcpy(hEncoder->next3SampleBuff[channel], heHalfRate[channel],
                    FRAME_LEN * sizeof(faac_real));
-            FreeMemory(heHalfRate[channel]);
-            heHalfRate[channel] = NULL;
         }
         else
         {

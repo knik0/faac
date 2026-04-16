@@ -92,6 +92,10 @@ typedef struct {
     unsigned int  fullSampleRateIdx; /* GetSRIndex(fullSampleRate) */
     struct Resampler *resampler;     /* 2:1 FIR downsampler for core signal */
     struct SBRInfo   *sbrInfo;       /* SBR analysis state and bitstream data */
+
+    /* HE-AAC cached buffers */
+    faac_real *heFullRatePtr[MAX_CHANNELS];
+    faac_real *heHalfRatePtr[MAX_CHANNELS];
 } faacEncStruct;
 
 #ifdef __cplusplus

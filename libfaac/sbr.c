@@ -198,6 +198,16 @@ SBRInfo *SBRInit(int channels, int sampleRate, int coreSampleRate)
     sbr->k2 = compute_k2(sampleRate, sbr->kx, sbr->bs_stop_freq);
     build_freq_table(sbr);
 
+    /* Precompute QMF modulation tables */
+    for (int k = 0; k < SBR_QMF_BANDS; k++) {
+        double phase_step = M_PI * (2 * k + 1) / 128.0;
+        for (int n = 0; n < SBR_QMF_FILTER_LEN; n++) {
+            double phase = phase_step * (2 * n - 63);
+            sbr->cos_table[k][n] = (faac_real)cos(phase);
+            sbr->sin_table[k][n] = (faac_real)sin(phase);
+        }
+    }
+
     return sbr;
 }
 
@@ -227,7 +237,8 @@ void SBREnd(SBRInfo *sbr)
  * slot[32]: 32 new input samples.
  * energy[32]: output subband energies.
  */
-static void qmf_analysis_slot(const faac_real *slot,
+static void qmf_analysis_slot(const SBRInfo *sbr,
+                               const faac_real *slot,
                                faac_real *ovl,
                                faac_real *energy)
 {
@@ -240,15 +251,15 @@ static void qmf_analysis_slot(const faac_real *slot,
      *   X_k = sum_{n=0}^{63} h[n] * x[n] * cos(pi*(k+0.5)*(2n-63)/64)
      *       + j*sum h[n] * x[n] * sin(...)
      * In our buffer x[n] = ovl[63-n] (newest sample at ovl[63]),
-     * phase = pi*(2k+1)*(2n-63)/128 */
+     * phase = pi*(2k+1)*(2n-63)/128
+     *
+     * Precomputed tables for cos/sin are used to avoid expensive runtime math. */
     for (int k = 0; k < SBR_QMF_BANDS; k++) {
         faac_real re = 0, im = 0;
-        double phase_step = M_PI * (2 * k + 1) / 128.0;
         for (int n = 0; n < SBR_QMF_FILTER_LEN; n++) {
             faac_real hv = h_sbr_qmf[n] * ovl[SBR_QMF_FILTER_LEN - 1 - n];
-            double phase = phase_step * (2 * n - 63);
-            re += (faac_real)(hv * cos(phase));
-            im += (faac_real)(hv * sin(phase));
+            re += hv * sbr->cos_table[k][n];
+            im += hv * sbr->sin_table[k][n];
         }
         energy[k] = re * re + im * im;
     }
@@ -287,7 +298,8 @@ void SBRAnalysis(SBRInfo *sbr,
         memset(bandEnergy[ch], 0, sizeof(bandEnergy[ch]));
 
         for (int slot = 0; slot < num_ana_slots; slot++) {
-            qmf_analysis_slot(timeDomain[ch] + slot * SBR_QMF_BANDS,
+            qmf_analysis_slot(sbr,
+                              timeDomain[ch] + slot * SBR_QMF_BANDS,
                               sbr->qmfOvl[ch],
                               slotEnergy);
             for (int k = 0; k < SBR_QMF_BANDS; k++)

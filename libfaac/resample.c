@@ -88,8 +88,11 @@ int Resample2to1(Resampler *r,
                 if (idx >= 0) {
                     val = in[idx];
                 } else {
-                    /* Look into history ring (idx is negative) */
-                    int hidx = RESAMPLE_FILTER_LEN + idx;
+                    /* Look into history ring (idx is negative).
+                     * Map idx == -(RESAMPLE_FILTER_LEN - 1) -> hist[0]
+                     * and idx == -1 -> hist[RESAMPLE_FILTER_LEN - 2].
+                     */
+                    int hidx = RESAMPLE_FILTER_LEN - 1 + idx;
                     val = (hidx >= 0) ? hist[hidx] : (faac_real)0;
                 }
                 sum += val * fir_coeffs[j];
