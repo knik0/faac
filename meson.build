@@ -52,3 +52,5 @@ subdir('libfaac')
 if get_option('frontend')
     subdir('frontend')
 endif
+
+subdir('tests')

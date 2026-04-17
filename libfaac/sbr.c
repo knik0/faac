@@ -237,23 +237,17 @@ void SBREnd(SBRInfo *sbr)
  * slot[32]: 32 new input samples.
  * energy[32]: output subband energies.
  */
-static void qmf_analysis_slot(const SBRInfo *sbr,
+/* Complex slot output: 32 subbands of (re, im).  Shared with the test
+ * harness (tests/qmf_test.c) via sbr_internal.h. */
+void qmf_analysis_slot_complex(const SBRInfo *sbr,
                                const faac_real *slot,
                                faac_real *ovl,
-                               faac_real *energy)
+                               faac_real *W_re,
+                               faac_real *W_im)
 {
-    /* Shift overlap buffer: drop 32 oldest, admit 32 new */
     memmove(ovl, ovl + 32, 32 * sizeof(faac_real));
     memcpy(ovl + 32, slot, 32 * sizeof(faac_real));
 
-    /* Compute energy per subband using cosine-modulated filterbank.
-     * ISO 14496-3 §6.8.1.1 analysis QMF with M=32, L=64:
-     *   X_k = sum_{n=0}^{63} h[n] * x[n] * cos(pi*(k+0.5)*(2n-63)/64)
-     *       + j*sum h[n] * x[n] * sin(...)
-     * In our buffer x[n] = ovl[63-n] (newest sample at ovl[63]),
-     * phase = pi*(2k+1)*(2n-63)/128
-     *
-     * Precomputed tables for cos/sin are used to avoid expensive runtime math. */
     for (int k = 0; k < SBR_QMF_BANDS; k++) {
         faac_real re = 0, im = 0;
         for (int n = 0; n < SBR_QMF_FILTER_LEN; n++) {
@@ -261,8 +255,20 @@ static void qmf_analysis_slot(const SBRInfo *sbr,
             re += hv * sbr->cos_table[k][n];
             im += hv * sbr->sin_table[k][n];
         }
-        energy[k] = re * re + im * im;
+        W_re[k] = re;
+        W_im[k] = im;
     }
+}
+
+static void qmf_analysis_slot(const SBRInfo *sbr,
+                               const faac_real *slot,
+                               faac_real *ovl,
+                               faac_real *energy)
+{
+    faac_real re[SBR_QMF_BANDS], im[SBR_QMF_BANDS];
+    qmf_analysis_slot_complex(sbr, slot, ovl, re, im);
+    for (int k = 0; k < SBR_QMF_BANDS; k++)
+        energy[k] = re[k] * re[k] + im[k] * im[k];
 }
 
 /* ------------------------------------------------------------------ *
