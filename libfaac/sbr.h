@@ -37,8 +37,8 @@ extern "C" {
 /* ---- SBR frame / band constants ---------------------------------- */
 #define SBR_NUM_TIME_SLOTS   32   /* time slots per AAC frame (FRAME_LEN/32) */
 #define SBR_QMF_BANDS        32   /* 32-band analysis QMF */
-#define SBR_QMF_FILTER_LEN   64   /* prototype filter length */
-#define SBR_QMF_OVL_LEN      64   /* overlap buffer length (1 filter length) */
+#define SBR_QMF_FILTER_LEN  320   /* 320-tap prototype (ISO Table 4.A.87) */
+#define SBR_QMF_OVL_LEN     320   /* overlap buffer = full prototype length */
 #define SBR_MAX_BANDS        48   /* max SBR frequency bands */
 #define SBR_NUM_ENVELOPES     1   /* FIXFIX, bs_num_env=0 → 1 envelope/frame */
 #define SBR_MAX_NOISE_BANDS   5   /* max noise-floor bands */
@@ -81,9 +81,6 @@ typedef struct SBRInfo {
     /* Previous envelope (for delta coding across frames) */
     int prevEnv[MAX_CHANNELS][SBR_MAX_BANDS];
 
-    /* Precomputed QMF modulation tables */
-    faac_real cos_table[SBR_QMF_BANDS][SBR_QMF_FILTER_LEN];
-    faac_real sin_table[SBR_QMF_BANDS][SBR_QMF_FILTER_LEN];
 } SBRInfo;
 
 /* ---- API --------------------------------------------------------- */

@@ -198,16 +198,6 @@ SBRInfo *SBRInit(int channels, int sampleRate, int coreSampleRate)
     sbr->k2 = compute_k2(sampleRate, sbr->kx, sbr->bs_stop_freq);
     build_freq_table(sbr);
 
-    /* Precompute QMF modulation tables */
-    for (int k = 0; k < SBR_QMF_BANDS; k++) {
-        double phase_step = M_PI * (2 * k + 1) / 128.0;
-        for (int n = 0; n < SBR_QMF_FILTER_LEN; n++) {
-            double phase = phase_step * (2 * n - 63);
-            sbr->cos_table[k][n] = (faac_real)cos(phase);
-            sbr->sin_table[k][n] = (faac_real)sin(phase);
-        }
-    }
-
     return sbr;
 }
 
@@ -217,26 +207,142 @@ void SBREnd(SBRInfo *sbr)
 }
 
 /* ------------------------------------------------------------------ *
- *  32-band analysis QMF
- *  ISO 14496-3:2009 §4.6.18.7.1
+ *  32-band analysis QMF — ISO 14496-3:2009 §4.6.18.7.1
  *
- *  For each time slot l (32 per frame):
- *    Shift 32 new samples into the 64-sample overlap buffer.
- *    For each subband k = 0..31:
- *      X_re[k] = sum_{n=0}^{63} h[n] * ovl[63-n]
- *                * cos(pi*(2k+1)*(2n-127)/256)
- *      X_im[k] = sum_{n=0}^{63} h[n] * ovl[63-n]
- *                * sin(pi*(2k+1)*(2n-127)/256)
- *
- *  Energy per subband: E[k] = X_re[k]^2 + X_im[k]^2
+ *  Per slot (32 new input samples):
+ *    1. Shift 32 samples into the 320-sample overlap buffer.
+ *    2. z[k] = window[k] * ovl[319-k]               (vector_fmul_reverse)
+ *    3. v[n] = Σ_{p=0..4} z[n + 64*p]                (sum64x5, n=0..63)
+ *    4. pre-shuffle v[0..63] → t[0..63]
+ *    5. IMDCT (N=64) on t → y[0..63]
+ *    6. post-shuffle y → (W_re[32], W_im[32])
  * ------------------------------------------------------------------ */
 
-/*
- * Analyse one time slot; return energy per QMF subband.
- * ovl[64]: overlap buffer (updated in place).
- * slot[32]: 32 new input samples.
- * energy[32]: output subband energies.
- */
+/* ISO 14496-3 Table 4.A.87 — 320-tap QMF analysis prototype. */
+static const faac_real sbr_qmf_window_ds320[320] = {
+     (faac_real) 0.0000000000f, (faac_real)-0.0005617692f, (faac_real)-0.0004875227f, (faac_real)-0.0005040714f,
+     (faac_real)-0.0005466565f, (faac_real)-0.0005870930f, (faac_real)-0.0006312493f, (faac_real)-0.0006777690f,
+     (faac_real)-0.0007157736f, (faac_real)-0.0007440941f, (faac_real)-0.0007681371f, (faac_real)-0.0007834332f,
+     (faac_real)-0.0007803664f, (faac_real)-0.0007757977f, (faac_real)-0.0007530001f, (faac_real)-0.0007215391f,
+     (faac_real)-0.0006650415f, (faac_real)-0.0005946118f, (faac_real)-0.0005145572f, (faac_real)-0.0004095121f,
+     (faac_real)-0.0002896981f, (faac_real)-0.0001446380f, (faac_real) 0.0000134949f, (faac_real) 0.0002043017f,
+     (faac_real) 0.0004026540f, (faac_real) 0.0006239376f, (faac_real) 0.0008608443f, (faac_real) 0.0011250155f,
+     (faac_real) 0.0013902494f, (faac_real) 0.0016868083f, (faac_real) 0.0019841140f, (faac_real) 0.0023017254f,
+     (faac_real) 0.0026201758f, (faac_real) 0.0029469447f, (faac_real) 0.0032739613f, (faac_real) 0.0036008268f,
+     (faac_real) 0.0039207432f, (faac_real) 0.0042264269f, (faac_real) 0.0045209852f, (faac_real) 0.0047932560f,
+     (faac_real) 0.0050393022f, (faac_real) 0.0052461166f, (faac_real) 0.0054196775f, (faac_real) 0.0055475714f,
+     (faac_real) 0.0056220643f, (faac_real) 0.0056389199f, (faac_real) 0.0055917128f, (faac_real) 0.0054753783f,
+     (faac_real) 0.0052715758f, (faac_real) 0.0049839687f, (faac_real) 0.0046039530f, (faac_real) 0.0041251642f,
+     (faac_real) 0.0035401246f, (faac_real) 0.0028446757f, (faac_real) 0.0020274176f, (faac_real) 0.0010902329f,
+     (faac_real) 0.0000276045f, (faac_real)-0.0011568135f, (faac_real)-0.0024826723f, (faac_real)-0.0039401124f,
+     (faac_real)-0.0055337211f, (faac_real)-0.0072615816f, (faac_real)-0.0091325329f, (faac_real)-0.0111315548f,
+     (faac_real) 0.0132718220f, (faac_real) 0.0155405553f, (faac_real) 0.0179433381f, (faac_real) 0.0204531793f,
+     (faac_real) 0.0230680169f, (faac_real) 0.0257875847f, (faac_real) 0.0286072173f, (faac_real) 0.0315017608f,
+     (faac_real) 0.0344620948f, (faac_real) 0.0374812850f, (faac_real) 0.0405349170f, (faac_real) 0.0436097542f,
+     (faac_real) 0.0466843027f, (faac_real) 0.0497385755f, (faac_real) 0.0527630746f, (faac_real) 0.0557173648f,
+     (faac_real) 0.0585915683f, (faac_real) 0.0613455171f, (faac_real) 0.0639715898f, (faac_real) 0.0664367512f,
+     (faac_real) 0.0687043828f, (faac_real) 0.0707628710f, (faac_real) 0.0725682583f, (faac_real) 0.0741003642f,
+     (faac_real) 0.0753137336f, (faac_real) 0.0761992479f, (faac_real) 0.0767093490f, (faac_real) 0.0768230011f,
+     (faac_real) 0.0765050718f, (faac_real) 0.0757305756f, (faac_real) 0.0744664394f, (faac_real) 0.0726774642f,
+     (faac_real) 0.0703533073f, (faac_real) 0.0674525021f, (faac_real) 0.0639444805f, (faac_real) 0.0598166570f,
+     (faac_real) 0.0550460034f, (faac_real) 0.0495978676f, (faac_real) 0.0434768782f, (faac_real) 0.0366418116f,
+     (faac_real) 0.0290824006f, (faac_real) 0.0207997072f, (faac_real) 0.0117623832f, (faac_real) 0.0019765601f,
+     (faac_real)-0.0085711749f, (faac_real)-0.0198834129f, (faac_real)-0.0319531274f, (faac_real)-0.0447806821f,
+     (faac_real)-0.0583705326f, (faac_real)-0.0726943300f, (faac_real)-0.0877547536f, (faac_real)-0.1035329531f,
+     (faac_real)-0.1200077984f, (faac_real)-0.1371551761f, (faac_real)-0.1549607071f, (faac_real)-0.1733808172f,
+     (faac_real)-0.1923966745f, (faac_real)-0.2119735853f, (faac_real)-0.2320690870f, (faac_real)-0.2526480309f,
+     (faac_real)-0.2736634040f, (faac_real)-0.2950716717f, (faac_real)-0.3168278913f, (faac_real)-0.3388722693f,
+     (faac_real) 0.3611589903f, (faac_real) 0.3836350013f, (faac_real) 0.4062317676f, (faac_real) 0.4289119920f,
+     (faac_real) 0.4515996535f, (faac_real) 0.4742453214f, (faac_real) 0.4967708254f, (faac_real) 0.5191234970f,
+     (faac_real) 0.5412553448f, (faac_real) 0.5630789140f, (faac_real) 0.5845403235f, (faac_real) 0.6055783538f,
+     (faac_real) 0.6261242695f, (faac_real) 0.6461269695f, (faac_real) 0.6655139880f, (faac_real) 0.6842353293f,
+     (faac_real) 0.7022388719f, (faac_real) 0.7194462634f, (faac_real) 0.7358211758f, (faac_real) 0.7513137456f,
+     (faac_real) 0.7658674865f, (faac_real) 0.7794287519f, (faac_real) 0.7919735841f, (faac_real) 0.8034485751f,
+     (faac_real) 0.8138191270f, (faac_real) 0.8230419890f, (faac_real) 0.8311038457f, (faac_real) 0.8379717337f,
+     (faac_real) 0.8436238281f, (faac_real) 0.8480315777f, (faac_real) 0.8511971524f, (faac_real) 0.8531020949f,
+     (faac_real) 0.8537385600f, (faac_real) 0.8531020949f, (faac_real) 0.8511971524f, (faac_real) 0.8480315777f,
+     (faac_real) 0.8436238281f, (faac_real) 0.8379717337f, (faac_real) 0.8311038457f, (faac_real) 0.8230419890f,
+     (faac_real) 0.8138191270f, (faac_real) 0.8034485751f, (faac_real) 0.7919735841f, (faac_real) 0.7794287519f,
+     (faac_real) 0.7658674865f, (faac_real) 0.7513137456f, (faac_real) 0.7358211758f, (faac_real) 0.7194462634f,
+     (faac_real) 0.7022388719f, (faac_real) 0.6842353293f, (faac_real) 0.6655139880f, (faac_real) 0.6461269695f,
+     (faac_real) 0.6261242695f, (faac_real) 0.6055783538f, (faac_real) 0.5845403235f, (faac_real) 0.5630789140f,
+     (faac_real) 0.5412553448f, (faac_real) 0.5191234970f, (faac_real) 0.4967708254f, (faac_real) 0.4742453214f,
+     (faac_real) 0.4515996535f, (faac_real) 0.4289119920f, (faac_real) 0.4062317676f, (faac_real) 0.3836350013f,
+     (faac_real) 0.3611589903f, (faac_real)-0.3388722693f, (faac_real)-0.3168278913f, (faac_real)-0.2950716717f,
+     (faac_real)-0.2736634040f, (faac_real)-0.2526480309f, (faac_real)-0.2320690870f, (faac_real)-0.2119735853f,
+     (faac_real)-0.1923966745f, (faac_real)-0.1733808172f, (faac_real)-0.1549607071f, (faac_real)-0.1371551761f,
+     (faac_real)-0.1200077984f, (faac_real)-0.1035329531f, (faac_real)-0.0877547536f, (faac_real)-0.0726943300f,
+     (faac_real)-0.0583705326f, (faac_real)-0.0447806821f, (faac_real)-0.0319531274f, (faac_real)-0.0198834129f,
+     (faac_real)-0.0085711749f, (faac_real) 0.0019765601f, (faac_real) 0.0117623832f, (faac_real) 0.0207997072f,
+     (faac_real) 0.0290824006f, (faac_real) 0.0366418116f, (faac_real) 0.0434768782f, (faac_real) 0.0495978676f,
+     (faac_real) 0.0550460034f, (faac_real) 0.0598166570f, (faac_real) 0.0639444805f, (faac_real) 0.0674525021f,
+     (faac_real) 0.0703533073f, (faac_real) 0.0726774642f, (faac_real) 0.0744664394f, (faac_real) 0.0757305756f,
+     (faac_real) 0.0765050718f, (faac_real) 0.0768230011f, (faac_real) 0.0767093490f, (faac_real) 0.0761992479f,
+     (faac_real) 0.0753137336f, (faac_real) 0.0741003642f, (faac_real) 0.0725682583f, (faac_real) 0.0707628710f,
+     (faac_real) 0.0687043828f, (faac_real) 0.0664367512f, (faac_real) 0.0639715898f, (faac_real) 0.0613455171f,
+     (faac_real) 0.0585915683f, (faac_real) 0.0557173648f, (faac_real) 0.0527630746f, (faac_real) 0.0497385755f,
+     (faac_real) 0.0466843027f, (faac_real) 0.0436097542f, (faac_real) 0.0405349170f, (faac_real) 0.0374812850f,
+     (faac_real) 0.0344620948f, (faac_real) 0.0315017608f, (faac_real) 0.0286072173f, (faac_real) 0.0257875847f,
+     (faac_real) 0.0230680169f, (faac_real) 0.0204531793f, (faac_real) 0.0179433381f, (faac_real) 0.0155405553f,
+     (faac_real) 0.0132718220f, (faac_real)-0.0111315548f, (faac_real)-0.0091325329f, (faac_real)-0.0072615816f,
+     (faac_real)-0.0055337211f, (faac_real)-0.0039401124f, (faac_real)-0.0024826723f, (faac_real)-0.0011568135f,
+     (faac_real) 0.0000276045f, (faac_real) 0.0010902329f, (faac_real) 0.0020274176f, (faac_real) 0.0028446757f,
+     (faac_real) 0.0035401246f, (faac_real) 0.0041251642f, (faac_real) 0.0046039530f, (faac_real) 0.0049839687f,
+     (faac_real) 0.0052715758f, (faac_real) 0.0054753783f, (faac_real) 0.0055917128f, (faac_real) 0.0056389199f,
+     (faac_real) 0.0056220643f, (faac_real) 0.0055475714f, (faac_real) 0.0054196775f, (faac_real) 0.0052461166f,
+     (faac_real) 0.0050393022f, (faac_real) 0.0047932560f, (faac_real) 0.0045209852f, (faac_real) 0.0042264269f,
+     (faac_real) 0.0039207432f, (faac_real) 0.0036008268f, (faac_real) 0.0032739613f, (faac_real) 0.0029469447f,
+     (faac_real) 0.0026201758f, (faac_real) 0.0023017254f, (faac_real) 0.0019841140f, (faac_real) 0.0016868083f,
+     (faac_real) 0.0013902494f, (faac_real) 0.0011250155f, (faac_real) 0.0008608443f, (faac_real) 0.0006239376f,
+     (faac_real) 0.0004026540f, (faac_real) 0.0002043017f, (faac_real) 0.0000134949f, (faac_real)-0.0001446380f,
+     (faac_real)-0.0002896981f, (faac_real)-0.0004095121f, (faac_real)-0.0005145572f, (faac_real)-0.0005946118f,
+     (faac_real)-0.0006650415f, (faac_real)-0.0007215391f, (faac_real)-0.0007530001f, (faac_real)-0.0007757977f,
+     (faac_real)-0.0007803664f, (faac_real)-0.0007834332f, (faac_real)-0.0007681371f, (faac_real)-0.0007440941f,
+     (faac_real)-0.0007157736f, (faac_real)-0.0006777690f, (faac_real)-0.0006312493f, (faac_real)-0.0005870930f,
+     (faac_real)-0.0005466565f, (faac_real)-0.0005040714f, (faac_real)-0.0004875227f, (faac_real)-0.0005617692f,
+};
+
+/* Pre-shuffle the 64 polyphase outputs into a 64-point DCT-IV input. */
+static void qmf_pre_shuffle(faac_real *buf, const faac_real *v)
+{
+    buf[0] = v[0];
+    buf[1] = v[1];
+    for (int k = 1; k < 31; k += 2) {
+        buf[2 * k + 0] = -v[64 - k];
+        buf[2 * k + 1] =  v[k + 1];
+        buf[2 * k + 2] = -v[63 - k];
+        buf[2 * k + 3] =  v[k + 2];
+    }
+    buf[62] = -v[64 - 31];
+    buf[63] =  v[32];
+}
+
+/* Post-shuffle the 64 IMDCT outputs into the 32 complex subband samples. */
+static void qmf_post_shuffle(faac_real *W_re, faac_real *W_im,
+                             const faac_real *y)
+{
+    for (int k = 0; k < 32; k += 2) {
+        W_re[k + 0] = -y[63 - k];
+        W_im[k + 0] =  y[k + 0];
+        W_re[k + 1] = -y[62 - k];
+        W_im[k + 1] =  y[k + 1];
+    }
+}
+
+/* Naive N=64 IMDCT matching FFmpeg AV_TX_FLOAT_MDCT inv=1, scale=1:
+ *   out[n] = Σ_{k=0..63} in[k] * cos(π/64 * (n + 0.5 + 32) * (k + 0.5))
+ * Only out[0..63] is consumed downstream. */
+static void qmf_imdct64(faac_real *out, const faac_real *in)
+{
+    const double C = M_PI / 64.0;
+    for (int n = 0; n < 64; n++) {
+        double s = 0.0;
+        for (int k = 0; k < 64; k++)
+            s += in[k] * cos(C * (n + 0.5 + 32.0) * (k + 0.5));
+        out[n] = (faac_real)s;
+    }
+}
+
 /* Complex slot output: 32 subbands of (re, im).  Shared with the test
  * harness (tests/qmf_test.c) via sbr_internal.h. */
 void qmf_analysis_slot_complex(const SBRInfo *sbr,
@@ -245,19 +351,22 @@ void qmf_analysis_slot_complex(const SBRInfo *sbr,
                                faac_real *W_re,
                                faac_real *W_im)
 {
-    memmove(ovl, ovl + 32, 32 * sizeof(faac_real));
-    memcpy(ovl + 32, slot, 32 * sizeof(faac_real));
+    (void)sbr;
+    memmove(ovl, ovl + 32, (SBR_QMF_OVL_LEN - 32) * sizeof(faac_real));
+    memcpy(ovl + SBR_QMF_OVL_LEN - 32, slot, 32 * sizeof(faac_real));
 
-    for (int k = 0; k < SBR_QMF_BANDS; k++) {
-        faac_real re = 0, im = 0;
-        for (int n = 0; n < SBR_QMF_FILTER_LEN; n++) {
-            faac_real hv = h_sbr_qmf[n] * ovl[SBR_QMF_FILTER_LEN - 1 - n];
-            re += hv * sbr->cos_table[k][n];
-            im += hv * sbr->sin_table[k][n];
-        }
-        W_re[k] = re;
-        W_im[k] = im;
-    }
+    faac_real z[320];
+    for (int k = 0; k < SBR_QMF_OVL_LEN; k++)
+        z[k] = sbr_qmf_window_ds320[k] * ovl[SBR_QMF_OVL_LEN - 1 - k];
+
+    faac_real v[64];
+    for (int n = 0; n < 64; n++)
+        v[n] = z[n] + z[n + 64] + z[n + 128] + z[n + 192] + z[n + 256];
+
+    faac_real t[64], y[64];
+    qmf_pre_shuffle(t, v);
+    qmf_imdct64(y, t);
+    qmf_post_shuffle(W_re, W_im, y);
 }
 
 static void qmf_analysis_slot(const SBRInfo *sbr,
@@ -335,7 +444,7 @@ void SBRAnalysis(SBRInfo *sbr,
      * decoder e_curr = sum_{slots,subbands} |X_synth|^2 / num_synth_subbands
      * Each analysis band covers 2 synthesis subbands; all time-slot sums are
      * kept intact (no per-slot averaging), so norm = 2 (not num_slots*2). */
-    float norm = 2.0f;
+    float norm = 65536.0f;
     for (int ch = 0; ch < numChannels; ch++)
         for (int k = 0; k < SBR_QMF_BANDS; k++)
             bandEnergy[ch][k] /= norm;
