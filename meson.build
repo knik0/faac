@@ -5,7 +5,6 @@ project('faac', 'c',
         'buildtype=release',
         'warning_level=1',
         'c_std=gnu99,c99',
-        'b_lto=true'
     ])
 
 add_global_arguments('-DHAVE_CONFIG_H', language: 'c')
