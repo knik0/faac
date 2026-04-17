@@ -73,43 +73,34 @@ int Resample2to1(Resampler *r,
                  faac_real *output[MAX_CHANNELS])
 {
     int output_len = input_len / 2;
+    /* FIR is symmetric (h[n] = h[N-1-n]), so fold taps into HALF pairs + center.
+     * N=63 ⇒ 31 paired taps + 1 center tap = 32 multiplies per output sample
+     * (down from 63), with no per-tap branch. */
+    const int H = RESAMPLE_FILTER_LEN - 1;            /* 62: history depth actually needed */
+    const int HALF = RESAMPLE_FILTER_LEN / 2;         /* 31: center index */
 
     for (int ch = 0; ch < r->channels; ch++) {
         faac_real *in  = input[ch];
         faac_real *out = output[ch];
-        faac_real *hist = r->buf[ch];  /* RESAMPLE_FILTER_LEN history samples */
+        faac_real *hist = r->buf[ch];
+
+        /* Contiguous view: [hist(H) | in(input_len)]. Lets the inner loop
+         * address samples as a single array with no negative-index branch. */
+        faac_real combined[H + input_len];
+        memcpy(combined,     hist, H         * sizeof(faac_real));
+        memcpy(combined + H, in,   input_len * sizeof(faac_real));
 
         for (int i = 0; i < output_len; i++) {
-            /* Full-rate index of the output sample centre: 2*i */
-            faac_real sum = (faac_real)0;
-            for (int j = 0; j < RESAMPLE_FILTER_LEN; j++) {
-                int idx = 2 * i - j;
-                faac_real val;
-                if (idx >= 0) {
-                    val = in[idx];
-                } else {
-                    /* Look into history ring (idx is negative).
-                     * Map idx == -(RESAMPLE_FILTER_LEN - 1) -> hist[0]
-                     * and idx == -1 -> hist[RESAMPLE_FILTER_LEN - 2].
-                     */
-                    int hidx = RESAMPLE_FILTER_LEN - 1 + idx;
-                    val = (hidx >= 0) ? hist[hidx] : (faac_real)0;
-                }
-                sum += val * fir_coeffs[j];
+            const faac_real *p = combined + H + 2 * i;  /* p[-j] = sample at logical idx 2i-j */
+            faac_real sum = p[-HALF] * fir_coeffs[HALF];
+            for (int j = 0; j < HALF; j++) {
+                sum += (p[-j] + p[-(H - j)]) * fir_coeffs[j];
             }
             out[i] = sum;
         }
 
-        /* Update history: keep last RESAMPLE_FILTER_LEN input samples */
-        if (input_len >= RESAMPLE_FILTER_LEN) {
-            memcpy(hist, in + input_len - RESAMPLE_FILTER_LEN,
-                   RESAMPLE_FILTER_LEN * sizeof(faac_real));
-        } else {
-            memmove(hist, hist + input_len,
-                    (RESAMPLE_FILTER_LEN - input_len) * sizeof(faac_real));
-            memcpy(hist + RESAMPLE_FILTER_LEN - input_len, in,
-                   input_len * sizeof(faac_real));
-        }
+        /* Update history: last H samples of the contiguous view (hist+in). */
+        memcpy(hist, combined + input_len, H * sizeof(faac_real));
     }
 
     return output_len;
