@@ -243,8 +243,30 @@ int FAACAPI faacEncSetConfiguration(faacEncHandle hpEncoder,
     }
 
     if (hEncoder->config.aacObjectType != LOW &&
-        hEncoder->config.aacObjectType != HE_AAC)
+        hEncoder->config.aacObjectType != HE_AAC &&
+        hEncoder->config.aacObjectType != AAC_AUTO)
         return 0;
+
+    if (!hEncoder->sampleRate || !hEncoder->numChannels)
+        return 0;
+
+    /* Clamp bitrate against the full (pre-halved) core sample rate so the cap
+     * stays correct regardless of HE-AAC's 2:1 downsample. */
+    {
+        unsigned long fullRate = hEncoder->fullSampleRate ? hEncoder->fullSampleRate
+                                                          : hEncoder->sampleRate;
+        if (config->bitRate > (MaxBitrate(fullRate) / hEncoder->numChannels))
+            config->bitRate = MaxBitrate(fullRate) / hEncoder->numChannels;
+    }
+
+    /* Resolve AAC_AUTO before the half-rate switch so the picked type drives
+     * everything downstream. Crossover: HE-AAC below 48 kbps/ch, LC at/above. */
+    if (hEncoder->config.aacObjectType == AAC_AUTO) {
+        unsigned long rate_per_ch = config->bitRate;
+        int pick_heaac = (rate_per_ch > 0 && rate_per_ch < 48000);
+        hEncoder->config.aacObjectType = pick_heaac ? HE_AAC : LOW;
+        config->aacObjectType = hEncoder->config.aacObjectType;
+    }
 
     /* HE-AAC: switch core codec to half sample rate (first time only) */
     if (hEncoder->config.aacObjectType == HE_AAC &&
@@ -261,12 +283,6 @@ int FAACAPI faacEncSetConfiguration(faacEncHandle hpEncoder,
 
     /* Re-init TNS for new profile */
     TnsInit(hEncoder);
-
-    /* Check for correct bitrate */
-    if (!hEncoder->sampleRate || !hEncoder->numChannels)
-        return 0;
-    if (config->bitRate > (MaxBitrate(hEncoder->sampleRate) / hEncoder->numChannels))
-        config->bitRate = MaxBitrate(hEncoder->sampleRate) / hEncoder->numChannels;
 #if 0
     if (config->bitRate < MinBitrate())
         return 0;
@@ -389,7 +405,7 @@ faacEncHandle FAACAPI faacEncOpen(unsigned long sampleRate,
     hEncoder->config.name = libfaacName;
     hEncoder->config.copyright = libCopyright;
     hEncoder->config.mpegVersion = MPEG4;
-    hEncoder->config.aacObjectType = LOW;
+    hEncoder->config.aacObjectType = AAC_AUTO;
     hEncoder->config.jointmode = JOINT_IS;
     hEncoder->config.pnslevel = 4;
     hEncoder->config.useLfe = 1;
@@ -816,7 +832,18 @@ int FAACAPI faacEncEncode(faacEncHandle hpEncoder,
     {
         int desbits = numChannels * (hEncoder->config.bitRate * FRAME_LEN)
             / hEncoder->sampleRate;
-        faac_real fix = (faac_real)desbits / (faac_real)(frameBytes * 8);
+        int totalBits = frameBytes * 8;
+        /* When HE-AAC is active, frameBytes also contains the SBR fill element.
+         * The quantiser quality only controls AAC-LC core bits, so compare the
+         * target against core bits only — otherwise SBR overhead starves the
+         * core at exactly the bitrates where SBR should leave it headroom. */
+        if (hEncoder->config.aacObjectType == HE_AAC && hEncoder->sbrInfo) {
+            int id_aac = (numChannels > 1) ? ID_CPE : ID_SCE;
+            int sbr_bits = SBRWriteBitstream(hEncoder->sbrInfo, NULL, id_aac, 0);
+            if (sbr_bits > 0 && sbr_bits < totalBits)
+                totalBits -= sbr_bits;
+        }
+        faac_real fix = (faac_real)desbits / (faac_real)totalBits;
 
         if (fix < (1.0 - RC_DEADBAND_THRESHOLD)) {
             fix += RC_DEADBAND_THRESHOLD;

@@ -34,6 +34,7 @@
 #define SSR    3
 #define LTP    4
 #define HE_AAC 5  /* HE-AAC v1: AAC-LC core + SBR (non-patent-encumbered as of 2026) */
+#define AAC_AUTO 6 /* Auto-select LC or HE-AAC based on bitrate (default) */
 
 /* Input Formats */
 #define FAAC_INPUT_NULL    0
