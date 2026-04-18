@@ -219,8 +219,8 @@ SBRInfo *SBRInit(int channels, int sampleRate, int coreSampleRate)
         double phase_step = M_PI * (2 * k + 1) / 256.0;
         for (int n = 0; n < 128; n++) {
             double phase = phase_step * (2 * n - 127);
-            sbr->cos_table64[k][n] = (faac_real)cos(phase);
-            sbr->sin_table64[k][n] = (faac_real)sin(phase);
+            sbr->cos_table64T[n][k] = (faac_real)cos(phase);
+            sbr->sin_table64T[n][k] = (faac_real)sin(phase);
         }
     }
 
@@ -291,36 +291,43 @@ void qmf_analysis_slot_complex(const SBRInfo *sbr,
  *       where phase = pi*(2k+1)*(2n-127)/256
  * ------------------------------------------------------------------ */
 static void qmf_analysis_64_slot_energy(const SBRInfo *sbr,
-                                         const faac_real *slot,
-                                         faac_real *ovl,
-                                         faac_real *energy)
+                                         const faac_real * restrict slot,
+                                         faac_real * restrict ovl,
+                                         faac_real * restrict energy)
 {
     /* Shift overlap: drop 64 oldest, append 64 newest at high end. */
     memmove(ovl, ovl + 64,
             (SBR_QMF_OVL_LEN_64 - 64) * sizeof(faac_real));
     memcpy(ovl + SBR_QMF_OVL_LEN_64 - 64, slot, 64 * sizeof(faac_real));
 
-    /* Windowing: z[n] = proto[n] * ovl[639-n] */
-    faac_real z[640];
-    for (int n = 0; n < 640; n++)
-        z[n] = sbr_qmf_window_us640[n] * ovl[639 - n];
-
-    /* Polyphase fold into u[0..127] */
+    /* Fused windowing + 5-way polyphase fold:
+     *   u[n] = sum_{j=0..4} proto[n + 128j] * ovl[639 - n - 128j] */
     faac_real u[128];
-    for (int n = 0; n < 128; n++)
-        u[n] = z[n] + z[n + 128] + z[n + 256] + z[n + 384] + z[n + 512];
-
-    /* DCT-IV modulation → 64 complex subbands; emit |W|² */
-    for (int k = 0; k < SBR_QMF_BANDS_64; k++) {
-        faac_real re = 0, im = 0;
-        const faac_real *ct = sbr->cos_table64[k];
-        const faac_real *st = sbr->sin_table64[k];
-        for (int n = 0; n < 128; n++) {
-            re += u[n] * ct[n];
-            im += u[n] * st[n];
-        }
-        energy[k] = re * re + im * im;
+    const faac_real * restrict proto = sbr_qmf_window_us640;
+    for (int n = 0; n < 128; n++) {
+        u[n] = proto[n]       * ovl[639 - n]
+             + proto[n + 128] * ovl[511 - n]
+             + proto[n + 256] * ovl[383 - n]
+             + proto[n + 384] * ovl[255 - n]
+             + proto[n + 512] * ovl[127 - n];
     }
+
+    /* DCT-IV modulation → 64 complex subbands; emit |W|².
+     * Outer n / inner k so u[n] stays in a register and the transposed
+     * tables stream contiguously. */
+    faac_real re[SBR_QMF_BANDS_64] = {0};
+    faac_real im[SBR_QMF_BANDS_64] = {0};
+    for (int n = 0; n < 128; n++) {
+        faac_real un = u[n];
+        const faac_real * restrict ctn = sbr->cos_table64T[n];
+        const faac_real * restrict stn = sbr->sin_table64T[n];
+        for (int k = 0; k < SBR_QMF_BANDS_64; k++) {
+            re[k] += un * ctn[k];
+            im[k] += un * stn[k];
+        }
+    }
+    for (int k = 0; k < SBR_QMF_BANDS_64; k++)
+        energy[k] = re[k] * re[k] + im[k] * im[k];
 }
 
 /* ------------------------------------------------------------------ *

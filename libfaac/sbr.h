@@ -88,10 +88,12 @@ typedef struct SBRInfo {
     faac_real cos_table[SBR_QMF_BANDS][SBR_QMF_FILTER_LEN];
     faac_real sin_table[SBR_QMF_BANDS][SBR_QMF_FILTER_LEN];
 
-    /* Precomputed 64-band QMF modulation tables: 64 subbands x 128-sample
-     * polyphase-reduced kernel.  See qmf_analysis_64_slot_complex(). */
-    faac_real cos_table64[SBR_QMF_BANDS_64][128];
-    faac_real sin_table64[SBR_QMF_BANDS_64][128];
+    /* Precomputed 64-band QMF modulation tables, transposed as
+     * [n][k] (128 rows × 64 subbands) so the hot modulation kernel
+     * streams each row contiguously while u[n] stays in a register.
+     * See qmf_analysis_64_slot_energy(). */
+    faac_real cos_table64T[128][SBR_QMF_BANDS_64];
+    faac_real sin_table64T[128][SBR_QMF_BANDS_64];
 } SBRInfo;
 
 /* ---- API --------------------------------------------------------- */
