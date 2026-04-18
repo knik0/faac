@@ -42,7 +42,7 @@ extern "C" {
 #define SBR_MAX_BANDS        48   /* max SBR frequency bands */
 #define SBR_NUM_ENVELOPES     1   /* FIXFIX, bs_num_env=0 → 1 envelope/frame */
 #define SBR_MAX_NOISE_BANDS   5   /* max noise-floor bands */
-#define SBR_HEADER_PERIOD    10   /* re-send sbr_header every N frames */
+#define SBR_HEADER_PERIOD    30   /* re-send sbr_header every N frames */
 
 /* ---- SBR bitstream frame-class code ------------------------------ */
 #define SBR_FRAME_CLASS_FIXFIX  0
