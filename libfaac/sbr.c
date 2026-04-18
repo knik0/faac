@@ -198,7 +198,7 @@ SBRInfo *SBRInit(int channels, int sampleRate, int coreSampleRate)
     sbr->k2 = compute_k2(sampleRate, sbr->kx, sbr->bs_stop_freq);
     build_freq_table(sbr);
 
-    /* Precompute QMF modulation tables */
+    /* Precompute QMF modulation tables (32-band legacy) */
     for (int k = 0; k < SBR_QMF_BANDS; k++) {
         double phase_step = M_PI * (2 * k + 1) / 128.0;
         for (int n = 0; n < SBR_QMF_FILTER_LEN; n++) {
@@ -207,6 +207,25 @@ SBRInfo *SBRInit(int channels, int sampleRate, int coreSampleRate)
             sbr->sin_table[k][n] = (faac_real)sin(phase);
         }
     }
+
+    /* Precompute 64-band QMF modulation tables.
+     *
+     * After polyphase reduction the 640-tap prototype is summed into a
+     * 128-sample u[n] buffer; subbands are obtained by DCT-IV-like
+     * modulation producing 64 complex outputs per slot.  Only per-subband
+     * |W|^2 is consumed downstream, so only relative phase between
+     * subbands matters — kernel below maps low freq -> k=0, high -> k=63. */
+    for (int k = 0; k < SBR_QMF_BANDS_64; k++) {
+        double phase_step = M_PI * (2 * k + 1) / 256.0;
+        for (int n = 0; n < 128; n++) {
+            double phase = phase_step * (2 * n - 127);
+            sbr->cos_table64[k][n] = (faac_real)cos(phase);
+            sbr->sin_table64[k][n] = (faac_real)sin(phase);
+        }
+    }
+
+    /* Zero 64-band overlap buffers */
+    memset(sbr->qmfOvl64, 0, sizeof(sbr->qmfOvl64));
 
     return sbr;
 }
@@ -260,15 +279,48 @@ void qmf_analysis_slot_complex(const SBRInfo *sbr,
     }
 }
 
-static void qmf_analysis_slot(const SBRInfo *sbr,
-                               const faac_real *slot,
-                               faac_real *ovl,
-                               faac_real *energy)
+/* ------------------------------------------------------------------ *
+ *  64-band analysis QMF (production path)
+ *  ISO 14496-3:2009 §4.6.18.4.2
+ *
+ *  For each time slot (64 new input samples → 64 complex subbands):
+ *    1. Shift 64 new samples into the 640-sample overlap buffer.
+ *    2. Window: z[n] = proto[n] * ovl[639-n]                  n=0..639
+ *    3. Polyphase fold: u[n] = sum_{j=0..4} z[n + 128*j]      n=0..127
+ *    4. Modulate: W[k] = sum u[n] * exp(-j*phase)             k=0..63
+ *       where phase = pi*(2k+1)*(2n-127)/256
+ * ------------------------------------------------------------------ */
+static void qmf_analysis_64_slot_energy(const SBRInfo *sbr,
+                                         const faac_real *slot,
+                                         faac_real *ovl,
+                                         faac_real *energy)
 {
-    faac_real re[SBR_QMF_BANDS], im[SBR_QMF_BANDS];
-    qmf_analysis_slot_complex(sbr, slot, ovl, re, im);
-    for (int k = 0; k < SBR_QMF_BANDS; k++)
-        energy[k] = re[k] * re[k] + im[k] * im[k];
+    /* Shift overlap: drop 64 oldest, append 64 newest at high end. */
+    memmove(ovl, ovl + 64,
+            (SBR_QMF_OVL_LEN_64 - 64) * sizeof(faac_real));
+    memcpy(ovl + SBR_QMF_OVL_LEN_64 - 64, slot, 64 * sizeof(faac_real));
+
+    /* Windowing: z[n] = proto[n] * ovl[639-n] */
+    faac_real z[640];
+    for (int n = 0; n < 640; n++)
+        z[n] = sbr_qmf_window_us640[n] * ovl[639 - n];
+
+    /* Polyphase fold into u[0..127] */
+    faac_real u[128];
+    for (int n = 0; n < 128; n++)
+        u[n] = z[n] + z[n + 128] + z[n + 256] + z[n + 384] + z[n + 512];
+
+    /* DCT-IV modulation → 64 complex subbands; emit |W|² */
+    for (int k = 0; k < SBR_QMF_BANDS_64; k++) {
+        faac_real re = 0, im = 0;
+        const faac_real *ct = sbr->cos_table64[k];
+        const faac_real *st = sbr->sin_table64[k];
+        for (int n = 0; n < 128; n++) {
+            re += u[n] * ct[n];
+            im += u[n] * st[n];
+        }
+        energy[k] = re * re + im * im;
+    }
 }
 
 /* ------------------------------------------------------------------ *
@@ -280,104 +332,67 @@ void SBRAnalysis(SBRInfo *sbr,
                  int numChannels,
                  int numSamples)
 {
-    /* Per-band energy accumulator over the whole frame.
+    /* 64-band analysis QMF: one slot per 64 full-rate samples →
+     * numSamples/64 = 32 slots per 2048-sample frame. That matches the
+     * decoder's synthesis-QMF temporal grid exactly, so envelopes and
+     * the decoder's E_curr live in the same (slot, subband) coordinates.
      *
-     * numSamples = 2*FRAME_LEN = 2048 full-rate samples.
-     * The 32-band analysis QMF produces one slot per 32 input samples,
-     * so there are numSamples/32 = 64 analysis QMF slots per SBR frame.
-     *
-     * The SBR temporal grid uses 64-band SYNTHESIS QMF slots (32 per frame).
-     * Each synthesis slot = 64 full-rate samples = 2 analysis slots.
-     * Therefore the decoder expects the envelope energy normalised by
-     * the number of SYNTHESIS slots (32), i.e. summed over all analysis
-     * slots and divided by (numSamples / 64) = 32.
-     *
-     * Combining time normalisation and the QMF filter energy gain
-     * (h_sbr_qmf sum-of-squares ≈ 1.5) into one divisor:
-     *   norm = (numSamples / 64) * 1.5   =  32 * 1.5 = 48  (for 2048 samples)
+     * Per-subband summed energy over all analysis slots:
+     *   bandEnergy64[k] = sum_{l=0..31} |W[k][l]|^2
      */
-    int num_ana_slots = numSamples / SBR_QMF_BANDS;  /* = 2048/32 = 64 */
-    faac_real bandEnergy[MAX_CHANNELS][SBR_QMF_BANDS];
-    faac_real slotEnergy[SBR_QMF_BANDS];
+    int num_slots = numSamples / SBR_QMF_BANDS_64; /* 2048/64 = 32 */
+    faac_real bandEnergy64[MAX_CHANNELS][SBR_QMF_BANDS_64];
+    faac_real slotEnergy[SBR_QMF_BANDS_64];
 
     for (int ch = 0; ch < numChannels; ch++) {
-        memset(bandEnergy[ch], 0, sizeof(bandEnergy[ch]));
+        memset(bandEnergy64[ch], 0, sizeof(bandEnergy64[ch]));
 
-        for (int slot = 0; slot < num_ana_slots; slot++) {
-            qmf_analysis_slot(sbr,
-                              timeDomain[ch] + slot * SBR_QMF_BANDS,
-                              sbr->qmfOvl[ch],
+        for (int slot = 0; slot < num_slots; slot++) {
+            qmf_analysis_64_slot_energy(sbr,
+                              timeDomain[ch] + slot * SBR_QMF_BANDS_64,
+                              sbr->qmfOvl64[ch],
                               slotEnergy);
-            for (int k = 0; k < SBR_QMF_BANDS; k++)
-                bandEnergy[ch][k] += slotEnergy[k];
+            for (int k = 0; k < SBR_QMF_BANDS_64; k++)
+                bandEnergy64[ch][k] += slotEnergy[k];
         }
     }
 
-    /* Normalise to match the decoder's e_curr coordinate system.
+    /* Convert accumulated energies to envelope levels.
      *
-     * The decoder (aacsbr.c sbr_dequant) interprets transmitted level L as:
-     *   env_facs = 2^(L/2 + 6)    (for amp_res=0)
-     * and sbr_gain_calc computes:
-     *   gain = sqrt(env_facs / e_curr)
-     * where e_curr = mean(X_high^2, per synthesis half-slot per synthesis subband).
+     * Decoder's E_curr (faad2 sbr_hfadj.c) per envelope m:
+     *   E_curr[m] = sum_{l=l_i..l_i+n_slots}
+     *               sum_{k=k_l..k_h} (re^2 + im^2)
+     *               / (n_slots * (k_h - k_l))
      *
-     * Our 32-band analysis has:
-     *   - num_ana_slots analysis slots = num synthesis half-slots (1:1 in time)
-     *   - Each analysis band covers 2 synthesis subbands
+     * So the encoder's per-SBR-band, per-decoder-coordinate energy is:
+     *   E_band = (sum over slots & subbands in band) / (n_slots * n_sub)
      *
-     * So: E_per_synth_subband = total_analysis_energy / (num_ana_slots * 2)
-     *                         = total / (num_ana_slots * 2)
-     *
-     * With this normalisation, the correct level formula is:
-     *   L = round(2 * (log2(E) - 6))   -- directly matches 2^(L/2+6) dequant
-     */
-    /* Normalise per synthesis subband only.
-     * decoder e_curr = sum_{slots,subbands} |X_synth|^2 / num_synth_subbands
-     * Each analysis band covers 2 synthesis subbands; all time-slot sums are
-     * kept intact (no per-slot averaging), so norm = 2 (not num_slots*2). */
-    float norm = 2.0f;
-    for (int ch = 0; ch < numChannels; ch++)
-        for (int k = 0; k < SBR_QMF_BANDS; k++)
-            bandEnergy[ch][k] /= norm;
-
-    /* --- Convert normalised subband energies to envelope levels --- */
-    /*
-     * FIXFIX + 1 envelope forces amp_res=0 (1.5 dB steps) in the decoder.
-     *
-     * First band: absolute 7-bit level [0..127].
-     * Subsequent bands: signed Huffman-coded delta, range [−60..+60].
-     *
-     * Energy → level (matches decoder's 2^(L/2+6) dequantisation):
-     *   level = round(2 * (log2(E) - 6))
-     *
-     * This is equivalent to 1.5 dB per step: each level unit = 3.01 dB / 2 ≈ 1.505 dB.
+     * With amp_res=0 (FIXFIX + 1 envelope): env_facs = 2^(L/2 + 6),
+     * so L = round(2 * (log2(E) - 6)).
      */
     for (int ch = 0; ch < numChannels; ch++) {
         for (int e = 0; e < SBR_NUM_ENVELOPES; e++) {
-            /* SBR_NUM_ENVELOPES == 1: single envelope over the full frame. */
             int prevLevel = -1;
             for (int b = 0; b < sbr->numBands; b++) {
-                /* Sum energy over analysis QMF subbands for this SBR band.
-                 * bandEdges[] are in 64-band synthesis QMF space (0..63).
-                 * Our 32-band analysis QMF maps: analysis_band ≈ synth_band/2. */
+                int k_lo = sbr->bandEdges[b];
+                int k_hi = sbr->bandEdges[b + 1];
+                if (k_hi <= k_lo) k_hi = k_lo + 1;
+                if (k_hi > SBR_QMF_BANDS_64) k_hi = SBR_QMF_BANDS_64;
+                int n_sub = k_hi - k_lo;
+
                 faac_real E = 0;
-                int q_ana_start = sbr->bandEdges[b] / 2;
-                int q_ana_end   = (sbr->bandEdges[b + 1] + 1) / 2;
-                if (q_ana_end <= q_ana_start) q_ana_end = q_ana_start + 1;
-                for (int qa = q_ana_start; qa < q_ana_end; qa++) {
-                    int qi = (qa < SBR_QMF_BANDS) ? qa : SBR_QMF_BANDS - 1;
-                    E += bandEnergy[ch][qi];
-                }
-                /* Convert energy to level: L = round(2*(log2(E)-6)) */
+                for (int k = k_lo; k < k_hi; k++)
+                    E += bandEnergy64[ch][k];
+                /* Decoder-equivalent E_curr: mean per (slot, subband) */
+                E /= (faac_real)(num_slots * n_sub);
+
                 double log2E = log2((double)E + 1e-20);
                 int level = (int)round(2.0 * (log2E - 6.0));
 
                 if (prevLevel < 0) {
-                    /* First band: absolute 7-bit level, range [0, 127] (amp_res=0) */
                     level = clamp_int(level, 0, 127);
                     sbr->envData[ch][e][b] = level;
                 } else {
-                    /* Remaining bands: delta from previous level */
                     int raw_level = clamp_int(level, 0, 127);
                     int delta = clamp_int(raw_level - prevLevel,
                                          -F_HUFF_ENV_1_5DB_OFFSET,
@@ -389,30 +404,13 @@ void SBRAnalysis(SBRInfo *sbr,
             }
         }
 
-        /* --- Noise floor estimation -------------------------------- */
-        /*
-         * Use the mean per-synthesis-slot energy in the noise band as a
-         * proxy for the noise floor level.  bandEnergy[] is already
-         * normalised per synthesis slot by the normalization above.
-         */
+        /* --- Noise floor estimation --------------------------------
+         * Empirically Q=0 beats absolute-energy and flatness-proxy
+         * variants (+0.05 MOS on gate clip). Absolute QMF energy is not
+         * a valid noise-level estimator — decoder interprets this as a
+         * ratio against E_curr. */
         int prevNoise = -1;
         for (int nb = 0; nb < sbr->numNoiseBands; nb++) {
-            faac_real meanE = 0;
-            int count = 0;
-            /* Same synthesis→analysis mapping as envelope estimation */
-            int q_ana_start = sbr->noiseBandEdges[nb] / 2;
-            int q_ana_end   = (sbr->noiseBandEdges[nb + 1] + 1) / 2;
-            if (q_ana_end <= q_ana_start) q_ana_end = q_ana_start + 1;
-            for (int qa = q_ana_start; qa < q_ana_end; qa++) {
-                int qi = (qa < SBR_QMF_BANDS) ? qa : SBR_QMF_BANDS - 1;
-                meanE += bandEnergy[ch][qi];
-                count++;
-            }
-            (void)meanE;
-            (void)count;
-            /* Empirically Q=0 beats absolute-energy and flatness-proxy variants
-             * (+0.05 MOS on gate clip). Absolute QMF analysis energy is not a
-             * valid noise-level estimator — the decoder interprets this as a ratio. */
             int level = 0;
 
             if (prevNoise < 0) {

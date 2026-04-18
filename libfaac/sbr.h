@@ -36,9 +36,11 @@ extern "C" {
 
 /* ---- SBR frame / band constants ---------------------------------- */
 #define SBR_NUM_TIME_SLOTS   32   /* time slots per AAC frame (FRAME_LEN/32) */
-#define SBR_QMF_BANDS        32   /* 32-band analysis QMF */
+#define SBR_QMF_BANDS        32   /* 32-band analysis QMF (legacy placeholder/test) */
 #define SBR_QMF_FILTER_LEN   64   /* prototype filter length */
 #define SBR_QMF_OVL_LEN      64   /* overlap buffer length (1 filter length) */
+#define SBR_QMF_BANDS_64     64   /* 64-band analysis QMF (production path) */
+#define SBR_QMF_OVL_LEN_64   640  /* 640-tap prototype overlap buffer */
 #define SBR_MAX_BANDS        48   /* max SBR frequency bands */
 #define SBR_NUM_ENVELOPES     1   /* FIXFIX, bs_num_env=0 → 1 envelope/frame */
 #define SBR_MAX_NOISE_BANDS   5   /* max noise-floor bands */
@@ -72,7 +74,8 @@ typedef struct SBRInfo {
     int bs_xover_band;     /* always 0 */
 
     /* Per-channel QMF analysis state */
-    faac_real qmfOvl[MAX_CHANNELS][SBR_QMF_OVL_LEN]; /* overlap buf */
+    faac_real qmfOvl[MAX_CHANNELS][SBR_QMF_OVL_LEN]; /* overlap buf (32-band legacy) */
+    faac_real qmfOvl64[MAX_CHANNELS][SBR_QMF_OVL_LEN_64]; /* 640-tap overlap (64-band) */
 
     /* Per-channel estimated data (filled by SBRAnalysis) */
     int envData  [MAX_CHANNELS][SBR_NUM_ENVELOPES][SBR_MAX_BANDS];
@@ -81,9 +84,14 @@ typedef struct SBRInfo {
     /* Previous envelope (for delta coding across frames) */
     int prevEnv[MAX_CHANNELS][SBR_MAX_BANDS];
 
-    /* Precomputed QMF modulation tables */
+    /* Precomputed QMF modulation tables (32-band legacy) */
     faac_real cos_table[SBR_QMF_BANDS][SBR_QMF_FILTER_LEN];
     faac_real sin_table[SBR_QMF_BANDS][SBR_QMF_FILTER_LEN];
+
+    /* Precomputed 64-band QMF modulation tables: 64 subbands x 128-sample
+     * polyphase-reduced kernel.  See qmf_analysis_64_slot_complex(). */
+    faac_real cos_table64[SBR_QMF_BANDS_64][128];
+    faac_real sin_table64[SBR_QMF_BANDS_64][128];
 } SBRInfo;
 
 /* ---- API --------------------------------------------------------- */
