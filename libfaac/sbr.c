@@ -293,40 +293,38 @@ void qmf_analysis_slot_complex(const SBRInfo *sbr,
 static void qmf_analysis_64_slot_energy(const SBRInfo *sbr,
                                          const faac_real * restrict slot,
                                          faac_real * restrict ovl,
-                                         faac_real * restrict energy)
+                                         faac_real * restrict energy,
+                                         int kx, int k2)
 {
     /* Shift overlap: drop 64 oldest, append 64 newest at high end. */
     memmove(ovl, ovl + 64,
             (SBR_QMF_OVL_LEN_64 - 64) * sizeof(faac_real));
     memcpy(ovl + SBR_QMF_OVL_LEN_64 - 64, slot, 64 * sizeof(faac_real));
 
-    /* Fused windowing + 5-way polyphase fold:
-     *   u[n] = sum_{j=0..4} proto[n + 128j] * ovl[639 - n - 128j] */
-    faac_real u[128];
+    /* Fused polyphase fold + DCT-IV modulation, restricted to the
+     * SBR band range [kx, k2).  Subbands outside this range are never
+     * consumed downstream (see SBRAnalysis), so the modulation cost is
+     * cut by ~(64-(k2-kx))/64 — typically ~50%.
+     *
+     *   u[n] = sum_{j=0..4} proto[n + 128j] * ovl[639 - n - 128j]
+     * is computed per-n and kept in a register; no u[128] round-trip. */
     const faac_real * restrict proto = sbr_qmf_window_us640;
-    for (int n = 0; n < 128; n++) {
-        u[n] = proto[n]       * ovl[639 - n]
-             + proto[n + 128] * ovl[511 - n]
-             + proto[n + 256] * ovl[383 - n]
-             + proto[n + 384] * ovl[255 - n]
-             + proto[n + 512] * ovl[127 - n];
-    }
-
-    /* DCT-IV modulation → 64 complex subbands; emit |W|².
-     * Outer n / inner k so u[n] stays in a register and the transposed
-     * tables stream contiguously. */
     faac_real re[SBR_QMF_BANDS_64] = {0};
     faac_real im[SBR_QMF_BANDS_64] = {0};
     for (int n = 0; n < 128; n++) {
-        faac_real un = u[n];
+        faac_real un = proto[n]       * ovl[639 - n]
+                     + proto[n + 128] * ovl[511 - n]
+                     + proto[n + 256] * ovl[383 - n]
+                     + proto[n + 384] * ovl[255 - n]
+                     + proto[n + 512] * ovl[127 - n];
         const faac_real * restrict ctn = sbr->cos_table64T[n];
         const faac_real * restrict stn = sbr->sin_table64T[n];
-        for (int k = 0; k < SBR_QMF_BANDS_64; k++) {
+        for (int k = kx; k < k2; k++) {
             re[k] += un * ctn[k];
             im[k] += un * stn[k];
         }
     }
-    for (int k = 0; k < SBR_QMF_BANDS_64; k++)
+    for (int k = kx; k < k2; k++)
         energy[k] = re[k] * re[k] + im[k] * im[k];
 }
 
@@ -348,6 +346,8 @@ void SBRAnalysis(SBRInfo *sbr,
      *   bandEnergy64[k] = sum_{l=0..31} |W[k][l]|^2
      */
     int num_slots = numSamples / SBR_QMF_BANDS_64; /* 2048/64 = 32 */
+    int kx = sbr->kx;
+    int k2 = sbr->k2;
     faac_real bandEnergy64[MAX_CHANNELS][SBR_QMF_BANDS_64];
     faac_real slotEnergy[SBR_QMF_BANDS_64];
 
@@ -358,8 +358,8 @@ void SBRAnalysis(SBRInfo *sbr,
             qmf_analysis_64_slot_energy(sbr,
                               timeDomain[ch] + slot * SBR_QMF_BANDS_64,
                               sbr->qmfOvl64[ch],
-                              slotEnergy);
-            for (int k = 0; k < SBR_QMF_BANDS_64; k++)
+                              slotEnergy, kx, k2);
+            for (int k = kx; k < k2; k++)
                 bandEnergy64[ch][k] += slotEnergy[k];
         }
     }
