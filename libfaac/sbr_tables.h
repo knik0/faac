@@ -6,6 +6,20 @@
  * parts of the standard and are reproduced here for implementation
  * purposes.  All SBR patents (Fraunhofer/Dolby) expired no later than
  * 2021 in all major jurisdictions.
+ *
+ * Third-party attribution for data values reproduced in this file:
+ *
+ *   - sbr_qmf_window_us640[] (640-tap QMF prototype) — transcribed from
+ *     FFmpeg libavcodec/aacsbrdata.h sbr_qmf_window_us[].
+ *     Copyright (c) 2008-2009 Robert Swain <rob@opendot.cl>.
+ *     Licensed under the GNU LGPL v2.1 or later.
+ *
+ *   - sbr_fs_offset[6][16] — identical to FFmpeg's sbr_offset[6][16]
+ *     (same source file and copyright as above).
+ *
+ *   - SBR Huffman tables — cross-checked against FAAD2 sbr_huff.c
+ *     decode trees.  "Code from FAAD2 is copyright (c) Nero AG,
+ *     www.nero.com" (GPLv2 or later).
  */
 
 #ifndef SBR_TABLES_H
