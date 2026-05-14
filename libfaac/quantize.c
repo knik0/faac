@@ -162,7 +162,9 @@ static void bmask(CoderInfo * __restrict coderInfo, faac_real * __restrict xr0, 
     bandmaxe[sfb] = FAAC_SQRT(maxe);
     maxe *= gsize;
 
-#define NOISETONE 0.2
+#define NOISETONE     0.2   /* noise-floor weight in masking target */
+#define TONEMASK      0.45  /* tone-masking component weight */
+#define SHORT_PENALTY 0.45  /* tightens masking target for short-window blocks */
     if (coderInfo->block_type == ONLY_SHORT_WINDOW)
     {
         last = BLOCK_LEN_SHORT;
@@ -170,9 +172,9 @@ static void bmask(CoderInfo * __restrict coderInfo, faac_real * __restrict xr0, 
         avgenrg *= end - start;
 
         target = NOISETONE * FAAC_POW(avge/avgenrg, powm);
-        target += (1.0 - NOISETONE) * 0.45 * FAAC_POW(maxe/avgenrg, powm);
+        target += (1.0 - NOISETONE) * TONEMASK * FAAC_POW(maxe/avgenrg, powm);
 
-        target *= 1.5;
+        target *= SHORT_PENALTY;
     }
     else
     {
@@ -181,7 +183,7 @@ static void bmask(CoderInfo * __restrict coderInfo, faac_real * __restrict xr0, 
         avgenrg *= end - start;
 
         target = NOISETONE * FAAC_POW(avge/avgenrg, powm);
-        target += (1.0 - NOISETONE) * 0.45 * FAAC_POW(maxe/avgenrg, powm);
+        target += (1.0 - NOISETONE) * TONEMASK * FAAC_POW(maxe/avgenrg, powm);
     }
 
     target *= 10.0 / (1.0 + ((faac_real)(start+end)/last));
