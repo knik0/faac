@@ -430,7 +430,7 @@ int main(int argc, char *argv[])
     unsigned int objectType = LOW;
     int jointmode = -1;
     int pnslevel = -1;
-    static int useTns = 0;
+    static int useTns = 1;
     enum container_format container = NO_CONTAINER;
     enum stream_format stream = ADTS_STREAM;
     int cutOff = -1;

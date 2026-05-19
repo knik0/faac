@@ -56,6 +56,15 @@ static unsigned short tnsMaxOrderLongMain = 20;
 static unsigned short tnsMaxOrderLongLow = 12;
 static unsigned short tnsMaxOrderShortMainLow = 7;
 
+/* TNS analysis pre-gate thresholds: skip the expensive LevinsonDurbin
+   analysis on frames where TNS provably cannot help, so the cost (and
+   any over-firing MOS regressions) are avoided on the silence/noise/
+   flat-spectrum content that defined prior failed attempts. */
+#define TNS_ENERGY_FLOOR  0.16     /* per-sample MDCT energy floor */
+#define TNS_FLATNESS_K    1.5      /* L2^2*N / L1^2 minimum; < K means
+                                      the band is too close to flat for
+                                      cross-frequency LPC to predict */
+
 
 /*************************/
 /* Function prototypes   */
@@ -192,6 +201,27 @@ void TnsEncode(TnsInfo* tnsInfo,       /* TNS info */
         windowData->coefResolution = DEF_TNS_COEFF_RES;
         startIndex = w * windowSize + sfbOffsetTable[startBand];
         length = sfbOffsetTable[stopBand] - sfbOffsetTable[startBand];
+
+        /* Cheap pre-gate: skip LevinsonDurbin when TNS cannot help.
+           Single O(length) pass over the TNS band computes L2 (energy)
+           and L1 (sum |x|). Skip if the band is essentially silent or
+           the spectrum is nearly flat (L2^2*N / L1^2 < TNS_FLATNESS_K,
+           bounded below by 1.0 at perfect flatness by Cauchy-Schwarz). */
+        {
+            faac_real sumsq = 0.0, suma = 0.0;
+            int j;
+            for (j = 0; j < length; j++) {
+                faac_real v = spec[startIndex + j];
+                sumsq += v * v;
+                suma  += FAAC_FABS(v);
+            }
+            if (sumsq < TNS_ENERGY_FLOOR * length
+                || suma <= 0.0
+                || sumsq * length < TNS_FLATNESS_K * suma * suma) {
+                continue;
+            }
+        }
+
         gain = LevinsonDurbin(order,length,&spec[startIndex],k);
 
         if (gain>DEF_TNS_GAIN_THRESH) {  /* Use TNS */
