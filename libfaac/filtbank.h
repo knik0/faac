@@ -30,8 +30,6 @@ extern "C" {
 
 #define NFLAT_LS 448
 
-#define MOVERLAPPED     0
-#define MNON_OVERLAPPED 1
 
 
 #define SINE_WINDOW 0
@@ -47,8 +45,7 @@ void			FilterBank( faacEncStruct* hEncoder,
 						CoderInfo *coderInfo,
 						faac_real *p_in_data,
 						faac_real *p_out_mdct,
-						faac_real *p_overlap,
-						int overlap_select );
+						faac_real *p_overlap );
 
 
 #ifdef __cplusplus

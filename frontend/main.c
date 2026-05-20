@@ -1008,19 +1008,7 @@ int main(int argc, char *argv[])
     fprintf(stderr, "Bandwidth: %d Hz\n", cutOff);
     if (myFormat->pnslevel > 0)
         fprintf(stderr, "PNS level: %d\n", myFormat->pnslevel);
-    fprintf(stderr, "Object type: ");
-    switch (objectType)
-    {
-    case LOW:
-        fprintf(stderr, "Low Complexity");
-        break;
-    case MAIN:
-        fprintf(stderr, "Main");
-        break;
-    case LTP:
-        fprintf(stderr, "LTP");
-        break;
-    }
+    fprintf(stderr, "Object type: Low Complexity");
     fprintf(stderr, " (MPEG-%d)", (mpegVersion == MPEG4) ? 4 : 2);
     if (myFormat->useTns)
         fprintf(stderr, " + TNS");
