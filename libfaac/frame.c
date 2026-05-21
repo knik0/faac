@@ -537,8 +537,7 @@ int FAACAPI faacEncEncode(faacEncHandle hpEncoder,
             &coderInfo[channel],
             hEncoder->sampleBuff[channel],
             hEncoder->freqBuff[channel],
-            hEncoder->overlapBuff[channel],
-            MOVERLAPPED);
+            hEncoder->overlapBuff[channel]);
     }
 
     for (channel = 0; channel < numChannels; channel++) {

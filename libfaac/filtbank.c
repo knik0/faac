@@ -102,8 +102,7 @@ void FilterBank(faacEncStruct* hEncoder,
                 CoderInfo *coderInfo,
                 faac_real *p_in_data,
                 faac_real *p_out_mdct,
-                faac_real *p_overlap,
-                int overlap_select)
+                faac_real *p_overlap)
 {
     faac_real *p_o_buf, *first_window, *second_window;
     faac_real *transf_buf;
@@ -114,51 +113,41 @@ void FilterBank(faacEncStruct* hEncoder,
 
     /* create / shift old values */
     /* We use p_overlap here as buffer holding the last frame time signal*/
-    if(overlap_select != MNON_OVERLAPPED) {
-        memcpy(transf_buf, p_overlap, BLOCK_LEN_LONG*sizeof(faac_real));
-        memcpy(transf_buf+BLOCK_LEN_LONG, p_in_data, BLOCK_LEN_LONG*sizeof(faac_real));
-        memcpy(p_overlap, p_in_data, BLOCK_LEN_LONG*sizeof(faac_real));
-    } else {
-        memcpy(transf_buf, p_in_data, 2*BLOCK_LEN_LONG*sizeof(faac_real));
-    }
+    memcpy(transf_buf, p_overlap, BLOCK_LEN_LONG*sizeof(faac_real));
+    memcpy(transf_buf+BLOCK_LEN_LONG, p_in_data, BLOCK_LEN_LONG*sizeof(faac_real));
+    memcpy(p_overlap, p_in_data, BLOCK_LEN_LONG*sizeof(faac_real));
 
     /*  Window shape processing */
-    if(overlap_select != MNON_OVERLAPPED) {
-        switch (coderInfo->prev_window_shape) {
-        case SINE_WINDOW:
-            if ( (block_type == ONLY_LONG_WINDOW) || (block_type == LONG_SHORT_WINDOW))
-                first_window = hEncoder->sin_window_long;
-            else
-                first_window = hEncoder->sin_window_short;
-            break;
-        default:
-        case KBD_WINDOW:
-            if ( (block_type == ONLY_LONG_WINDOW) || (block_type == LONG_SHORT_WINDOW))
-                first_window = hEncoder->kbd_window_long;
-            else
-                first_window = hEncoder->kbd_window_short;
-            break;
-        }
+    switch (coderInfo->prev_window_shape) {
+    case SINE_WINDOW:
+        if ( (block_type == ONLY_LONG_WINDOW) || (block_type == LONG_SHORT_WINDOW))
+            first_window = hEncoder->sin_window_long;
+        else
+            first_window = hEncoder->sin_window_short;
+        break;
+    default:
+    case KBD_WINDOW:
+        if ( (block_type == ONLY_LONG_WINDOW) || (block_type == LONG_SHORT_WINDOW))
+            first_window = hEncoder->kbd_window_long;
+        else
+            first_window = hEncoder->kbd_window_short;
+        break;
+    }
 
-        switch (coderInfo->window_shape){
-        case SINE_WINDOW:
-        default:
-            if ( (block_type == ONLY_LONG_WINDOW) || (block_type == SHORT_LONG_WINDOW))
-                second_window = hEncoder->sin_window_long;
-            else
-                second_window = hEncoder->sin_window_short;
-            break;
-        case KBD_WINDOW:
-            if ( (block_type == ONLY_LONG_WINDOW) || (block_type == SHORT_LONG_WINDOW))
-                second_window = hEncoder->kbd_window_long;
-            else
-                second_window = hEncoder->kbd_window_short;
-            break;
-        }
-    } else {
-        /* Always long block and sine window for LTP */
-        first_window = hEncoder->sin_window_long;
-        second_window = hEncoder->sin_window_long;
+    switch (coderInfo->window_shape){
+    case SINE_WINDOW:
+    default:
+        if ( (block_type == ONLY_LONG_WINDOW) || (block_type == SHORT_LONG_WINDOW))
+            second_window = hEncoder->sin_window_long;
+        else
+            second_window = hEncoder->sin_window_short;
+        break;
+    case KBD_WINDOW:
+        if ( (block_type == ONLY_LONG_WINDOW) || (block_type == SHORT_LONG_WINDOW))
+            second_window = hEncoder->kbd_window_long;
+        else
+            second_window = hEncoder->kbd_window_short;
+        break;
     }
 
     /* Set ptr to transf-Buffer */
