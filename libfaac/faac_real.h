@@ -32,6 +32,7 @@ typedef float faac_real;
 #define FAAC_COS cosf
 #define FAAC_SQRT sqrtf
 #define FAAC_FABS fabsf
+#define FAAC_LOG logf
 #define FAAC_LOG10 log10f
 #define FAAC_POW powf
 #define FAAC_ASIN asinf
@@ -43,6 +44,7 @@ typedef double faac_real;
 #define FAAC_COS cos
 #define FAAC_SQRT sqrt
 #define FAAC_FABS fabs
+#define FAAC_LOG log
 #define FAAC_LOG10 log10
 #define FAAC_POW pow
 #define FAAC_ASIN asin
