@@ -97,6 +97,16 @@ static faac_real gain_with_overflow_clamp(int *sfac, faac_real band_peak)
 
 #define NOISEFLOOR 0.4
 
+#define NOISETONE     0.2   /* noise-floor weight in masking target */
+#define TONEMASK      0.45  /* tone-masking component weight */
+#define SHORT_PENALTY 0.45  /* tightens masking target for short-window blocks */
+
+/* Prevents masking target collapse in quiet upper bands by flooring energy ratios.
+ * AVGE_FLOOR_FACTOR: -30 dB (10^-3)
+ * MAXE_FLOOR_FACTOR: ~ -23 dB (10^-2.3) */
+#define AVGE_FLOOR_FACTOR 0.0010
+#define MAXE_FLOOR_FACTOR 0.0050
+
 // band sound masking
 static void bmask(CoderInfo * __restrict coderInfo, faac_real * __restrict xr0, faac_real * __restrict bandqual,
                   faac_real * __restrict bandenrg, faac_real * __restrict bandmaxe, int gnum, faac_real quality)
@@ -134,6 +144,8 @@ static void bmask(CoderInfo * __restrict coderInfo, faac_real * __restrict xr0, 
       return;
   }
 
+  last = (coderInfo->block_type == ONLY_SHORT_WINDOW) ? BLOCK_LEN_SHORT : BLOCK_LEN_LONG;
+
   for (sfb = 0; sfb < coderInfo->sfbn; sfb++)
   {
     faac_real avge, maxe;
@@ -162,30 +174,17 @@ static void bmask(CoderInfo * __restrict coderInfo, faac_real * __restrict xr0, 
     bandmaxe[sfb] = FAAC_SQRT(maxe);
     maxe *= gsize;
 
-#define NOISETONE     0.2   /* noise-floor weight in masking target */
-#define TONEMASK      0.45  /* tone-masking component weight */
-#define SHORT_PENALTY 0.45  /* tightens masking target for short-window blocks */
+    avgenrg = (totenrg / last) * (end - start);
+
+    /* Apply floors to inputs before the pow() calls. The masking formula is
+     * monotonic, so flooring inputs is equivalent to flooring the output. */
+    if (avge < avgenrg * AVGE_FLOOR_FACTOR) avge = avgenrg * AVGE_FLOOR_FACTOR;
+    if (maxe < avgenrg * MAXE_FLOOR_FACTOR) maxe = avgenrg * MAXE_FLOOR_FACTOR;
+
+    target = NOISETONE * FAAC_POW(avge/avgenrg, powm);
+    target += (1.0 - NOISETONE) * TONEMASK * FAAC_POW(maxe/avgenrg, powm);
     if (coderInfo->block_type == ONLY_SHORT_WINDOW)
-    {
-        last = BLOCK_LEN_SHORT;
-        avgenrg = totenrg / last;
-        avgenrg *= end - start;
-
-        target = NOISETONE * FAAC_POW(avge/avgenrg, powm);
-        target += (1.0 - NOISETONE) * TONEMASK * FAAC_POW(maxe/avgenrg, powm);
-
         target *= SHORT_PENALTY;
-    }
-    else
-    {
-        last = BLOCK_LEN_LONG;
-        avgenrg = totenrg / last;
-        avgenrg *= end - start;
-
-        target = NOISETONE * FAAC_POW(avge/avgenrg, powm);
-        target += (1.0 - NOISETONE) * TONEMASK * FAAC_POW(maxe/avgenrg, powm);
-    }
-
     target *= 10.0 / (1.0 + ((faac_real)(start+end)/last));
 
     bandqual[sfb] = target * quality;
@@ -215,7 +214,7 @@ static void qlevel(CoderInfo * __restrict coderInfo,
       int sf_rel;   /* relative scalefactor index: SF_OFFSET - sfac */
       faac_real rmsx;
       faac_real etot;
-      int xitab[8 * MAXSHORTBAND];
+      int xitab[FRAME_LEN];
       int *xi;
       int start, end;
       const faac_real *xr;
@@ -301,6 +300,7 @@ static void qlevel(CoderInfo * __restrict coderInfo,
       if (sfacfix <= 0.0)
       {
           memset(xi, 0, gsize * end * sizeof(int));
+          coderInfo->book[coderInfo->bandcnt] = HCB_ZERO;
       }
       else
       {
@@ -310,8 +310,8 @@ static void qlevel(CoderInfo * __restrict coderInfo,
               qfunc(xr, xi, end, sfacfix);
               xi += end;
           }
+          huffbook(coderInfo, xitab, gsize * end);
       }
-      huffbook(coderInfo, xitab, gsize * end);
       /* Track sf_abs (full bitstream value) for the next band's delta check.
        * HCB_ZERO bands don't participate in the regular-band delta chain. */
       if (coderInfo->book[coderInfo->bandcnt] != HCB_ZERO)
