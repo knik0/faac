@@ -113,13 +113,12 @@ void TnsInit(faacEncStruct* hEncoder)
         tnsInfo->tnsMinBandNumberLong  = tnsMinBandNumberLong[fsIndex];
         tnsInfo->tnsMinBandNumberShort = tnsMinBandNumberShort[fsIndex];
 
-        /* Adaptive max order for long windows based on per-channel bitrate. */
-        if (bitratePerCh >= 128000) {
-            tnsInfo->tnsMaxOrderLong = 6;
-        } else if (bitratePerCh >= 96000) {
-            tnsInfo->tnsMaxOrderLong = 8;
-        } else {
+        /* Adaptive max order: lower bitrate uses order 8 to reduce analysis
+         * cost and coefficient overhead; higher bitrate can afford order 12. */
+        if (bitratePerCh >= 96000) {
             tnsInfo->tnsMaxOrderLong = tnsMaxOrderLongLow; /* 12 */
+        } else {
+            tnsInfo->tnsMaxOrderLong = 8;
         }
 
         /* Long-window gain threshold via break-even bit budget formula. */
@@ -298,7 +297,6 @@ void TnsEncode(TnsInfo* tnsInfo,       /* TNS info */
             QuantizeReflectionCoeffs(order,DEF_TNS_COEFF_RES,k,tnsFilter->index);
             truncatedOrder = TruncateCoeffs(order,DEF_TNS_COEFF_THRESH,k);
             if (truncatedOrder == 0) continue;
-
             windowData->numFilters++;
             tnsInfo->tnsDataPresent=1;
             tnsFilter->direction = 0;
