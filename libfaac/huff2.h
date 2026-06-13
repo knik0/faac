@@ -46,6 +46,8 @@ enum {
     SF_PNS_OFFSET = SF_OFFSET - SF_MIN,
     /* Max allowed difference between successive scalefactors (AAC spec) */
     SF_DELTA = 60,
+    /* Max absolute scalefactor / global_gain (8-bit bitstream field) */
+    SF_MAX_ABS = 255,
 };
 
 /**

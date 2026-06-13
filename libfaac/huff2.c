@@ -432,7 +432,8 @@ int writesf(CoderInfo *coder, BitStream *stream, int write)
     lastis = 0;
     lastpns = coder->global_gain - SF_PNS_OFFSET;
 
-    // fixme: move range check to quantizer
+    /* qlevel() bounds every stored sf[] and global_gain to [0, SF_MAX_ABS], so
+     * the running reconstruction below cannot leave the decoder's range. */
     for (cnt = 0; cnt < coder->bandcnt; cnt++)
     {
         int book = coder->book[cnt];
