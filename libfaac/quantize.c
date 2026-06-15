@@ -293,6 +293,23 @@ static void qlevel(CoderInfo * __restrict coderInfo,
                   }
               }
           }
+
+          /* Bound to the decoder's 8-bit scalefactor range. The delta clamp
+           * keeps each step legal but not the running total, so a band can
+           * still land outside [0, SF_MAX_ABS]; pin it here. Covers every
+           * active band, including the first, which seeds global_gain and
+           * skips the delta clamp above. */
+          if (sf_abs < 0 || sf_abs > SF_MAX_ABS)
+          {
+              sf_abs = (sf_abs < 0) ? 0 : SF_MAX_ABS;
+              sf_rel = sf_abs - sf_bias;
+              sfac   = SF_OFFSET - sf_rel;
+              /* Clamping toward 0 raises gain (recheck Huffman overflow);
+               * clamping toward 255 lowers gain (recheck is a harmless no-op). */
+              sfacfix = gain_with_overflow_clamp(&sfac, bandmaxe[sb]);
+              sf_rel  = SF_OFFSET - sfac;
+              sf_abs  = sf_bias + sf_rel;
+          }
       }
 
       end -= start;
@@ -345,13 +362,18 @@ int BlocQuant(CoderInfo * __restrict coder, faac_real * __restrict xr, AACQuantC
         gxr += coder->groups.len[cnt] * BLOCK_LEN_SHORT;
     }
 
+    /* global_gain seeds the decoder's regular scalefactor chain and is written
+     * as 8 bits, so it must be a regular band's sf in [0, SF_MAX_ABS]. Intensity
+     * and PNS bands store stereo-position / noise-energy on a different scale
+     * (PNS can be negative); seeding from one truncates on the 8-bit write and
+     * desyncs the encoder and decoder chains. */
     coder->global_gain = 0;
     for (cnt = 0; cnt < coder->bandcnt; cnt++)
     {
         int book = coder->book[cnt];
         if (!book)
             continue;
-        if ((book != HCB_INTENSITY) && (book != HCB_INTENSITY2))
+        if ((book != HCB_INTENSITY) && (book != HCB_INTENSITY2) && (book != HCB_PNS))
         {
             coder->global_gain = coder->sf[cnt];
             break;
