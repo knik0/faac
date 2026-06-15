@@ -10,7 +10,7 @@
 #define IDC_SELECT_OUTPUTFILE           1003
 #define IDC_INPUTPARAMS                 1004
 #define IDC_PROGRESS                    1006
-#define IDC_ALLOWMIDSIDE                1007
+#define IDC_JOINTMODE                   1007
 #define IDC_TIME                        1008
 #define IDC_BANDWIDTH                   1009
 #define IDC_QUALITY                     1010

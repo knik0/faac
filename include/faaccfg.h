@@ -51,7 +51,7 @@ enum stream_format
     ADTS_STREAM = 1,
 };
 
-enum {JOINT_NONE = 0, JOINT_MS, JOINT_IS};
+enum {JOINT_NONE = 0, JOINT_MS, JOINT_IS, JOINT_MIXED};
 
 #pragma pack(push, 1)
 typedef struct faacEncConfiguration
