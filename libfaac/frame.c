@@ -292,7 +292,7 @@ faacEncHandle FAACAPI faacEncOpen(unsigned long sampleRate,
     hEncoder->config.copyright = libCopyright;
     hEncoder->config.mpegVersion = MPEG4;
     hEncoder->config.aacObjectType = LOW;
-    hEncoder->config.jointmode = JOINT_IS;
+    hEncoder->config.jointmode = JOINT_MIXED;
     hEncoder->config.pnslevel = 4;
     hEncoder->config.useLfe = 1;
     hEncoder->config.useTns = 0;
@@ -591,7 +591,7 @@ int FAACAPI faacEncEncode(faacEncHandle hpEncoder,
 	}
 
     AACstereo(coderInfo, channelInfo, hEncoder->freqBuff, numChannels,
-              (faac_real)hEncoder->aacquantCfg.quality/DEFQUAL, jointmode);
+              (faac_real)hEncoder->aacquantCfg.quality/DEFQUAL, jointmode, hEncoder->sampleRate);
 
     for (channel = 0; channel < numChannels; channel++) {
         BlocQuant(&coderInfo[channel], hEncoder->freqBuff[channel],

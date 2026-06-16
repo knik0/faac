@@ -190,6 +190,7 @@ static help_t help_advanced[] = {
     {"--joint 0\tDisable joint stereo coding.\n"},
     {"--joint 1\tUse Mid/Side coding.\n"},
     {"--joint 2\tUse Intensity Stereo coding.\n"},
+    {"--joint 3\tUse Mixed Mode (dynamic M/S and IS) coding (default).\n"},
     {"--pns <0 .. 10>\tPNS level; 0=disabled.\n"},
     {"--mpeg-vers X\tForce AAC MPEG version, X can be 2 or 4\n"},
     {"--shortctl X\tEnforce block type (0 = both (default); 1 = no short; 2 = no\n"
@@ -1019,6 +1020,9 @@ int main(int argc, char *argv[])
         break;
     case JOINT_IS:
         fprintf(stderr, " + IS");
+        break;
+    case JOINT_MIXED:
+        fprintf(stderr, " + Mixed");
         break;
     }
     if (myFormat->pnslevel > 0)

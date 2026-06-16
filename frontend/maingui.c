@@ -153,7 +153,10 @@ static DWORD WINAPI EncodeFile(LPVOID pParam)
             /* set encoder configuration */
             faacEncConfigurationPtr config = faacEncGetCurrentConfiguration(hEncoder);
 
-            config->jointmode = IsDlgButtonChecked(hWnd, IDC_ALLOWMIDSIDE) == BST_CHECKED ? 1 : 0;
+            {
+                LRESULT mode = SendMessage(GetDlgItem(hWnd, IDC_JOINTMODE), CB_GETCURSEL, 0, 0);
+                config->jointmode = (mode == CB_ERR) ? JOINT_MIXED : (unsigned int)mode;
+            }
             config->useTns = IsDlgButtonChecked(hWnd, IDC_USETNS) == BST_CHECKED ? 1 : 0;
             config->useLfe = IsDlgButtonChecked(hWnd, IDC_USELFE) == BST_CHECKED ? 1 : 0;
             config->outputFormat = IsDlgButtonChecked(hWnd, IDC_USERAW) == BST_CHECKED ? 0 : 1;
@@ -339,7 +342,12 @@ static BOOL WINAPI DialogProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
         SendMessage(GetDlgItem(hWnd, IDC_OBJECTTYPE), CB_ADDSTRING, 0, (LPARAM)(LPCTSTR)"Low Complexity");
         SendMessage(GetDlgItem(hWnd, IDC_OBJECTTYPE), CB_SETCURSEL, 0, 0);
 
-        CheckDlgButton(hWnd, IDC_ALLOWMIDSIDE, TRUE);
+        SendMessage(GetDlgItem(hWnd, IDC_JOINTMODE), CB_ADDSTRING, 0, (LPARAM)(LPCTSTR)"None");
+        SendMessage(GetDlgItem(hWnd, IDC_JOINTMODE), CB_ADDSTRING, 0, (LPARAM)(LPCTSTR)"M/S");
+        SendMessage(GetDlgItem(hWnd, IDC_JOINTMODE), CB_ADDSTRING, 0, (LPARAM)(LPCTSTR)"IS");
+        SendMessage(GetDlgItem(hWnd, IDC_JOINTMODE), CB_ADDSTRING, 0, (LPARAM)(LPCTSTR)"Mixed");
+        SendMessage(GetDlgItem(hWnd, IDC_JOINTMODE), CB_SETCURSEL, 3, 0);
+
         CheckDlgButton(hWnd, IDC_USELFE, FALSE);
         CheckDlgButton(hWnd, IDC_USERAW, FALSE);
         CheckDlgButton(hWnd, IDC_USETNS, TRUE);
