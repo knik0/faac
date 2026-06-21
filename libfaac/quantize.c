@@ -172,7 +172,6 @@ static void bmask(CoderInfo * __restrict coderInfo, faac_real * __restrict xr0, 
     bandenrg[sfb] = avge;
     /* Track peak magnitude to identify potential Huffman overflows. */
     bandmaxe[sfb] = FAAC_SQRT(maxe);
-    maxe *= gsize;
 
     avgenrg = (totenrg / last) * (end - start);
 
