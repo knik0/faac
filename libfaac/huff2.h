@@ -25,14 +25,39 @@
 /* Huffman Codebooks */
 enum {
     HCB_ZERO = 0,
+    HCB_1, HCB_2, HCB_3, HCB_4, HCB_5,
+    HCB_6, HCB_7, HCB_8, HCB_9, HCB_10,
     HCB_ESC = 11,
+    HCB_DELTA = 12,   /* scalefactor-delta book (book12) */
     HCB_PNS = 13,
     HCB_INTENSITY2 = 14,
     HCB_INTENSITY = 15,
     HCB_NONE
 };
 
-/* Maximum value representable by Huffman Book 11 escape sequences.
+/* Spectral books come in range-pairs {base, base+1} sharing a tuple shape but a
+ * different codeword table; the pair's reach is its Largest Absolute Value. */
+enum {
+    LAV_1   = 1,    /* HCB_1, HCB_2  */
+    LAV_2   = 2,    /* HCB_3, HCB_4  */
+    LAV_4   = 4,    /* HCB_5, HCB_6  */
+    LAV_7   = 7,    /* HCB_7, HCB_8  */
+    LAV_12  = 12,   /* HCB_9, HCB_10 */
+    LAV_ESC = 16    /* HCB_ESC: |q| >= 16 spills into an escape suffix */
+};
+
+/* Radix of each book's positional codeword index (so the magic 27/9/13/17 read
+ * as the powers they are). 4-tuples pack as radix^3..^0, 2-tuples as radix^1..^0. */
+enum {
+    DIM_S4    = 3,  /* HCB_1, HCB_2:  signed 4-tuple, 3^4 = 81  */
+    DIM_M4    = 3,  /* HCB_3, HCB_4:  mag 4-tuple,    3^4 = 81  */
+    DIM_S2    = 9,  /* HCB_5, HCB_6:  signed 2-tuple, 9^2 = 81  */
+    DIM_M2_7  = 8,  /* HCB_7, HCB_8:  mag 2-tuple,    8^2 = 64  */
+    DIM_M2_12 = 13, /* HCB_9, HCB_10: mag 2-tuple,   13^2 = 169 */
+    DIM_ESC   = 17  /* HCB_ESC:       mag 2-tuple,   17^2 = 289 */
+};
+
+/* Maximum value representable by HCB_ESC escape sequences.
  * Values >= 8192 would cause bitstream overflow/sync loss. */
 #define MAX_HUFF_ESC_VAL 8191
 
@@ -52,7 +77,7 @@ enum {
 
 /**
  * Restrict scalefactor delta to the spec-defined +/- SF_DELTA range.
- * This ensures the delta remains valid for Book 12 Huffman encoding.
+ * This ensures the delta remains valid for HCB_DELTA Huffman encoding.
  */
 static inline int clamp_sf_diff(int diff)
 {

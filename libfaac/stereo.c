@@ -551,26 +551,6 @@ void AACstereo(CoderInfo *coder,
 
     for (chn = 0; chn < maxchan; chn++)
     {
-        int group;
-        int bookcnt = 0;
-        CoderInfo *cp = coder + chn;
-
-        if (!channel[chn].present)
-            continue;
-
-        for (group = 0; group < cp->groups.n; group++)
-        {
-            int band;
-            for (band = 0; band < cp->sfbn; band++)
-            {
-                cp->book[bookcnt] = HCB_NONE;
-                cp->sf[bookcnt] = 0;
-                bookcnt++;
-            }
-        }
-    }
-    for (chn = 0; chn < maxchan; chn++)
-    {
         int rch;
         int cnt;
         int group;

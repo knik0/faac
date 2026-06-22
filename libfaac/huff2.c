@@ -23,11 +23,16 @@
 #include "huffdata.h"
 #include "huff2.h"
 #include "bitstream.h"
+#include "util.h"
 
+/* Escape suffix for HCB_ESC: a magnitude |q| >= LAV_ESC is sent as the pair index
+ * LAV_ESC (emitted by the caller) plus this suffix - a unary prefix of `preflen`
+ * ones and a zero, then the low `preflen+4` bits of x. preflen counts how far x is
+ * past the 16-window, so the suffix is 2*preflen+5 bits. */
 static int escape(int x, int *code)
 {
-    int preflen = 0;
-    int base = 32;
+    int preflen;
+    int base;
 
     if (x > MAX_HUFF_ESC_VAL)
     {
@@ -35,19 +40,10 @@ static int escape(int x, int *code)
         return 0;
     }
 
-    *code = 0;
-    while (base <= x)
-    {
-        base <<= 1;
-        *code <<= 1;
-        *code |= 1;
-        preflen++;
-    }
-    base >>= 1;
+    preflen = 31 - CountLeadingZeros(x) - 4;
+    base = 1 << (preflen + 4);
 
-    // separator
-    *code <<= 1;
-
+    *code = (1 << (preflen + 1)) - 2; /* preflen 1s and a 0 */
     *code <<= (preflen + 4);
     *code |= (x - base);
 
@@ -56,6 +52,11 @@ static int escape(int x, int *code)
 
 #define arrlen(array) (sizeof(array) / sizeof(*array))
 
+/* Code `len` coeffs under book `bnum`, returning the bit count. coder == NULL only
+ * sizes (the per-band cost trials in huffbook); else also emits codewords to
+ * coder->s[]. Signed books fold sign into the index and emit book[idx].data
+ * verbatim; magnitude books look up the |coef| index then append one sign bit per
+ * nonzero coefficient. HCB_ESC additionally spills |q| >= LAV_ESC into escape(). */
 static int huffcode(int *qs /* quantized spectrum */,
                     int len,
                     int bnum,
@@ -79,12 +80,12 @@ static int huffcode(int *qs /* quantized spectrum */,
     book = hmap[bnum];
     switch (bnum)
     {
-    case 1:
-    case 2:
+    case HCB_1:
+    case HCB_2:
         for(ofs = 0; ofs < len; ofs += 4)
         {
             qp = qs+ofs;
-            idx = 27 * qp[0] + 9 * qp[1] + 3 * qp[2] + qp[3] + 40;
+            idx = DIM_S4*DIM_S4*DIM_S4 * qp[0] + DIM_S4*DIM_S4 * qp[1] + DIM_S4 * qp[2] + qp[3] + 40;
             if (idx < 0 || idx >= arrlen(book01))
             {
                 return -1;
@@ -99,12 +100,12 @@ static int huffcode(int *qs /* quantized spectrum */,
             bits += blen;
         }
         break;
-    case 3:
-    case 4:
+    case HCB_3:
+    case HCB_4:
         for(ofs = 0; ofs < len; ofs += 4)
         {
             qp = qs+ofs;
-            idx = 27 * abs(qp[0]) + 9 * abs(qp[1]) + 3 * abs(qp[2]) + abs(qp[3]);
+            idx = DIM_M4*DIM_M4*DIM_M4 * abs(qp[0]) + DIM_M4*DIM_M4 * abs(qp[1]) + DIM_M4 * abs(qp[2]) + abs(qp[3]);
             if (idx < 0 || idx >= arrlen(book03))
             {
                 return -1;
@@ -137,12 +138,12 @@ static int huffcode(int *qs /* quantized spectrum */,
             bits += blen;
         }
         break;
-    case 5:
-    case 6:
+    case HCB_5:
+    case HCB_6:
         for(ofs = 0; ofs < len; ofs += 2)
         {
             qp = qs+ofs;
-            idx = 9 * qp[0] + qp[1] + 40;
+            idx = DIM_S2 * qp[0] + qp[1] + 40;
             if (idx < 0 || idx >= arrlen(book05))
             {
                 return -1;
@@ -157,12 +158,12 @@ static int huffcode(int *qs /* quantized spectrum */,
             bits += blen;
         }
         break;
-    case 7:
-    case 8:
+    case HCB_7:
+    case HCB_8:
         for(ofs = 0; ofs < len; ofs += 2)
         {
             qp = qs+ofs;
-            idx = 8 * abs(qp[0]) + abs(qp[1]);
+            idx = DIM_M2_7 * abs(qp[0]) + abs(qp[1]);
             if (idx < 0 || idx >= arrlen(book07))
             {
                 return -1;
@@ -193,12 +194,12 @@ static int huffcode(int *qs /* quantized spectrum */,
             bits += blen;
         }
         break;
-    case 9:
-    case 10:
+    case HCB_9:
+    case HCB_10:
         for(ofs = 0; ofs < len; ofs += 2)
         {
             qp = qs+ofs;
-            idx = 13 * abs(qp[0]) + abs(qp[1]);
+            idx = DIM_M2_12 * abs(qp[0]) + abs(qp[1]);
             if (idx < 0 || idx >= arrlen(book09))
             {
                 return -1;
@@ -238,11 +239,11 @@ static int huffcode(int *qs /* quantized spectrum */,
 
             x0 = abs(qp[0]);
             x1 = abs(qp[1]);
-            if (x0 > 16)
-                x0 = 16;
-            if (x1 > 16)
-                x1 = 16;
-            idx = 17 * x0 + x1;
+            if (x0 > LAV_ESC)
+                x0 = LAV_ESC;
+            if (x1 > LAV_ESC)
+                x1 = LAV_ESC;
+            idx = DIM_ESC * x0 + x1;
             if (idx < 0 || idx >= arrlen(book11))
             {
                 return -1;
@@ -273,7 +274,7 @@ static int huffcode(int *qs /* quantized spectrum */,
             }
             bits += blen;
 
-            if (x0 >= 16)
+            if (x0 >= LAV_ESC)
             {
                 blen = escape(abs(qp[0]), &data);
                 if (coder)
@@ -284,7 +285,7 @@ static int huffcode(int *qs /* quantized spectrum */,
                 bits += blen;
             }
 
-            if (x1 >= 16)
+            if (x1 >= LAV_ESC)
             {
                 blen = escape(abs(qp[1]), &data);
                 if (coder)
@@ -308,6 +309,9 @@ static int huffcode(int *qs /* quantized spectrum */,
 }
 
 
+/* Per-band codebook selection: scan |maxq| to pick the lowest range-pair that can
+ * represent it, keep whichever book of the pair {base, base+1} codes the band
+ * shorter, emit it, and record the choice in coder->book[]. */
 int huffbook(CoderInfo *coder,
              int *qs /* quantized spectrum */,
              int len)
@@ -323,6 +327,7 @@ int huffbook(CoderInfo *coder,
             maxq = q;
     }
 
+    /* Size the band under both books of the covering pair; keep the cheaper. */
 #define BOOKMIN(n)bookmin=n;lenmin=huffcode(qs,len,bookmin,0);if(huffcode(qs,len,bookmin+1,0)<lenmin)bookmin++;
 
     if (maxq < 1)
@@ -330,25 +335,25 @@ int huffbook(CoderInfo *coder,
         bookmin = HCB_ZERO;
         lenmin = 0;
     }
-    else if (maxq < 2)
+    else if (maxq < LAV_1 + 1)
     {
-        BOOKMIN(1);
+        BOOKMIN(HCB_1);
     }
-    else if (maxq < 3)
+    else if (maxq < LAV_2 + 1)
     {
-        BOOKMIN(3);
+        BOOKMIN(HCB_3);
     }
-    else if (maxq < 5)
+    else if (maxq < LAV_4 + 1)
     {
-        BOOKMIN(5);
+        BOOKMIN(HCB_5);
     }
-    else if (maxq < 8)
+    else if (maxq < LAV_7 + 1)
     {
-        BOOKMIN(7);
+        BOOKMIN(HCB_7);
     }
-    else if (maxq < 13)
+    else if (maxq < LAV_12 + 1)
     {
-        BOOKMIN(9);
+        BOOKMIN(HCB_9);
     }
     else
     {
@@ -362,6 +367,9 @@ int huffbook(CoderInfo *coder,
     return 0;
 }
 
+/* Write (or size) the section layout: a 4-bit book + run length per maximal run of
+ * equal adjacent books. The count field is cntbits wide (5 long / 3 short), so a
+ * run past maxcnt splits into repeated full sections under the same book. */
 int writebooks(CoderInfo *coder, BitStream *stream, int write)
 {
     int bits = 0;
@@ -428,6 +436,10 @@ int writesf(CoderInfo *coder, BitStream *stream, int write)
     int lastpns;
     int initpns = 1;
 
+    /* Three independent DPCM chains share HCB_DELTA, each seeded so its first delta
+     * is self-contained: intensity positions from 0, scalefactors from global_gain
+     * (itself the first regular sf), PNS energies from global_gain - SF_PNS_OFFSET.
+     * The decoder rebuilds each by the same running sum, so deltas match. */
     lastsf = coder->global_gain;
     lastis = 0;
     lastpns = coder->global_gain - SF_PNS_OFFSET;
@@ -457,6 +469,9 @@ int writesf(CoderInfo *coder, BitStream *stream, int write)
 
             if (initpns)
             {
+                /* First PNS band has no prior energy to delta against, so the spec
+                 * sends a raw 9-bit value (diff + 256) instead of an HCB_DELTA code;
+                 * later PNS bands delta off this one. */
                 initpns = 0;
 
                 length = 9;

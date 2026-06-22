@@ -336,6 +336,20 @@ static void qlevel(CoderInfo * __restrict coderInfo,
     }
 }
 
+/* Per-frame reset of a channel's section state: every band starts with no codebook
+ * (HCB_NONE) and zero scalefactor. AACstereo() then pre-loads intensity bands and
+ * qlevel() resolves the rest. */
+void ResetCoderSections(CoderInfo *coder)
+{
+    int band, nband = coder->groups.n * coder->sfbn;
+
+    for (band = 0; band < nband; band++)
+    {
+        coder->book[band] = HCB_NONE;
+        coder->sf[band] = 0;
+    }
+}
+
 int BlocQuant(CoderInfo * __restrict coder, faac_real * __restrict xr, AACQuantCfg *aacquantCfg)
 {
     faac_real bandlvl[MAX_SCFAC_BANDS];

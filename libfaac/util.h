@@ -15,8 +15,6 @@
  * You should have received a copy of the GNU Lesser General Public
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
- *
- * $Id: util.h,v 1.8 2003/12/20 04:32:48 stux Exp $
  */
 
 #ifndef UTIL_H
@@ -50,6 +48,7 @@ extern "C" {
 int GetSRIndex(unsigned int sampleRate);
 unsigned int MaxBitrate(unsigned long sampleRate);
 unsigned int MinBitrate();
+int CountLeadingZeros(unsigned int x);
 
 #ifdef __cplusplus
 }
