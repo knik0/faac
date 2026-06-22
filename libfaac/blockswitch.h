@@ -15,12 +15,10 @@
  * You should have received a copy of the GNU Lesser General Public
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
- *
- * $Id: psych.h,v 1.15 2009/06/05 16:32:15 menno Exp $
  */
 
-#ifndef PSYCH_H
-#define PSYCH_H
+#ifndef BLOCKSWITCH_H
+#define BLOCKSWITCH_H
 
 #include "faac_real.h"
 
@@ -28,13 +26,8 @@
 extern "C" {
 #endif /* __cplusplus */
 
-#ifndef M_PI
-#define M_PI        3.14159265358979323846
-#endif
-
 #include "coder.h"
 #include "channels.h"
-#include "fft.h"
 
 typedef struct {
 	int size;
@@ -51,34 +44,21 @@ typedef struct {
 typedef struct {
 	faac_real sampleRate;
 
-	/* Hann window */
-	faac_real *hannWindow;
-	faac_real *hannWindowS;
-
 	/* shared work buffers */
 	faac_real *sharedWorkBuffLong;  /* Used for 2048-sample windows (filtbank, psy, tns) */
-	faac_real *sharedWorkBuffShort; /* Used for 256-sample windows (psy) */
 	faac_real *mdctXr;              /* MDCT pre-twiddle work buffer (xr) */
 	faac_real *mdctXi;              /* MDCT pre-twiddle work buffer (xi) */
-
-        void *data;
 } GlobalPsyInfo;
 
 typedef struct 
 {
 void (*PsyInit) (GlobalPsyInfo *gpsyInfo, PsyInfo *psyInfo,
-		unsigned int numChannels, unsigned int sampleRate,
-		int *cb_width_long, int num_cb_long,
-		int *cb_width_short, int num_cb_short);
-void (*PsyEnd) (GlobalPsyInfo *gpsyInfo, PsyInfo *psyInfo,
+		unsigned int numChannels, unsigned int sampleRate);
+void (*PsyEnd) (PsyInfo *psyInfo, unsigned int numChannels);
+void (*PsyCalculate) (ChannelInfo *channelInfo, PsyInfo *psyInfo,
 		unsigned int numChannels);
-void (*PsyCalculate) (ChannelInfo *channelInfo, GlobalPsyInfo *gpsyInfo,
-		PsyInfo *psyInfo, int *cb_width_long, int num_cb_long,
-		int *cb_width_short, int num_cb_short,
-		unsigned int numChannels, faac_real quality);
-void (*PsyBufferUpdate) ( FFT_Tables *fft_tables, GlobalPsyInfo * gpsyInfo, PsyInfo * psyInfo,
-		faac_real *newSamples, unsigned int bandwidth,
-		int *cb_width_short, int num_cb_short);
+void (*PsyBufferUpdate) (GlobalPsyInfo * gpsyInfo, PsyInfo * psyInfo,
+		faac_real *newSamples);
 void (*BlockSwitch) (CoderInfo *coderInfo, PsyInfo *psyInfo,
 		unsigned int numChannels);
 } psymodel_t;
@@ -89,4 +69,4 @@ extern psymodel_t psymodel2;
 }
 #endif /* __cplusplus */
 
-#endif /* PSYCH_H */
+#endif /* BLOCKSWITCH_H */

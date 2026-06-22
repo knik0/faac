@@ -73,7 +73,6 @@ void FilterBankInit(faacEncStruct* hEncoder)
     CalculateKBDWindow(hEncoder->kbd_window_short, 6, BLOCK_LEN_SHORT*2);
 
     hEncoder->gpsyInfo.sharedWorkBuffLong = (faac_real*)AllocMemory(2*BLOCK_LEN_LONG*sizeof(faac_real));
-    hEncoder->gpsyInfo.sharedWorkBuffShort = (faac_real*)AllocMemory(2*BLOCK_LEN_SHORT*sizeof(faac_real));
     hEncoder->gpsyInfo.mdctXr = (faac_real*)AllocMemory((BLOCK_LEN_LONG / 2)*sizeof(faac_real));
     hEncoder->gpsyInfo.mdctXi = (faac_real*)AllocMemory((BLOCK_LEN_LONG / 2)*sizeof(faac_real));
 }
@@ -93,7 +92,6 @@ void FilterBankEnd(faacEncStruct* hEncoder)
     if (hEncoder->kbd_window_short) FreeMemory(hEncoder->kbd_window_short);
 
     if (hEncoder->gpsyInfo.sharedWorkBuffLong) FreeMemory(hEncoder->gpsyInfo.sharedWorkBuffLong);
-    if (hEncoder->gpsyInfo.sharedWorkBuffShort) FreeMemory(hEncoder->gpsyInfo.sharedWorkBuffShort);
     if (hEncoder->gpsyInfo.mdctXr) FreeMemory(hEncoder->gpsyInfo.mdctXr);
     if (hEncoder->gpsyInfo.mdctXi) FreeMemory(hEncoder->gpsyInfo.mdctXi);
 }

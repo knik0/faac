@@ -15,136 +15,87 @@
  * You should have received a copy of the GNU Lesser General Public
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
- *
- * $Id: psychkni.c,v 1.19 2012/03/01 18:34:17 knik Exp $
  */
 #include <stdio.h>
 #include <stdlib.h>
-#include <math.h>
 #include <string.h>
 
 #include "blockswitch.h"
 #include "coder.h"
-#include "fft.h"
 #include "util.h"
-#include "filtbank.h"
 #include <faac.h>
 
 typedef float psyfloat;
 
 typedef struct
 {
-  /* bandwidth */
-  int bandS;
-  int lastband;
-
-  /* band volumes */
-  psyfloat *engPrev[8];
-  psyfloat *eng[8];
-  psyfloat *engNext[8];
-  psyfloat *engNext2[8];
+  /* Per-sub-block high-pass energy, oldest to newest. The four-deep history
+     is what PsyCheckShort's +-2 sub-block lookahead reaches across. */
+  psyfloat engPrev[8];
+  psyfloat eng[8];
+  psyfloat engNext[8];
+  psyfloat engNext2[8];
 }
 psydata_t;
 
+/* The high-pass first difference (d[n]=x[n]-x[n-1]) de-weights bass, whose
+ * broadband energy would otherwise mask HF attacks and false-trigger short
+ * blocks on stationary music; what's left tracks the band where pre-echo is
+ * audible. A relative energy jump between sub-blocks past this threshold is a
+ * transient. */
+#define PSY_TD_THRESH ((faac_real)0.5)
 
-static void Hann(GlobalPsyInfo * gpsyInfo, faac_real *inSamples, int size)
-{
-  int i;
-
-  /* Applying Hann window */
-  if (size == BLOCK_LEN_LONG * 2)
-  {
-    for (i = 0; i < size; i++)
-      inSamples[i] *= gpsyInfo->hannWindow[i];
-  }
-  else
-  {
-    for (i = 0; i < size; i++)
-      inSamples[i] *= gpsyInfo->hannWindowS[i];
-  }
-}
-
-#define PRINTSTAT 0
-#if PRINTSTAT
-static struct {
-    int tot;
-    int s;
-} frames;
-#endif
-
-static void PsyCheckShort(PsyInfo * psyInfo, faac_real quality)
+static void PsyCheckShort(PsyInfo * psyInfo)
 {
   enum {PREVS = 2, NEXTS = 2};
-  psydata_t *psydata = psyInfo->data;
-  int lastband = psydata->lastband;
-  int firstband = 2;
-  int sfb, win;
-  psyfloat *lasteng;
+  psydata_t *psydata = (psydata_t *)psyInfo->data;
+  int win, haveprev = 0;
+  faac_real lasteng = 0.0;
 
   psyInfo->block_type = ONLY_LONG_WINDOW;
 
-  lasteng = NULL;
   for (win = 0; win < PREVS + 8 + NEXTS; win++)
   {
-      psyfloat *eng;
+      faac_real eng;
 
       if (win < PREVS)
-          eng = psydata->engPrev[win + 8 - PREVS];
+          eng = (faac_real)psydata->engPrev[win + 8 - PREVS];
       else if (win < (PREVS + 8))
-          eng = psydata->eng[win - PREVS];
+          eng = (faac_real)psydata->eng[win - PREVS];
       else
-          eng = psydata->engNext[win - PREVS - 8];
+          eng = (faac_real)psydata->engNext[win - PREVS - 8];
 
-      if (lasteng)
+      if (haveprev)
       {
-          faac_real toteng = 0.0;
-          faac_real volchg = 0.0;
+          faac_real toteng = (eng < lasteng) ? eng : lasteng;
+          faac_real volchg = FAAC_FABS(eng - lasteng);
 
-          for (sfb = firstband; sfb < lastband; sfb++)
-          {
-              toteng += (eng[sfb] < lasteng[sfb]) ? eng[sfb] : lasteng[sfb];
-              volchg += FAAC_FABS(eng[sfb] - lasteng[sfb]);
-          }
-
-          if ((volchg / toteng * quality) > 3.0)
+          /* Relying on IEEE divide: silence beside energy gives inf (fires
+             short on the onset/offset), two silent sub-blocks give 0/0=NaN
+             (compares false, stays long). */
+          if (volchg / toteng > PSY_TD_THRESH)
           {
               psyInfo->block_type = ONLY_SHORT_WINDOW;
               break;
           }
       }
       lasteng = eng;
+      haveprev = 1;
   }
-
-#if PRINTSTAT
-  frames.tot++;
-  if (psyInfo->block_type == ONLY_SHORT_WINDOW)
-      frames.s++;
-#endif
 }
 
 static void PsyInit(GlobalPsyInfo * gpsyInfo, PsyInfo * psyInfo, unsigned int numChannels,
-		    unsigned int sampleRate, int *cb_width_long, int num_cb_long,
-		    int *cb_width_short, int num_cb_short)
+		    unsigned int sampleRate)
 {
   unsigned int channel;
-  int i, j, size;
+  int size;
 
-  gpsyInfo->hannWindow =
-    (faac_real *) AllocMemory(2 * BLOCK_LEN_LONG * sizeof(faac_real));
-  gpsyInfo->hannWindowS =
-    (faac_real *) AllocMemory(2 * BLOCK_LEN_SHORT * sizeof(faac_real));
-
-  for (i = 0; i < BLOCK_LEN_LONG * 2; i++)
-    gpsyInfo->hannWindow[i] = 0.5 * (1 - FAAC_COS(2.0 * M_PI * (i + 0.5) /
-					     (BLOCK_LEN_LONG * 2)));
-  for (i = 0; i < BLOCK_LEN_SHORT * 2; i++)
-    gpsyInfo->hannWindowS[i] = 0.5 * (1 - FAAC_COS(2.0 * M_PI * (i + 0.5) /
-					      (BLOCK_LEN_SHORT * 2)));
   gpsyInfo->sampleRate = (faac_real) sampleRate;
 
   for (channel = 0; channel < numChannels; channel++)
   {
-    psydata_t *psydata = AllocMemory(sizeof(psydata_t));
+    psydata_t *psydata = (psydata_t *)AllocMemory(sizeof(psydata_t));
+    memset(psydata, 0, sizeof(psydata_t));
     psyInfo[channel].data = psydata;
   }
 
@@ -160,38 +111,12 @@ static void PsyInit(GlobalPsyInfo * gpsyInfo, PsyInfo * psyInfo, unsigned int nu
 
   size = BLOCK_LEN_SHORT;
   for (channel = 0; channel < numChannels; channel++)
-  {
-    psydata_t *psydata = psyInfo[channel].data;
-
     psyInfo[channel].sizeS = size;
-
-    for (j = 0; j < 8; j++)
-    {
-      psydata->engPrev[j] =
-            (psyfloat *) AllocMemory(NSFB_SHORT * sizeof(psyfloat));
-      memset(psydata->engPrev[j], 0, NSFB_SHORT * sizeof(psyfloat));
-      psydata->eng[j] =
-          (psyfloat *) AllocMemory(NSFB_SHORT * sizeof(psyfloat));
-      memset(psydata->eng[j], 0, NSFB_SHORT * sizeof(psyfloat));
-      psydata->engNext[j] =
-          (psyfloat *) AllocMemory(NSFB_SHORT * sizeof(psyfloat));
-      memset(psydata->engNext[j], 0, NSFB_SHORT * sizeof(psyfloat));
-      psydata->engNext2[j] =
-          (psyfloat *) AllocMemory(NSFB_SHORT * sizeof(psyfloat));
-      memset(psydata->engNext2[j], 0, NSFB_SHORT * sizeof(psyfloat));
-    }
-  }
 }
 
-static void PsyEnd(GlobalPsyInfo * gpsyInfo, PsyInfo * psyInfo, unsigned int numChannels)
+static void PsyEnd(PsyInfo * psyInfo, unsigned int numChannels)
 {
   unsigned int channel;
-  int j;
-
-  if (gpsyInfo->hannWindow)
-    FreeMemory(gpsyInfo->hannWindow);
-  if (gpsyInfo->hannWindowS)
-    FreeMemory(gpsyInfo->hannWindowS);
 
   for (channel = 0; channel < numChannels; channel++)
   {
@@ -201,45 +126,17 @@ static void PsyEnd(GlobalPsyInfo * gpsyInfo, PsyInfo * psyInfo, unsigned int num
 
   for (channel = 0; channel < numChannels; channel++)
   {
-    psydata_t *psydata = psyInfo[channel].data;
-
-    for (j = 0; j < 8; j++)
-    {
-        if (psydata->engPrev[j])
-            FreeMemory(psydata->engPrev[j]);
-        if (psydata->eng[j])
-            FreeMemory(psydata->eng[j]);
-        if (psydata->engNext[j])
-            FreeMemory(psydata->engNext[j]);
-        if (psydata->engNext2[j])
-            FreeMemory(psydata->engNext2[j]);
-    }
-  }
-
-  for (channel = 0; channel < numChannels; channel++)
-  {
     if (psyInfo[channel].data)
       FreeMemory(psyInfo[channel].data);
   }
-
-#if PRINTSTAT
-  printf("short frames: %d/%d (%.2f %%)\n", frames.s, frames.tot, 100.0*frames.s/frames.tot);
-#endif
 }
 
 /* Do psychoacoustical analysis */
-static void PsyCalculate(ChannelInfo * channelInfo, GlobalPsyInfo * gpsyInfo,
-			 PsyInfo * psyInfo, int *cb_width_long, int
-			 num_cb_long, int *cb_width_short,
-			 int num_cb_short, unsigned int numChannels,
-			 faac_real quality
+static void PsyCalculate(ChannelInfo * channelInfo, PsyInfo * psyInfo,
+			 unsigned int numChannels
 			)
 {
   unsigned int channel;
-
-  // limit switching threshold
-  if (quality < 0.4)
-      quality = 0.4;
 
   for (channel = 0; channel < numChannels; channel++)
   {
@@ -253,8 +150,8 @@ static void PsyCalculate(ChannelInfo * channelInfo, GlobalPsyInfo * gpsyInfo,
 	int leftChan = channel;
 	int rightChan = channelInfo[channel].paired_ch;
 
-	PsyCheckShort(&psyInfo[leftChan], quality);
-	PsyCheckShort(&psyInfo[rightChan], quality);
+	PsyCheckShort(&psyInfo[leftChan]);
+	PsyCheckShort(&psyInfo[rightChan]);
       }
       else if (channelInfo[channel].type == ELEMENT_LFE)
       {				/* LFE */
@@ -263,71 +160,41 @@ static void PsyCalculate(ChannelInfo * channelInfo, GlobalPsyInfo * gpsyInfo,
       }
       else if (channelInfo[channel].type == ELEMENT_SCE)
       {				/* SCE */
-	PsyCheckShort(&psyInfo[channel], quality);
+	PsyCheckShort(&psyInfo[channel]);
       }
     }
   }
 }
 
-static void PsyBufferUpdate( FFT_Tables *fft_tables, GlobalPsyInfo * gpsyInfo, PsyInfo * psyInfo,
-			    faac_real *newSamples, unsigned int bandwidth,
-			    int *cb_width_short, int num_cb_short)
+static void PsyBufferUpdate(GlobalPsyInfo * gpsyInfo, PsyInfo * psyInfo,
+			    faac_real *newSamples)
 {
   int win;
   faac_real *transBuff = gpsyInfo->sharedWorkBuffLong;
-  faac_real *transBuffS = gpsyInfo->sharedWorkBuffShort;
-  psydata_t *psydata = psyInfo->data;
-  psyfloat *tmp;
-  int sfb;
-
-  psydata->bandS = psyInfo->sizeS * bandwidth * 2 / gpsyInfo->sampleRate;
+  psydata_t *psydata = (psydata_t *)psyInfo->data;
 
   memcpy(transBuff, psyInfo->prevSamples, psyInfo->size * sizeof(faac_real));
   memcpy(transBuff + psyInfo->size, newSamples, psyInfo->size * sizeof(faac_real));
 
+  // shift bufs
+  memcpy(psydata->engPrev, psydata->eng, 8 * sizeof(psyfloat));
+  memcpy(psydata->eng, psydata->engNext, 8 * sizeof(psyfloat));
+  memcpy(psydata->engNext, psydata->engNext2, 8 * sizeof(psyfloat));
+
   for (win = 0; win < 8; win++)
   {
-    int first = 0;
-    int last = 0;
+    /* seg[-1] is in bounds (seg starts >= 448 samples in), so the first
+     * difference carries across the sub-block boundary instead of resetting. */
+    faac_real *seg = transBuff + (win * BLOCK_LEN_SHORT) + (BLOCK_LEN_LONG - BLOCK_LEN_SHORT) / 2;
+    faac_real e = 0.0;
+    int l, n = 2 * psyInfo->sizeS;
 
-    memcpy(transBuffS, transBuff + (win * BLOCK_LEN_SHORT) + (BLOCK_LEN_LONG - BLOCK_LEN_SHORT) / 2,
-	   2 * psyInfo->sizeS * sizeof(faac_real));
-
-    Hann(gpsyInfo, transBuffS, 2 * psyInfo->sizeS);
-    MDCT( fft_tables, transBuffS, 2 * psyInfo->sizeS, gpsyInfo->mdctXr, gpsyInfo->mdctXi);
-
-    // shift bufs
-    tmp = psydata->engPrev[win];
-    psydata->engPrev[win] = psydata->eng[win];
-    psydata->eng[win] = psydata->engNext[win];
-    psydata->engNext[win] = psydata->engNext2[win];
-    psydata->engNext2[win] = tmp;
-
-    for (sfb = 0; sfb < num_cb_short; sfb++)
+    for (l = 0; l < n; l++)
     {
-      faac_real e;
-      int l;
-
-      first = last;
-      last = first + cb_width_short[sfb];
-
-      if (first < 1)
-          first = 1;
-
-      if (first >= psydata->bandS) // band out of range
-          break;
-
-      e = 0.0;
-      for (l = first; l < last; l++)
-          e += transBuffS[l] * transBuffS[l];
-
-      psydata->engNext2[win][sfb] = e;
+      faac_real d = seg[l] - seg[l - 1];
+      e += d * d;
     }
-    psydata->lastband = sfb;
-    for (; sfb < num_cb_short; sfb++)
-    {
-        psydata->engNext2[win][sfb] = 0;
-    }
+    psydata->engNext2[win] = (psyfloat)e;
   }
 
   memcpy(psyInfo->prevSamples, newSamples, psyInfo->size * sizeof(faac_real));
