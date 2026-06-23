@@ -45,9 +45,7 @@ typedef struct {
 	faac_real sampleRate;
 
 	/* shared work buffers */
-	faac_real *sharedWorkBuffLong;  /* Used for 2048-sample windows (filtbank, psy, tns) */
-	faac_real *mdctXr;              /* MDCT pre-twiddle work buffer (xr) */
-	faac_real *mdctXi;              /* MDCT pre-twiddle work buffer (xi) */
+	faac_real *sharedWorkBuffLong;  /* Used for 2048-sample windows (filtbank, psy, tns, mdct) */
 } GlobalPsyInfo;
 
 typedef struct 
