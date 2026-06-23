@@ -111,7 +111,7 @@ void TnsEncode(TnsInfo* tnsInfo,       /* TNS info */
     int numberOfWindows,windowSize;
     int startBand,stopBand,order;    /* Bands over which to apply TNS */
     int lengthInBands;               /* Length to filter, in bands */
-    int w;
+    int w, i;
     int startIndex,length;
     faac_real gain;
 
@@ -169,82 +169,30 @@ void TnsEncode(TnsInfo* tnsInfo,       /* TNS info */
 
         if (gain>DEF_TNS_GAIN_THRESH) {  /* Use TNS */
             int truncatedOrder;
+            QuantizeReflectionCoeffs(order,DEF_TNS_COEFF_RES,k,tnsFilter->index);
+            truncatedOrder = TruncateCoeffs(order,DEF_TNS_COEFF_THRESH,k);
+            if (truncatedOrder == 0) continue;
+
             windowData->numFilters++;
             tnsInfo->tnsDataPresent=1;
             tnsFilter->direction = 0;
-            tnsFilter->coefCompress = 0;
+
+            tnsFilter->coefCompress = 1;
+            for (i = 1; i <= truncatedOrder; i++) {
+                int limit = 1 << (DEF_TNS_COEFF_RES - 2);
+                if (tnsFilter->index[i] < -limit || tnsFilter->index[i] >= limit) {
+                    tnsFilter->coefCompress = 0;
+                    break;
+                }
+            }
+
             tnsFilter->length = lengthInBands;
-            QuantizeReflectionCoeffs(order,DEF_TNS_COEFF_RES,k,tnsFilter->index);
-            truncatedOrder = TruncateCoeffs(order,DEF_TNS_COEFF_THRESH,k);
             tnsFilter->order = truncatedOrder;
             StepUp(truncatedOrder,k,a);    /* Compute predictor coefficients */
             TnsInvFilter(length,&spec[startIndex],tnsFilter,temp);      /* Filter */
         }
     }
 }
-
-
-/*****************************************************/
-/* TnsEncodeFilterOnly:                              */
-/* This is a stripped-down version of TnsEncode()    */
-/* which performs TNS analysis filtering only        */
-/*****************************************************/
-void TnsEncodeFilterOnly(TnsInfo* tnsInfo,           /* TNS info */
-                         int numberOfBands,          /* Number of bands per window */
-                         int maxSfb,                 /* max_sfb */
-                         enum WINDOW_TYPE blockType, /* block type */
-                         int* sfbOffsetTable,        /* Scalefactor band offset table */
-                         faac_real* spec,               /* Spectral data array */
-                         faac_real* temp)
-{
-    int numberOfWindows,windowSize;
-    int startBand,stopBand;    /* Bands over which to apply TNS */
-    int w;
-    int startIndex,length;
-
-    switch( blockType ) {
-    case ONLY_SHORT_WINDOW :
-        numberOfWindows = MAX_SHORT_WINDOWS;
-        windowSize = BLOCK_LEN_SHORT;
-        startBand = tnsInfo->tnsMinBandNumberShort;
-        stopBand = numberOfBands;
-        startBand = min(startBand,tnsInfo->tnsMaxBandsShort);
-        stopBand = min(stopBand,tnsInfo->tnsMaxBandsShort);
-        break;
-
-    default:
-        numberOfWindows = 1;
-        windowSize = BLOCK_LEN_LONG;
-        startBand = tnsInfo->tnsMinBandNumberLong;
-        stopBand = numberOfBands;
-        startBand = min(startBand,tnsInfo->tnsMaxBandsLong);
-        stopBand = min(stopBand,tnsInfo->tnsMaxBandsLong);
-        break;
-    }
-
-    /* Make sure that start and stop bands < maxSfb */
-    /* Make sure that start and stop bands >= 0 */
-    startBand = min(startBand,maxSfb);
-    stopBand = min(stopBand,maxSfb);
-    startBand = max(startBand,0);
-    stopBand = max(stopBand,0);
-
-
-    /* Perform filtering for each window */
-    for(w=0;w<numberOfWindows;w++)
-    {
-        TnsWindowData* windowData = &tnsInfo->windowData[w];
-        TnsFilterData* tnsFilter = windowData->tnsFilter;
-
-        startIndex = w * windowSize + sfbOffsetTable[startBand];
-        length = sfbOffsetTable[stopBand] - sfbOffsetTable[startBand];
-
-        if (tnsInfo->tnsDataPresent  &&  windowData->numFilters) {  /* Use TNS */
-            TnsInvFilter(length,&spec[startIndex],tnsFilter,temp);
-        }
-    }
-}
-
 
 
 
