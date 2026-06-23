@@ -117,11 +117,11 @@ static void reorder2( FFT_Tables *fft_tables, faac_real *xr, faac_real *xi, int 
 }
 
 static void fft_proc(
-		faac_real *xr,
-		faac_real *xi,
-		fftfloat *refac, 
-		fftfloat *imfac, 
-		int size)	
+		faac_real * __restrict xr,
+		faac_real * __restrict xi,
+		const fftfloat * __restrict refac,
+		const fftfloat * __restrict imfac,
+		int size)
 {
 	int step, shift, pos;
 	int exp, estep;
@@ -185,17 +185,14 @@ static void fft_proc(
 	}
 
 	/* Resume standard Radix-2 loop from stage 3 (step = 4) */
-	estep = size >> 2;
+	estep = 0;
 	for (step = 4; step < size; step *= 2)
 	{
-		int x1;
-		int x2 = 0;
-		estep >>= 1;
 		for (pos = 0; pos < size; pos += (2 * step))
 		{
-			x1 = x2;
-			x2 += step;
-			exp = 0;
+			int x1 = pos;
+			int x2 = pos + step;
+			exp = estep;
 			for (shift = 0; shift < step; shift++)
 			{
 				faac_real v2r, v2i;
@@ -207,15 +204,14 @@ static void fft_proc(
 				xr[x1] += v2r;
 
 				xi[x2] = xi[x1] - v2i;
-
 				xi[x1] += v2i;
 
-				exp += estep;
-
+				exp++;
 				x1++;
 				x2++;
 			}
 		}
+		estep += step;
 	}
 }
 
@@ -223,20 +219,31 @@ static void check_tables( FFT_Tables *fft_tables, int logm)
 {
 	if( fft_tables->costbl[logm] == NULL )
 	{
-		int i;
+		int step;
 		int size = 1 << logm;
+		int offset = 0;
 
 		if( fft_tables->negsintbl[logm] != NULL )
 			FreeMemory( fft_tables->negsintbl[logm] );
 
-		fft_tables->costbl[logm]	= AllocMemory((size / 2) * sizeof(*(fft_tables->costbl[0])));
-		fft_tables->negsintbl[logm]	= AllocMemory((size / 2) * sizeof(*(fft_tables->negsintbl[0])));
+		/* Total elements: 4 + 8 + ... + size/2 = size - 4.
+		   We allocate exactly the required size for stage-contiguous twiddles.
+		   Guard against size < 4 (logm < 2) which would result in negative allocation.
+		*/
+		int alloc_size = (size < 4) ? 0 : (size - 4);
+		fft_tables->costbl[logm]	= AllocMemory(alloc_size * sizeof(*(fft_tables->costbl[0])));
+		fft_tables->negsintbl[logm]	= AllocMemory(alloc_size * sizeof(*(fft_tables->negsintbl[0])));
 
-		for (i = 0; i < (size >> 1); i++)
+		for (step = 4; step < size; step *= 2)
 		{
-			faac_real theta = 2.0 * M_PI * ((faac_real) i) / (faac_real) size;
-			fft_tables->costbl[logm][i]		= FAAC_COS(theta);
-			fft_tables->negsintbl[logm][i]	= -FAAC_SIN(theta);
+			int shift;
+			for (shift = 0; shift < step; shift++)
+			{
+				faac_real theta = M_PI * (faac_real)shift / (faac_real)step;
+				fft_tables->costbl[logm][offset] = (fftfloat)FAAC_COS(theta);
+				fft_tables->negsintbl[logm][offset] = (fftfloat)-FAAC_SIN(theta);
+				offset++;
+			}
 		}
 	}
 }
