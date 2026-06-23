@@ -577,6 +577,12 @@ int FAACAPI faacEncEncode(faacEncHandle hpEncoder,
 		}
 	}
 
+    /* Clear each channel's section state before AACstereo pre-loads intensity
+     * bands and BlocQuant resolves the rest. */
+    for (channel = 0; channel < numChannels; channel++)
+        if (channelInfo[channel].present)
+            ResetCoderSections(&coderInfo[channel]);
+
     AACstereo(coderInfo, channelInfo, hEncoder->freqBuff, numChannels,
               (faac_real)hEncoder->aacquantCfg.quality/DEFQUAL, jointmode, hEncoder->sampleRate);
 
