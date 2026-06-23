@@ -15,7 +15,6 @@
  * You should have received a copy of the GNU Lesser General Public
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
- *
  */
 
 #include <stdio.h>
@@ -242,16 +241,14 @@ int FAACAPI faacEncSetConfiguration(faacEncHandle hpEncoder,
               &hEncoder->aacquantCfg);
 
     // reset psymodel
-    hEncoder->psymodel->PsyEnd(&hEncoder->gpsyInfo, hEncoder->psyInfo, hEncoder->numChannels);
+    hEncoder->psymodel->PsyEnd(hEncoder->psyInfo, hEncoder->numChannels);
     if (config->psymodelidx >= (sizeof(psymodellist) / sizeof(psymodellist[0]) - 1))
 		config->psymodelidx = (sizeof(psymodellist) / sizeof(psymodellist[0])) - 2;
 
     hEncoder->config.psymodelidx = config->psymodelidx;
     hEncoder->psymodel = (psymodel_t *)psymodellist[hEncoder->config.psymodelidx].ptr;
     hEncoder->psymodel->PsyInit(&hEncoder->gpsyInfo, hEncoder->psyInfo, hEncoder->numChannels,
-			hEncoder->sampleRate, hEncoder->srInfo->cb_width_long,
-			hEncoder->srInfo->num_cb_long, hEncoder->srInfo->cb_width_short,
-			hEncoder->srInfo->num_cb_short);
+			hEncoder->sampleRate);
 
 	/* load channel_map */
 	for( i = 0; i < MAX_CHANNELS; i++ )
@@ -334,9 +331,7 @@ faacEncHandle FAACAPI faacEncOpen(unsigned long sampleRate,
 	fft_initialize( &hEncoder->fft_tables );
 
 	hEncoder->psymodel->PsyInit(&hEncoder->gpsyInfo, hEncoder->psyInfo, hEncoder->numChannels,
-        hEncoder->sampleRate, hEncoder->srInfo->cb_width_long,
-        hEncoder->srInfo->num_cb_long, hEncoder->srInfo->cb_width_short,
-        hEncoder->srInfo->num_cb_short);
+        hEncoder->sampleRate);
 
     FilterBankInit(hEncoder);
 
@@ -354,7 +349,7 @@ int FAACAPI faacEncClose(faacEncHandle hpEncoder)
     unsigned int channel;
 
     /* Deinitialize coder functions */
-    hEncoder->psymodel->PsyEnd(&hEncoder->gpsyInfo, hEncoder->psyInfo, hEncoder->numChannels);
+    hEncoder->psymodel->PsyEnd(hEncoder->psyInfo, hEncoder->numChannels);
 
     FilterBankEnd(hEncoder);
 
@@ -398,7 +393,6 @@ int FAACAPI faacEncEncode(faacEncHandle hpEncoder,
     unsigned int useLfe = hEncoder->config.useLfe;
     unsigned int useTns = hEncoder->config.useTns;
     unsigned int jointmode = hEncoder->config.jointmode;
-    unsigned int bandWidth = hEncoder->config.bandWidth;
     unsigned int shortctl = hEncoder->config.shortctl;
     int maxqual = hEncoder->config.outputFormat ? MAXQUALADTS : MAXQUAL;
 
@@ -494,13 +488,9 @@ int FAACAPI faacEncEncode(faacEncHandle hpEncoder,
 		if (channelInfo[channel].type != ELEMENT_LFE)
 		{
 			hEncoder->psymodel->PsyBufferUpdate(
-					&hEncoder->fft_tables,
 					&hEncoder->gpsyInfo,
 					&hEncoder->psyInfo[channel],
-					hEncoder->next3SampleBuff[channel],
-					bandWidth,
-					hEncoder->srInfo->cb_width_short,
-					hEncoder->srInfo->num_cb_short);
+					hEncoder->next3SampleBuff[channel]);
 		}
     }
 
@@ -508,10 +498,7 @@ int FAACAPI faacEncEncode(faacEncHandle hpEncoder,
         return 0;
 
     /* Psychoacoustics */
-    hEncoder->psymodel->PsyCalculate(channelInfo, &hEncoder->gpsyInfo, hEncoder->psyInfo,
-        hEncoder->srInfo->cb_width_long, hEncoder->srInfo->num_cb_long,
-        hEncoder->srInfo->cb_width_short,
-        hEncoder->srInfo->num_cb_short, numChannels, (faac_real)hEncoder->aacquantCfg.quality / DEFQUAL);
+    hEncoder->psymodel->PsyCalculate(channelInfo, hEncoder->psyInfo, numChannels);
 
     hEncoder->psymodel->BlockSwitch(coderInfo, hEncoder->psyInfo, numChannels);
 
