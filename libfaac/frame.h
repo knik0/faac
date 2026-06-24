@@ -86,6 +86,14 @@ typedef struct {
 
     /* FFT Tables */
     FFT_Tables	fft_tables;
+
+    /* Input FIFO: decouples the caller's per-call chunk size from the encoder
+     * frame size. faacEncEncode appends whatever it is handed (any count) and
+     * emits one frame once a full frame (FRAME_LEN samples/ch) has accumulated.
+     * Stores format-converted faac_real. */
+    faac_real    *inputFifo[MAX_CHANNELS];
+    unsigned int  inputFifoFill;     /* samples per channel currently buffered */
+    unsigned int  inputFifoCap;      /* per-channel capacity in samples */
 } faacEncStruct;
 
 #ifdef __cplusplus
