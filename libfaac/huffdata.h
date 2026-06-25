@@ -28,8 +28,8 @@ typedef struct {
 } hcode16_t;
 
 typedef struct {
-    const uint32_t len;
-    const uint32_t data;
+    const uint32_t len  : 8;    /* lengths <= 19        */
+    const uint32_t data : 24;   /* codes are <= 19 bits */
 } hcode32_t;
 
 extern hcode16_t book01[81];
