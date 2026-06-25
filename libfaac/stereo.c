@@ -68,7 +68,7 @@ static inline void apply_ms(faac_real * restrict sl0, faac_real * restrict sr0,
 
 static inline void apply_is(faac_real * restrict sl0, faac_real * restrict sr0,
                             int start, int len, int wstart, int wend,
-                            int in_phase, faac_real vfix, int zero_sr)
+                            int in_phase, faac_real vfix)
 {
     faac_real * restrict sl_out = sl0 + wstart * BLOCK_LEN_SHORT + start;
     faac_real * restrict sr_out = sr0 + wstart * BLOCK_LEN_SHORT + start;
@@ -79,17 +79,19 @@ static inline void apply_is(faac_real * restrict sl0, faac_real * restrict sr0,
         int l;
         if (in_phase)
         {
-            if (zero_sr)
-                for (l = 0; l < len; l++) { sl_out[l] = (sl_out[l] + sr_out[l]) * vfix; sr_out[l] = 0.0; }
-            else
-                for (l = 0; l < len; l++) { sl_out[l] = (sl_out[l] + sr_out[l]) * vfix; }
+            for (l = 0; l < len; l++)
+            {
+                sl_out[l] = (sl_out[l] + sr_out[l]) * vfix;
+                sr_out[l] = 0.0;
+            }
         }
         else
         {
-            if (zero_sr)
-                for (l = 0; l < len; l++) { sl_out[l] = (sl_out[l] - sr_out[l]) * vfix; sr_out[l] = 0.0; }
-            else
-                for (l = 0; l < len; l++) { sl_out[l] = (sl_out[l] - sr_out[l]) * vfix; }
+            for (l = 0; l < len; l++)
+            {
+                sl_out[l] = (sl_out[l] - sr_out[l]) * vfix;
+                sr_out[l] = 0.0;
+            }
         }
         sl_out += BLOCK_LEN_SHORT;
         sr_out += BLOCK_LEN_SHORT;
@@ -120,10 +122,7 @@ static void stereo(CoderInfo * restrict cl, CoderInfo * restrict cr,
     else
         sfmin = 8;
 
-    for (sfb = 0; sfb < sfmin; sfb++)
-    {
-        (*sfcnt)++;
-    }
+    *sfcnt += sfmin;
 
     for (sfb = sfmin; sfb < cl->sfbn; sfb++)
     {
@@ -163,19 +162,19 @@ static void stereo(CoderInfo * restrict cl, CoderInfo * restrict cr,
         if (enrgs < 0.0) enrgs = 0.0;
         if (enrgd < 0.0) enrgd = 0.0;
 
-        /* IS pays off when one phase collapses most energy into a single
-         * channel: gate on (sqrt(L)+sqrt(R))^2 scaled by phthr */
-        ethr = FAAC_SQRT(enrgl) + FAAC_SQRT(enrgr);
-        ethr *= ethr;
-        ethr *= phthr;
+        /* Skip completely silent bands first */
         efix = enrgl + enrgr;
-        /* Skip completely silent bands: efix==0 makes ethr==0 so IS would
-         * trigger spuriously, and vfix=sqrt(0/0) would be NaN. */
         if (efix <= 0.0)
         {
             (*sfcnt)++;
             continue;
         }
+
+        /* IS pays off when one phase collapses most energy into a single
+         * channel: gate on (sqrt(L)+sqrt(R))^2 scaled by phthr */
+        ethr = FAAC_SQRT(enrgl) + FAAC_SQRT(enrgr);
+        ethr *= ethr;
+        ethr *= phthr;
         /* in-phase (l+r) vs out-of-phase (l-r); vfix renormalises the kept
          * channel so its energy matches the original L+R total */
         if (enrgs >= ethr)
@@ -221,10 +220,10 @@ static void stereo(CoderInfo * restrict cl, CoderInfo * restrict cr,
             cr->sf[*sfcnt] = -pan;
             cr->book[*sfcnt] = hcb;
 
-            /* JOINT_IS leaves the right channel intact; the intensity
-             * codebook marks the band, so its spectrum is not coded. */
+            /* the intensity codebook marks the band, so the right channel
+             * spectrum is not coded; apply_is zeroes it to be safe. */
             apply_is(sl0, sr0, start, len, wstart, wend,
-                     hcb == HCB_INTENSITY, vfix, /*zero_sr=*/0);
+                     hcb == HCB_INTENSITY, vfix);
         }
         (*sfcnt)++;
     }
@@ -438,7 +437,7 @@ static int mixed(CoderInfo * restrict cl, CoderInfo * restrict cr, ChannelInfo *
                 /* drop the right channel: the codebook + intensity position
                  * carry the band, so its spectrum is not coded */
                 apply_is(sl0, sr0, start, len, wstart, wend,
-                         hcb == HCB_INTENSITY, vfix, /*zero_sr=*/1);
+                         hcb == HCB_INTENSITY, vfix);
                 continue;
             }
         }
