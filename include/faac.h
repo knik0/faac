@@ -80,6 +80,10 @@ int FAACAPI faacEncGetDecoderSpecificInfo(faacEncHandle hEncoder, unsigned char 
 					  unsigned long *pSizeOfDecoderSpecificInfo);
 
 
+/* samplesInput may be any count in [0, inputSamples]. The library buffers input
+ * internally and emits one frame once enough has accumulated, returning 0 while
+ * priming, accumulating, or flushing. Exceeding inputSamples returns -1. Pass
+ * samplesInput == 0 to flush at end of stream. */
 int FAACAPI faacEncEncode(faacEncHandle hEncoder, int32_t * inputBuffer, unsigned int samplesInput,
 			 unsigned char *outputBuffer,
 			 unsigned int bufferSize);

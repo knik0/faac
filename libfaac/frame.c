@@ -235,6 +235,18 @@ int FAACAPI faacEncSetConfiguration(faacEncHandle hpEncoder,
     hEncoder->aacquantCfg.pnslevel = config->pnslevel;
     /* set quantization quality */
     hEncoder->aacquantCfg.quality = config->quantqual;
+    /* Input FIFO: one frame of leftover capacity; allocated once, reset on
+     * each (re)configuration so a stale partial frame is never carried over. */
+    {
+        unsigned int channel;
+        for (channel = 0; channel < hEncoder->numChannels; channel++)
+            if (!hEncoder->inputFifo[channel])
+                hEncoder->inputFifo[channel] =
+                    (faac_real *)AllocMemory(2 * FRAME_LEN * sizeof(faac_real));
+        hEncoder->inputFifoCap  = 2 * FRAME_LEN;
+        hEncoder->inputFifoFill = 0;
+    }
+
     CalcBW(&hEncoder->config.bandWidth,
               hEncoder->sampleRate,
               hEncoder->srInfo,
@@ -343,6 +355,67 @@ faacEncHandle FAACAPI faacEncOpen(unsigned long sampleRate,
     return hEncoder;
 }
 
+/* Append the caller's (interleaved) input to the per-channel input FIFO,
+ * de-interleaving and converting to faac_real once here so the rest of the
+ * encoder is agnostic to the input format. samplesInput may be any count that
+ * fits the FIFO; returns -1 on overflow or an invalid format. */
+static int appendInputFifo(faacEncStruct *hEncoder, int32_t *inputBuffer,
+                           unsigned int samplesInput)
+{
+    unsigned int numChannels = hEncoder->numChannels;
+    unsigned int spch = samplesInput / numChannels;
+    unsigned int channel, i;
+
+    if (spch == 0)
+        return 0;
+    if (spch > FRAME_LEN)  /* caller exceeded one nominal frame per channel */
+        return -1;
+    if (hEncoder->inputFifoFill + spch > hEncoder->inputFifoCap)
+        return -1;
+
+    for (channel = 0; channel < numChannels; channel++) {
+        faac_real *dst = hEncoder->inputFifo[channel] + hEncoder->inputFifoFill;
+        switch (hEncoder->config.inputFormat) {
+            case FAAC_INPUT_16BIT: {
+                short *src = (short *)inputBuffer + hEncoder->config.channel_map[channel];
+                for (i = 0; i < spch; i++) { dst[i] = (faac_real)*src; src += numChannels; }
+                break;
+            }
+            case FAAC_INPUT_32BIT: {
+                int32_t *src = (int32_t *)inputBuffer + hEncoder->config.channel_map[channel];
+                for (i = 0; i < spch; i++) { dst[i] = (1.0f/256) * (faac_real)*src; src += numChannels; }
+                break;
+            }
+            case FAAC_INPUT_FLOAT: {
+                float *src = (float *)inputBuffer + hEncoder->config.channel_map[channel];
+                for (i = 0; i < spch; i++) { dst[i] = (faac_real)*src; src += numChannels; }
+                break;
+            }
+            default:
+                return -1;
+        }
+    }
+    hEncoder->inputFifoFill += spch;
+    return 0;
+}
+
+/* Drop n samples/channel from the front of the FIFO, shifting the leftover down. */
+static void consumeInputFifo(faacEncStruct *hEncoder, unsigned int n)
+{
+    unsigned int numChannels = hEncoder->numChannels;
+    unsigned int channel, rem;
+
+    if (n > hEncoder->inputFifoFill)
+        n = hEncoder->inputFifoFill;
+    rem = hEncoder->inputFifoFill - n;
+    if (rem)
+        for (channel = 0; channel < numChannels; channel++)
+            memmove(hEncoder->inputFifo[channel],
+                    hEncoder->inputFifo[channel] + n,
+                    rem * sizeof(faac_real));
+    hEncoder->inputFifoFill = rem;
+}
+
 int FAACAPI faacEncClose(faacEncHandle hpEncoder)
 {
     faacEncStruct* hEncoder = (faacEncStruct*)hpEncoder;
@@ -362,6 +435,8 @@ int FAACAPI faacEncClose(faacEncHandle hpEncoder)
 			FreeMemory(hEncoder->sampleBuff[channel]);
 		if (hEncoder->next3SampleBuff[channel])
 			FreeMemory (hEncoder->next3SampleBuff[channel]);
+		if (hEncoder->inputFifo[channel])
+			FreeMemory (hEncoder->inputFifo[channel]);
     }
 
     /* Free handle */
@@ -396,10 +471,33 @@ int FAACAPI faacEncEncode(faacEncHandle hpEncoder,
     unsigned int shortctl = hEncoder->config.shortctl;
     int maxqual = hEncoder->config.outputFormat ? MAXQUALADTS : MAXQUAL;
 
+    /* The input FIFO decouples the caller's chunk size from the encoder frame
+     * size: append whatever we were handed, then emit at most one frame. While
+     * fewer than a full frame is buffered we return 0 without touching any
+     * per-frame state, so the encoder behaves identically regardless of the
+     * caller's chunk size. */
+    int flushing = (samplesInput == 0);
+    int realPerCh;          /* real (non-padded) input samples/ch in this frame */
+
+    if (samplesInput > 0)
+        if (appendInputFifo(hEncoder, inputBuffer, samplesInput) < 0)
+            return -1;
+
+    if (hEncoder->inputFifoFill >= FRAME_LEN)
+        realPerCh = (int)FRAME_LEN;               /* full frame ready */
+    else if (flushing && hEncoder->inputFifoFill > 0)
+        realPerCh = (int)hEncoder->inputFifoFill; /* final partial frame */
+    else if (flushing)
+        realPerCh = 0;                            /* drain core lookahead */
+    else
+        return 0;                                 /* accumulating */
+
     /* Increase frame number */
     hEncoder->frameNum++;
 
-    if (samplesInput == 0)
+    /* A pure (FIFO-empty) flush frame pushes silence to drain the core's
+     * algorithmic delay; a final partial frame still carries real samples. */
+    if (realPerCh == 0)
         hEncoder->flushFrame++;
 
     /* After 4 flush frames all samples have been encoded,
@@ -424,7 +522,7 @@ int FAACAPI faacEncEncode(faacEncHandle hpEncoder,
 		hEncoder->sampleBuff[channel]	= hEncoder->next3SampleBuff[channel];
 		hEncoder->next3SampleBuff[channel]	= tmp;
 
-        if (samplesInput == 0)
+        if (realPerCh == 0)
         {
             /* start flushing*/
             for (i = 0; i < FRAME_LEN; i++)
@@ -432,53 +530,12 @@ int FAACAPI faacEncEncode(faacEncHandle hpEncoder,
         }
         else
         {
-			int samples_per_channel = samplesInput/numChannels;
-
-            /* handle the various input formats and channel remapping */
-            switch( hEncoder->config.inputFormat )
-			{
-                case FAAC_INPUT_16BIT:
-					{
-						short *input_channel = (short*)inputBuffer + hEncoder->config.channel_map[channel];
-
-						for (i = 0; i < samples_per_channel; i++)
-						{
-							hEncoder->next3SampleBuff[channel][i] = (faac_real)*input_channel;
-							input_channel += numChannels;
-						}
-					}
-                    break;
-
-                case FAAC_INPUT_32BIT:
-					{
-						int32_t *input_channel = (int32_t*)inputBuffer + hEncoder->config.channel_map[channel];
-
-						for (i = 0; i < samples_per_channel; i++)
-						{
-							hEncoder->next3SampleBuff[channel][i] = (1.0/256) * (faac_real)*input_channel;
-							input_channel += numChannels;
-						}
-					}
-                    break;
-
-                case FAAC_INPUT_FLOAT:
-					{
-						float *input_channel = (float*)inputBuffer + hEncoder->config.channel_map[channel];
-
-						for (i = 0; i < samples_per_channel; i++)
-						{
-							hEncoder->next3SampleBuff[channel][i] = (faac_real)*input_channel;
-							input_channel += numChannels;
-						}
-					}
-                    break;
-
-                default:
-                    return -1; /* invalid input format */
-                    break;
-            }
-
-            for (i = (int)(samplesInput/numChannels); i < FRAME_LEN; i++)
+            /* Take one frame from the FIFO front (already faac_real),
+             * silence-padding a short final frame. */
+            unsigned int spc = ((unsigned int)realPerCh < FRAME_LEN) ? (unsigned int)realPerCh : FRAME_LEN;
+            memcpy(hEncoder->next3SampleBuff[channel], hEncoder->inputFifo[channel],
+                   spc * sizeof(faac_real));
+            for (i = spc; i < FRAME_LEN; i++)
                 hEncoder->next3SampleBuff[channel][i] = 0.0;
 		}
 
@@ -493,6 +550,10 @@ int FAACAPI faacEncEncode(faacEncHandle hpEncoder,
 					hEncoder->next3SampleBuff[channel]);
 		}
     }
+
+    /* Drop the consumed frame from the FIFO front. */
+    if (realPerCh > 0)
+        consumeInputFifo(hEncoder, FRAME_LEN);
 
     if (hEncoder->frameNum <= 3) /* Still filling up the buffers */
         return 0;
