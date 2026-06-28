@@ -330,15 +330,17 @@ faacEncHandle FAACAPI faacEncOpen(unsigned long sampleRate,
 
     for (channel = 0; channel < numChannels; channel++)
 	{
+        int buf;
         hEncoder->coderInfo[channel].prev_window_shape = SINE_WINDOW;
         hEncoder->coderInfo[channel].window_shape = SINE_WINDOW;
         hEncoder->coderInfo[channel].block_type = ONLY_LONG_WINDOW;
         hEncoder->coderInfo[channel].groups.n = 1;
         hEncoder->coderInfo[channel].groups.len[0] = 1;
 
-        hEncoder->sampleBuff[channel] = NULL;
-        hEncoder->nextSampleBuff[channel] = NULL;
-        hEncoder->next2SampleBuff[channel] = NULL;
+        for (buf = 0; buf < 4; buf++) {
+            hEncoder->audioFIFO[channel][buf] = (faac_real*)AllocMemory(FRAME_LEN*sizeof(faac_real));
+            memset(hEncoder->audioFIFO[channel][buf], 0, FRAME_LEN*sizeof(faac_real));
+        }
     }
 
     /* Initialize coder functions */
@@ -433,14 +435,12 @@ int FAACAPI faacEncClose(faacEncHandle hpEncoder)
     /* Free remaining buffer memory */
     for (channel = 0; channel < hEncoder->numChannels; channel++)
 	{
-		if (hEncoder->sampleBuff[channel])
-			FreeMemory(hEncoder->sampleBuff[channel]);
-		if (hEncoder->nextSampleBuff[channel])
-			FreeMemory (hEncoder->nextSampleBuff[channel]);
-		if (hEncoder->next2SampleBuff[channel])
-			FreeMemory (hEncoder->next2SampleBuff[channel]);
-		if (hEncoder->next3SampleBuff[channel])
-			FreeMemory (hEncoder->next3SampleBuff[channel]);
+        int buf;
+        for (buf = 0; buf < 4; buf++) {
+            if (hEncoder->audioFIFO[channel][buf]) {
+                FreeMemory(hEncoder->audioFIFO[channel][buf]);
+            }
+        }
 		if (hEncoder->inputFifo[channel])
 			FreeMemory (hEncoder->inputFifo[channel]);
     }
@@ -462,7 +462,7 @@ int FAACAPI faacEncEncode(faacEncHandle hpEncoder,
                           )
 {
     faacEncStruct* hEncoder = (faacEncStruct*)hpEncoder;
-    unsigned int channel, i;
+    unsigned int channel;
     int sb, frameBytes;
     unsigned int offset;
     BitStream *bitStream; /* bitstream used for writing the frame to */
@@ -506,9 +506,9 @@ int FAACAPI faacEncEncode(faacEncHandle hpEncoder,
     if (realPerCh == 0)
         hEncoder->flushFrame++;
 
-    /* After 4 flush frames all samples have been encoded,
+    /* After LOOKAHEAD_DEPTH + 1 flush frames all samples have been encoded,
        return 0 bytes written */
-    if (hEncoder->flushFrame > 4)
+    if (hEncoder->flushFrame > (LOOKAHEAD_DEPTH + 1))
         return 0;
 
     /* Determine the channel configuration */
@@ -519,32 +519,26 @@ int FAACAPI faacEncEncode(faacEncHandle hpEncoder,
 	{
 		faac_real *tmp;
 
-
-		if (!hEncoder->sampleBuff[channel])
-			hEncoder->sampleBuff[channel] = (faac_real*)AllocMemory(FRAME_LEN*sizeof(faac_real));
-
-		tmp = hEncoder->sampleBuff[channel];
-
-		hEncoder->sampleBuff[channel]		= hEncoder->nextSampleBuff[channel];
-		hEncoder->nextSampleBuff[channel]	= hEncoder->next2SampleBuff[channel];
-		hEncoder->next2SampleBuff[channel]	= hEncoder->next3SampleBuff[channel];
-		hEncoder->next3SampleBuff[channel]	= tmp;
+		tmp = hEncoder->audioFIFO[channel][FIFO_PAST];
+		hEncoder->audioFIFO[channel][FIFO_PAST]  = hEncoder->audioFIFO[channel][FIFO_CURR];
+		hEncoder->audioFIFO[channel][FIFO_CURR]  = hEncoder->audioFIFO[channel][FIFO_AHEAD1];
+		hEncoder->audioFIFO[channel][FIFO_AHEAD1] = hEncoder->audioFIFO[channel][FIFO_AHEAD2];
+		hEncoder->audioFIFO[channel][FIFO_AHEAD2] = tmp;
 
         if (realPerCh == 0)
         {
             /* start flushing*/
-            for (i = 0; i < FRAME_LEN; i++)
-                hEncoder->next3SampleBuff[channel][i] = 0.0;
+            memset(hEncoder->audioFIFO[channel][FIFO_AHEAD2], 0, FRAME_LEN * sizeof(faac_real));
         }
         else
         {
             /* Take one frame from the FIFO front (already faac_real),
              * silence-padding a short final frame. */
             unsigned int spc = ((unsigned int)realPerCh < FRAME_LEN) ? (unsigned int)realPerCh : FRAME_LEN;
-            memcpy(hEncoder->next3SampleBuff[channel], hEncoder->inputFifo[channel],
+            memcpy(hEncoder->audioFIFO[channel][FIFO_AHEAD2], hEncoder->inputFifo[channel],
                    spc * sizeof(faac_real));
-            for (i = spc; i < FRAME_LEN; i++)
-                hEncoder->next3SampleBuff[channel][i] = 0.0;
+            if (spc < FRAME_LEN)
+                memset(hEncoder->audioFIFO[channel][FIFO_AHEAD2] + spc, 0, (FRAME_LEN - spc) * sizeof(faac_real));
 		}
 
 		/* Psychoacoustics */
@@ -555,7 +549,8 @@ int FAACAPI faacEncEncode(faacEncHandle hpEncoder,
 			hEncoder->psymodel->PsyBufferUpdate(
 					&hEncoder->gpsyInfo,
 					&hEncoder->psyInfo[channel],
-					hEncoder->next3SampleBuff[channel]);
+                    hEncoder->audioFIFO[channel][FIFO_AHEAD1],
+                    hEncoder->audioFIFO[channel][FIFO_AHEAD2]);
 		}
     }
 
@@ -563,7 +558,7 @@ int FAACAPI faacEncEncode(faacEncHandle hpEncoder,
     if (realPerCh > 0)
         consumeInputFifo(hEncoder, FRAME_LEN);
 
-    if (hEncoder->frameNum <= 3) /* Still filling up the buffers */
+    if (hEncoder->frameNum <= LOOKAHEAD_DEPTH) /* Still filling up the buffers */
         return 0;
 
     /* Psychoacoustics */
@@ -579,7 +574,7 @@ int FAACAPI faacEncEncode(faacEncHandle hpEncoder,
 			coderInfo[channel].block_type = ONLY_LONG_WINDOW;
 		}
     }
-    else if ((hEncoder->frameNum <= 4) || (shortctl == SHORTCTL_NOLONG))
+    else if ((hEncoder->frameNum <= (LOOKAHEAD_DEPTH + 1)) || (shortctl == SHORTCTL_NOLONG))
     {
 		for (channel = 0; channel < numChannels; channel++)
 		{
@@ -591,9 +586,9 @@ int FAACAPI faacEncEncode(faacEncHandle hpEncoder,
     for (channel = 0; channel < numChannels; channel++) {
         FilterBank(hEncoder,
             &coderInfo[channel],
-            hEncoder->sampleBuff[channel],
-            hEncoder->freqBuff[channel],
-            hEncoder->overlapBuff[channel]);
+            hEncoder->audioFIFO[channel][FIFO_PAST],
+            hEncoder->audioFIFO[channel][FIFO_CURR],
+            hEncoder->freqBuff[channel]);
     }
 
     for (channel = 0; channel < numChannels; channel++) {

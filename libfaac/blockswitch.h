@@ -33,9 +33,6 @@ typedef struct {
 	int size;
 	int sizeS;
 
-	/* Previous input samples */
-	faac_real *prevSamples;
-
 	int block_type;
 
         void *data;
@@ -56,7 +53,8 @@ void (*PsyEnd) (PsyInfo *psyInfo, unsigned int numChannels);
 void (*PsyCalculate) (ChannelInfo *channelInfo, PsyInfo *psyInfo,
 		unsigned int numChannels);
 void (*PsyBufferUpdate) (GlobalPsyInfo * gpsyInfo, PsyInfo * psyInfo,
-		faac_real *newSamples);
+		faac_real * restrict p_lookahead1,
+		faac_real * restrict p_lookahead2);
 void (*BlockSwitch) (CoderInfo *coderInfo, PsyInfo *psyInfo,
 		unsigned int numChannels);
 } psymodel_t;

@@ -43,9 +43,9 @@ void			MDCT				( FFT_Tables *fft_tables, faac_real *data, int N, faac_real *work
 
 void			FilterBank( faacEncStruct* hEncoder,
 						CoderInfo *coderInfo,
-						faac_real *p_in_data,
-						faac_real *p_out_mdct,
-						faac_real *p_overlap );
+						faac_real * restrict p_prev_data,
+						faac_real * restrict p_in_data,
+						faac_real * restrict p_out_mdct);
 
 
 #ifdef __cplusplus
