@@ -47,18 +47,41 @@ common_src = [
     'util.h',
 ]
 
-libfaac = library('faac', common_src,
-    include_directories: ['..', '../include'],
-    c_args: c_args,
-    link_args: link_args,
-    dependencies: [ libm ],
-    link_with: quantize_simd_libs,
-    vs_module_defs: 'libfaac.def',
-    install: true,
-    version: '0.0.0',
-    gnu_symbol_visibility: 'hidden'
-)
+common_args = {
+    'include_directories' : ['..', '../include'],
+    'c_args' : c_args,
+    'link_args' : link_args,
+    'dependencies' : [libm],
+    'link_with' : quantize_simd_libs,
+    'install' : true,
+    'gnu_symbol_visibility' : 'hidden',
+}
 
+default_lib = get_option('default_library')
+
+if default_lib == 'static' or default_lib == 'both'
+    libfaac_static = static_library(
+        'faac',
+        common_src,
+        kwargs : common_args + {
+          'override_options' : ['b_lto=false'],
+        },
+    )
+    libfaac = libfaac_static
+endif
+
+if default_lib == 'shared' or default_lib == 'both'
+    libfaac_shared = shared_library(
+        'faac',
+        common_src,
+        kwargs : common_args + {
+          'version' : '0.0.0',
+          'vs_module_defs' : 'libfaac.def',
+          'override_options' : ['b_lto=true'],
+        },
+    )
+    libfaac = libfaac_shared
+endif
 
 pkgconfig = import('pkgconfig')
 pkgconfig.generate(
