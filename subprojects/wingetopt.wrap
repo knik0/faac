@@ -1,0 +1,8 @@
+[wrap-git]
+url = https://github.com/alex85k/wingetopt.git
+revision = 98ea94f3d77890678da28230aa156b225cc14974
+depth = 1
+patch_directory = wingetopt
+
+[provide]
+getopt = getopt_dep

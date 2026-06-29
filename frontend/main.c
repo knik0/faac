@@ -47,13 +47,7 @@
 #include <ctype.h>
 #include <math.h>
 #include <string.h>
-
-#ifdef HAVE_GETOPT_H
-# include <getopt.h>
-#else
-# include "getopt.h"
-# include "getopt.c"
-#endif
+#include <getopt.h>
 
 #include "mp4write.h"
 
