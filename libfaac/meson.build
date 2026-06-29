@@ -47,6 +47,8 @@ common_src = [
     'util.h',
 ]
 
+libfaac = disabler()
+
 common_args = {
     'include_directories' : ['..', '../include'],
     'c_args' : c_args,
