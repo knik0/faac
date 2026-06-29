@@ -21,6 +21,17 @@
 #ifndef FRAME_H
 #define FRAME_H
 
+/* Input sample FIFO slots, each one frame (FRAME_LEN samples) wide, relative to
+   the frame currently being coded (FIFO_CURR): one frame behind (FIFO_PAST,
+   reused as the MDCT overlap) and two frames ahead. The two ahead slots are
+   needed because the block-switch energy analysis works on 2-frame-wide windows
+   and keeps one window of lookahead, whose far edge reaches two frames ahead. */
+#define LOOKAHEAD_DEPTH 2
+#define FIFO_PAST       0
+#define FIFO_CURR       1
+#define FIFO_AHEAD1     2
+#define FIFO_AHEAD2     3
+
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
@@ -56,11 +67,8 @@ typedef struct {
     /* Scalefactorband data */
     SR_INFO *srInfo;
 
-    /* sample buffers of current next and next next frame*/
-    faac_real *sampleBuff[MAX_CHANNELS];
-    faac_real *nextSampleBuff[MAX_CHANNELS];
-    faac_real *next2SampleBuff[MAX_CHANNELS];
-    faac_real *next3SampleBuff[MAX_CHANNELS];
+    /* sample buffers: FIFO_PAST (MDCT overlap), FIFO_CURR, FIFO_AHEAD1, FIFO_AHEAD2 */
+    faac_real *audioFIFO[MAX_CHANNELS][4];
 
     /* Filterbank buffers */
     faac_real *sin_window_long;
@@ -68,7 +76,6 @@ typedef struct {
     faac_real *kbd_window_long;
     faac_real *kbd_window_short;
     faac_real *freqBuff[MAX_CHANNELS];
-    faac_real *overlapBuff[MAX_CHANNELS];
 
     /* Channel and Coder data for all channels */
     CoderInfo coderInfo[MAX_CHANNELS];

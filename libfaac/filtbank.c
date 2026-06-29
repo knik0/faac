@@ -55,8 +55,6 @@ void FilterBankInit(faacEncStruct* hEncoder)
 
     for (channel = 0; channel < hEncoder->numChannels; channel++) {
         hEncoder->freqBuff[channel] = (faac_real*)AllocMemory(2*FRAME_LEN*sizeof(faac_real));
-        hEncoder->overlapBuff[channel] = (faac_real*)AllocMemory(FRAME_LEN*sizeof(faac_real));
-        SetMemory(hEncoder->overlapBuff[channel], 0, FRAME_LEN*sizeof(faac_real));
     }
 
     hEncoder->sin_window_long = (faac_real*)AllocMemory(BLOCK_LEN_LONG*sizeof(faac_real));
@@ -81,7 +79,6 @@ void FilterBankEnd(faacEncStruct* hEncoder)
 
     for (channel = 0; channel < hEncoder->numChannels; channel++) {
         if (hEncoder->freqBuff[channel]) FreeMemory(hEncoder->freqBuff[channel]);
-        if (hEncoder->overlapBuff[channel]) FreeMemory(hEncoder->overlapBuff[channel]);
     }
 
     if (hEncoder->sin_window_long) FreeMemory(hEncoder->sin_window_long);
@@ -94,22 +91,20 @@ void FilterBankEnd(faacEncStruct* hEncoder)
 
 void FilterBank(faacEncStruct* hEncoder,
                 CoderInfo *coderInfo,
-                faac_real *p_in_data,
-                faac_real *p_out_mdct,
-                faac_real *p_overlap)
+                faac_real * restrict p_prev_data,
+                faac_real * restrict p_in_data,
+                faac_real * restrict p_out_mdct)
 {
     faac_real *p_o_buf, *first_window, *second_window;
-    faac_real *transf_buf;
+    faac_real * restrict transf_buf;
     int k, i;
     int block_type = coderInfo->block_type;
 
     transf_buf = hEncoder->gpsyInfo.sharedWorkBuffLong;
 
-    /* create / shift old values */
-    /* We use p_overlap here as buffer holding the last frame time signal*/
-    memcpy(transf_buf, p_overlap, BLOCK_LEN_LONG*sizeof(faac_real));
+    /* Assembly of the 2048-sample window from consecutive frames in the FIFO rotation */
+    memcpy(transf_buf, p_prev_data, BLOCK_LEN_LONG*sizeof(faac_real));
     memcpy(transf_buf+BLOCK_LEN_LONG, p_in_data, BLOCK_LEN_LONG*sizeof(faac_real));
-    memcpy(p_overlap, p_in_data, BLOCK_LEN_LONG*sizeof(faac_real));
 
     /*  Window shape processing */
     switch (coderInfo->prev_window_shape) {
