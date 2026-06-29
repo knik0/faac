@@ -1,3 +1,12 @@
+2026-06-29  Nils Schimmelmann <nschimme@users.sourceforge.net>
+
+	* Relicensed core DSP to LGPL v2.1:
+	- Huffman tables (huffdata.c/h) regenerated from ISO/IEC 14496-3 standard.
+	- Huffman coder (huff2.c/h) rewritten to remove GPL-3 expression.
+	- Quantizer core (quantize.c/h) rewritten to remove GPL-3 expression.
+	- Intensity Stereo (stereo.c/h) rewritten to remove GPL-3 expression.
+	- Nils Schimmelmann relicensed his prior contributions to LGPL v2.1.
+
 1.50 (Apr 16, 2026)
 
 	[ Fabian Greffrath ]

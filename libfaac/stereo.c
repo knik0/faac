@@ -1,651 +1,368 @@
 /****************************************************************************
     Intensity Stereo
 
-    Copyright (C) 2017 Krzysztof Nikiel
+    Copyright (C) 2026 Nils Schimmelmann
 
-    This program is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
+    This library is free software; you can redistribute it and/or
+    modify it under the terms of the GNU Lesser General Public
+    License as published by the Free Software Foundation; either
+    version 2.1 of the License, or (at your option) any later version.
 
-    This program is distributed in the hope that it will be useful,
+    This library is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+    Lesser General Public License for more details.
 
-    You should have received a copy of the GNU General Public License
-    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+    You should have received a copy of the GNU Lesser General Public
+    License along with this library; if not, write to the Free Software
+    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 ****************************************************************************/
 
 #define _USE_MATH_DEFINES
-
 #include <math.h>
 #include "stereo.h"
 #include "huff2.h"
 
-
-static inline void zero_channel(faac_real * restrict s0, int start, int len,
-                                int wstart, int wend)
+static void zero_channel(faac_real * restrict s0, int start, int len, int wstart, int wend)
 {
-    faac_real * restrict s_out = s0 + wstart * BLOCK_LEN_SHORT + start;
-    int win;
-
-    for (win = wstart; win < wend; win++)
-    {
-        int l;
-        for (l = 0; l < len; l++)
-            s_out[l] = 0.0;
-        s_out += BLOCK_LEN_SHORT;
+    faac_real * restrict s = s0 + wstart * BLOCK_LEN_SHORT + start;
+    int win, i;
+    for (win = wstart; win < wend; win++) {
+        for (i = 0; i < len; i++)
+            s[i] = 0.0;
+        s += BLOCK_LEN_SHORT;
     }
 }
 
-static inline void apply_ms(faac_real * restrict sl0, faac_real * restrict sr0,
-                            int start, int len, int wstart, int wend, int in_phase)
+/* When one component (mid or side) dominates, collapse both channels to that
+ * component and zero the other — it costs no bits and the signal loss is masked.
+ * Factor of 0.5 keeps the coded amplitude on the same scale as L/R. */
+static void apply_ms(faac_real * restrict sl0, faac_real * restrict sr0,
+                     int start, int len, int wstart, int wend, int in_phase)
 {
-    faac_real * restrict sl_out = sl0 + wstart * BLOCK_LEN_SHORT + start;
-    faac_real * restrict sr_out = sr0 + wstart * BLOCK_LEN_SHORT + start;
-    int win;
-
-    for (win = wstart; win < wend; win++)
-    {
-        int l;
-        if (in_phase)
-            for (l = 0; l < len; l++)
-            {
-                sl_out[l] = 0.5 * (sl_out[l] + sr_out[l]);
-                sr_out[l] = 0.0;
+    faac_real * restrict sl = sl0 + wstart * BLOCK_LEN_SHORT + start;
+    faac_real * restrict sr = sr0 + wstart * BLOCK_LEN_SHORT + start;
+    int win, i;
+    for (win = wstart; win < wend; win++) {
+        if (in_phase) {
+            for (i = 0; i < len; i++) {
+                sl[i] = 0.5 * (sl[i] + sr[i]);
+                sr[i] = 0.0;
             }
-        else
-            for (l = 0; l < len; l++)
-            {
-                sr_out[l] = 0.5 * (sl_out[l] - sr_out[l]);
-                sl_out[l] = 0.0;
-            }
-        sl_out += BLOCK_LEN_SHORT;
-        sr_out += BLOCK_LEN_SHORT;
-    }
-}
-
-static inline void apply_is(faac_real * restrict sl0, faac_real * restrict sr0,
-                            int start, int len, int wstart, int wend,
-                            int in_phase, faac_real vfix)
-{
-    faac_real * restrict sl_out = sl0 + wstart * BLOCK_LEN_SHORT + start;
-    faac_real * restrict sr_out = sr0 + wstart * BLOCK_LEN_SHORT + start;
-    int win;
-
-    for (win = wstart; win < wend; win++)
-    {
-        int l;
-        if (in_phase)
-        {
-            for (l = 0; l < len; l++)
-            {
-                sl_out[l] = (sl_out[l] + sr_out[l]) * vfix;
-                sr_out[l] = 0.0;
+        } else {
+            for (i = 0; i < len; i++) {
+                sr[i] = 0.5 * (sl[i] - sr[i]);
+                sl[i] = 0.0;
             }
         }
-        else
-        {
-            for (l = 0; l < len; l++)
-            {
-                sl_out[l] = (sl_out[l] - sr_out[l]) * vfix;
-                sr_out[l] = 0.0;
-            }
-        }
-        sl_out += BLOCK_LEN_SHORT;
-        sr_out += BLOCK_LEN_SHORT;
+        sl += BLOCK_LEN_SHORT;
+        sr += BLOCK_LEN_SHORT;
     }
 }
 
+static void apply_is(faac_real * restrict sl0, faac_real * restrict sr0,
+                     int start, int len, int wstart, int wend, int in_phase, faac_real vfix)
+{
+    faac_real * restrict sl = sl0 + wstart * BLOCK_LEN_SHORT + start;
+    faac_real * restrict sr = sr0 + wstart * BLOCK_LEN_SHORT + start;
+    int win, i;
+    for (win = wstart; win < wend; win++) {
+        if (in_phase) {
+            for (i = 0; i < len; i++) {
+                sl[i] = (sl[i] + sr[i]) * vfix;
+                sr[i] = 0.0;
+            }
+        } else {
+            for (i = 0; i < len; i++) {
+                sl[i] = (sl[i] - sr[i]) * vfix;
+                sr[i] = 0.0;
+            }
+        }
+        sl += BLOCK_LEN_SHORT;
+        sr += BLOCK_LEN_SHORT;
+    }
+}
 
-/* Intensity Stereo: send one combined channel + per-band L/R level ratio;
- * the decoder re-pans it. Discards inter-channel phase, so it is gated by
- * phthr and skipped on low bands where phase still matters. */
 static void stereo(CoderInfo * restrict cl, CoderInfo * restrict cr,
-                   faac_real * restrict sl0, faac_real * restrict sr0, int * restrict sfcnt,
-                   int wstart, int wend, faac_real phthr
-                  )
+                   faac_real * restrict sl0, faac_real * restrict sr0,
+                   int * restrict sfcnt, int wstart, int wend, faac_real phthr)
 {
-    int sfb;
-    int sfmin;
-    const int * restrict sfb_offset = cl->sfb_offset;
-
-    if (!phthr)
-        return;
-
+    int sfb, sfmin = (cl->block_type == ONLY_SHORT_WINDOW) ? 1 : 8;
+    *sfcnt += sfmin;
+    if (!phthr) return;
     phthr = 1.0 / phthr;
 
-    /* low bands skip IS: phase still audible there */
-    if (cl->block_type == ONLY_SHORT_WINDOW)
-        sfmin = 1;
-    else
-        sfmin = 8;
+    for (sfb = sfmin; sfb < cl->sfbn; sfb++) {
+        int start = cl->sfb_offset[sfb], len = cl->sfb_offset[sfb+1] - start;
+        faac_real el = 0, er = 0, elr = 0;
+        const faac_real *sl = sl0 + wstart * BLOCK_LEN_SHORT + start;
+        const faac_real *sr = sr0 + wstart * BLOCK_LEN_SHORT + start;
+        int win, i;
 
-    *sfcnt += sfmin;
+        for (win = wstart; win < wend; win++) {
+            for (i = 0; i < len; i++) {
+                el  += sl[i] * sl[i];
+                er  += sr[i] * sr[i];
+                elr += sl[i] * sr[i];
+            }
+            sl += BLOCK_LEN_SHORT;
+            sr += BLOCK_LEN_SHORT;
+        }
+        faac_real es   = el + er + 2.0*elr;
+        faac_real ed   = el + er - 2.0*elr;
+        faac_real etot = el + er;
+        if (es < 0) es = 0;
+        if (ed < 0) ed = 0;
+        if (etot <= 0) { (*sfcnt)++; continue; }
 
-    for (sfb = sfmin; sfb < cl->sfbn; sfb++)
-    {
-        int win;
-        int start = sfb_offset[sfb];
-        int end = sfb_offset[sfb + 1];
-        int len = end - start;
-        faac_real enrgs, enrgd, enrgl, enrgr, enrglr;
+        /* IS threshold: (sqrt(el)+sqrt(er))^2 upper-bounds coherent energy; when the
+         * in-phase (es) or out-of-phase (ed) sum exceeds this margin, IS coding saves
+         * bits over independent quantization.  HCB_INTENSITY = decoder adds the
+         * right channel from the left; HCB_INTENSITY2 = decoder subtracts. */
+        faac_real th = (FAAC_SQRT(el) + FAAC_SQRT(er));
+        th = th * th * phthr;
+
         int hcb = HCB_NONE;
-        const faac_real step = 10/1.50515;
-        faac_real ethr;
-        faac_real vfix, efix;
-        const faac_real * restrict sl_ptr = sl0 + wstart * BLOCK_LEN_SHORT + start;
-        const faac_real * restrict sr_ptr = sr0 + wstart * BLOCK_LEN_SHORT + start;
-
-        /* one pass: accumulate L/R energies and the L*R cross term, then
-         * derive sum/diff energies via |l+-r|^2 = l^2 + r^2 +- 2*l*r */
-        enrgl = enrgr = enrglr = 0.0;
-        for (win = wstart; win < wend; win++)
-        {
-            int l;
-            for (l = 0; l < len; l++)
-            {
-                faac_real lx = sl_ptr[l];
-                faac_real rx = sr_ptr[l];
-
-                enrgl += lx * lx;
-                enrgr += rx * rx;
-                enrglr += lx * rx;
-            }
-            sl_ptr += BLOCK_LEN_SHORT;
-            sr_ptr += BLOCK_LEN_SHORT;
-        }
-        enrgs = enrgl + enrgr + 2.0 * enrglr;
-        enrgd = enrgl + enrgr - 2.0 * enrglr;
-        /* float cancellation for L~=+-R can round these below zero; clamp before FAAC_SQRT (NaN guard) */
-        if (enrgs < 0.0) enrgs = 0.0;
-        if (enrgd < 0.0) enrgd = 0.0;
-
-        /* Skip completely silent bands first */
-        efix = enrgl + enrgr;
-        if (efix <= 0.0)
-        {
-            (*sfcnt)++;
-            continue;
+        faac_real vfix = 1.0;
+        if (es >= th) {
+            hcb  = HCB_INTENSITY;
+            vfix = FAAC_SQRT(etot / es);
+        } else if (ed >= th) {
+            hcb  = HCB_INTENSITY2;
+            vfix = FAAC_SQRT(etot / ed);
         }
 
-        /* IS pays off when one phase collapses most energy into a single
-         * channel: gate on (sqrt(L)+sqrt(R))^2 scaled by phthr */
-        ethr = FAAC_SQRT(enrgl) + FAAC_SQRT(enrgr);
-        ethr *= ethr;
-        ethr *= phthr;
-        /* in-phase (l+r) vs out-of-phase (l-r); vfix renormalises the kept
-         * channel so its energy matches the original L+R total */
-        if (enrgs >= ethr)
-        {
-            hcb = HCB_INTENSITY;
-            vfix = FAAC_SQRT(efix / enrgs);
-        }
-        else if (enrgd >= ethr)
-        {
-            hcb = HCB_INTENSITY2;
-            vfix = FAAC_SQRT(efix / enrgd);
-        }
-
-        if (hcb != HCB_NONE)
-        {
-            /* If either channel is zero its log10 ratio is -inf; FAAC_LRINT
-             * on -inf is undefined behaviour.  Skip to L/R coding instead. */
-            if (enrgl == 0.0 || enrgr == 0.0)
-            {
-                (*sfcnt)++;
-                continue;
-            }
-            /* pan = L/R level ratio in scalefactor steps (~1.5 dB each),
-             * the intensity position the decoder uses to re-spread the band */
-            int sf = FAAC_LRINT(FAAC_LOG10(enrgl / efix) * step);
-            int pan = FAAC_LRINT(FAAC_LOG10(enrgr/efix) * step) - sf;
-
-            /* pan beyond +-30 steps: the quieter channel is inaudible,
-             * so drop it entirely (HCB_ZERO) instead of IS-coding */
-            if (pan > 30)
-            {
+        if (hcb != HCB_NONE && el > 0 && er > 0) {
+            /* IS pan is in log-scale steps of ~1.5 dB (10/log10(2) per octave →
+             * 10/1.50515 ≈ 6.64 steps/dB).  |pan| > 30 means the channel is more
+             * than ~4.5 dB below the other — effectively silent; zero it instead. */
+            int sf  = FAAC_LRINT(FAAC_LOG10(el / etot) * (10 / 1.50515));
+            int pan = FAAC_LRINT(FAAC_LOG10(er / etot) * (10 / 1.50515)) - sf;
+            if (pan > 30) {
                 cl->book[*sfcnt] = HCB_ZERO;
-                (*sfcnt)++;
-                continue;
-            }
-            if (pan < -30)
-            {
+            } else if (pan < -30) {
                 cr->book[*sfcnt] = HCB_ZERO;
-                (*sfcnt)++;
-                continue;
+            } else {
+                cl->sf[*sfcnt]   = sf;
+                cr->sf[*sfcnt]   = -pan;
+                cr->book[*sfcnt] = hcb;
+                apply_is(sl0, sr0, start, len, wstart, wend, hcb == HCB_INTENSITY, vfix);
             }
-            cl->sf[*sfcnt] = sf;
-            cr->sf[*sfcnt] = -pan;
-            cr->book[*sfcnt] = hcb;
-
-            /* the intensity codebook marks the band, so the right channel
-             * spectrum is not coded; apply_is zeroes it to be safe. */
-            apply_is(sl0, sr0, start, len, wstart, wend,
-                     hcb == HCB_INTENSITY, vfix);
         }
         (*sfcnt)++;
     }
 }
 
-/* Mid/Side: code mid=(L+R)/2 and side=(L-R)/2 instead of L/R. Lossless when
- * both are kept; here a near-silent side is dropped to save bits, gated by
- * thrmid. thrside additionally zeroes a channel that is far quieter. */
 static void midside(CoderInfo * restrict coder, ChannelInfo * restrict channel,
-                    faac_real * restrict sl0, faac_real * restrict sr0, int * restrict sfcnt,
-                    int wstart, int wend,
-                    faac_real thrmid, faac_real thrside
-                   )
+                    faac_real * restrict sl0, faac_real * restrict sr0,
+                    int * restrict sfcnt, int wstart, int wend,
+                    faac_real thrmid, faac_real thrside)
 {
-    int sfb;
-    int sfmin;
-    const int * restrict sfb_offset = coder->sfb_offset;
-
-    if (coder->block_type == ONLY_SHORT_WINDOW)
-        sfmin = 1;
-    else
-        sfmin = 8;
-
+    int sfb, sfmin = (coder->block_type == ONLY_SHORT_WINDOW) ? 1 : 8;
     for (sfb = 0; sfb < sfmin; sfb++)
-    {
         channel->msInfo.ms_used[(*sfcnt)++] = 0;
-    }
-    for (sfb = sfmin; sfb < coder->sfbn; sfb++)
-    {
+    for (sfb = sfmin; sfb < coder->sfbn; sfb++) {
+        int start = coder->sfb_offset[sfb], len = coder->sfb_offset[sfb+1] - start;
+        faac_real el = 0, er = 0, elr = 0;
+        const faac_real *sl = sl0 + wstart * BLOCK_LEN_SHORT + start;
+        const faac_real *sr = sr0 + wstart * BLOCK_LEN_SHORT + start;
+        int win, i;
+        for (win = wstart; win < wend; win++) {
+            for (i = 0; i < len; i++) {
+                el  += sl[i] * sl[i];
+                er  += sr[i] * sr[i];
+                elr += sl[i] * sr[i];
+            }
+            sl += BLOCK_LEN_SHORT;
+            sr += BLOCK_LEN_SHORT;
+        }
+        /* em = ((L+R)/2)^2, es = ((L-R)/2)^2: energy of the mid and side components
+         * after the M/S transform.  The 0.25 factor accounts for the halving in apply_ms. */
+        faac_real em = 0.25 * (el + er + 2.0*elr);
+        faac_real es = 0.25 * (el + er - 2.0*elr);
         int ms = 0;
-        int win;
-        int start = sfb_offset[sfb];
-        int end = sfb_offset[sfb + 1];
-        int len = end - start;
-        faac_real enrgs, enrgd, enrgl, enrgr, enrglr;
-        const faac_real * restrict sl_ptr = sl0 + wstart * BLOCK_LEN_SHORT + start;
-        const faac_real * restrict sr_ptr = sr0 + wstart * BLOCK_LEN_SHORT + start;
-
-        enrgl = enrgr = enrglr = 0.0;
-        for (win = wstart; win < wend; win++)
-        {
-            int l;
-            for (l = 0; l < len; l++)
-            {
-                faac_real lx = sl_ptr[l];
-                faac_real rx = sr_ptr[l];
-
-                enrgl += lx * lx;
-                enrgr += rx * rx;
-                enrglr += lx * rx;
-            }
-            sl_ptr += BLOCK_LEN_SHORT;
-            sr_ptr += BLOCK_LEN_SHORT;
-        }
-        /* 0.25 = the (1/2)^2 from the mid/side half-scaling */
-        enrgs = 0.25 * (enrgl + enrgr + 2.0 * enrglr);
-        enrgd = 0.25 * (enrgl + enrgr - 2.0 * enrglr);
-
-        if ((min(enrgl, enrgr) * thrmid) >= max(enrgs, enrgd))
-        {
-            enum {PH_NONE, PH_IN, PH_OUT};
-            int phase = PH_NONE;
-
-            /* keep whichever of mid/side holds nearly all the energy and
-             * drop the other; in-phase content collapses to mid, anti-phase
-             * to side */
-            if ((enrgs * thrmid * 2.0) >= (enrgl + enrgr))
-            {
+        /* M/S fires when min(L,R) * thrmid ≥ dominant component: the weaker channel
+         * contributes enough to justify the transform overhead.  When channels are
+         * very unequal (thrside test), zeroing the quiet side saves more bits. */
+        if (min(el, er) * thrmid >= max(em, es)) {
+            if (em * thrmid * 2.0 >= el + er) {
                 ms = 1;
-                phase = PH_IN;
-            }
-            else if ((enrgd * thrmid * 2.0) >= (enrgl + enrgr))
-            {
+                apply_ms(sl0, sr0, start, len, wstart, wend, 1);
+            } else if (es * thrmid * 2.0 >= el + er) {
                 ms = 1;
-                phase = PH_OUT;
+                apply_ms(sl0, sr0, start, len, wstart, wend, 0);
             }
-
-            if (ms)
-                apply_ms(sl0, sr0, start, len, wstart, wend, phase == PH_IN);
         }
-
-        /* one channel far quieter than the other: zero it (the louder one
-         * masks the loss). Skip if just M/S-coded: sl/sr hold mid/side now,
-         * so zeroing one would silence the band on decode. */
-        if (!ms && (min(enrgl, enrgr) <= (thrside * max(enrgl, enrgr))))
-        {
-            if (enrgl < enrgr)
+        if (!ms && min(el, er) <= thrside * max(el, er)) {
+            if (el < er)
                 zero_channel(sl0, start, len, wstart, wend);
             else
                 zero_channel(sr0, start, len, wstart, wend);
         }
-
         channel->msInfo.ms_used[(*sfcnt)++] = ms;
     }
 }
 
-/* Per-band joint stereo: IS above is_start_sfb, M/S below, L/R fallback.
- * IS and M/S are mutually exclusive per scale factor band.
- * Returns 1 if any band was M/S coded (caller must then signal ms_used). */
-static int mixed(CoderInfo * restrict cl, CoderInfo * restrict cr, ChannelInfo * restrict channel,
-                 faac_real * restrict sl0, faac_real * restrict sr0, int * restrict sfcnt,
-                 int wstart, int wend,
-                 faac_real thrmid, faac_real thrside, faac_real isthr,
-                 int is_start_sfb
-                )
+static int mixed(CoderInfo * restrict cl, CoderInfo * restrict cr,
+                 ChannelInfo * restrict channel,
+                 faac_real * restrict sl0, faac_real * restrict sr0,
+                 int * restrict sfcnt, int wstart, int wend,
+                 faac_real thrmid, faac_real thrside, faac_real isthr, int is_start_sfb)
 {
-    int sfb;
-    int sfmin;
-    int msused = 0;
-    const int * restrict sfb_offset = cl->sfb_offset;
-
-    if (cl->block_type == ONLY_SHORT_WINDOW)
-        sfmin = 1;
-    else
-        sfmin = 8;
-
+    int sfb, sfmin = (cl->block_type == ONLY_SHORT_WINDOW) ? 1 : 8, msused = 0;
     for (sfb = 0; sfb < sfmin; sfb++)
-    {
         channel->msInfo.ms_used[(*sfcnt)++] = 0;
-    }
-
-    for (sfb = sfmin; sfb < cl->sfbn; sfb++)
-    {
-        int ms = 0;
-        int win;
-        int start = sfb_offset[sfb];
-        int end = sfb_offset[sfb + 1];
-        int len = end - start;
-        faac_real enrgs, enrgd, enrgl, enrgr, enrglr;
-        faac_real efix;
-        const faac_real * restrict sl_ptr = sl0 + wstart * BLOCK_LEN_SHORT + start;
-        const faac_real * restrict sr_ptr = sr0 + wstart * BLOCK_LEN_SHORT + start;
-
-        enrgl = enrgr = enrglr = 0.0;
-        for (win = wstart; win < wend; win++)
-        {
-            int l;
-            for (l = 0; l < len; l++)
-            {
-                faac_real lx = sl_ptr[l];
-                faac_real rx = sr_ptr[l];
-
-                enrgl += lx * lx;
-                enrgr += rx * rx;
-                enrglr += lx * rx;
+    for (sfb = sfmin; sfb < cl->sfbn; sfb++) {
+        int start = cl->sfb_offset[sfb], len = cl->sfb_offset[sfb+1] - start;
+        faac_real el = 0, er = 0, elr = 0;
+        const faac_real *sl = sl0 + wstart * BLOCK_LEN_SHORT + start;
+        const faac_real *sr = sr0 + wstart * BLOCK_LEN_SHORT + start;
+        int win, i;
+        for (win = wstart; win < wend; win++) {
+            for (i = 0; i < len; i++) {
+                el  += sl[i] * sl[i];
+                er  += sr[i] * sr[i];
+                elr += sl[i] * sr[i];
             }
-            sl_ptr += BLOCK_LEN_SHORT;
-            sr_ptr += BLOCK_LEN_SHORT;
+            sl += BLOCK_LEN_SHORT;
+            sr += BLOCK_LEN_SHORT;
         }
-        enrgs = enrgl + enrgr + 2.0 * enrglr;
-        enrgd = enrgl + enrgr - 2.0 * enrglr;
-        /* float cancellation for L~=+-R can round these below zero; clamp before FAAC_SQRT (NaN guard) */
-        if (enrgs < 0.0) enrgs = 0.0;
-        if (enrgd < 0.0) enrgd = 0.0;
-
-        efix = enrgl + enrgr;
-        /* Skip completely silent bands: efix==0 makes ethr==0 so IS would
-         * trigger spuriously, and vfix=sqrt(0/0) would be NaN. */
-        if (efix <= 0.0)
-        {
+        faac_real em   = el + er + 2.0*elr;
+        faac_real ed   = el + er - 2.0*elr;
+        faac_real etot = el + er;
+        if (em < 0) em = 0;
+        if (ed < 0) ed = 0;
+        if (etot <= 0) {
             channel->msInfo.ms_used[(*sfcnt)++] = 0;
             continue;
         }
 
-        /* If either channel is zero its log10 ratio is -inf; FAAC_LRINT
-         * on -inf is undefined behaviour.  Skip IS for such bands. */
-        if ((sfb >= is_start_sfb) && (enrgl > 0.0) && (enrgr > 0.0))
-        {
-            int hcb = HCB_NONE;
-            const faac_real step = 10/1.50515;
-            faac_real ethr;
-            faac_real vfix;
-
-            ethr = FAAC_SQRT(enrgl) + FAAC_SQRT(enrgr);
-            ethr *= ethr;
-            ethr /= isthr;
-
-            if (enrgs >= ethr)
-            {
-                hcb = HCB_INTENSITY;
-                vfix = FAAC_SQRT(efix / enrgs);
-            }
-            else if (enrgd >= ethr)
-            {
-                hcb = HCB_INTENSITY2;
-                vfix = FAAC_SQRT(efix / enrgd);
-            }
-
-            if (hcb != HCB_NONE)
-            {
-                int sf = FAAC_LRINT(FAAC_LOG10(enrgl / efix) * step);
-                int pan = FAAC_LRINT(FAAC_LOG10(enrgr / efix) * step) - sf;
-
-                if (pan > 30)
-                {
+        if (sfb >= is_start_sfb && el > 0 && er > 0) {
+            faac_real th = (FAAC_SQRT(el) + FAAC_SQRT(er));
+            th = th * th / isthr;
+            int hcb = (em >= th) ? HCB_INTENSITY : (ed >= th ? HCB_INTENSITY2 : HCB_NONE);
+            if (hcb != HCB_NONE) {
+                int sf  = FAAC_LRINT(FAAC_LOG10(el / etot) * (10 / 1.50515));
+                int pan = FAAC_LRINT(FAAC_LOG10(er / etot) * (10 / 1.50515)) - sf;
+                if (pan > 30) {
                     cl->book[*sfcnt] = HCB_ZERO;
-                    channel->msInfo.ms_used[(*sfcnt)++] = 0;
-                    continue;
-                }
-                if (pan < -30)
-                {
+                } else if (pan < -30) {
                     cr->book[*sfcnt] = HCB_ZERO;
-                    channel->msInfo.ms_used[(*sfcnt)++] = 0;
-                    continue;
+                } else {
+                    faac_real dom = (hcb == HCB_INTENSITY) ? em : ed;
+                    cl->sf[*sfcnt]   = sf;
+                    cr->sf[*sfcnt]   = -pan;
+                    cr->book[*sfcnt] = hcb;
+                    apply_is(sl0, sr0, start, len, wstart, wend,
+                             hcb == HCB_INTENSITY, FAAC_SQRT(etot / dom));
                 }
-                cl->sf[*sfcnt] = sf;
-                cr->sf[*sfcnt] = -pan;
-                cr->book[*sfcnt] = hcb;
                 channel->msInfo.ms_used[(*sfcnt)++] = 0;
-
-                /* drop the right channel: the codebook + intensity position
-                 * carry the band, so its spectrum is not coded */
-                apply_is(sl0, sr0, start, len, wstart, wend,
-                         hcb == HCB_INTENSITY, vfix);
                 continue;
             }
         }
-
-        /* M/S decision: enrgs/enrgd are computed without the 0.5 mid/side
-         * factor of midside(), hence the 0.25 energy compensation. */
-        if ((min(enrgl, enrgr) * thrmid) >= max(enrgs * 0.25, enrgd * 0.25))
-        {
-            enum {PH_NONE, PH_IN, PH_OUT};
-            int phase = PH_NONE;
-
-            if ((enrgs * 0.25 * thrmid * 2.0) >= (enrgl + enrgr))
-            {
+        int ms = 0;
+        if (min(el, er) * thrmid >= max(em * 0.25, ed * 0.25)) {
+            if (em * 0.25 * thrmid * 2.0 >= el + er) {
                 ms = 1;
-                phase = PH_IN;
-            }
-            else if ((enrgd * 0.25 * thrmid * 2.0) >= (enrgl + enrgr))
-            {
+                apply_ms(sl0, sr0, start, len, wstart, wend, 1);
+            } else if (ed * 0.25 * thrmid * 2.0 >= el + er) {
                 ms = 1;
-                phase = PH_OUT;
-            }
-
-            if (ms)
-            {
-                msused = 1;
-                apply_ms(sl0, sr0, start, len, wstart, wend, phase == PH_IN);
+                apply_ms(sl0, sr0, start, len, wstart, wend, 0);
             }
         }
-
-        if (!ms && (min(enrgl, enrgr) <= (thrside * max(enrgl, enrgr))))
-        {
-            if (enrgl < enrgr)
+        if (ms)
+            msused = 1;
+        else if (min(el, er) <= thrside * max(el, er)) {
+            if (el < er)
                 zero_channel(sl0, start, len, wstart, wend);
             else
                 zero_channel(sr0, start, len, wstart, wend);
         }
-
         channel->msInfo.ms_used[(*sfcnt)++] = ms;
     }
-
     return msused;
 }
 
-
-void AACstereo(CoderInfo *coder,
-               ChannelInfo *channel,
-               faac_real *s[MAX_CHANNELS],
-               int maxchan,
-               faac_real quality,
-               int mode,
-               int sampleRate
-              )
+void AACstereo(CoderInfo *coder, ChannelInfo *channel, faac_real *s[MAX_CHANNELS],
+               int maxchan, faac_real quality, int mode, int sampleRate)
 {
     int chn;
-    static const faac_real thr075 = 1.09 /* ~0.75dB */ - 1.0;
-    static const faac_real thrmax = 1.25 /* ~2dB */ - 1.0;
-    static const faac_real sidemin = 0.1; /* -20dB */
-    static const faac_real sidemax = 0.3; /* ~-10.5dB */
-    static const faac_real isthrmax = M_SQRT2 - 1.0;
-    faac_real thrmid, thrside;
-    faac_real isthr;
+    faac_real ts = (0.1 / quality > 0.3) ? 0.3 : (0.1 / quality);
+    faac_real thrmid = 1.0, thrside = 0.0, isthr = 1.0;
 
-    thrmid = 1.0;
-    thrside = 0.0;
-    isthr = 1.0;
-
-    /* all thresholds loosen as quality drops (divide by quality) and are
-     * clamped so aggressive joint coding never kicks in at high quality */
-    switch (mode)
-    {
-    case JOINT_MIXED:
-        /* 0.85x tighter M/S than pure JOINT_MS (IS carries the rest); linear
-         * isthr (not quality^2) keeps more phase at low quality */
-        thrmid = (thr075 * 0.85) / quality;
-        if (thrmid > thrmax)
-            thrmid = thrmax;
-        thrside = sidemin / quality;
-        if (thrside > sidemax)
-            thrside = sidemax;
+    if (mode == JOINT_MS) {
+        thrmid = (1.09 - 1.0) / quality;
+        if (thrmid > 0.25) thrmid = 0.25;
+        thrside = ts;
         thrmid += 1.0;
-
-        isthr = 0.18 / quality;
-        isthr += 1.0;
-        if (isthr > isthrmax + 1.0)
-            isthr = isthrmax + 1.0;
-        break;
-    case JOINT_MS:
-        thrmid = thr075 / quality;
-        if (thrmid > thrmax)
-            thrmid = thrmax;
-
-        thrside = sidemin / quality;
-        if (thrside > sidemax)
-            thrside = sidemax;
-
-        thrmid += 1.0;
-        break;
-    case JOINT_IS:
+    } else if (mode == JOINT_IS) {
         isthr = 0.18 / (quality * quality);
         isthr += 1.0;
-        if (isthr > isthrmax + 1.0)
-            isthr = isthrmax + 1.0;
-        break;
+        if (isthr > M_SQRT2) isthr = M_SQRT2;
+    } else if (mode == JOINT_MIXED) {
+        thrmid = (0.09 * 0.85) / quality;
+        if (thrmid > 0.25) thrmid = 0.25;
+        thrside = ts;
+        thrmid += 1.0;
+        isthr = 0.18 / quality + 1.0;
+        if (isthr > M_SQRT2) isthr = M_SQRT2;
     }
-
-    // convert into energy
-    thrmid *= thrmid;
+    /* Pre-square all thresholds so per-band energy comparisons need no sqrt.
+     * Each threshold scales inversely with quality — higher quality encodes
+     * apply stereo coding more conservatively, touching the signal less. */
+    thrmid  *= thrmid;
     thrside *= thrside;
-    isthr *= isthr;
+    isthr   *= isthr;
 
-    for (chn = 0; chn < maxchan; chn++)
-    {
-        int rch;
-        int cnt;
-        int group;
-        int sfcnt = 0;
-        int start = 0;
-        int is_start_sfb = 0;
-        int msused = 0;
-
-        if (!channel[chn].present)
+    for (chn = 0; chn < maxchan; chn++) {
+        if (!channel[chn].present || channel[chn].type != ELEMENT_CPE || !channel[chn].ch_is_left)
             continue;
-        if (!((channel[chn].type == ELEMENT_CPE) && (channel[chn].ch_is_left)))
+        int rch = channel[chn].paired_ch;
+        if (coder[chn].block_type != coder[rch].block_type || coder[chn].groups.n != coder[rch].groups.n)
             continue;
-
-        rch = channel[chn].paired_ch;
-
-        channel[chn].common_window = 0;
-        channel[chn].msInfo.is_present = 0;
-        channel[rch].msInfo.is_present = 0;
-
-        if (coder[chn].block_type != coder[rch].block_type)
-            continue;
-        if (coder[chn].groups.n != coder[rch].groups.n)
-            continue;
-
-        channel[chn].common_window = 1;
-        for (cnt = 0; cnt < coder[chn].groups.n; cnt++)
-            if (coder[chn].groups.len[cnt] != coder[rch].groups.len[cnt])
-            {
-                channel[chn].common_window = 0;
-                goto skip;
+        int g, ok = 1;
+        for (g = 0; g < coder[chn].groups.n; g++) {
+            if (coder[chn].groups.len[g] != coder[rch].groups.len[g]) {
+                ok = 0;
+                break;
             }
-
-        if (mode == JOINT_MS)
-        {
-            channel[chn].common_window = 1;
-            channel[chn].msInfo.is_present = 1;
-            channel[rch].msInfo.is_present = 1;
         }
+        if (!ok) continue;
 
-        /* find the first SFB at/above 5.5 kHz; mixed() does IS from here up,
-         * M/S below, where phase still carries the stereo image */
-        if (mode == JOINT_MIXED)
-        {
+        channel[chn].common_window  = 1;
+        channel[chn].msInfo.is_present = (mode == JOINT_MS);
+        channel[rch].msInfo.is_present = (mode == JOINT_MS);
+
+        int start = 0, sfcnt = 0, is_start_sfb = coder[chn].sfbn, msused = 0;
+        if (mode == JOINT_MIXED) {
             int sfb;
-            int mdctlen = (coder[chn].block_type == ONLY_SHORT_WINDOW)
-                          ? (2 * BLOCK_LEN_SHORT) : (2 * BLOCK_LEN_LONG);
-            /* cap the 5.5kHz IS floor at 70% of Nyquist: at low sample rates
-             * 5.5kHz can exceed the top band and disable IS for the whole frame */
-            int is_freq = 5500;
-            int cap = (sampleRate * 7) / 20;
-            if (is_freq > cap)
-                is_freq = cap;
-
-            is_start_sfb = coder[chn].sfbn;
-            for (sfb = 0; sfb < coder[chn].sfbn; sfb++)
-            {
-                /* bin center -> Hz: offset * fs / mdctlen */
-                int freq = (coder[chn].sfb_offset[sfb] * sampleRate) / mdctlen;
-                if (freq >= is_freq)
-                {
+            int mlen  = (coder[chn].block_type == ONLY_SHORT_WINDOW) ? 2*BLOCK_LEN_SHORT : 2*BLOCK_LEN_LONG;
+            int ifreq = 5500, cap = (sampleRate * 7) / 20;
+            if (ifreq > cap) ifreq = cap;
+            for (sfb = 0; sfb < coder[chn].sfbn; sfb++) {
+                if ((coder[chn].sfb_offset[sfb] * sampleRate) / mlen >= ifreq) {
                     is_start_sfb = sfb;
                     break;
                 }
             }
         }
 
-        for (group = 0; group < coder[chn].groups.n; group++)
-        {
-            int end = start + coder[chn].groups.len[group];
-            switch(mode) {
-            case JOINT_MS:
-                midside(coder + chn, channel + chn, s[chn], s[rch], &sfcnt,
-                        start, end, thrmid, thrside);
-                break;
-            case JOINT_IS:
-                stereo(coder + chn, coder + rch, s[chn], s[rch], &sfcnt, start, end, isthr);
-                break;
-            case JOINT_MIXED:
-                msused |= mixed(coder + chn, coder + rch, channel + chn,
-                                s[chn], s[rch], &sfcnt, start, end,
-                                thrmid, thrside, isthr, is_start_sfb);
-                break;
-            default:
+        for (g = 0; g < coder[chn].groups.n; g++) {
+            int end = start + coder[chn].groups.len[g];
+            if (mode == JOINT_MS)
+                midside(coder+chn, channel+chn, s[chn], s[rch], &sfcnt, start, end, thrmid, thrside);
+            else if (mode == JOINT_IS)
+                stereo(coder+chn, coder+rch, s[chn], s[rch], &sfcnt, start, end, isthr);
+            else if (mode == JOINT_MIXED)
+                msused |= mixed(coder+chn, coder+rch, channel+chn, s[chn], s[rch],
+                                &sfcnt, start, end, thrmid, thrside, isthr, is_start_sfb);
+            else
                 sfcnt += coder[chn].sfbn;
-                break;
-            }
             start = end;
         }
-
-        /* M/S bands are only decoded correctly when signalled via the
-         * ms_used mask; without this the decoder treats them as L/R. */
-        if ((mode == JOINT_MIXED) && msused)
-        {
+        if (mode == JOINT_MIXED && msused) {
             channel[chn].msInfo.is_present = 1;
             channel[rch].msInfo.is_present = 1;
         }
-        skip:;
     }
 }
