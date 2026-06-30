@@ -1,21 +1,22 @@
-/****************************************************************************
-    Huffman coding
-
-    Copyright (C) 2017 Krzysztof Nikiel
-
-    This program is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
-
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License
-    along with this program.  If not, see <http://www.gnu.org/licenses/>.
-****************************************************************************/
+/*
+ * FAAC - Freeware Advanced Audio Coder
+ * Huffman coding per ISO/IEC 14496-3
+ * Copyright (C) 2026 Nils Schimmelmann
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+ */
 
 #ifndef HUFF2_H
 #define HUFF2_H
@@ -60,6 +61,12 @@ enum {
 /* Maximum value representable by HCB_ESC escape sequences.
  * Values >= 8192 would cause bitstream overflow/sync loss. */
 #define MAX_HUFF_ESC_VAL 8191
+
+/* Scalefactor step constants (ISO 14496-3 §8.3.4): one SF unit = 2^(1/4) in amplitude.
+ * AMPL converts a log10 amplitude ratio to scalefactor index steps (= 4/log10(2)).
+ * ENRG is AMPL/2 — use when the input ratio is energy (squared amplitude). */
+#define SF_STEP_AMPL  13.287712379549461
+#define SF_STEP_ENRG  (SF_STEP_AMPL / 2.0)
 
 /* Scalefactor Management */
 enum {
