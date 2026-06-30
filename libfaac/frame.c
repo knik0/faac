@@ -449,8 +449,6 @@ int FAACAPI faacEncClose(faacEncHandle hpEncoder)
     if (hEncoder)
 		FreeMemory(hEncoder);
 
-    BlocStat();
-
     return 0;
 }
 
