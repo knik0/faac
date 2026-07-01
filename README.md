@@ -1,11 +1,10 @@
-__________
-COPYRIGHTS
+# <img src="frontend/faac.ico" alt="FAAC" width="48" height="48" align="top" /> Freeware Advanced Audio Coder
 
-FAAC is based on the ISO MPEG-4 reference code. For this base code the
-following license applies:
+## Copyrights
 
+FAAC is based on the ISO MPEG-4 reference code. For this base code the following license applies:
 
-**********************************************************************
+```
 This software module was originally developed by
 
 FirstName LastName (CompanyName)
@@ -35,14 +34,11 @@ code for non MPEG-2 NBC/MPEG-4 Audio conforming products. This
 copyright notice must be included in all copies or derivative works.
 
 Copyright (c) 1997.
-**********************************************************************
+```
 
+For the changes made for the FAAC project the GNU Lesser General Public License (LGPL), version 2.1 applies. For the changes the following statement applies:
 
-For the changes made for the FAAC project the GNU Library General
-Public License (LGPL), version 2 1991 applies. For the changes the
-following statement applies:
-
-**********************************************************************
+```
 FAAC - Freeware Advanced Audio Coder
 Copyright (C) 2001 M. Bakker
 
@@ -59,23 +55,19 @@ Lesser General Public License for more details.
 You should have received a copy of the GNU Lesser General Public
 License along with this library; if not, write to the Free Software
 Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
-**********************************************************************
+```
 
+> **Important:** The use of this software may require the payment of patent royalties. You need to consider this issue before you start building derivative works. We are not warranting or indemnifying you in any way for patent royalities! **YOU ARE SOLELY RESPONSIBLE FOR YOUR OWN ACTIONS!**
 
-
-Please note that the use of this software may require the payment of
-patent royalties. You need to consider this issue before you start
-building derivative works. We are not warranting or indemnifying you in
-any way for patent royalities! YOU ARE SOLELY RESPONSIBLE FOR YOUR OWN
-ACTIONS!
-
-___________________________________
-General FAAC compiling instructions
+## Compiling Instructions
 
 1. Make sure you have recent versions of meson and ninja installed.
 2. cd to FAAC source dir
 3. Run:
-	mkdir -p build
-	cd build
-	meson setup ..
-	meson install
+   ```bash
+   mkdir -p build
+   cd build
+   meson setup ..
+   meson install
+   ```
+
