@@ -18,6 +18,8 @@ foreach h: ['getopt.h', 'immintrin.h']
     config_h.set('HAVE_' + h.underscorify().to_upper(), cc.has_header(h))
 endforeach
 
+config_h.set('WORDS_BIGENDIAN', host_machine.endian() == 'big')
+
 
 libm = cc.find_library('m', required: false)
 
