@@ -1,25 +1,21 @@
-/****************************************************************************
-    MP4 output module
+/*
+ * FAAC - Freeware Advanced Audio Coder
+ * Copyright (C) 2026 Nils Schimmelmann
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
 
-    Copyright (C) 2017 Krzysztof Nikiel
-
-    This program is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
-
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License
-    along with this program.  If not, see <http://www.gnu.org/licenses/>.
-****************************************************************************/
-
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ */
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -36,906 +32,628 @@
 
 #include "mp4write.h"
 
-enum ATOM_TYPE
-{
-    ATOM_STOP = 0 /* end of atoms */ ,
-    ATOM_NAME /* plain atom */ ,
-    ATOM_DESCENT,               /* starts group of children */
-    ATOM_ASCENT,                /* ends group */
-    ATOM_DATA,
-};
-typedef struct
-{
-    uint16_t opcode;
-    void *data;
-} creator_t;
-
-mp4config_t mp4config = { 0 };
-
-static FILE *g_fout = NULL;
-
-static inline uint32_t be32(uint32_t u32)
-{
-#ifndef WORDS_BIGENDIAN
-#if defined (__GNUC__) && ((__GNUC__ > 4) || ((__GNUC__ == 4) && (__GNUC_MINOR__ >= 3)))
-    return __builtin_bswap32(u32);
-#elif defined (_MSC_VER)
-    return _byteswap_ulong(u32);
-#else
-    return (u32 << 24) | ((u32 << 8) & 0xFF0000) | ((u32 >> 8) & 0xFF00) | (u32 >> 24);
+#if defined(__has_builtin)
+#if __has_builtin(__builtin_bswap32) && __has_builtin(__builtin_bswap16)
+#define MP4_HAVE_BSWAP_BUILTINS 1
 #endif
-#else
-    return u32;
+#elif defined(__GNUC__)
+#define MP4_HAVE_BSWAP_BUILTINS 1
 #endif
-}
 
-static inline uint16_t be16(uint16_t u16)
-{
-#ifndef WORDS_BIGENDIAN
-#if defined (__GNUC__) && ((__GNUC__ > 4) || ((__GNUC__ == 4) && (__GNUC_MINOR__ >= 8)))
-    return __builtin_bswap16(u16);
-#elif defined (_MSC_VER)
-    return _byteswap_ushort(u16);
+#if defined(MP4_HAVE_BSWAP_BUILTINS)
+#define BSWAP32 __builtin_bswap32
+#define BSWAP16 __builtin_bswap16
+#elif defined(_MSC_VER)
+#define BSWAP32 _byteswap_ulong
+#define BSWAP16 _byteswap_ushort
 #else
-    return (u16 << 8) | (u16 >> 8);
+static inline uint32_t BSWAP32(uint32_t x) {
+    return (x >> 24) | ((x >> 8) & 0xff00) | ((x << 8) & 0xff0000) | (x << 24);
+}
+static inline uint16_t BSWAP16(uint16_t x) {
+    return (uint16_t)((x >> 8) | (x << 8));
+}
 #endif
-#else
-    return u16;
-#endif
-}
 
-static int dataout(const void *data, int size)
-{
-    if (fwrite(data, 1, size, g_fout) != size)
-    {
-        perror("mp4out");
-        return -1;
-    }
-    return size;
-}
+enum {
+    MP4_EPOCH_OFFSET = 2082844800, /* seconds from 1904-01-01 to 1970-01-01 */
 
-static int stringout(const char *txt)
-{
-    return dataout(txt, strlen(txt));
-}
+    /* identity transform: required by the spec even though audio-only
+       files never use it; fixed-point format differs per field */
+    MP4_FP1616_ONE = 0x00010000, /* unity in 16.16 fixed point: rate, matrix a/d */
+    MP4_FP0230_ONE = 0x40000000, /* unity in 2.30 fixed point: matrix w */
+    MP4_FP0808_ONE = 0x0100,     /* unity in 8.8 fixed point: volume */
 
-static int u32out(uint32_t u32)
-{
-    u32 = be32(u32);
-    return dataout(&u32, 4);
-}
+    MP4_DESC_HDR = 5, /* descriptor tag byte + 4-byte expandable size, see put_descriptor() */
 
-static int u16out(uint16_t u16)
-{
-    u16 = be16(u16);
-    return dataout(&u16, 2);
-}
+    /* iTunes 'data' atom type codes */
+    ITUNES_DATA_BINARY = 0,
+    ITUNES_DATA_TEXT   = 1,
+    ITUNES_DATA_UINT8  = 0x15,
+    ITUNES_DATA_IMAGE  = 0x0d,
 
-static int u8out(uint8_t u8)
-{
-    if (fwrite(&u8, 1, 1, g_fout) != 1)
-    {
-        perror("mp4 out");
-        return 0;
-    }
-    return 1;
-}
+    /* DecoderConfigDescriptor fixed fields (ISO/IEC 14496-1) */
+    MP4_OBJECT_TYPE_AUDIO_ISO_14496_3 = 0x40,
+    MP4_STREAM_TYPE_AUDIO             = 0x15, /* streamType=5 (audio) << 2 | upStream=0 | reserved=1 */
+    MP4_DECODER_BUFFER_SIZE           = 6144, /* bufferSizeDB, arbitrary but generous for one AAC frame */
 
-static int ftypout(void)
-{
-    int size = 0;
+    MP4_TRACK_ID      = 1, /* single-track file: 'trak' and 'tkhd' both hardcode this */
+    MP4_NEXT_TRACK_ID = 2, /* mvhd's hint for the next trak ID a future edit would use */
+    MP4_URL_SELF_CONTAINED = 1, /* dref 'url ' flags bit: media data lives in this file, no external ref */
 
-    size += stringout("M4A ");
-    size += u32out(0);
-    size += stringout("M4A ");
-    size += stringout("mp42");
-    size += stringout("isom");
-    size += u32out(0);
-
-    return size;
-}
-
-enum
-{ SECSINDAY = 24 * 60 * 60 };
-static time_t mp4time(void)
-{
-    int y;
-    time_t t;
-
-    time(&t);
-
-    // add some time from the start of 1904 to the start of 1970
-    for (y = 1904; y < 1970; y++)
-    {
-        t += 365 * SECSINDAY;
-        if (!(y & 3))
-            t += SECSINDAY;
-    }
-
-    return t;
-}
-
-static int mvhdout(void)
-{
-    int size = 0;
-    int cnt;
-
-    // version
-    size += u8out(0);
-    // flags
-    size += u8out(0);
-    size += u16out(0);
-    // Creation time
-    size += u32out(mp4time());
-    // Modification time
-    size += u32out(mp4time());
-    // Time scale (samplerate)
-    size += u32out(mp4config.samplerate);
-    // Duration
-    size += u32out(mp4config.samples);
-    // rate
-    size += u32out(0x00010000);
-    // volume
-    size += u16out(0x0100);
-    // reserved
-    size += u16out(0);
-    size += u32out(0);
-    size += u32out(0);
-    // matrix
-    size += u32out(0x00010000);
-    size += u32out(0);
-    size += u32out(0);
-    size += u32out(0);
-    size += u32out(0x00010000);
-    size += u32out(0);
-    size += u32out(0);
-    size += u32out(0);
-    size += u32out(0x40000000);
-
-    for (cnt = 0; cnt < 6; cnt++)
-        size += u32out(0);
-    // Next track ID
-    size += u32out(2);
-
-    return size;
+    MP4_IO_BUFSIZE = 65536, /* stdio buffer for the mdat write path, see mp4_open() */
 };
 
-static int tkhdout(void)
-{
-    int size = 0;
-
-    // version
-    size += u8out(0);
-    // flags
-    // bits 8-23
-    size += u16out(0);
-    // bits 0-7
-    size += u8out(1 /*track enabled */ );
-    // Creation time
-    size += u32out(mp4time());
-    // Modification time
-    size += u32out(mp4time());
-    // Track ID
-    size += u32out(1);
-    // Reserved
-    size += u32out(0);
-    // Duration
-    size += u32out(mp4config.samples);
-    // Reserved
-    size += u32out(0);
-    size += u32out(0);
-    // Layer
-    size += u16out(0);
-    // Alternate group
-    size += u16out(0);
-    // Volume
-    size += u16out(0x0100);
-    // Reserved
-    size += u16out(0);
-    // matrix
-    size += u32out(0x00010000);
-    size += u32out(0);
-    size += u32out(0);
-    size += u32out(0);
-    size += u32out(0x00010000);
-    size += u32out(0);
-    size += u32out(0);
-    size += u32out(0);
-    size += u32out(0x40000000);
-
-    // Track width
-    size += u32out(0);
-    // Track height
-    size += u32out(0);
-
-    return size;
-};
-
-static int mdhdout(void)
-{
-    int size = 0;
-
-    // version/flags
-    size += u32out(0);
-    // Creation time
-    size += u32out(mp4time());
-    // Modification time
-    size += u32out(mp4time());
-    // Time scale
-    size += u32out(mp4config.samplerate);
-    // Duration
-    size += u32out(mp4config.samples);
-    // Language
-    size += u16out(0 /*0=English */ );
-    // pre_defined
-    size += u16out(0);
-
-    return size;
-};
-
-
-static int hdlr1out(void)
-{
-    int size = 0;
-
-    // version/flags
-    size += u32out(0);
-    // pre_defined
-    size += u32out(0);
-    // Component subtype
-    size += stringout("soun");
-    // reserved
-    size += u32out(0);
-    size += u32out(0);
-    size += u32out(0);
-    // name
-    // null terminate
-    size += u8out(0);
-
-    return size;
-};
-
-static int smhdout(void)
-{
-    int size = 0;
-
-    // version/flags
-    size += u32out(0);
-    // Balance
-    size += u16out(0 /*center */ );
-    // Reserved
-    size += u16out(0);
-
-    return size;
-};
-
-static int drefout(void)
-{
-    int size = 0;
-
-    // version/flags
-    size += u32out(0);
-    // Number of entries
-    size += u32out(1 /*url reference */ );
-
-    return size;
-};
-
-static int urlout(void)
-{
-    int size = 0;
-
-    size += u32out(1);
-
-    return size;
-};
-
-static int stsdout(void)
-{
-    int size = 0;
-
-    // version/flags
-    size += u32out(0);
-    // Number of entries(one 'mp4a')
-    size += u32out(1);
-
-    return size;
-};
-
-static int mp4aout(void)
-{
-    int size = 0;
-    // Reserved (6 bytes)
-    size += u32out(0);
-    size += u16out(0);
-    // Data reference index
-    size += u16out(1);
-    // Version
-    size += u16out(0);
-    // Revision level
-    size += u16out(0);
-    // Vendor
-    size += u32out(0);
-    // Number of channels
-    size += u16out(mp4config.channels);
-    // Sample size (bits)
-    size += u16out(mp4config.bits);
-    // Compression ID
-    size += u16out(0);
-    // Packet size
-    size += u16out(0);
-    // Sample rate (16.16)
-    // rate integer part
-    size += u16out(mp4config.samplerate);
-    // rate reminder part
-    size += u16out(0);
-
-    return size;
-}
-
-static int esdsout(void)
-{
-    int size = 0;
-    // descriptor definitions:
-    // systems/mp4_file_format/libisomediafile/src/MP4Descriptors.h
-    // systems/mp4_file_format/libisomediafile/src/MP4Descriptors.c
-    //
-    // descriptor tree:
-    // MP4ES_Descriptor
-    //   MP4DecoderConfigDescriptor
-    //      MP4DecSpecificInfoDescriptor
-    //   MP4SLConfigDescriptor
-    struct
-    {
-        int es;
-        int dc;                 // DecoderConfig
-        int dsi;                // DecSpecificInfo
-        int sl;                 // SLConfig
-    } dsize;
-
-    enum
-    { TAG_ES = 3, TAG_DC = 4, TAG_DSI = 5, TAG_SLC = 6 };
-
-    // calc sizes
-#define DESCSIZE(x) (x + 5/*.tag+.size*/)
-    dsize.sl = 1;
-    dsize.dsi = mp4config.asc.size;
-    dsize.dc = 13 + DESCSIZE(dsize.dsi);
-    dsize.es = 3 + DESCSIZE(dsize.dc) + DESCSIZE(dsize.sl);
-
-    // output esds atom data
-    // version/flags ?
-    size += u32out(0);
-    // mp4es
-    size += u8out(TAG_ES);
-    size += u8out(0x80);
-    size += u8out(0x80);
-    size += u8out(0x80);
-    size += u8out(dsize.es);
-    // ESID
-    size += u16out(0);
-    // flags(url(bit 6); ocr(5); streamPriority (0-4)):
-    size += u8out(0);
-
-    size += u8out(TAG_DC);
-    size += u8out(0x80);
-    size += u8out(0x80);
-    size += u8out(0x80);
-    size += u8out(dsize.dc);
-    size += u8out(0x40 /*MPEG-4 audio */ );
-    size += u8out((5 << 2) /* AudioStream */ | 1 /* reserved = 1 */);
-    // decode buffer size bytes
-#if 0
-    size += u16out(mp4config.buffersize >> 8);
-    size += u8out(mp4config.buffersize && 0xff);
-#else
-    size += u8out(0);
-    size += u8out(0x18);
-    size += u8out(0);
-#endif
-    // bitrate
-    size += u32out(mp4config.bitrate.max);
-    size += u32out(mp4config.bitrate.avg);
-
-    size += u8out(TAG_DSI);
-    size += u8out(0x80);
-    size += u8out(0x80);
-    size += u8out(0x80);
-    size += u8out(dsize.dsi);
-    // AudioSpecificConfig
-    size += dataout(mp4config.asc.data, mp4config.asc.size);
-
-    size += u8out(TAG_SLC);
-    size += u8out(0x80);
-    size += u8out(0x80);
-    size += u8out(0x80);
-    size += u8out(dsize.sl);
-    // "predefined" (no idea)
-    size += u8out(2);
-
-    return size;
-}
-
-static int sttsout(void)
-{
-    int size = 0;
-
-    // version/flags
-    size += u32out(0);
-    // Number of entries
-    size += u32out(1);
-    // only one entry
-    // Sample count (number of frames)
-    size += u32out(mp4config.frame.ents);
-    // Sample duration (samples per frame)
-    size += u32out(mp4config.framesamples);
-
-    return size;
-}
-
-static int stszout(void)
-{
-    int size = 0;
-    int cnt;
-
-    // version/flags
-    size += u32out(0);
-    // Sample size
-    size += u32out(0 /*i.e. variable size */ );
-    // Number of entries
-    if (!mp4config.frame.ents)
-        return size;
-    if (!mp4config.frame.data)
-        return size;
-
-    size += u32out(mp4config.frame.ents);
-    for (cnt = 0; cnt < mp4config.frame.ents; cnt++)
-        size += u32out(mp4config.frame.data[cnt]);
-
-    return size;
-}
-
-static int stscout(void)
-{
-    int size = 0;
-
-    // version/flags
-    size += u32out(0);
-    // Number of entries
-    size += u32out(1);
-    // first chunk
-    size += u32out(1);
-    // frames in chunk
-    size += u32out(mp4config.frame.ents);
-    // sample id
-    size += u32out(1);
-
-    return size;
-}
-
-static int stcoout(void)
-{
-    int size = 0;
-
-    // version/flags
-    size += u32out(0);
-    // Number of entries
-    size += u32out(1);
-    // Chunk offset table
-    size += u32out(mp4config.mdatofs);
-
-    return size;
-}
-
-static int tagtxt(char *tagname, const char *tagtxt)
-{
-    int txtsize = strlen(tagtxt);
-    int size = 0;
-    int datasize = txtsize + 16;
-
-    size += u32out(datasize + 8);
-    size += dataout(tagname, 4);
-    size += u32out(datasize);
-    size += dataout("data", 4);
-    size += u32out(1); // data type text
-    size += u32out(0);
-    size += dataout(tagtxt, txtsize);
-
-    return size;
-}
-
-static int tagu16(char *tagname, int n /*number of stored fields*/)
-{
-    int numsize = n * 2;
-    int size = 0;
-    int datasize = numsize + 16;
-
-    size += u32out(datasize + 8);
-    size += dataout(tagname, 4);
-    size += u32out(datasize);
-    size += dataout("data", 4);
-    size += u32out(0); // data type uint16
-    size += u32out(0);
-
-    return size;
-}
-
-static int tagu8(char *tagname, int n /*number of stored fields*/)
-{
-    int numsize = n * 1;
-    int size = 0;
-    int datasize = numsize + 16;
-
-    size += u32out(datasize + 8);
-    size += dataout(tagname, 4);
-    size += u32out(datasize);
-    size += dataout("data", 4);
-    size += u32out(0x15); // data type uint8
-    size += u32out(0);
-
-    return size;
-}
-
-static int tagimage(char *tagname, int n /*image size*/)
-{
-    int numsize = n;
-    int size = 0;
-    int datasize = numsize + 16;
-
-    size += u32out(datasize + 8);
-    size += dataout(tagname, 4);
-    size += u32out(datasize);
-    size += dataout("data", 4);
-    size += u32out(0x0d); // data type: image
-    size += u32out(0);
-
-    return size;
-}
-
-static int metaout(void)
-{
-    int size = 0;
-
-    // version/flags
-    size += u32out(0);
-
-    return size;
-}
-
-static int hdlr2out(void)
-{
-    int size = 0;
-
-    // version/flags
-    size += u32out(0);
-    // Predefined
-    size += u32out(0);
-    // Handler type
-    size += stringout("mdir");
-    size += stringout("appl");
-    // Reserved
-    size += u32out(0);
-    size += u32out(0);
-    // null terminator
-    size += u8out(0);
-
-    return size;
-};
-
-static int ilstout(void)
-{
-    int size = 0;
-    int cnt;
-
-    size += tagtxt("\xa9" "too", mp4config.tag.encoder);
-    if (mp4config.tag.artist)
-        size += tagtxt("\xa9" "ART", mp4config.tag.artist);
-    if (mp4config.tag.artistsort)
-        size += tagtxt("soar", mp4config.tag.artistsort);
-    if (mp4config.tag.composer)
-        size += tagtxt("\xa9" "wrt", mp4config.tag.composer);
-    if (mp4config.tag.composersort)
-        size += tagtxt("soco", mp4config.tag.composersort);
-    if (mp4config.tag.title)
-        size += tagtxt("\xa9" "nam", mp4config.tag.title);
-    if (mp4config.tag.genre)
-    {
-        size += tagu16("gnre", 1);
-        size += u16out(mp4config.tag.genre);
-    }
-    if (mp4config.tag.album)
-        size += tagtxt("\xa9" "alb", mp4config.tag.album);
-    if (mp4config.tag.albumartist)
-        size += tagtxt("aART", mp4config.tag.albumartist);
-    if (mp4config.tag.albumartistsort)
-        size += tagtxt("soaa", mp4config.tag.albumartistsort);
-    if (mp4config.tag.albumsort)
-        size += tagtxt("soal", mp4config.tag.albumsort);
-    if (mp4config.tag.compilation)
-    {
-        size += tagu8("cpil", 1);
-        size += u8out(mp4config.tag.compilation);
-    }
-    if (mp4config.tag.trackno)
-    {
-        size += tagu16("trkn", 4);
-        size += u16out(0);
-        size += u16out(mp4config.tag.trackno);
-        size += u16out(mp4config.tag.ntracks);
-        size += u16out(0);
-    }
-    if (mp4config.tag.discno)
-    {
-        size += tagu16("disk", 4);
-        size += u16out(0);
-        size += u16out(mp4config.tag.discno);
-        size += u16out(mp4config.tag.ndiscs);
-        size += u16out(0);
-    }
-    if (mp4config.tag.year)
-        size += tagtxt("\xa9" "day", mp4config.tag.year);
-    if (mp4config.tag.cover.data)
-    {
-        size += tagimage("covr", mp4config.tag.cover.size);
-        size += dataout(mp4config.tag.cover.data, mp4config.tag.cover.size);
-    }
-    if (mp4config.tag.comment)
-        size += tagtxt("\xa9" "cmt", mp4config.tag.comment);
-
-    // ----(mean(com.apple.iTunes),name(name),data(data))
-    for (cnt = 0; cnt < mp4config.tag.extnum; cnt++)
-    {
-        static const char *mean = "faac";//"com.apple.iTunes";
-        const char *name = mp4config.tag.ext[cnt].name;
-        const char *data = mp4config.tag.ext[cnt].data;
-        uint32_t len1 = 8 + strlen(mean) + 4;
-        uint32_t len2 = 8 + strlen(name) + 4;
-        uint32_t len3 = 8 + strlen(data) + 4 + 4;
-        u32out(8 + len1 + len2 + len3);
-        size += 8 + len1 + len2 + len3;
-        stringout("----");
-        u32out(len1);
-        stringout("mean");
-        u32out(0);
-        stringout(mean);
-        u32out(len2);
-        stringout("name");
-        u32out(0);
-        stringout(name);
-        u32out(len3);
-        stringout("data");
-        u32out(1);
-        u32out(0);
-        stringout(data);
-    }
-
-    return size;
-};
-
-static creator_t g_head[] = {
-    {ATOM_NAME, "ftyp"},
-    {ATOM_DATA, ftypout},
-    {ATOM_NAME, "free"},
-    {ATOM_NAME, "mdat"},
-    {0}
-};
-
-static creator_t g_tail[] = {
-    {ATOM_NAME, "moov"},
-    {ATOM_DESCENT},
-    {ATOM_NAME, "mvhd"},
-    {ATOM_DATA, mvhdout},
-    {ATOM_NAME, "trak"},
-    {ATOM_DESCENT},
-    {ATOM_NAME, "tkhd"},
-    {ATOM_DATA, tkhdout},
-    {ATOM_NAME, "mdia"},
-    {ATOM_DESCENT},
-    {ATOM_NAME, "mdhd"},
-    {ATOM_DATA, mdhdout},
-    {ATOM_NAME, "hdlr"},
-    {ATOM_DATA, hdlr1out},
-    {ATOM_NAME, "minf"},
-    {ATOM_DESCENT},
-    {ATOM_NAME, "smhd"},
-    {ATOM_DATA, smhdout},
-    {ATOM_NAME, "dinf"},
-    {ATOM_DESCENT},
-    {ATOM_NAME, "dref"},
-    {ATOM_DATA, drefout},
-    {ATOM_DESCENT},
-    {ATOM_NAME, "url "},
-    {ATOM_DATA, urlout},
-    {ATOM_ASCENT},
-    {ATOM_ASCENT},
-    {ATOM_NAME, "stbl"},
-    {ATOM_DESCENT},
-    {ATOM_NAME, "stsd"},
-    {ATOM_DATA, stsdout},
-    {ATOM_DESCENT},
-    {ATOM_NAME, "mp4a"},
-    {ATOM_DATA, mp4aout},
-    {ATOM_DESCENT},
-    {ATOM_NAME, "esds"},
-    {ATOM_DATA, esdsout},
-    {ATOM_ASCENT},
-    {ATOM_ASCENT},
-    {ATOM_NAME, "stts"},
-    {ATOM_DATA, sttsout},
-    {ATOM_NAME, "stsc"},
-    {ATOM_DATA, stscout},
-    {ATOM_NAME, "stsz"},
-    {ATOM_DATA, stszout},
-    {ATOM_NAME, "stco"},
-    {ATOM_DATA, stcoout},
-    {ATOM_ASCENT},
-    {ATOM_ASCENT},
-    {ATOM_ASCENT},
-    {ATOM_ASCENT},
-    {ATOM_NAME, "udta"},
-    {ATOM_DESCENT},
-    {ATOM_NAME, "meta"},
-    {ATOM_DATA, metaout},
-    {ATOM_DESCENT},
-    {ATOM_NAME, "hdlr"},
-    {ATOM_DATA, hdlr2out},
-    {ATOM_NAME, "ilst"},
-    {ATOM_DATA, ilstout},
-    {0}
-};
-
-static creator_t *g_atom = 0;
-static int create(void)
-{
-    long apos = ftell(g_fout);;
-    int size;
-
-    size = u32out(8);
-    size += dataout(g_atom->data, 4);
-
-    g_atom++;
-    if (g_atom->opcode == ATOM_DATA)
-    {
-        size += ((int (*)(void)) g_atom->data) ();
-        g_atom++;
-    }
-    if (g_atom->opcode == ATOM_DESCENT)
-    {
-        g_atom++;
-        while (g_atom->opcode != ATOM_STOP)
-        {
-            if (g_atom->opcode == ATOM_ASCENT)
-            {
-                g_atom++;
-                break;
+static struct {
+    uint32_t samplerate;
+    uint32_t samples;
+    uint32_t channels;
+    uint32_t bits;
+    uint16_t buffersize;
+
+    struct {
+        uint32_t max;
+        uint32_t avg;
+        uint32_t size;
+        uint32_t samples;
+    } bitrate;
+
+    uint32_t framesamples;
+
+    struct {
+        uint32_t *data;
+        uint32_t ents;
+        uint32_t bufsize;
+    } frame;
+
+    struct {
+        const uint8_t *data;
+        unsigned long size;
+    } asc;
+
+    FILE *fout;
+    uint32_t mdatofs;
+    uint32_t mdatsize;
+
+    const char *encoder;
+    const char *tags[MP4TAG_COUNT];
+    uint8_t compilation;
+    uint32_t trackno;
+    uint32_t ntracks;
+    uint32_t discno;
+    uint32_t ndiscs;
+    int genre;
+
+    struct {
+        const uint8_t *data;
+        int size;
+    } cover;
+
+    struct {
+        const char *name;
+        const char *value;
+    } *custom;
+    int customcnt;
+    int customcap;
+} g_mp4 = { 0 };
+
+/* Atom trees assembled all at once (ftyp/free in mp4_open, moov in
+   mp4_finish) are built here so end_atom() can patch sizes with a memcpy
+   instead of an lseek round trip. mdat audio bytes stream straight to
+   g_mp4.fout instead, since they arrive incrementally during encoding
+   and can be far larger than is worth buffering. */
+static uint8_t *g_membuf = NULL;
+static size_t g_mempos = 0;
+static size_t g_memcap = 0;
+
+static inline void mem_write(const void *data, size_t size) {
+    if (g_membuf) {
+        if (g_mempos + size > g_memcap) {
+            size_t new_cap = g_memcap ? g_memcap * 2 : 1024;
+            while (g_mempos + size > new_cap) new_cap *= 2;
+            void *tmp = realloc(g_membuf, new_cap);
+            if (!tmp) {
+                free(g_membuf);
+                g_membuf = NULL;
+                return;
             }
-            size += create();
+            g_membuf = (uint8_t *)tmp;
+            g_memcap = new_cap;
         }
+        memcpy(g_membuf + g_mempos, data, size);
+        g_mempos += size;
+    } else if (g_mp4.fout) {
+        fwrite(data, 1, size, g_mp4.fout);
     }
-
-    fseek(g_fout, apos, SEEK_SET);
-    u32out(size);
-    fseek(g_fout, apos + size, SEEK_SET);
-
-    return size;
 }
 
-enum {BUFSTEP = 0x4000};
-int mp4atom_frame(uint8_t * buf, int size, int samples)
-{
-    if (mp4config.framesamples <= samples)
-    {
-        int bitrate;
 
-        mp4config.bitrate.samples += samples;
-        mp4config.bitrate.size += size;
-
-        if (mp4config.bitrate.samples >= mp4config.samplerate)
-        {
-            bitrate = 8.0 * mp4config.bitrate.size * mp4config.samplerate
-                / mp4config.bitrate.samples;
-            mp4config.bitrate.size = 0;
-            mp4config.bitrate.samples = 0;
-
-            if (mp4config.bitrate.max < bitrate)
-                mp4config.bitrate.max = bitrate;
-        }
-        mp4config.framesamples = samples;
+static inline void put_u32(uint32_t val) {
+#ifndef WORDS_BIGENDIAN
+    val = BSWAP32(val);
+#endif
+    if (g_membuf && g_mempos + 4 <= g_memcap) {
+        memcpy(g_membuf + g_mempos, &val, 4);
+        g_mempos += 4;
+    } else {
+        mem_write(&val, 4);
     }
-    if (mp4config.buffersize < size)
-        mp4config.buffersize = size;
-    mp4config.samples += samples;
-    mp4config.mdatsize += dataout(buf, size);
+}
 
-    if (((mp4config.frame.ents + 1) * sizeof(*(mp4config.frame.data)))
-        > mp4config.frame.bufsize)
-    {
-        mp4config.frame.bufsize += BUFSTEP;
-        mp4config.frame.data = realloc(mp4config.frame.data,
-                                       mp4config.frame.bufsize);
+static inline void put_u16(uint16_t val) {
+#ifndef WORDS_BIGENDIAN
+    val = BSWAP16(val);
+#endif
+    if (g_membuf && g_mempos + 2 <= g_memcap) {
+        memcpy(g_membuf + g_mempos, &val, 2);
+        g_mempos += 2;
+    } else {
+        mem_write(&val, 2);
     }
-    mp4config.frame.data[mp4config.frame.ents++] = size;
+}
 
+static inline void put_u8(uint8_t val) { mem_write(&val, 1); }
+
+static inline void put_data(const void *data, size_t size) { mem_write(data, size); }
+
+/* An atom's size field comes before its contents but isn't known until
+   the contents (and any nested atoms) are written, so reserve it as 0
+   here and let end_atom() backpatch the real value once it's known. */
+static inline long start_atom(const char *name) {
+    long pos = g_membuf ? (long)g_mempos : (g_mp4.fout ? ftell(g_mp4.fout) : 0);
+    put_u32(0);
+    put_data(name, 4);
+    return pos;
+}
+
+static inline void end_atom(long pos) {
+    if (g_membuf) {
+        uint32_t size = (uint32_t)(g_mempos - pos);
+#ifndef WORDS_BIGENDIAN
+        size = BSWAP32(size);
+#endif
+        memcpy(g_membuf + pos, &size, 4);
+    } else if (g_mp4.fout) {
+        long curr = ftell(g_mp4.fout);
+        fseek(g_mp4.fout, pos, SEEK_SET);
+        put_u32((uint32_t)(curr - pos));
+        fseek(g_mp4.fout, curr, SEEK_SET);
+    }
+}
+
+static uint32_t get_mp4_time(void) {
+    return (uint32_t)time(NULL) + MP4_EPOCH_OFFSET;
+}
+
+/* MPEG-4 descriptor sizes are a base-128 varint with a continuation bit,
+   but always emitted here as the full 4-byte form (continuation bit set
+   on all but the last byte) since some parsers assume that fixed width
+   rather than the shorter encodings the spec also permits. */
+static void put_descriptor(uint8_t tag, uint32_t size) {
+    uint8_t buf[5];
+    buf[0] = tag;
+    buf[1] = ((size >> 21) & 0x7f) | 0x80;
+    buf[2] = ((size >> 14) & 0x7f) | 0x80;
+    buf[3] = ((size >> 7) & 0x7f) | 0x80;
+    buf[4] = (size & 0x7f);
+    mem_write(buf, 5);
+}
+
+/* Only resets per-output-file write state (frame table, mdat bookkeeping,
+   bitrate accumulators). Tag/format config set by the caller, which may
+   happen before or after mp4_open() depending on the option, is left
+   untouched. */
+static void reset_write_state(void) {
+    free(g_mp4.frame.data);
+    g_mp4.frame.data = NULL;
+    g_mp4.frame.ents = 0;
+    g_mp4.frame.bufsize = 0;
+    g_mp4.framesamples = 0;
+    g_mp4.samples = 0;
+    g_mp4.buffersize = 0;
+    g_mp4.mdatofs = 0;
+    g_mp4.mdatsize = 0;
+    memset(&g_mp4.bitrate, 0, sizeof(g_mp4.bitrate));
+}
+
+int mp4_open(const char *path, int overwrite) {
+    mp4_close(); /* in case of a retry after a failed previous mp4_open() */
+    reset_write_state();
+
+    if (!overwrite && access(path, 0) == 0) return 1;
+    g_mp4.fout = fopen(path, "wb");
+    if (!g_mp4.fout) return 1;
+    setvbuf(g_mp4.fout, NULL, _IOFBF, MP4_IO_BUFSIZE);
+
+    g_mp4.frame.bufsize = 1024;
+    g_mp4.frame.data = (uint32_t *)malloc(g_mp4.frame.bufsize * sizeof(uint32_t));
+
+    g_mempos = 0;
+    g_memcap = 1024;
+    g_membuf = (uint8_t *)malloc(g_memcap);
+
+    long ftyp = start_atom("ftyp");
+    put_data("M4A \0\0\0\0M4A mp42isom", 20);
+    end_atom(ftyp);
+
+    fwrite(g_membuf, 1, g_mempos, g_mp4.fout);
+    free(g_membuf);
+    g_membuf = NULL;
+
+    /* mdat's size isn't known until every frame has been written, so its
+       header goes out now as a placeholder and gets patched in mp4_finish().
+       stco also needs mdatofs to point past this header at the first
+       audio byte, which is why it's recorded here rather than computed later. */
+    g_mp4.mdatofs = (uint32_t)ftell(g_mp4.fout) + 8;
+    put_u32(0);
+    put_data("mdat", 4);
     return 0;
 }
 
-int mp4atom_close(void)
-{
-    if (g_fout)
-    {
-        fseek(g_fout, mp4config.mdatofs - 8, SEEK_SET);
-        u32out(mp4config.mdatsize + 8);
-        fclose(g_fout);
-        g_fout = 0;
+void mp4_set_format(uint32_t samplerate, uint32_t channels, uint32_t bits) {
+    g_mp4.samplerate = samplerate;
+    g_mp4.channels = channels;
+    g_mp4.bits = bits;
+}
+
+void mp4_set_decoder_config(const uint8_t *asc, unsigned long size) {
+    g_mp4.asc.data = asc;
+    g_mp4.asc.size = size;
+}
+
+void mp4_set_encoder(const char *value) { g_mp4.encoder = value; }
+
+void mp4_set_tag(mp4_tag_id_t id, const char *value) {
+    if (id < MP4TAG_COUNT)
+        g_mp4.tags[id] = value;
+}
+
+void mp4_set_genre(int genre) { g_mp4.genre = genre; }
+
+void mp4_set_compilation(int flag) { g_mp4.compilation = (uint8_t)flag; }
+
+void mp4_set_track(uint32_t num, uint32_t total) {
+    g_mp4.trackno = num;
+    g_mp4.ntracks = total;
+}
+
+void mp4_set_disc(uint32_t num, uint32_t total) {
+    g_mp4.discno = num;
+    g_mp4.ndiscs = total;
+}
+
+void mp4_set_cover(const uint8_t *data, int size) {
+    g_mp4.cover.data = data;
+    g_mp4.cover.size = size;
+}
+
+int mp4_add_custom_tag(const char *name, const char *value) {
+    if (g_mp4.customcnt >= g_mp4.customcap) {
+        int new_cap = g_mp4.customcap ? g_mp4.customcap * 2 : 8;
+        void *tmp = realloc(g_mp4.custom, new_cap * sizeof(*g_mp4.custom));
+        if (!tmp) return -1;
+        g_mp4.custom = tmp;
+        g_mp4.customcap = new_cap;
     }
-    if (mp4config.frame.data)
-    {
-        free(mp4config.frame.data);
-        mp4config.frame.data = 0;
-    }
+    g_mp4.custom[g_mp4.customcnt].name = name;
+    g_mp4.custom[g_mp4.customcnt].value = value;
+    g_mp4.customcnt++;
     return 0;
 }
 
-int mp4atom_open(char *name, int over)
-{
-    mp4atom_close();
+int mp4_write_frame(const uint8_t *data, uint32_t size, uint32_t samples) {
+    if (!g_mp4.fout) return -1;
 
-    if (!access(name, W_OK) && !over)
-    {
-        fprintf(stderr, "output file exists, use --overwrite option\n");
-        return 1;
-    }
-    if (!(g_fout = fopen(name, "wb")))
-    {
-        perror(name);
-        return 1;
-    }
-
-    mp4config.mdatsize = 0;
-    mp4config.frame.bufsize = BUFSTEP;
-    mp4config.frame.data = malloc(mp4config.frame.bufsize);
-
-    return 0;
-}
-
-
-int mp4atom_head(void)
-{
-    g_atom = g_head;
-    while (g_atom->opcode != ATOM_STOP)
-        create();
-    mp4config.mdatofs = ftell(g_fout);
-
-    return 0;
-}
-
-int mp4atom_tail(void)
-{
-    mp4config.bitrate.avg = 8.0 * mp4config.mdatsize
-        * mp4config.samplerate / mp4config.samples;
-    if (!mp4config.bitrate.max)
-        mp4config.bitrate.max = mp4config.bitrate.avg;
-
-    g_atom = g_tail;
-    while (g_atom->opcode != ATOM_STOP)
-        create();
-
-    return 0;
-}
-
-int mp4tag_add(const char *name, const char *data)
-{
-    int idx = mp4config.tag.extnum;
-
-    if (idx >= TAGMAX)
-    {
-        fprintf(stderr, "To many tags\n");
+    if (fwrite(data, 1, size, g_mp4.fout) != size)
         return -1;
+    g_mp4.mdatsize += size;
+    g_mp4.samples += samples;
+
+    /* only count frames at the established frame length toward the
+       bitrate window, so a shorter trailing frame doesn't skew it */
+    if (g_mp4.framesamples <= samples) {
+        g_mp4.bitrate.size += size;
+        g_mp4.bitrate.samples += samples;
+        if (g_mp4.bitrate.samples >= g_mp4.samplerate) {
+            uint32_t br = (uint32_t)((uint64_t)8 * g_mp4.bitrate.size * g_mp4.samplerate / g_mp4.bitrate.samples);
+            if (g_mp4.bitrate.max < br)
+                g_mp4.bitrate.max = br;
+            g_mp4.bitrate.size = 0;
+            g_mp4.bitrate.samples = 0;
+        }
+        g_mp4.framesamples = samples;
     }
 
-    mp4config.tag.ext[idx].name = name;
-    mp4config.tag.ext[idx].data = data;
-    mp4config.tag.extnum++;
-
+    if (g_mp4.frame.ents >= g_mp4.frame.bufsize) {
+        uint32_t new_cap = g_mp4.frame.bufsize ? g_mp4.frame.bufsize * 2 : 1024;
+        uint32_t *tmp = (uint32_t *)realloc(g_mp4.frame.data, new_cap * sizeof(uint32_t));
+        if (!tmp) return -1;
+        g_mp4.frame.data = tmp;
+        g_mp4.frame.bufsize = new_cap;
+    }
+    g_mp4.frame.data[g_mp4.frame.ents++] = size;
+    if (g_mp4.buffersize < (uint16_t)size)
+        g_mp4.buffersize = (uint16_t)size;
     return 0;
 }
+
+static void put_tag(const char *name, const char *data) {
+    if (!data) return;
+    long box      = start_atom(name);
+    long data_box = start_atom("data");
+    put_u32(ITUNES_DATA_TEXT);
+    put_u32(0);
+    put_data(data, strlen(data));
+    end_atom(data_box);
+    end_atom(box);
+}
+
+static void put_tag_u8(const char *name, uint8_t val) {
+    long box      = start_atom(name);
+    long data_box = start_atom("data");
+    put_u32(ITUNES_DATA_UINT8);
+    put_u32(0);
+    put_u8(val);
+    end_atom(data_box);
+    end_atom(box);
+}
+
+static void put_tag_genre(uint16_t genre) {
+    long box      = start_atom("gnre");
+    long data_box = start_atom("data");
+    put_u32(ITUNES_DATA_BINARY);
+    put_u32(0);
+    put_u16(genre);
+    end_atom(data_box);
+    end_atom(box);
+}
+
+static void put_tag_index(const char *name, uint16_t num, uint16_t total) {
+    long box      = start_atom(name);
+    long data_box = start_atom("data");
+    put_u32(ITUNES_DATA_BINARY);
+    put_u32(0);
+    put_u16(0);
+    put_u16(num);
+    put_u16(total);
+    put_u16(0);
+    end_atom(data_box);
+    end_atom(box);
+}
+
+static void put_tag_image(const uint8_t *data, int size) {
+    long box      = start_atom("covr");
+    long data_box = start_atom("data");
+    put_u32(ITUNES_DATA_IMAGE);
+    put_u32(0);
+    put_data(data, size);
+    end_atom(data_box);
+    end_atom(box);
+}
+
+static void put_tag_ext(const char *mean, const char *name, const char *val) {
+    long box      = start_atom("----");
+    long mean_box = start_atom("mean");
+    put_u32(0);
+    put_data(mean, strlen(mean));
+    end_atom(mean_box);
+    long name_box = start_atom("name");
+    put_u32(0);
+    put_data(name, strlen(name));
+    end_atom(name_box);
+    long data_box = start_atom("data");
+    put_u32(ITUNES_DATA_TEXT);
+    put_u32(0);
+    put_data(val, strlen(val));
+    end_atom(data_box);
+    end_atom(box);
+}
+
+/* leading \xa9 marks an atom as iTunes-style "plain text" metadata,
+   distinct from the freeform '----' atoms used by mp4_add_custom_tag() */
+static const char *tag_atom_names[MP4TAG_COUNT] = {
+    [MP4TAG_ARTIST]          = "\xa9" "ART",
+    [MP4TAG_ARTISTSORT]      = "soar",
+    [MP4TAG_COMPOSER]        = "\xa9" "wrt",
+    [MP4TAG_COMPOSERSORT]    = "soco",
+    [MP4TAG_TITLE]           = "\xa9" "nam",
+    [MP4TAG_ALBUM]           = "\xa9" "alb",
+    [MP4TAG_ALBUMARTIST]     = "aART",
+    [MP4TAG_ALBUMARTISTSORT] = "soaa",
+    [MP4TAG_ALBUMSORT]       = "soal",
+    [MP4TAG_YEAR]            = "\xa9" "day",
+    [MP4TAG_COMMENT]         = "\xa9" "cmt",
+};
+
+int mp4_finish(void) {
+    if (!g_mp4.fout) return 0;
+    /* now that all frames are written, go back and fill in the mdat
+       size placeholder left by mp4_open() */
+    long pos = ftell(g_mp4.fout);
+    fseek(g_mp4.fout, g_mp4.mdatofs - 8, SEEK_SET);
+    put_u32(g_mp4.mdatsize + 8);
+    fseek(g_mp4.fout, pos, SEEK_SET);
+
+    g_mp4.bitrate.avg = (uint32_t)((uint64_t)8 * g_mp4.mdatsize * g_mp4.samplerate / (g_mp4.samples ? g_mp4.samples : 1));
+    /* a file shorter than one second never crosses the sample-count
+       threshold in mp4_write_frame, so bitrate.max would otherwise
+       still be 0 here */
+    if (!g_mp4.bitrate.max) g_mp4.bitrate.max = g_mp4.bitrate.avg;
+
+    g_mempos = 0;
+    g_memcap = 65536 + (size_t)g_mp4.frame.ents * 4;
+    g_membuf = (uint8_t *)malloc(g_memcap);
+
+    long moov = start_atom("moov");
+    long mvhd = start_atom("mvhd");
+    uint32_t now = get_mp4_time();
+    put_u32(0); put_u32(now); put_u32(now);
+    put_u32(g_mp4.samplerate); put_u32(g_mp4.samples);
+    put_u32(MP4_FP1616_ONE); put_u16(MP4_FP0808_ONE); put_u16(0); put_u32(0); put_u32(0);
+    put_u32(MP4_FP1616_ONE); put_u32(0); put_u32(0);
+    put_u32(0); put_u32(MP4_FP1616_ONE); put_u32(0);
+    put_u32(0); put_u32(0); put_u32(MP4_FP0230_ONE);
+    put_u32(0); put_u32(0); put_u32(0); put_u32(0); put_u32(0); put_u32(0);
+    put_u32(MP4_NEXT_TRACK_ID);
+    end_atom(mvhd);
+
+    long trak = start_atom("trak");
+    long tkhd = start_atom("tkhd");
+    put_u32(1); put_u32(now); put_u32(now); put_u32(MP4_TRACK_ID); put_u32(0);
+    put_u32(g_mp4.samples); put_u32(0); put_u32(0);
+    put_u16(0); put_u16(0); put_u16(MP4_FP0808_ONE); put_u16(0);
+    put_u32(MP4_FP1616_ONE); put_u32(0); put_u32(0);
+    put_u32(0); put_u32(MP4_FP1616_ONE); put_u32(0);
+    put_u32(0); put_u32(0); put_u32(MP4_FP0230_ONE);
+    put_u32(0); put_u32(0);
+    end_atom(tkhd);
+
+    long mdia = start_atom("mdia");
+    long mdhd = start_atom("mdhd");
+    put_u32(0); put_u32(now); put_u32(now);
+    put_u32(g_mp4.samplerate); put_u32(g_mp4.samples);
+    put_u16(0); put_u16(0);
+    end_atom(mdhd);
+
+    long hdlr = start_atom("hdlr");
+    put_u32(0); put_u32(0); put_data("soun", 4);
+    put_u32(0); put_u32(0); put_u32(0); put_u8(0);
+    end_atom(hdlr);
+
+    long minf = start_atom("minf");
+    long smhd = start_atom("smhd");
+    put_u32(0); put_u16(0); put_u16(0);
+    end_atom(smhd);
+
+    long dinf = start_atom("dinf");
+    long dref = start_atom("dref");
+    put_u32(0); put_u32(1);
+    long url = start_atom("url ");
+    put_u32(MP4_URL_SELF_CONTAINED);
+    end_atom(url);
+    end_atom(dref);
+    end_atom(dinf);
+
+    long stbl = start_atom("stbl");
+    long stsd = start_atom("stsd");
+    put_u32(0); put_u32(1);
+    long mp4a = start_atom("mp4a");
+    put_u8(0); put_u8(0); put_u8(0); put_u8(0); put_u8(0); put_u8(0);
+    put_u16(1); put_u32(0); put_u32(0);
+    put_u16(g_mp4.channels); put_u16(g_mp4.bits);
+    put_u16(0); put_u16(0); put_u16(g_mp4.samplerate); put_u16(0);
+
+    long esds = start_atom("esds");
+    put_u32(0);
+    /* ES descriptor's declared size must cover its own fixed fields plus
+       every nested descriptor including their headers (DecoderConfig:
+       13 fixed + DecSpecificInfo; SLConfig: 1 fixed byte) */
+    put_descriptor(3, 3 + MP4_DESC_HDR + 13 + MP4_DESC_HDR + g_mp4.asc.size + MP4_DESC_HDR + 1);
+    put_u16(0); put_u8(0);
+    put_descriptor(4, 13 + MP4_DESC_HDR + g_mp4.asc.size);
+    put_u8(MP4_OBJECT_TYPE_AUDIO_ISO_14496_3); put_u8(MP4_STREAM_TYPE_AUDIO);
+    put_u8((uint8_t)(MP4_DECODER_BUFFER_SIZE >> 16));
+    put_u8((uint8_t)(MP4_DECODER_BUFFER_SIZE >> 8));
+    put_u8((uint8_t)MP4_DECODER_BUFFER_SIZE);
+    put_u32(g_mp4.bitrate.max); put_u32(g_mp4.bitrate.avg);
+    put_descriptor(5, g_mp4.asc.size);
+    put_data(g_mp4.asc.data, g_mp4.asc.size);
+    put_descriptor(6, 1); put_u8(2);
+    end_atom(esds);
+    end_atom(mp4a);
+    end_atom(stsd);
+
+    long stts = start_atom("stts");
+    put_u32(0); put_u32(1);
+    put_u32(g_mp4.frame.ents); put_u32(g_mp4.framesamples);
+    end_atom(stts);
+
+    long stsc = start_atom("stsc");
+    put_u32(0); put_u32(1); put_u32(1);
+    put_u32(g_mp4.frame.ents); put_u32(1);
+    end_atom(stsc);
+
+    long stsz = start_atom("stsz");
+    put_u32(0); put_u32(0); put_u32(g_mp4.frame.ents);
+    if (g_mp4.frame.ents) {
+        /* written by hand instead of looping put_u32() per entry: this
+           table has one entry per encoded frame, so for a long file it's
+           the hottest loop in mp4_finish() */
+        size_t stsz_size = (size_t)g_mp4.frame.ents * 4;
+        if (g_mempos + stsz_size > g_memcap) {
+            size_t new_cap = g_memcap ? g_memcap * 2 : 1024;
+            while (g_mempos + stsz_size > new_cap) new_cap *= 2;
+            void *tmp = realloc(g_membuf, new_cap);
+            if (!tmp) return 0;
+            g_membuf = (uint8_t *)tmp;
+            g_memcap = new_cap;
+        }
+        uint8_t *p = g_membuf + g_mempos;
+#ifdef WORDS_BIGENDIAN
+        memcpy(p, g_mp4.frame.data, stsz_size);
+#else
+        for (uint32_t i = 0; i < g_mp4.frame.ents; i++) {
+            uint32_t val = BSWAP32(g_mp4.frame.data[i]);
+            memcpy(p + i * 4, &val, 4);
+        }
+#endif
+        g_mempos += stsz_size;
+    }
+    end_atom(stsz);
+
+    long stco = start_atom("stco");
+    put_u32(0); put_u32(1); put_u32(g_mp4.mdatofs);
+    end_atom(stco);
+
+    end_atom(stbl);
+    end_atom(minf);
+    end_atom(mdia);
+    end_atom(trak);
+
+    long udta = start_atom("udta");
+    long meta = start_atom("meta");
+    put_u32(0);
+    long hdlr2 = start_atom("hdlr");
+    put_u32(0); put_u32(0); put_data("mdirappl", 8);
+    put_u32(0); put_u32(0); put_u8(0);
+    end_atom(hdlr2);
+
+    long ilst = start_atom("ilst");
+    put_tag("\xa9" "too", g_mp4.encoder);
+    for (int i = 0; i < MP4TAG_COUNT; i++)
+        put_tag(tag_atom_names[i], g_mp4.tags[i]);
+    if (g_mp4.genre) put_tag_genre((uint16_t)g_mp4.genre);
+    if (g_mp4.compilation) put_tag_u8("cpil", g_mp4.compilation);
+    if (g_mp4.trackno) put_tag_index("trkn", (uint16_t)g_mp4.trackno, (uint16_t)g_mp4.ntracks);
+    if (g_mp4.discno) put_tag_index("disk", (uint16_t)g_mp4.discno, (uint16_t)g_mp4.ndiscs);
+    if (g_mp4.cover.data) put_tag_image(g_mp4.cover.data, g_mp4.cover.size);
+    for (int i = 0; i < g_mp4.customcnt; i++)
+        put_tag_ext("faac", g_mp4.custom[i].name, g_mp4.custom[i].value);
+    end_atom(ilst);
+    end_atom(meta);
+    end_atom(udta);
+    end_atom(moov);
+
+    fwrite(g_membuf, 1, g_mempos, g_mp4.fout);
+    free(g_membuf);
+    g_membuf = NULL;
+    return 0;
+}
+
+int mp4_close(void) {
+    if (g_mp4.fout) {
+        fclose(g_mp4.fout);
+        g_mp4.fout = NULL;
+    }
+    free(g_mp4.frame.data);
+    g_mp4.frame.data = NULL;
+    free(g_membuf);
+    g_membuf = NULL;
+    return 0;
+}
+
+uint32_t mp4_frame_count(void) { return g_mp4.frame.ents; }
+uint32_t mp4_sample_count(void) { return g_mp4.samples; }
+uint32_t mp4_max_bitrate(void) { return g_mp4.bitrate.max; }
+uint32_t mp4_avg_bitrate(void) { return g_mp4.bitrate.avg; }
+uint32_t mp4_max_frame_size(void) { return g_mp4.buffersize; }

@@ -1,96 +1,61 @@
-/****************************************************************************
-    MP4 output module
+/*
+ * FAAC - Freeware Advanced Audio Coder
+ * Copyright (C) 2026 Nils Schimmelmann
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
 
-    Copyright (C) 2017 Krzysztof Nikiel
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ */
 
-    This program is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
-
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License
-    along with this program.  If not, see <http://www.gnu.org/licenses/>.
-****************************************************************************/
+#ifndef MP4WRITE_H
+#define MP4WRITE_H
 
 #include <stdint.h>
 
-enum {TAGMAX = 100};
+typedef enum {
+    MP4TAG_ARTIST,
+    MP4TAG_ARTISTSORT,
+    MP4TAG_COMPOSER,
+    MP4TAG_COMPOSERSORT,
+    MP4TAG_TITLE,
+    MP4TAG_ALBUM,
+    MP4TAG_ALBUMARTIST,
+    MP4TAG_ALBUMARTISTSORT,
+    MP4TAG_ALBUMSORT,
+    MP4TAG_YEAR,
+    MP4TAG_COMMENT,
+    MP4TAG_COUNT
+} mp4_tag_id_t;
 
-typedef struct
-{
-    uint32_t samplerate;
-    // total sound samples
-    uint32_t samples;
-    uint32_t channels;
-    // sample depth
-    uint32_t bits;
-    // buffer config
-    uint16_t buffersize;
-    struct {
-        uint32_t max;
-        uint32_t avg;
-        int size;
-        int samples;
-    } bitrate;
-    uint32_t framesamples;
-    struct
-    {
-        uint16_t *data;
-        uint32_t ents;
-        uint32_t bufsize;
-    } frame;
-    // AudioSpecificConfig data:
-    struct
-    {
-        uint8_t *data;
-        unsigned long size;
-    } asc;
-    uint32_t mdatofs;
-    uint32_t mdatsize;
+int mp4_open(const char *path, int overwrite);
+void mp4_set_format(uint32_t samplerate, uint32_t channels, uint32_t bits);
+void mp4_set_decoder_config(const uint8_t *asc, unsigned long size);
+void mp4_set_encoder(const char *value);
+void mp4_set_tag(mp4_tag_id_t id, const char *value);
+void mp4_set_genre(int genre);
+void mp4_set_compilation(int flag);
+void mp4_set_track(uint32_t num, uint32_t total);
+void mp4_set_disc(uint32_t num, uint32_t total);
+void mp4_set_cover(const uint8_t *data, int size);
+int mp4_add_custom_tag(const char *name, const char *value);
+int mp4_write_frame(const uint8_t *data, uint32_t size, uint32_t samples);
+int mp4_finish(void);
+int mp4_close(void);
 
-    struct
-    {
-        // meta fields
-        const char *encoder;
-        const char *artist;
-        const char *artistsort;
-        const char *composer;
-        const char *composersort;
-        const char *title;
-        const char *album;
-        const char *albumartist;
-        const char *albumartistsort;
-        const char *albumsort;
-        uint8_t compilation;
-        uint32_t trackno;
-        uint32_t ntracks;
-        uint32_t discno;
-        uint32_t ndiscs;
-        int genre;
-        const char *year;
-        struct {
-            uint8_t *data;
-            int size;
-        } cover;
-        const char *comment;
-        struct {
-            const char *name;
-            const char *data;
-        } ext[TAGMAX];
-        int extnum;
-    } tag;
-} mp4config_t;
+uint32_t mp4_frame_count(void);
+uint32_t mp4_sample_count(void);
+uint32_t mp4_max_bitrate(void);
+uint32_t mp4_avg_bitrate(void);
+uint32_t mp4_max_frame_size(void);
 
-extern mp4config_t mp4config;
-
-int mp4atom_open(char *name, int over);
-int mp4atom_head(void);
-int mp4atom_tail(void);
-int mp4atom_frame(uint8_t * bitbuf, int bytesWritten, int frame_samples);
-int mp4atom_close(void);
-int mp4tag_add(const char *name, const char *data);
+#endif

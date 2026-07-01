@@ -704,7 +704,8 @@ int main(int argc, char *argv[])
                 dieMessage = "Missing tag value.\n";
             else
                 *(char *)tagval++ = 0;
-            mp4tag_add(tagname, tagval);
+            if (!dieMessage && mp4_add_custom_tag(tagname, tagval))
+                dieMessage = "Couldn't add tag (out of memory).\n";
             break;
         case COVER_ART_FLAG:
             {
@@ -966,16 +967,13 @@ int main(int argc, char *argv[])
             return 1;
         }
 
-        if (mp4atom_open(aacFileName, overwrite))
+        if (mp4_open(aacFileName, overwrite))
         {
             fprintf(stderr, "Couldn't create output file %s\n", aacFileName);
             return 1;
         }
-        mp4atom_head();
 
-        mp4config.samplerate = infile->samplerate;
-        mp4config.channels = infile->channels;
-        mp4config.bits = infile->samplebytes * 8;
+        mp4_set_format(infile->samplerate, infile->channels, infile->samplebytes * 8);
     }
     else
     {
@@ -1187,9 +1185,9 @@ int main(int argc, char *argv[])
             if (frame_samples > delay_samples)
                 frame_samples = delay_samples;
 
-            if (container == MP4_CONTAINER)
-                mp4atom_frame(bitbuf, bytesWritten, frame_samples);
-            else
+            if (container == MP4_CONTAINER) {
+                mp4_write_frame(bitbuf, (uint32_t)bytesWritten, (uint32_t)frame_samples);
+            } else
                 fwrite(bitbuf, 1, bytesWritten, outfile);
 
             encoded_samples += frame_samples;
@@ -1200,51 +1198,48 @@ int main(int argc, char *argv[])
     if (container == MP4_CONTAINER)
     {
         char *version_string = malloc(strlen(faac_id_string) + 6);
+        unsigned char *ascData = NULL;
+        unsigned long ascSize = 0;
 
-        faacEncGetDecoderSpecificInfo(hEncoder,
-                                      &mp4config.asc.data,
-                                      &mp4config.asc.size);
+        faacEncGetDecoderSpecificInfo(hEncoder, &ascData, &ascSize);
+        mp4_set_decoder_config(ascData, ascSize);
         strcpy(version_string, "FAAC ");
         strcpy(version_string + 5, faac_id_string);
 
-        mp4config.tag.encoder = version_string;
+        mp4_set_encoder(version_string);
 
-#define SETTAG(x) if(x)mp4config.tag.x=x
-        SETTAG(artist);
-        SETTAG(artistsort);
-        SETTAG(composer);
-        SETTAG(composersort);
-        SETTAG(title);
-        SETTAG(album);
-        SETTAG(albumartist);
-        SETTAG(albumartistsort);
-        SETTAG(albumsort);
-        SETTAG(trackno);
-        SETTAG(ntracks);
-        SETTAG(discno);
-        SETTAG(ndiscs);
-        SETTAG(compilation);
-        SETTAG(year);
-        SETTAG(genre);
-        SETTAG(comment);
+#define SETTAG(id, x) if(x) mp4_set_tag(id, x)
+        SETTAG(MP4TAG_ARTIST, artist);
+        SETTAG(MP4TAG_ARTISTSORT, artistsort);
+        SETTAG(MP4TAG_COMPOSER, composer);
+        SETTAG(MP4TAG_COMPOSERSORT, composersort);
+        SETTAG(MP4TAG_TITLE, title);
+        SETTAG(MP4TAG_ALBUM, album);
+        SETTAG(MP4TAG_ALBUMARTIST, albumartist);
+        SETTAG(MP4TAG_ALBUMARTISTSORT, albumartistsort);
+        SETTAG(MP4TAG_ALBUMSORT, albumsort);
+        SETTAG(MP4TAG_YEAR, year);
+        SETTAG(MP4TAG_COMMENT, comment);
+#undef SETTAG
+        if (trackno) mp4_set_track(trackno, ntracks);
+        if (discno) mp4_set_disc(discno, ndiscs);
+        if (compilation) mp4_set_compilation(compilation);
+        if (genre) mp4_set_genre(genre);
         if (artData && artSize)
-        {
-            mp4config.tag.cover.data = artData;
-            mp4config.tag.cover.size = artSize;
-        }
+            mp4_set_cover(artData, (int)artSize);
 
-        mp4atom_tail();
-        mp4atom_close();
+        mp4_finish();
+        mp4_close();
 
         free(version_string);
 
         if (verbose >= 2)
         {
-            fprintf(stderr, "%u frames\n", mp4config.frame.ents);
-            fprintf(stderr, "%u output samples\n", mp4config.samples);
-            fprintf(stderr, "max bitrate: %u\n", mp4config.bitrate.max);
-            fprintf(stderr, "avg bitrate: %u\n", mp4config.bitrate.avg);
-            fprintf(stderr, "max frame size: %u\n", mp4config.buffersize);
+            fprintf(stderr, "%u frames\n", mp4_frame_count());
+            fprintf(stderr, "%u output samples\n", mp4_sample_count());
+            fprintf(stderr, "max bitrate: %u\n", mp4_max_bitrate());
+            fprintf(stderr, "avg bitrate: %u\n", mp4_avg_bitrate());
+            fprintf(stderr, "max frame size: %u\n", mp4_max_frame_size());
         }
     }
     else
