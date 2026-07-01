@@ -36,7 +36,7 @@ copyright notice must be included in all copies or derivative works.
 Copyright (c) 1997.
 ```
 
-For the changes made for the FAAC project the GNU Library General Public License (LGPL), version 2 1991 applies. For the changes the following statement applies:
+For the changes made for the FAAC project the GNU Lesser General Public License (LGPL), version 2.1 applies. For the changes the following statement applies:
 
 ```
 FAAC - Freeware Advanced Audio Coder
