@@ -47,6 +47,9 @@
 #include <ctype.h>
 #include <math.h>
 #include <string.h>
+#include <time.h>
+#include <sys/stat.h>
+#include <errno.h>
 
 #ifdef HAVE_GETOPT_H
 # include <getopt.h>
@@ -89,6 +92,7 @@ enum flags
     WRITER_FLAG,
     WRITER_SORT_FLAG,
     TAG_FLAG,
+    CREATION_TIME_FLAG,
     HELP_QUAL,
     HELP_IO,
     HELP_MP4,
@@ -181,6 +185,7 @@ static help_t help_mp4[] = {
     {"--cover-art <filename>\tRead cover art from file X\n",
     "\t\tSupported image formats are GIF, JPEG, and PNG.\n"},
     {"--comment <string>\tSet comment\n"},
+    {"--creation-time <value>\tSet creation/modification time (auto, now, or timestamp)\n"},
     {0}
 };
 
@@ -468,7 +473,8 @@ int main(int argc, char *argv[])
         *album = NULL, *albumartist = NULL,
         *albumartistsort = NULL, *albumsort = NULL,
         *year = NULL, *comment = NULL, *composer = NULL,
-        *composersort = NULL, *tagname = 0, *tagval = 0;
+        *composersort = NULL, *tagname = 0, *tagval = 0,
+        *creation_time_str = NULL;
     int genre = 0;
     uint8_t *artData = NULL;
     uint64_t artSize = 0;
@@ -553,6 +559,7 @@ int main(int argc, char *argv[])
             {"ignorelength", 0, &ignorelen, 1},
             {"tag", 1, 0, TAG_FLAG},
             {"overwrite", 0, &overwrite, 1},
+            {"creation-time", 1, 0, CREATION_TIME_FLAG},
             {0, 0, 0, 0}
         };
         int c = -1;
@@ -706,6 +713,9 @@ int main(int argc, char *argv[])
                 *(char *)tagval++ = 0;
             if (!dieMessage && mp4_add_custom_tag(tagname, tagval))
                 dieMessage = "Couldn't add tag (out of memory).\n";
+            break;
+        case CREATION_TIME_FLAG:
+            creation_time_str = optarg;
             break;
         case COVER_ART_FLAG:
             {
@@ -1227,6 +1237,63 @@ int main(int argc, char *argv[])
         if (genre) mp4_set_genre(genre);
         if (artData && artSize)
             mp4_set_cover(artData, (int)artSize);
+
+        {
+            uint32_t final_creation_time = 0;
+            if (creation_time_str)
+            {
+                if (!strcmp(creation_time_str, "auto"))
+                {
+                    if (strcmp(audioFileName, "-") == 0)
+                    {
+                        fprintf(stderr, "cannot use --creation-time auto with stdin, defaulting to 0\n");
+                    }
+                    else
+                    {
+                        struct stat st;
+                        if (stat(audioFileName, &st) == 0)
+                        {
+                            final_creation_time = (uint32_t)st.st_mtime;
+                        }
+                        else
+                        {
+                            fprintf(stderr, "couldn't stat() input file %s, defaulting to 0\n", audioFileName);
+                        }
+                    }
+                }
+                else if (!strcmp(creation_time_str, "now"))
+                {
+                    final_creation_time = (uint32_t)time(NULL);
+                }
+                else
+                {
+                    char *endptr;
+                    errno = 0;
+                    final_creation_time = (uint32_t)strtoul(creation_time_str, &endptr, 10);
+                    if (errno != 0 || *endptr != '\0')
+                    {
+                        fprintf(stderr, "invalid creation time %s, defaulting to 0\n", creation_time_str);
+                        final_creation_time = 0;
+                    }
+                }
+            }
+            else
+            {
+                const char *sde = getenv("SOURCE_DATE_EPOCH");
+                if (sde)
+                {
+                    char *endptr;
+                    errno = 0;
+                    final_creation_time = (uint32_t)strtoul(sde, &endptr, 10);
+                    if (errno != 0 || *endptr != '\0')
+                    {
+                        fprintf(stderr, "invalid SOURCE_DATE_EPOCH %s, ignoring\n", sde);
+                        final_creation_time = 0;
+                    }
+                }
+            }
+            mp4_set_creation_time(final_creation_time);
+        }
 
         mp4_finish();
         mp4_close();
