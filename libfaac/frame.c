@@ -116,12 +116,12 @@ int FAACAPI faacEncGetDecoderSpecificInfo(faacEncHandle hpEncoder,unsigned char*
     }
 
     *pSizeOfDecoderSpecificInfo = 2;
-    *ppBuffer = malloc(2);
+    *ppBuffer = (unsigned char *)malloc(2);
 
     if(*ppBuffer != NULL){
-
         memset(*ppBuffer,0,*pSizeOfDecoderSpecificInfo);
-        pBitStream = OpenBitStream(*pSizeOfDecoderSpecificInfo, *ppBuffer);
+        pBitStream = OpenBitStream((int)*pSizeOfDecoderSpecificInfo, *ppBuffer);
+        if (!pBitStream) return -3;
         PutBit(pBitStream, hEncoder->config.aacObjectType, 5);
         PutBit(pBitStream, hEncoder->sampleRateIdx, 4);
         PutBit(pBitStream, hEncoder->numChannels, 4);
@@ -241,8 +241,11 @@ int FAACAPI faacEncSetConfiguration(faacEncHandle hpEncoder,
         unsigned int channel;
         for (channel = 0; channel < hEncoder->numChannels; channel++)
             if (!hEncoder->inputFifo[channel])
+            {
                 hEncoder->inputFifo[channel] =
                     (faac_real *)AllocMemory(2 * FRAME_LEN * sizeof(faac_real));
+                if (!hEncoder->inputFifo[channel]) return 0;
+            }
         hEncoder->inputFifoCap  = 2 * FRAME_LEN;
         hEncoder->inputFifoFill = 0;
     }
@@ -278,13 +281,14 @@ faacEncHandle FAACAPI faacEncOpen(unsigned long sampleRate,
     unsigned int channel;
     faacEncStruct* hEncoder;
 
-    if (numChannels > MAX_CHANNELS)
+    if (numChannels < 1 || numChannels > MAX_CHANNELS)
 	return NULL;
 
     *inputSamples = FRAME_LEN*numChannels;
     *maxOutputBytes = ADTS_FRAMESIZE;
 
     hEncoder = (faacEncStruct*)AllocMemory(sizeof(faacEncStruct));
+    if (!hEncoder) return NULL;
     SetMemory(hEncoder, 0, sizeof(faacEncStruct));
 
     hEncoder->numChannels = numChannels;
@@ -339,6 +343,11 @@ faacEncHandle FAACAPI faacEncOpen(unsigned long sampleRate,
 
         for (buf = 0; buf < 4; buf++) {
             hEncoder->audioFIFO[channel][buf] = (faac_real*)AllocMemory(FRAME_LEN*sizeof(faac_real));
+            if (!hEncoder->audioFIFO[channel][buf])
+            {
+                faacEncClose(hEncoder);
+                return NULL;
+            }
             memset(hEncoder->audioFIFO[channel][buf], 0, FRAME_LEN*sizeof(faac_real));
         }
     }

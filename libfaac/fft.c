@@ -36,6 +36,17 @@ void fft_initialize( FFT_Tables *fft_tables )
 	fft_tables->costbl		= AllocMemory( (MAXLOGM+1) * sizeof( fft_tables->costbl[0] ) );
 	fft_tables->negsintbl	= AllocMemory( (MAXLOGM+1) * sizeof( fft_tables->negsintbl[0] ) );
 	fft_tables->reordertbl	= AllocMemory( (MAXLOGM+1) * sizeof( fft_tables->reordertbl[0] ) );
+
+	if (!fft_tables->costbl || !fft_tables->negsintbl || !fft_tables->reordertbl)
+	{
+		if (fft_tables->costbl) FreeMemory(fft_tables->costbl);
+		if (fft_tables->negsintbl) FreeMemory(fft_tables->negsintbl);
+		if (fft_tables->reordertbl) FreeMemory(fft_tables->reordertbl);
+		fft_tables->costbl = NULL;
+		fft_tables->negsintbl = NULL;
+		fft_tables->reordertbl = NULL;
+		return;
+	}
 	
 	for( i = 0; i< MAXLOGM+1; i++ )
 	{
@@ -80,6 +91,7 @@ static void reorder2( FFT_Tables *fft_tables, faac_real *xr, faac_real *xi, int 
 	if ( fft_tables->reordertbl[logm] == NULL ) // create bit reversing table
 	{
 		fft_tables->reordertbl[logm] = AllocMemory(size * sizeof(*(fft_tables->reordertbl[0])));
+		if (!fft_tables->reordertbl[logm]) return;
 
 		for (i = 0; i < size; i++)
 		{
@@ -233,6 +245,14 @@ static void check_tables( FFT_Tables *fft_tables, int logm)
 		int alloc_size = (size < 4) ? 0 : (size - 4);
 		fft_tables->costbl[logm]	= AllocMemory(alloc_size * sizeof(*(fft_tables->costbl[0])));
 		fft_tables->negsintbl[logm]	= AllocMemory(alloc_size * sizeof(*(fft_tables->negsintbl[0])));
+
+		if (!fft_tables->costbl[logm] || !fft_tables->negsintbl[logm])
+		{
+			if (fft_tables->costbl[logm]) FreeMemory(fft_tables->costbl[logm]);
+			if (fft_tables->negsintbl[logm]) FreeMemory(fft_tables->negsintbl[logm]);
+			fft_tables->costbl[logm] = fft_tables->negsintbl[logm] = NULL;
+			return;
+		}
 
 		for (step = 4; step < size; step *= 2)
 		{

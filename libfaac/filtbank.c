@@ -55,12 +55,17 @@ void FilterBankInit(faacEncStruct* hEncoder)
 
     for (channel = 0; channel < hEncoder->numChannels; channel++) {
         hEncoder->freqBuff[channel] = (faac_real*)AllocMemory(2*FRAME_LEN*sizeof(faac_real));
+        if (!hEncoder->freqBuff[channel]) return;
     }
 
     hEncoder->sin_window_long = (faac_real*)AllocMemory(BLOCK_LEN_LONG*sizeof(faac_real));
     hEncoder->sin_window_short = (faac_real*)AllocMemory(BLOCK_LEN_SHORT*sizeof(faac_real));
     hEncoder->kbd_window_long = (faac_real*)AllocMemory(BLOCK_LEN_LONG*sizeof(faac_real));
     hEncoder->kbd_window_short = (faac_real*)AllocMemory(BLOCK_LEN_SHORT*sizeof(faac_real));
+
+    if (!hEncoder->sin_window_long || !hEncoder->sin_window_short ||
+        !hEncoder->kbd_window_long || !hEncoder->kbd_window_short)
+        return;
 
     for( i=0; i<BLOCK_LEN_LONG; i++ )
         hEncoder->sin_window_long[i] = FAAC_SIN((M_PI/(2*BLOCK_LEN_LONG)) * (i + 0.5));

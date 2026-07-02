@@ -730,7 +730,9 @@ BitStream *OpenBitStream(int size, unsigned char *buffer)
     BitStream *bitStream;
 
     bitStream = AllocMemory(sizeof(BitStream));
+    if (!bitStream) return NULL;
     bitStream->size = size;
+    bitStream->maxBit = (long)size * 8;
     bitStream->numBit = 0;
     bitStream->currentBit = 0;
     bitStream->data = buffer;
@@ -761,6 +763,12 @@ int PutBit(BitStream *bitStream,
 
     if (numBit == 0)
         return 0;
+
+    /* refuse to write past the caller's buffer instead of corrupting
+       adjacent memory; can be hit with pathological configs (e.g. large
+       channel counts) that make the ASC/header overflow its fixed size */
+    if (bitStream->currentBit + numBit > bitStream->maxBit)
+        return -1;
 
     /* Hoist bitstream state for faster access */
     unsigned int currentBit = (unsigned int)bitStream->currentBit;
