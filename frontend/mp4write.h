@@ -38,6 +38,7 @@ typedef enum {
 } mp4_tag_id_t;
 
 int mp4_open(const char *path, int overwrite);
+void mp4_set_creation_time(uint32_t t);
 void mp4_set_format(uint32_t samplerate, uint32_t channels, uint32_t bits);
 void mp4_set_decoder_config(const uint8_t *asc, unsigned long size);
 void mp4_set_encoder(const char *value);

@@ -20,7 +20,6 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include <time.h>
 
 #ifdef _WIN32
 #include <io.h>
@@ -115,6 +114,7 @@ static struct {
     uint32_t mdatofs;
     uint32_t mdatsize;
 
+    uint32_t creation_time;
     const char *encoder;
     const char *tags[MP4TAG_COUNT];
     uint8_t compilation;
@@ -221,8 +221,18 @@ static inline void end_atom(long pos) {
     }
 }
 
+void mp4_set_creation_time(uint32_t t) {
+    if (t == 0)
+        g_mp4.creation_time = 0;
+    else
+        g_mp4.creation_time = t + MP4_EPOCH_OFFSET;
+}
+
+/* creation/modification time is informational only; the spec (14496-12) never
+ * requires a real clock. Emit 0 ("unknown") by default so encodes are
+ * byte-reproducible, matching common muxer practice. */
 static uint32_t get_mp4_time(void) {
-    return (uint32_t)time(NULL) + MP4_EPOCH_OFFSET;
+    return g_mp4.creation_time;
 }
 
 /* MPEG-4 descriptor sizes are a base-128 varint with a continuation bit,
