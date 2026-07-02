@@ -27,7 +27,7 @@ extern "C" {
 #endif /* __cplusplus */
 
 #include <stdlib.h>
-#include <memory.h>
+#include <string.h>
 
 #ifndef max
 #define max(a, b) (((a) > (b)) ? (a) : (b))
@@ -39,6 +39,9 @@ extern "C" {
 #ifndef M_PI
 #define M_PI        3.14159265358979323846
 #endif
+#ifndef M_SQRT2
+#define M_SQRT2     1.41421356237309504880
+#endif
 
 /* Memory functions */
 #define AllocMemory(size) malloc(size)
@@ -47,7 +50,7 @@ extern "C" {
 
 int GetSRIndex(unsigned int sampleRate);
 unsigned int MaxBitrate(unsigned long sampleRate);
-unsigned int MinBitrate();
+unsigned int MinBitrate(void);
 int CountLeadingZeros(unsigned int x);
 
 #ifdef __cplusplus

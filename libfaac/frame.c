@@ -49,7 +49,7 @@ static char *libCopyright =
 
 static const psymodellist_t psymodellist[] = {
   {&psymodel2, "knipsycho psychoacoustic"},
-  {NULL}
+  {NULL, NULL}
 };
 
 static SR_INFO srInfo[12+1];
@@ -219,7 +219,7 @@ int FAACAPI faacEncSetConfiguration(faacEncHandle hpEncoder,
     if (hEncoder->config.bandWidth > (hEncoder->sampleRate / 2))
 		hEncoder->config.bandWidth = hEncoder->sampleRate / 2;
 
-    if (config->quantqual > maxqual)
+    if (config->quantqual > (unsigned long)maxqual)
         config->quantqual = maxqual;
     if (config->quantqual < MINQUAL)
         config->quantqual = MINQUAL;
@@ -254,8 +254,8 @@ int FAACAPI faacEncSetConfiguration(faacEncHandle hpEncoder,
 
     // reset psymodel
     hEncoder->psymodel->PsyEnd(hEncoder->psyInfo, hEncoder->numChannels);
-    if (config->psymodelidx >= (sizeof(psymodellist) / sizeof(psymodellist[0]) - 1))
-		config->psymodelidx = (sizeof(psymodellist) / sizeof(psymodellist[0])) - 2;
+    if (config->psymodelidx >= (int)(sizeof(psymodellist) / sizeof(psymodellist[0]) - 1))
+		config->psymodelidx = (int)(sizeof(psymodellist) / sizeof(psymodellist[0])) - 2;
 
     hEncoder->config.psymodelidx = config->psymodelidx;
     hEncoder->psymodel = (psymodel_t *)psymodellist[hEncoder->config.psymodelidx].ptr;
@@ -810,5 +810,5 @@ static SR_INFO srInfo[12+1] =
             4, 4, 4, 4, 4, 4, 4, 8, 8, 8, 8, 12, 16, 20, 20
         }
     },
-    { -1 }
+{ -1, 0, 0, {0}, {0} }
 };

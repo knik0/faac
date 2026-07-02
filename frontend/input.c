@@ -195,7 +195,7 @@ pcmfile_t *wav_open_read(const char *name, int rawinput)
     if (fmtsize < 16)
 	return NULL;
 
-   if (fread(&wave, 1, fmtsize, wave_f) != fmtsize)
+   if (fread(&wave, 1, fmtsize, wave_f) != (size_t)fmtsize)
         return NULL;
 
     seekcur(wave_f, riffsub.len - fmtsize);

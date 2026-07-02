@@ -46,36 +46,28 @@ static int WriteCPE(CoderInfo *coderInfoL,
                     CoderInfo *coderInfoR,
                     ChannelInfo *channelInfo,
                     BitStream* bitStream,
-                    int objectType,
                     int writeFlag);
 static int WriteSCE(CoderInfo *coderInfo,
                     ChannelInfo *channelInfo,
                     BitStream *bitStream,
-                    int objectType,
                     int writeFlag);
 static int WriteLFE(CoderInfo *coderInfo,
                     ChannelInfo *channelInfo,
                     BitStream *bitStream,
-                    int objectType,
                     int writeFlag);
 static int WriteICSInfo(CoderInfo *coderInfo,
                         BitStream *bitStream,
-                        int objectType,
-                        int common_window,
                         int writeFlag);
 static int WriteICS(CoderInfo *coderInfo,
                     BitStream *bitStream,
                     int commonWindow,
-                    int objectType,
                     int writeFlag);
-static int WritePulseData(CoderInfo *coderInfo,
-                          BitStream *bitStream,
+static int WritePulseData(BitStream *bitStream,
                           int writeFlag);
 static int WriteTNSData(CoderInfo *coderInfo,
                         BitStream *bitStream,
                         int writeFlag);
-static int WriteGainControlData(CoderInfo *coderInfo,
-                                BitStream *bitStream,
+static int WriteGainControlData(BitStream *bitStream,
                                 int writeFlag);
 static int WriteSpectralData(CoderInfo *coderInfo,
                              BitStream *bitStream,
@@ -119,14 +111,12 @@ int WriteBitstream(faacEncStruct* hEncoder,
                     bits += WriteLFE(&coderInfo[channel],
                         &channelInfo[channel],
                         bitStream,
-                        hEncoder->config.aacObjectType,
                         1);
                 } else {
                     /* Write out sce */
                     bits += WriteSCE(&coderInfo[channel],
                         &channelInfo[channel],
                         bitStream,
-                        hEncoder->config.aacObjectType,
                         1);
                 }
 
@@ -138,7 +128,6 @@ int WriteBitstream(faacEncStruct* hEncoder,
                         &coderInfo[channelInfo[channel].paired_ch],
                         &channelInfo[channel],
                         bitStream,
-                        hEncoder->config.aacObjectType,
                         1);
                 }
             }
@@ -202,14 +191,12 @@ static int CountBitstream(faacEncStruct* hEncoder,
                     bits += WriteLFE(&coderInfo[channel],
                         &channelInfo[channel],
                         bitStream,
-                        hEncoder->config.aacObjectType,
                         0);
                 } else {
                     /* Write out sce */
                     bits += WriteSCE(&coderInfo[channel],
                         &channelInfo[channel],
                         bitStream,
-                        hEncoder->config.aacObjectType,
                         0);
                 }
 
@@ -221,7 +208,6 @@ static int CountBitstream(faacEncStruct* hEncoder,
                         &coderInfo[channelInfo[channel].paired_ch],
                         &channelInfo[channel],
                         bitStream,
-                        hEncoder->config.aacObjectType,
                         0);
                 }
             }
@@ -321,7 +307,6 @@ static int WriteCPE(CoderInfo *coderInfoL,
                     CoderInfo *coderInfoR,
                     ChannelInfo *channelInfo,
                     BitStream* bitStream,
-                    int objectType,
                     int writeFlag)
 {
     int bits = 0;
@@ -345,7 +330,7 @@ static int WriteCPE(CoderInfo *coderInfoL,
     if (channelInfo->common_window) {
         int numWindows, maxSfb;
 
-        bits += WriteICSInfo(coderInfoL, bitStream, objectType, channelInfo->common_window, writeFlag);
+        bits += WriteICSInfo(coderInfoL, bitStream, writeFlag);
         numWindows = coderInfoL->groups.n;
         maxSfb = coderInfoL->sfbn;
 
@@ -367,8 +352,8 @@ static int WriteCPE(CoderInfo *coderInfoL,
     }
 
     /* Write individual_channel_stream elements */
-    bits += WriteICS(coderInfoL, bitStream, channelInfo->common_window, objectType, writeFlag);
-    bits += WriteICS(coderInfoR, bitStream, channelInfo->common_window, objectType, writeFlag);
+    bits += WriteICS(coderInfoL, bitStream, channelInfo->common_window, writeFlag);
+    bits += WriteICS(coderInfoR, bitStream, channelInfo->common_window, writeFlag);
 
     return bits;
 }
@@ -376,7 +361,6 @@ static int WriteCPE(CoderInfo *coderInfoL,
 static int WriteSCE(CoderInfo *coderInfo,
                     ChannelInfo *channelInfo,
                     BitStream *bitStream,
-                    int objectType,
                     int writeFlag)
 {
     int bits = 0;
@@ -393,7 +377,7 @@ static int WriteSCE(CoderInfo *coderInfo,
     bits += LEN_TAG;
 
     /* Write an Individual Channel Stream element */
-    bits += WriteICS(coderInfo, bitStream, 0, objectType, writeFlag);
+    bits += WriteICS(coderInfo, bitStream, 0, writeFlag);
 
     return bits;
 }
@@ -401,7 +385,6 @@ static int WriteSCE(CoderInfo *coderInfo,
 static int WriteLFE(CoderInfo *coderInfo,
                     ChannelInfo *channelInfo,
                     BitStream *bitStream,
-                    int objectType,
                     int writeFlag)
 {
     int bits = 0;
@@ -418,15 +401,13 @@ static int WriteLFE(CoderInfo *coderInfo,
     bits += LEN_TAG;
 
     /* Write an individual_channel_stream element */
-    bits += WriteICS(coderInfo, bitStream, 0, objectType, writeFlag);
+    bits += WriteICS(coderInfo, bitStream, 0, writeFlag);
 
     return bits;
 }
 
 static int WriteICSInfo(CoderInfo *coderInfo,
                         BitStream *bitStream,
-                        int objectType,
-                        int common_window,
                         int writeFlag)
 {
     int grouping_bits;
@@ -473,7 +454,6 @@ static int WriteICSInfo(CoderInfo *coderInfo,
 static int WriteICS(CoderInfo *coderInfo,
                     BitStream *bitStream,
                     int commonWindow,
-                    int objectType,
                     int writeFlag)
 {
     /* this function writes out an individual_channel_stream to the bitstream and */
@@ -487,15 +467,15 @@ static int WriteICS(CoderInfo *coderInfo,
 
     /* Write ics information */
     if (!commonWindow) {
-        bits += WriteICSInfo(coderInfo, bitStream, objectType, commonWindow, writeFlag);
+        bits += WriteICSInfo(coderInfo, bitStream, writeFlag);
     }
 
     bits += writebooks(coderInfo, bitStream, writeFlag);
     bits += writesf(coderInfo, bitStream, writeFlag);
 
-    bits += WritePulseData(coderInfo, bitStream, writeFlag);
+    bits += WritePulseData(bitStream, writeFlag);
     bits += WriteTNSData(coderInfo, bitStream, writeFlag);
-    bits += WriteGainControlData(coderInfo, bitStream, writeFlag);
+    bits += WriteGainControlData(bitStream, writeFlag);
 
     bits += WriteSpectralData(coderInfo, bitStream, writeFlag);
 
@@ -503,8 +483,7 @@ static int WriteICS(CoderInfo *coderInfo,
     return bits;
 }
 
-static int WritePulseData(CoderInfo *coderInfo,
-                          BitStream *bitStream,
+static int WritePulseData(BitStream *bitStream,
                           int writeFlag)
 {
     int bits = 0;
@@ -592,7 +571,7 @@ static int WriteTNSData(CoderInfo *coderInfo,
                     if (writeFlag) {
                         int i;
                         for (i=1;i<=order;i++) {
-                            unsignedIndex = (unsigned long) (tnsFilterPtr->index[i])&(~(~0<<bitsToTransmit));
+                            unsignedIndex = (unsigned long) (tnsFilterPtr->index[i])&(~(~0UL<<bitsToTransmit));
                             PutBit(bitStream,unsignedIndex,bitsToTransmit);
                         }
                     }
@@ -603,8 +582,7 @@ static int WriteTNSData(CoderInfo *coderInfo,
     return bits;
 }
 
-static int WriteGainControlData(CoderInfo *coderInfo,
-                                BitStream *bitStream,
+static int WriteGainControlData(BitStream *bitStream,
                                 int writeFlag)
 {
     int bits = 0;
