@@ -122,7 +122,7 @@ static help_t help_qual[] = {
     {"-c <freq>\tSet the bandwidth in Hz.\n",
     "\t\tThe actual frequency is adjusted to maximize upper spectral band\n"
     "\t\tusage.\n"},
-    {0}
+    {NULL, NULL}
 };
 
 static help_t help_io[] = {
@@ -136,7 +136,7 @@ static help_t help_io[] = {
     "\t\tthus enabling piping from other applications and utilities. The\n"
     "\t\tsame works for stdout as well, so FAAC can pipe its output to\n"
     "\t\tother apps such as a server.\n"},
-    {"-v <verbose>\t\tverbosity level (-v0 is quiet mode)\n"},
+    {"-v <verbose>\t\tverbosity level (-v0 is quiet mode)\n", NULL},
     {"-r\t\tUse RAW AAC output file.\n",
     "\t\tGenerate raw AAC bitstream (i.e. without any headers).\n"
     "\t\tNot advised!!!, RAW AAC files are practically useless!!!\n"},
@@ -160,47 +160,47 @@ static help_t help_io[] = {
     "\t\thave to specify a different position of these two mono channels\n"
     "\t\tin your multichannel input files if they haven't been reordered\n"
     "\t\talready).\n"},
-    {"--ignorelength\tIgnore wav length from header (useful with files over 4 GB)\n"},
-    {"--overwrite\t\tOverwrite existing output file"},
-    {0}
+    {"--ignorelength\tIgnore wav length from header (useful with files over 4 GB)\n", NULL},
+    {"--overwrite\t\tOverwrite existing output file", NULL},
+    {NULL, NULL}
 };
 
 static help_t help_mp4[] = {
-    {"-w\tWrap AAC data in MP4 container (default for *.mp4, *.m4a and *.m4b)\n"},
-    {"--tag <tagname,tagvalue> Add named tag (iTunes '----')\n"},
-    {"--artist <name>\tSet artist name\n"},
-    {"--artistsort <name>\tSet artist sort order\n"},
-    {"--composer <name>\tSet composer name\n"},
-    {"--composersort <name>\tSet composer sort order\n"},
-    {"--title <name>\tSet title/track name\n"},
-    {"--genre <number>\tSet genre number\n"},
-    {"--album <name>\tSet album/performer\n"},
-    {"--albumartist <name>\tSet album artist\n"},
-    {"--albumartistsort <name>\tSet album artist sort order\n"},
-    {"--albumsort <name>\tSet album sort order\n"},
-    {"--compilation\tMark as compilation\n"},
-    {"--track <number/total>\tSet track number\n"},
-    {"--disc <number/total>\tSet disc number\n"},
-    {"--year <number>\tSet year\n"},
+    {"-w\tWrap AAC data in MP4 container (default for *.mp4, *.m4a and *.m4b)\n", NULL},
+    {"--tag <tagname,tagvalue> Add named tag (iTunes '----')\n", NULL},
+    {"--artist <name>\tSet artist name\n", NULL},
+    {"--artistsort <name>\tSet artist sort order\n", NULL},
+    {"--composer <name>\tSet composer name\n", NULL},
+    {"--composersort <name>\tSet composer sort order\n", NULL},
+    {"--title <name>\tSet title/track name\n", NULL},
+    {"--genre <number>\tSet genre number\n", NULL},
+    {"--album <name>\tSet album/performer\n", NULL},
+    {"--albumartist <name>\tSet album artist\n", NULL},
+    {"--albumartistsort <name>\tSet album artist sort order\n", NULL},
+    {"--albumsort <name>\tSet album sort order\n", NULL},
+    {"--compilation\tMark as compilation\n", NULL},
+    {"--track <number/total>\tSet track number\n", NULL},
+    {"--disc <number/total>\tSet disc number\n", NULL},
+    {"--year <number>\tSet year\n", NULL},
     {"--cover-art <filename>\tRead cover art from file X\n",
     "\t\tSupported image formats are GIF, JPEG, and PNG.\n"},
-    {"--comment <string>\tSet comment\n"},
-    {"--creation-time <value>\tSet creation/modification time (auto, now, or timestamp)\n"},
-    {0}
+    {"--comment <string>\tSet comment\n", NULL},
+    {"--creation-time <value>\tSet creation/modification time (auto, now, or timestamp)\n", NULL},
+    {NULL, NULL}
 };
 
 static help_t help_advanced[] = {
-    {"--tns  \tEnable coding of TNS, temporal noise shaping.\n"},
-    {"--no-tns\tDisable coding of TNS, temporal noise shaping.\n"},
-    {"--joint 0\tDisable joint stereo coding.\n"},
-    {"--joint 1\tUse Mid/Side coding.\n"},
-    {"--joint 2\tUse Intensity Stereo coding.\n"},
-    {"--joint 3\tUse Mixed Mode (dynamic M/S and IS) coding (default).\n"},
-    {"--pns <0 .. 10>\tPNS level; 0=disabled.\n"},
-    {"--mpeg-vers X\tForce AAC MPEG version, X can be 2 or 4\n"},
+    {"--tns  \tEnable coding of TNS, temporal noise shaping.\n", NULL},
+    {"--no-tns\tDisable coding of TNS, temporal noise shaping.\n", NULL},
+    {"--joint 0\tDisable joint stereo coding.\n", NULL},
+    {"--joint 1\tUse Mid/Side coding.\n", NULL},
+    {"--joint 2\tUse Intensity Stereo coding.\n", NULL},
+    {"--joint 3\tUse Mixed Mode (dynamic M/S and IS) coding (default).\n", NULL},
+    {"--pns <0 .. 10>\tPNS level; 0=disabled.\n", NULL},
+    {"--mpeg-vers X\tForce AAC MPEG version, X can be 2 or 4\n", NULL},
     {"--shortctl X\tEnforce block type (0 = both (default); 1 = no short; 2 = no\n"
-    "\t\tlong).\n"},
-    {0}
+    "\t\tlong).\n", NULL},
+    {NULL, NULL}
 };
 
 static struct {
@@ -295,6 +295,7 @@ enum container_format
 #ifndef _WIN32
 void signal_handler(int signal)
 {
+    (void)signal;
     running = 0;
 }
 #endif
@@ -686,11 +687,11 @@ int main(int argc, char *argv[])
             albumsort = optarg;
             break;
         case TRACK_FLAG:
-            if (sscanf(optarg, "%d/%d", &trackno, &ntracks) < 1)
+            if (sscanf(optarg, "%u/%u", &trackno, &ntracks) < 1)
                 dieMessage = "Wrong track number.\n";
             break;
         case DISC_FLAG:
-            if (sscanf(optarg, "%d/%d", &discno, &ndiscs) < 1)
+            if (sscanf(optarg, "%u/%u", &discno, &ndiscs) < 1)
                 dieMessage = "Wrong disc number.\n";
             break;
         case GENRE_FLAG:
@@ -1088,14 +1089,14 @@ int main(int argc, char *argv[])
 
         if (!ignorelen)
         {
-            if (input_samples < infile->samples || infile->samples == 0)
+            if (input_samples < (uint64_t)infile->samples || infile->samples == 0)
                 samplesRead =
                     wav_read_float32(infile, pcmbuf, samplesInput, chanmap);
             else
                 samplesRead = 0;
 
             if (input_samples + (samplesRead / infile->channels) >
-                infile->samples && infile->samples != 0)
+                (uint64_t)infile->samples && infile->samples != 0)
                 samplesRead =
                     (infile->samples - input_samples) * infile->channels;
         }

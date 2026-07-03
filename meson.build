@@ -3,8 +3,8 @@ project('faac', 'c',
     default_options: [
         'default_library=both',
         'buildtype=release',
-        'warning_level=1',
-        'c_std=gnu99,c99',
+        'warning_level=3',
+        'c_std=gnu11,c11',
     ])
 
 add_global_arguments('-DHAVE_CONFIG_H', language: 'c')
