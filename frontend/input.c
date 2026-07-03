@@ -118,7 +118,7 @@ static void unsuperr(const char *name)
 
 static void seekcur(FILE *f, int ofs)
 {
-    if (ofs <= 0)
+    if (ofs < 0)
         return;
 
     if (fseek(f, ofs, SEEK_CUR) != 0)
@@ -272,8 +272,7 @@ pcmfile_t *wav_open_read(const char *name, int rawinput)
     /* channel/sample-width bounds guard against a corrupt header (e.g. a
        bogus huge channel count) driving an oversized allocation downstream */
     if (sndf->channels < 1 || sndf->channels > 64 ||
-        (sndf->samplebytes != 1 && sndf->samplebytes != 2 &&
-         sndf->samplebytes != 3 && sndf->samplebytes != 4))
+        sndf->samplebytes < 1 || sndf->samplebytes > 4)
     {
       if (wave_f != stdin) fclose(wave_f);
       free(sndf);
@@ -282,6 +281,13 @@ pcmfile_t *wav_open_read(const char *name, int rawinput)
 
     sndf->samples = riffsub.len / (sndf->samplebytes * sndf->channels);
   }
+
+#ifdef WORDS_BIGENDIAN
+  sndf->swap = !sndf->bigendian;
+#else
+  sndf->swap = sndf->bigendian;
+#endif
+
   return sndf;
 }
 
@@ -349,11 +355,7 @@ size_t wav_read_float32(pcmfile_t *sndf, float *buf, size_t num, int *map)
       case 2:
           {
               int16_t *in = (int16_t*)bufi;
-#ifdef WORDS_BIGENDIAN
-              int swap = !sndf->bigendian;
-#else
-              int swap = sndf->bigendian;
-#endif
+              int swap = sndf->swap;
               if (swap)
               {
                   for (size_t i = 0; i < cnt; i++)
@@ -392,11 +394,7 @@ size_t wav_read_float32(pcmfile_t *sndf, float *buf, size_t num, int *map)
       case 4:
           {
               int32_t *in = (int32_t*)bufi;
-#ifdef WORDS_BIGENDIAN
-              int swap = !sndf->bigendian;
-#else
-              int swap = sndf->bigendian;
-#endif
+              int swap = sndf->swap;
               if (swap)
               {
                   for (size_t i = 0; i < cnt; i++)
@@ -444,11 +442,7 @@ size_t wav_read_int24(pcmfile_t *sndf, int32_t *buf, size_t num, int *map)
 
   case 2:
     {
-#ifdef WORDS_BIGENDIAN
-      int swap = !sndf->bigendian;
-#else
-      int swap = sndf->bigendian;
-#endif
+      int swap = sndf->swap;
       int16_t *in = (int16_t *)bufi;
       if (swap)
       {
@@ -486,11 +480,7 @@ size_t wav_read_int24(pcmfile_t *sndf, int32_t *buf, size_t num, int *map)
 
   case 4:
     {
-#ifdef WORDS_BIGENDIAN
-      int swap = !sndf->bigendian;
-#else
-      int swap = sndf->bigendian;
-#endif
+      int swap = sndf->swap;
       if (swap)
       {
         for (i = 0; i < size; i++)

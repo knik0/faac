@@ -121,7 +121,11 @@ int FAACAPI faacEncGetDecoderSpecificInfo(faacEncHandle hpEncoder,unsigned char*
     if(*ppBuffer != NULL){
         memset(*ppBuffer,0,*pSizeOfDecoderSpecificInfo);
         pBitStream = OpenBitStream((int)*pSizeOfDecoderSpecificInfo, *ppBuffer);
-        if (!pBitStream) return -3;
+        if (!pBitStream) {
+            free(*ppBuffer);
+            *ppBuffer = NULL;
+            return -3;
+        }
         PutBit(pBitStream, hEncoder->config.aacObjectType, 5);
         PutBit(pBitStream, hEncoder->sampleRateIdx, 4);
         PutBit(pBitStream, hEncoder->numChannels, 4);
@@ -679,6 +683,8 @@ int FAACAPI faacEncEncode(faacEncHandle hpEncoder,
     }
     /* Write the AAC bitstream */
     bitStream = OpenBitStream(bufferSize, outputBuffer);
+    if (!bitStream)
+        return -1;
 
     if (WriteBitstream(hEncoder, coderInfo, channelInfo, bitStream, numChannels) < 0)
         return -1;
