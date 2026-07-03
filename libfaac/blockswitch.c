@@ -90,6 +90,7 @@ static void PsyInit(GlobalPsyInfo * gpsyInfo, PsyInfo * psyInfo, unsigned int nu
   for (channel = 0; channel < numChannels; channel++)
   {
     psydata_t *psydata = (psydata_t *)AllocMemory(sizeof(psydata_t));
+    if (!psydata) return;
     memset(psydata, 0, sizeof(psydata_t));
     psyInfo[channel].data = psydata;
   }

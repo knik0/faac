@@ -118,10 +118,19 @@ static void unsuperr(const char *name)
 
 static void seekcur(FILE *f, int ofs)
 {
-    int cnt;
+    if (ofs < 0)
+        return;
 
-    for (cnt = 0; cnt < ofs; cnt++)
-        fgetc(f);
+    if (fseek(f, ofs, SEEK_CUR) != 0)
+    {
+        /* fseek fails on non-seekable streams (stdin/pipes); fall back to
+           reading and discarding bytes one at a time */
+        while (ofs--)
+        {
+            if (fgetc(f) == EOF)
+                break;
+        }
+    }
 }
 
 static int seekchunk(FILE *f, riffsub_t *riffsub, char *name)
@@ -228,6 +237,11 @@ pcmfile_t *wav_open_read(const char *name, int rawinput)
   }
 
   sndf = (pcmfile_t*)malloc(sizeof(*sndf));
+  if (!sndf)
+  {
+      if (wave_f != stdin) fclose(wave_f);
+      return NULL;
+  }
   memset(sndf, 0, sizeof(*sndf));
   sndf->f = wave_f;
 
@@ -254,13 +268,26 @@ pcmfile_t *wav_open_read(const char *name, int rawinput)
     sndf->channels = UINT16(wave.Format.nChannels);
     sndf->samplebytes = UINT16(wave.Format.wBitsPerSample) / 8;
     sndf->samplerate = UINT32(wave.Format.nSamplesPerSec);
-    if (!sndf->samplebytes || !sndf->channels)
+
+    /* channel/sample-width bounds guard against a corrupt header (e.g. a
+       bogus huge channel count) driving an oversized allocation downstream */
+    if (sndf->channels < 1 || sndf->channels > 64 ||
+        sndf->samplebytes < 1 || sndf->samplebytes > 4)
     {
+      if (wave_f != stdin) fclose(wave_f);
       free(sndf);
       return NULL;
     }
+
     sndf->samples = riffsub.len / (sndf->samplebytes * sndf->channels);
   }
+
+#ifdef WORDS_BIGENDIAN
+  sndf->swap = !sndf->bigendian;
+#else
+  sndf->swap = sndf->bigendian;
+#endif
+
   return sndf;
 }
 
@@ -269,6 +296,8 @@ static void chan_remap(int32_t *buf, int channels, int blocks, int *map)
 {
   int i;
   int32_t *tmp = (int32_t*)malloc(channels * sizeof(int32_t));
+
+  if (!tmp) return;
 
   for (i = 0; i < blocks; i++)
   {
@@ -298,77 +327,84 @@ size_t wav_read_float32(pcmfile_t *sndf, float *buf, size_t num, int *map)
   isize /= sndf->samplebytes;
 
   // perform in-place conversion
-  for (cnt = 0; cnt < num; cnt++)
+  cnt = (num < isize) ? num : isize;
+
+  if (sndf->isfloat)
   {
-      if (cnt >= isize)
-          break;
-
-      if (sndf->isfloat)
+      if (sndf->samplebytes == 4)
       {
-          switch (sndf->samplebytes) {
-          case 4:
-              buf[cnt] *= 32768.0;
-              break;
-          default:
-              return 0;
-          }
-          continue;
+          for (size_t i = 0; i < cnt; i++)
+              buf[i] *= 32768.0f;
       }
-
+      else
+      {
+          return 0;
+      }
+  }
+  else
+  {
       switch (sndf->samplebytes)
       {
       case 1:
           {
               uint8_t *in = (uint8_t*)bufi;
-              uint8_t s = in[cnt];
-
-              buf[cnt] = ((float)s - 128.0) * (float)256;
+              for (size_t i = 0; i < cnt; i++)
+                  buf[i] = ((float)in[i] - 128.0f) * 256.0f;
           }
           break;
       case 2:
           {
               int16_t *in = (int16_t*)bufi;
-              int16_t s = in[cnt];
-#ifdef WORDS_BIGENDIAN
-              if (!sndf->bigendian)
-#else
-              if (sndf->bigendian)
-#endif
-                  buf[cnt] = (float)SWAP16(s);
+              int swap = sndf->swap;
+              if (swap)
+              {
+                  for (size_t i = 0; i < cnt; i++)
+                      buf[i] = (float)SWAP16(in[i]);
+              }
               else
-                  buf[cnt] = (float)s;
+              {
+                  for (size_t i = 0; i < cnt; i++)
+                      buf[i] = (float)in[i];
+              }
           }
           break;
       case 3:
           {
-              int s;
               uint8_t *in = (uint8_t*)bufi;
-              in += 3 * cnt;
-
               if (!sndf->bigendian)
-                  s = in[0] | (in[1] << 8) | (in[2] << 16);
+              {
+                  for (size_t i = 0; i < cnt; i++)
+                  {
+                      int s = in[3*i] | (in[3*i+1] << 8) | (in[3*i+2] << 16);
+                      if (s & 0x800000) s |= 0xff000000;
+                      buf[i] = (float)s / 256.0f;
+                  }
+              }
               else
-                  s = (in[0] << 16) | (in[1] << 8) | in[2];
-
-              // fix sign
-              if (s & 0x800000)
-                  s |= 0xff000000;
-
-              buf[cnt] = (float)s / 256;
+              {
+                  for (size_t i = 0; i < cnt; i++)
+                  {
+                      int s = (in[3*i] << 16) | (in[3*i+1] << 8) | in[3*i+2];
+                      if (s & 0x800000) s |= 0xff000000;
+                      buf[i] = (float)s / 256.0f;
+                  }
+              }
           }
         break;
       case 4:
           {
               int32_t *in = (int32_t*)bufi;
-              int s = in[cnt];
-#ifdef WORDS_BIGENDIAN
-              if (!sndf->bigendian)
-#else
-              if (sndf->bigendian)
-#endif
-                  buf[cnt] = (float)SWAP32(s) / 65536;
+              int swap = sndf->swap;
+              if (swap)
+              {
+                  for (size_t i = 0; i < cnt; i++)
+                      buf[i] = (float)SWAP32(in[i]) / 65536.0f;
+              }
               else
-                  buf[cnt] = (float)s / 65536;
+              {
+                  for (size_t i = 0; i < cnt; i++)
+                      buf[i] = (float)in[i] / 65536.0f;
+              }
           }
           break;
       default:
@@ -405,30 +441,18 @@ size_t wav_read_int24(pcmfile_t *sndf, int32_t *buf, size_t num, int *map)
     break;
 
   case 2:
-#ifdef WORDS_BIGENDIAN
-    if (!sndf->bigendian)
-#else
-    if (sndf->bigendian)
-#endif
     {
-      // swap bytes
-      for (i = 0; i < size; i++)
+      int swap = sndf->swap;
+      int16_t *in = (int16_t *)bufi;
+      if (swap)
       {
-	int16_t s = ((int16_t *)bufi)[i];
-
-	s = SWAP16(s);
-
-	buf[i] = ((uint32_t)s) << 8;
+        for (i = 0; i < size; i++)
+          buf[i] = ((uint32_t)SWAP16(in[i])) << 8;
       }
-    }
-    else
-    {
-      // no swap
-      for (i = 0; i < size; i++)
+      else
       {
-	int s = ((int16_t *)bufi)[i];
-
-	buf[i] = s << 8;
+        for (i = 0; i < size; i++)
+          buf[i] = ((int32_t)in[i]) << 8;
       }
     }
     break;
@@ -439,11 +463,7 @@ size_t wav_read_int24(pcmfile_t *sndf, int32_t *buf, size_t num, int *map)
       for (i = 0; i < size; i++)
       {
 	int s = bufi[3 * i] | (bufi[3 * i + 1] << 8) | (bufi[3 * i + 2] << 16);
-
-        // fix sign
-	if (s & 0x800000)
-          s |= 0xff000000;
-
+	if (s & 0x800000) s |= 0xff000000;
 	buf[i] = s;
       }
     }
@@ -452,29 +472,19 @@ size_t wav_read_int24(pcmfile_t *sndf, int32_t *buf, size_t num, int *map)
       for (i = 0; i < size; i++)
       {
 	int s = (bufi[3 * i] << 16) | (bufi[3 * i + 1] << 8) | bufi[3 * i + 2];
-
-        // fix sign
-	if (s & 0x800000)
-          s |= 0xff000000;
-
+	if (s & 0x800000) s |= 0xff000000;
 	buf[i] = s;
       }
     }
     break;
 
   case 4:
-#ifdef WORDS_BIGENDIAN
-    if (!sndf->bigendian)
-#else
-    if (sndf->bigendian)
-#endif
     {
-      // swap bytes
-      for (i = 0; i < size; i++)
+      int swap = sndf->swap;
+      if (swap)
       {
-	int s = buf[i];
-
-	buf[i] = SWAP32(s);
+        for (i = 0; i < size; i++)
+          buf[i] = SWAP32(buf[i]);
       }
     }
     break;

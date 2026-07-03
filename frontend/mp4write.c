@@ -145,16 +145,24 @@ static struct {
 static uint8_t *g_membuf = NULL;
 static size_t g_mempos = 0;
 static size_t g_memcap = 0;
+/* Set whenever mem_write() can't grow g_membuf to fit a write and drops
+   it instead; checked by mp4_finish() so a truncated moov atom is never
+   mistaken for a successfully written one. */
+static int g_mem_error = 0;
 
 static inline void mem_write(const void *data, size_t size) {
     if (g_membuf) {
         if (g_mempos + size > g_memcap) {
             size_t new_cap = g_memcap ? g_memcap * 2 : 1024;
-            while (g_mempos + size > new_cap) new_cap *= 2;
+            /* cap growth so a bogus/huge write request can't spin the
+               doubling loop forever or overflow new_cap */
+            while (g_mempos + size > new_cap && new_cap < (1UL << 31)) new_cap *= 2;
+            if (g_mempos + size > new_cap) { g_mem_error = 1; return; }
             void *tmp = realloc(g_membuf, new_cap);
             if (!tmp) {
                 free(g_membuf);
                 g_membuf = NULL;
+                g_mem_error = 1;
                 return;
             }
             g_membuf = (uint8_t *)tmp;
@@ -162,8 +170,9 @@ static inline void mem_write(const void *data, size_t size) {
         }
         memcpy(g_membuf + g_mempos, data, size);
         g_mempos += size;
-    } else if (g_mp4.fout) {
-        fwrite(data, 1, size, g_mp4.fout);
+    } else if (g_mp4.fout && !g_mem_error) {
+        if (fwrite(data, 1, size, g_mp4.fout) != size)
+            g_mem_error = 1;
     }
 }
 
@@ -269,6 +278,7 @@ static void reset_write_state(void) {
 int mp4_open(const char *path, int overwrite) {
     mp4_close(); /* in case of a retry after a failed previous mp4_open() */
     reset_write_state();
+    g_mem_error = 0;
 
     if (!overwrite && access(path, 0) == 0) return 1;
     g_mp4.fout = fopen(path, "wb");
@@ -277,10 +287,17 @@ int mp4_open(const char *path, int overwrite) {
 
     g_mp4.frame.bufsize = 1024;
     g_mp4.frame.data = (uint32_t *)malloc(g_mp4.frame.bufsize * sizeof(uint32_t));
+    if (!g_mp4.frame.data) return 1;
 
     g_mempos = 0;
     g_memcap = 1024;
     g_membuf = (uint8_t *)malloc(g_memcap);
+    if (!g_membuf)
+    {
+        free(g_mp4.frame.data);
+        g_mp4.frame.data = NULL;
+        return 1;
+    }
 
     long ftyp = start_atom("ftyp");
     put_data("M4A \0\0\0\0M4A mp42isom", 20);
@@ -297,7 +314,7 @@ int mp4_open(const char *path, int overwrite) {
     g_mp4.mdatofs = (uint32_t)ftell(g_mp4.fout) + 8;
     put_u32(0);
     put_data("mdat", 4);
-    return 0;
+    return g_mem_error ? 1 : 0;
 }
 
 void mp4_set_format(uint32_t samplerate, uint32_t channels, uint32_t bits) {
@@ -376,6 +393,9 @@ int mp4_write_frame(const uint8_t *data, uint32_t size, uint32_t samples) {
 
     if (g_mp4.frame.ents >= g_mp4.frame.bufsize) {
         uint32_t new_cap = g_mp4.frame.bufsize ? g_mp4.frame.bufsize * 2 : 1024;
+        /* bound the frame table so an unreasonably long encode can't grow
+           this without limit or overflow new_cap * sizeof(uint32_t) */
+        if (new_cap > (1UL << 30)) return -1;
         uint32_t *tmp = (uint32_t *)realloc(g_mp4.frame.data, new_cap * sizeof(uint32_t));
         if (!tmp) return -1;
         g_mp4.frame.data = tmp;
@@ -475,14 +495,18 @@ static const char *tag_atom_names[MP4TAG_COUNT] = {
     [MP4TAG_COMMENT]         = "\xa9" "cmt",
 };
 
+/* Returns 0 on success, 1 on failure (mirroring mp4_open()'s convention). */
 int mp4_finish(void) {
-    if (!g_mp4.fout) return 0;
+    if (!g_mp4.fout) return 1;
+    g_mem_error = 0;
+
     /* now that all frames are written, go back and fill in the mdat
        size placeholder left by mp4_open() */
     long pos = ftell(g_mp4.fout);
     fseek(g_mp4.fout, g_mp4.mdatofs - 8, SEEK_SET);
     put_u32(g_mp4.mdatsize + 8);
     fseek(g_mp4.fout, pos, SEEK_SET);
+    if (g_mem_error) return 1;
 
     g_mp4.bitrate.avg = (uint32_t)((uint64_t)8 * g_mp4.mdatsize * g_mp4.samplerate / (g_mp4.samples ? g_mp4.samples : 1));
     /* a file shorter than one second never crosses the sample-count
@@ -493,6 +517,7 @@ int mp4_finish(void) {
     g_mempos = 0;
     g_memcap = 65536 + (size_t)g_mp4.frame.ents * 4;
     g_membuf = (uint8_t *)malloc(g_memcap);
+    if (!g_membuf) return 1;
 
     long moov = start_atom("moov");
     long mvhd = start_atom("mvhd");
@@ -592,9 +617,13 @@ int mp4_finish(void) {
         size_t stsz_size = (size_t)g_mp4.frame.ents * 4;
         if (g_mempos + stsz_size > g_memcap) {
             size_t new_cap = g_memcap ? g_memcap * 2 : 1024;
-            while (g_mempos + stsz_size > new_cap) new_cap *= 2;
-            void *tmp = realloc(g_membuf, new_cap);
-            if (!tmp) return 0;
+            while (g_mempos + stsz_size > new_cap && new_cap < (1UL << 31)) new_cap *= 2;
+            void *tmp = (g_mempos + stsz_size > new_cap) ? NULL : realloc(g_membuf, new_cap);
+            if (!tmp) {
+                free(g_membuf);
+                g_membuf = NULL;
+                return 1;
+            }
             g_membuf = (uint8_t *)tmp;
             g_memcap = new_cap;
         }
@@ -644,10 +673,10 @@ int mp4_finish(void) {
     end_atom(udta);
     end_atom(moov);
 
-    fwrite(g_membuf, 1, g_mempos, g_mp4.fout);
+    int ok = !g_mem_error && fwrite(g_membuf, 1, g_mempos, g_mp4.fout) == g_mempos;
     free(g_membuf);
     g_membuf = NULL;
-    return 0;
+    return ok ? 0 : 1;
 }
 
 int mp4_close(void) {

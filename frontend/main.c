@@ -395,6 +395,7 @@ static int *mkChanMap(int channels, int center, int lf)
         center = 0;             // default AAC position
 
     map = malloc(channels * sizeof(map[0]));
+    if (!map) return NULL;
     memset(map, 0, channels * sizeof(map[0]));
 
     outpos = 0;
@@ -402,7 +403,7 @@ static int *mkChanMap(int channels, int center, int lf)
         map[outpos++] = center;
 
     inpos = 0;
-    for (; outpos < (channels - 1); inpos++)
+    for (; outpos < (channels - 1) && inpos < channels; inpos++)
     {
         if (inpos == center)
             continue;
@@ -415,7 +416,7 @@ static int *mkChanMap(int channels, int center, int lf)
     {
         if ((lf >= 0) && (lf < channels))
             map[outpos] = lf;
-        else
+        else if (inpos < channels)
             map[outpos] = inpos;
     }
 
@@ -581,6 +582,11 @@ int main(int argc, char *argv[])
             {
                 int l = strlen(optarg);
                 aacFileName = malloc(l + 1);
+                if (!aacFileName)
+                {
+                    fprintf(stderr, "out of memory\n");
+                    return 1;
+                }
                 memcpy(aacFileName, optarg, l);
                 aacFileName[l] = '\0';
                 aacFileNameGiven = 1;
@@ -730,6 +736,12 @@ int main(int argc, char *argv[])
                     artSize = ftell(artFile);
 
                     artData = malloc(artSize);
+                    if (!artData)
+                    {
+                        fprintf(stderr, "out of memory\n");
+                        fclose(artFile);
+                        return 1;
+                    }
 
                     fseek(artFile, 0, SEEK_SET);
                     clearerr(artFile);
@@ -836,6 +848,11 @@ int main(int argc, char *argv[])
         aacFileExt = container == MP4_CONTAINER ? ".m4a" : ".aac";
 
         aacFileName = malloc(l + 1 + 4);
+        if (!aacFileName)
+        {
+            fprintf(stderr, "out of memory\n");
+            return 1;
+        }
         memcpy(aacFileName, audioFileName, l);
         memcpy(aacFileName + l, aacFileExt, 4);
         aacFileName[l + 4] = '\0';
@@ -907,6 +924,11 @@ int main(int argc, char *argv[])
     delay_samples = frameSize;  // encoder delay 1024 samples
     pcmbuf = (float *) malloc(samplesInput * sizeof(float));
     bitbuf = (unsigned char *) malloc(maxBytesOutput * sizeof(unsigned char));
+    if (!pcmbuf || !bitbuf)
+    {
+        fprintf(stderr, "out of memory\n");
+        return 1;
+    }
     chanmap = mkChanMap(infile->channels, chanC, chanLF);
     if (chanmap)
     {
@@ -1172,7 +1194,7 @@ int main(int argc, char *argv[])
 #ifdef _WIN32
                 if (frames != 0)
                 {
-                    sprintf(percent, "%.2f%% encoding %s",
+                    snprintf(percent, sizeof(percent), "%.2f%% encoding %s",
                             100.0 * currentFrame / frames, audioFileName);
                     SetConsoleTitle(percent);
                 }
@@ -1197,7 +1219,11 @@ int main(int argc, char *argv[])
                 frame_samples = delay_samples;
 
             if (container == MP4_CONTAINER) {
-                mp4_write_frame(bitbuf, (uint32_t)bytesWritten, (uint32_t)frame_samples);
+                if (mp4_write_frame(bitbuf, (uint32_t)bytesWritten, (uint32_t)frame_samples))
+                {
+                    fprintf(stderr, "mp4_write_frame() failed\n");
+                    break;
+                }
             } else
                 fwrite(bitbuf, 1, bytesWritten, outfile);
 
@@ -1209,13 +1235,17 @@ int main(int argc, char *argv[])
     if (container == MP4_CONTAINER)
     {
         char *version_string = malloc(strlen(faac_id_string) + 6);
+        if (!version_string)
+        {
+            fprintf(stderr, "out of memory\n");
+            return 1;
+        }
         unsigned char *ascData = NULL;
         unsigned long ascSize = 0;
 
         faacEncGetDecoderSpecificInfo(hEncoder, &ascData, &ascSize);
         mp4_set_decoder_config(ascData, ascSize);
-        strcpy(version_string, "FAAC ");
-        strcpy(version_string + 5, faac_id_string);
+        snprintf(version_string, strlen(faac_id_string) + 6, "FAAC %s", faac_id_string);
 
         mp4_set_encoder(version_string);
 
@@ -1296,7 +1326,8 @@ int main(int argc, char *argv[])
             mp4_set_creation_time(final_creation_time);
         }
 
-        mp4_finish();
+        if (mp4_finish())
+            fprintf(stderr, "mp4_finish() failed: output file may be incomplete\n");
         mp4_close();
 
         free(version_string);
