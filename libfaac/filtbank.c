@@ -240,32 +240,31 @@ static void CalculateKBDWindow(faac_real* win, faac_real alpha, int length)
     }
 }
 
-void MDCT( FFT_Tables *fft_tables, faac_real *data, int N, faac_real *work )
+void MDCT( FFT_Tables *fft_tables, faac_real * restrict data, int N, faac_real * restrict work )
 {
-    faac_real tempr, tempi, c, s, cold, cfreq, sfreq; /* temps for pre and post twiddle */
-    faac_real freq = TWOPI / N;
+    faac_real tempr, tempi;
     int i;
 
     /* Hoisted constants */
     const int N2 = N >> 1;
     const int N4 = N >> 2;
     const int N8 = N >> 3;
+    const int logm = (N == 2 * BLOCK_LEN_LONG) ? 9 : 6;
+
+    /* Twiddle factors cos/sin(freq*(i+1/8)), precomputed once in fft_initialize.
+       Indexing them (instead of the old serial cos/sin recurrence) lets the
+       twiddle loops below vectorize. */
+    const fftfloat * restrict tc = fft_tables->mdct_cos[logm];
+    const fftfloat * restrict ts = fft_tables->mdct_sin[logm];
 
     /* Pre/post-twiddle FFT buffers carved from the shared work buffer */
-    faac_real *xr = work;
-    faac_real *xi = work + N4;
+    faac_real * restrict xr = work;
+    faac_real * restrict xi = work + N4;
 
     /* Base pointers for address simplification */
     faac_real *base0 = data + N4;
     faac_real *base1 = data + (N4 - 1);
     faac_real *base2 = data + (N + N4 - 1);
-
-    /* prepare for recurrence relation in pre-twiddle */
-    cfreq = FAAC_COS(freq);
-    sfreq = FAAC_SIN(freq);
-
-    c = FAAC_COS(freq * 0.125);
-    s = FAAC_SIN(freq * 0.125);
 
     /* Induction variables */
     int n1 = N2 - 1;  /* descending: N/2 - 1 - 2i */
@@ -283,13 +282,8 @@ void MDCT( FFT_Tables *fft_tables, faac_real *data, int N, faac_real *work )
         tempi = base0[n2] - base1[-n2];
 
         /* calculate pre-twiddled FFT input */
-        xr[i] = tempr * c + tempi * s;
-        xi[i] = tempi * c - tempr * s;
-
-        /* use recurrence to prepare cosine and sine for next value of i */
-        cold = c;
-        c = c * cfreq - s * sfreq;
-        s = s * cfreq + cold * sfreq;
+        xr[i] = tempr * tc[i] + tempi * ts[i];
+        xi[i] = tempi * tc[i] - tempr * ts[i];
 
         n1 -= 2;
         n2 += 2;
@@ -307,31 +301,15 @@ void MDCT( FFT_Tables *fft_tables, faac_real *data, int N, faac_real *work )
         tempi = base0[n2] + base2[-n2];
 
         /* calculate pre-twiddled FFT input */
-        xr[i] = tempr * c + tempi * s;
-        xi[i] = tempi * c - tempr * s;
-
-        /* use recurrence to prepare cosine and sine for next value of i */
-        cold = c;
-        c = c * cfreq - s * sfreq;
-        s = s * cfreq + cold * sfreq;
+        xr[i] = tempr * tc[i] + tempi * ts[i];
+        xi[i] = tempi * tc[i] - tempr * ts[i];
 
         n1 -= 2;
         n2 += 2;
     }
 
     /* Perform in-place complex FFT of length N/4 */
-    switch (N) {
-    case BLOCK_LEN_SHORT * 2:
-        fft( fft_tables, xr, xi, 6);
-        break;
-    case BLOCK_LEN_LONG * 2:
-        fft( fft_tables, xr, xi, 9);
-        break;
-    }
-
-    /* prepare for recurrence relations in post-twiddle */
-    c = FAAC_COS(freq * 0.125);
-    s = FAAC_SIN(freq * 0.125);
+    fft( fft_tables, xr, xi, logm);
 
     /* Base pointers for output mapping */
     faac_real *base_even0 = data;
@@ -345,19 +323,14 @@ void MDCT( FFT_Tables *fft_tables, faac_real *data, int N, faac_real *work )
     for (i = 0; i < N4; i++) {
 
         /* get post-twiddled FFT output */
-        tempr = 2. * (xr[i] * c + xi[i] * s);
-        tempi = 2. * (xi[i] * c - xr[i] * s);
+        tempr = (faac_real)2.0 * (xr[i] * tc[i] + xi[i] * ts[i]);
+        tempi = (faac_real)2.0 * (xi[i] * tc[i] - xr[i] * ts[i]);
 
         /* fill in output values */
         base_even0[n2] = -tempr;  /* first half even */
         base_odd0[-n2] =  tempi;  /* first half odd */
         base_even1[n2] = -tempi;  /* second half even */
         base_odd1[-n2] =  tempr;  /* second half odd */
-
-        /* use recurrence to prepare cosine and sine for next value of i */
-        cold = c;
-        c = c * cfreq - s * sfreq;
-        s = s * cfreq + cold * sfreq;
 
         n2 += 2;
     }
