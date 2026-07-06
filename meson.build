@@ -33,6 +33,8 @@ else
     config_h.set('FAAC_PRECISION_SINGLE', 1)
 endif
 
+config_h.set('FAAC_SBR_DECIMATION', get_option('sbr-decimation'))
+
 config_h.set('MAX_CHANNELS', get_option('max-channels'))
 
 c_args = []

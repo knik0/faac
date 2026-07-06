@@ -118,6 +118,9 @@ typedef struct {
   int cb_width_short[NSFB_SHORT];
 } SR_INFO;
 
+/* Scalefactor-band layout per sampling_rate_index, shared by frame.c and sbr.c. */
+extern SR_INFO srInfo[12 + 1];
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

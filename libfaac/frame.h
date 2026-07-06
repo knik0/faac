@@ -47,8 +47,9 @@ extern "C" {
 #include "blockswitch.h"
 #include "fft.h"
 #include "quantize.h"
+#include "sbr.h"
 
-typedef struct {
+typedef struct faacEncStruct {
     /* number of channels in AAC file */
     unsigned int numChannels;
 
@@ -94,8 +95,8 @@ typedef struct {
 
     /* Input FIFO: decouples the caller's per-call chunk size from the encoder
      * frame size. faacEncEncode appends whatever it is handed (any count) and
-     * emits one frame once a full frame (FRAME_LEN samples/ch) has accumulated.
-     * Stores format-converted faac_real. */
+     * emits one frame once a full frame (mult*FRAME_LEN samples/ch, mult = 2 for
+     * HE-AAC, 1 for LC) has accumulated. Stores format-converted faac_real. */
     faac_real    *inputFifo[MAX_CHANNELS];
     unsigned int  inputFifoFill;     /* samples per channel currently buffered */
     unsigned int  inputFifoCap;      /* per-channel capacity in samples */
@@ -105,7 +106,23 @@ typedef struct {
      * the caller never frees. NULL until first built. */
     unsigned char *ascCache;
     unsigned long  ascCacheLen;
+
+    /* HE-AAC / SBR state */
+    struct SBRContext *sbrContext;   /* SBR analysis state and bitstream data */
 } faacEncStruct;
+
+/* Configuration worker behind faac_encoder_open(): validates the config,
+ * resolves AUTO/HE-AAC, and (re)initializes the encoder. Returns 1 on success,
+ * 0 on failure. */
+int faacEncApplyConfig(faacEncStruct* hEncoder,
+                       faacEncConfigurationPtr config);
+
+/* Samples/channel per full frame: HE-AAC's core runs dual-rate at Fs/2, so it
+ * needs two FRAME_LENs of input to emit one frame at the full rate; LC needs one. */
+static inline unsigned int faacFrameSamples(const faacEncStruct *hEncoder)
+{
+    return (hEncoder->config.aacObjectType == HE_V1) ? 2 * FRAME_LEN : FRAME_LEN;
+}
 
 #ifdef __cplusplus
 }

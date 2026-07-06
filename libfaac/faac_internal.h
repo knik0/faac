@@ -34,8 +34,10 @@
 /* MPEG version */
 enum { MPEG4 = 0, MPEG2 = 1 };
 
-/* AAC object type. Only AAC-LC is implemented; MAIN/SSR/LTP never were. */
-enum { LOW = 2 };
+/* AAC object types this build implements, numbered per the MPEG-4 AOT
+ * registry (mirrors the public FAAC_OBJ_* enum in <faac.h>). AUTO defers the
+ * choice between LOW and HE_V1 to faacEncApplyConfig. */
+enum { AUTO = 0, LOW = 2, HE_V1 = 5 };
 
 /* PCM input sample format. Named distinctly from the public faac_input_format
  * enumerators (<faac.h>) so the facade can include both headers; faac.c
@@ -73,7 +75,6 @@ int  faacEncGetDecoderSpecificInfo(faacEncHandle hEncoder, unsigned char **ppBuf
                                    unsigned long *pSizeOfDecoderSpecificInfo);
 faacEncHandle faacEncOpen(unsigned long sampleRate, unsigned int numChannels,
                           unsigned long *inputSamples, unsigned long *maxOutputBytes);
-int  faacEncSetConfiguration(faacEncHandle hEncoder, faacEncConfigurationPtr config);
 int  faacEncEncode(faacEncHandle hEncoder, int32_t *inputBuffer, unsigned int samplesInput,
                    unsigned char *outputBuffer, unsigned int bufferSize);
 int  faacEncClose(faacEncHandle hEncoder);

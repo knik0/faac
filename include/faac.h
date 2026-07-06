@@ -85,12 +85,12 @@ typedef enum faac_status {
 /*
  * AAC object type, numbered per the MPEG-4 Audio Object Type (AOT) registry so
  * a single collision-free namespace covers current and future profiles.
- * FAAC_OBJ_AUTO lets the library pick (currently AAC-LC).
+ * FAAC_OBJ_AUTO lets the library pick AAC-LC or HE-AAC by bitrate.
  */
 enum faac_object_type {
-    FAAC_OBJ_AUTO      = 0,          /* let the library choose (resolves to AAC-LC) */
+    FAAC_OBJ_AUTO      = 0,          /* let the library choose LC or HE-AAC by bitrate */
     FAAC_OBJ_LOW       = 2,          /* AAC-LC                                       */
-    FAAC_OBJ_HE_AAC_V1 = 5,          /* AAC-LC + SBR       (not yet implemented)     */
+    FAAC_OBJ_HE_AAC_V1 = 5,          /* AAC-LC + SBR                                 */
     FAAC_OBJ_HE_AAC_V2 = 29,         /* AAC-LC + SBR + PS  (reserved, unimplemented) */
     /* AOT 23 (LD), 39 (ELD), 42 (xHE-AAC/USAC) are intentionally NOT reserved
      * here; each would need its own additive configuration surface. */
@@ -198,20 +198,24 @@ typedef struct faac_encoder_info {
 
 /*
  * Library-global facts, independent of any encoder instance: the compiled
- * channel ceiling and the version/copyright strings. These reflect build-time
- * options (e.g. max-channels) that the header alone cannot report, so they are
- * queried at runtime. Set out->struct_size to sizeof(faac_library_info) before
- * the call; the struct grows only by appending fields, so a newer library stays
- * compatible with an older caller's smaller struct. version/copyright are static
- * and library-owned; do not free them.
+ * channel ceiling, the version/copyright strings, and the SBR analysis density.
+ * These reflect build-time options (max-channels, sbr-decimation) that the
+ * header alone cannot report, so they are queried at runtime. Set
+ * out->struct_size to sizeof(faac_library_info) before the call; the struct
+ * grows only by appending fields, so a newer library stays compatible with an
+ * older caller's smaller struct. version/copyright are static and library-owned;
+ * do not free them.
  */
 typedef struct faac_library_info {
-    uint32_t                struct_size;   /* set by caller to sizeof(faac_library_info) */
+    uint32_t                struct_size;    /* set by caller to sizeof(faac_library_info) */
 
-    uint32_t                max_channels;  /* highest num_channels this build accepts */
+    uint32_t                max_channels;   /* highest num_channels this build accepts */
 
-    const char             *version;       /* library version string   (library-owned) */
-    const char             *copyright;     /* library copyright string (library-owned) */
+    const char             *version;        /* library version string   (library-owned) */
+    const char             *copyright;      /* library copyright string (library-owned) */
+
+    uint32_t                sbr_decimation; /* HE-AAC SBR analysis density: every Nth slot
+                                             * is analysed (1 = full quality). Build-time. */
 } faac_library_info;
 
 FAACAPI faac_status faac_get_library_info(faac_library_info *out);

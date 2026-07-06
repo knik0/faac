@@ -11,6 +11,12 @@ Unreleased
 	  AudioSpecificConfig memory leak on the MP4 output path.
 	* Retire the never-implemented MAIN/SSR/LTP object types and collapse the
 	  single-model psychoacoustic vtable into direct calls.
+	* Add HE-AAC v1 (AAC-LC core + Spectral Band Replication) encoding via
+	  `FAAC_OBJ_HE_AAC_V1`, or `FAAC_OBJ_AUTO`, which picks LC or HE-AAC from
+	  the bitrate. The SBR core runs dual-rate (half-rate core, 2048-sample
+	  frame); `faac_encoder_get_info()` reports the full output rate and frame
+	  size so callers need no SBR-specific handling. CLI:
+	  `--object-type lc|he-aac-v1|auto`.
 
 1.50 (Apr 16, 2026)
 

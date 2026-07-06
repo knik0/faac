@@ -24,6 +24,7 @@
 #include "coder.h"
 #include "util.h"
 #include "faac_internal.h"
+#include "frame.h"
 
 typedef float psyfloat;
 
@@ -186,10 +187,30 @@ void PsyBufferUpdate(GlobalPsyInfo * gpsyInfo, PsyInfo * psyInfo,
   }
 }
 
-void BlockSwitch(CoderInfo * coderInfo, PsyInfo * psyInfo, unsigned int numChannels)
+void BlockSwitch(struct faacEncStruct *hEncoder, CoderInfo * coderInfo, PsyInfo * psyInfo, unsigned int numChannels)
 {
   unsigned int channel;
   int desire = ONLY_LONG_WINDOW;
+
+  /* Shared transient override for HE-AAC path.
+   * Core delay alignment: SbrAnalyze runs on frame N full-rate; core
+   * block-switch for frame N audio is emitted at a delay. Alignment logic
+   * uses the FIFO. */
+  if (hEncoder->config.aacObjectType == HE_V1 && SbrContextIsAnalysisValid(hEncoder->sbrContext))
+  {
+      for (channel = 0; channel < numChannels; channel++)
+      {
+          /* Alignment: the core frame being coded now lags the freshest SBR
+           * analysis by LOOKAHEAD_DEPTH frames; FIFO index 0 holds that frame's
+           * decision (FIFO sized SBR_DETECT_FIFO so [0] is LOOKAHEAD_DEPTH back). */
+          int wantShort = SbrContextGetWantShort(hEncoder->sbrContext, (int)channel, 0);
+
+          if (wantShort)
+              psyInfo[channel].block_type = ONLY_SHORT_WINDOW;
+          else
+              psyInfo[channel].block_type = ONLY_LONG_WINDOW;
+      }
+  }
 
   /* Use the same block type for all channels
      If there is 1 channel that wants a short block,
