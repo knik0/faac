@@ -45,21 +45,16 @@ typedef struct {
 	faac_real *sharedWorkBuffLong;  /* Used for 2048-sample windows (filtbank, psy, tns, mdct) */
 } GlobalPsyInfo;
 
-typedef struct 
-{
-void (*PsyInit) (GlobalPsyInfo *gpsyInfo, PsyInfo *psyInfo,
+void PsyInit (GlobalPsyInfo *gpsyInfo, PsyInfo *psyInfo,
 		unsigned int numChannels, unsigned int sampleRate);
-void (*PsyEnd) (PsyInfo *psyInfo, unsigned int numChannels);
-void (*PsyCalculate) (ChannelInfo *channelInfo, PsyInfo *psyInfo,
+void PsyEnd (PsyInfo *psyInfo, unsigned int numChannels);
+void PsyCalculate (ChannelInfo *channelInfo, PsyInfo *psyInfo,
 		unsigned int numChannels);
-void (*PsyBufferUpdate) (GlobalPsyInfo * gpsyInfo, PsyInfo * psyInfo,
+void PsyBufferUpdate (GlobalPsyInfo * gpsyInfo, PsyInfo * psyInfo,
 		faac_real * restrict p_lookahead1,
 		faac_real * restrict p_lookahead2);
-void (*BlockSwitch) (CoderInfo *coderInfo, PsyInfo *psyInfo,
+void BlockSwitch (CoderInfo *coderInfo, PsyInfo *psyInfo,
 		unsigned int numChannels);
-} psymodel_t;
-
-extern psymodel_t psymodel2;
 
 #ifdef __cplusplus
 }

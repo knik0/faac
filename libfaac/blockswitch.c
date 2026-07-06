@@ -23,7 +23,7 @@
 #include "blockswitch.h"
 #include "coder.h"
 #include "util.h"
-#include <faac.h>
+#include "faac_internal.h"
 
 typedef float psyfloat;
 
@@ -79,7 +79,7 @@ static void PsyCheckShort(PsyInfo * psyInfo)
   }
 }
 
-static void PsyInit(GlobalPsyInfo * gpsyInfo, PsyInfo * psyInfo, unsigned int numChannels,
+void PsyInit(GlobalPsyInfo * gpsyInfo, PsyInfo * psyInfo, unsigned int numChannels,
 		    unsigned int sampleRate)
 {
   unsigned int channel;
@@ -106,7 +106,7 @@ static void PsyInit(GlobalPsyInfo * gpsyInfo, PsyInfo * psyInfo, unsigned int nu
     psyInfo[channel].sizeS = size;
 }
 
-static void PsyEnd(PsyInfo * psyInfo, unsigned int numChannels)
+void PsyEnd(PsyInfo * psyInfo, unsigned int numChannels)
 {
   unsigned int channel;
 
@@ -118,7 +118,7 @@ static void PsyEnd(PsyInfo * psyInfo, unsigned int numChannels)
 }
 
 /* Do psychoacoustical analysis */
-static void PsyCalculate(ChannelInfo * channelInfo, PsyInfo * psyInfo,
+void PsyCalculate(ChannelInfo * channelInfo, PsyInfo * psyInfo,
 			 unsigned int numChannels
 			)
 {
@@ -152,7 +152,7 @@ static void PsyCalculate(ChannelInfo * channelInfo, PsyInfo * psyInfo,
   }
 }
 
-static void PsyBufferUpdate(GlobalPsyInfo * gpsyInfo, PsyInfo * psyInfo,
+void PsyBufferUpdate(GlobalPsyInfo * gpsyInfo, PsyInfo * psyInfo,
                             faac_real * restrict p_lookahead1,
                             faac_real * restrict p_lookahead2)
 {
@@ -186,7 +186,7 @@ static void PsyBufferUpdate(GlobalPsyInfo * gpsyInfo, PsyInfo * psyInfo,
   }
 }
 
-static void BlockSwitch(CoderInfo * coderInfo, PsyInfo * psyInfo, unsigned int numChannels)
+void BlockSwitch(CoderInfo * coderInfo, PsyInfo * psyInfo, unsigned int numChannels)
 {
   unsigned int channel;
   int desire = ONLY_LONG_WINDOW;
@@ -223,12 +223,3 @@ static void BlockSwitch(CoderInfo * coderInfo, PsyInfo * psyInfo, unsigned int n
     coderInfo[channel].desired_block_type = desire;
   }
 }
-
-psymodel_t psymodel2 =
-{
-  PsyInit,
-  PsyEnd,
-  PsyCalculate,
-  PsyBufferUpdate,
-  BlockSwitch
-};

@@ -36,7 +36,7 @@
 #include "config.h"
 #endif
 
-#include <faac.h>
+#include "faac_internal.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -47,8 +47,6 @@ extern "C" {
 #include "blockswitch.h"
 #include "fft.h"
 #include "quantize.h"
-
-#include <faaccfg.h>
 
 typedef struct {
     /* number of channels in AAC file */
@@ -88,8 +86,6 @@ typedef struct {
     /* Configuration data */
     faacEncConfiguration config;
 
-    psymodel_t *psymodel;
-
     /* quantizer specific config */
     AACQuantCfg aacquantCfg;
 
@@ -103,6 +99,12 @@ typedef struct {
     faac_real    *inputFifo[MAX_CHANNELS];
     unsigned int  inputFifoFill;     /* samples per channel currently buffered */
     unsigned int  inputFifoCap;      /* per-channel capacity in samples */
+
+    /* faac_* API: AudioSpecificConfig cached on first request and owned by the
+     * handle (freed at close), so faac_encoder_asc() can hand back a pointer
+     * the caller never frees. NULL until first built. */
+    unsigned char *ascCache;
+    unsigned long  ascCacheLen;
 } faacEncStruct;
 
 #ifdef __cplusplus

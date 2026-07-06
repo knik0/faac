@@ -1,11 +1,12 @@
 EXPORTS
 ;
-; libfaac exports
+; libfaac public API (faac.h)
 ;
-faacEncOpen                      @1
-faacEncGetCurrentConfiguration   @2
-faacEncSetConfiguration          @3
-faacEncEncode                    @4
-faacEncClose                     @5
-faacEncGetDecoderSpecificInfo	 @6
-faacEncGetVersion				 @7
+faac_get_library_info            @1
+faac_params_init                 @2
+faac_encoder_open                @3
+faac_encoder_close               @4
+faac_encoder_get_info            @5
+faac_encoder_asc                 @6
+faac_encoder_encode              @7
+faac_strerror                    @8

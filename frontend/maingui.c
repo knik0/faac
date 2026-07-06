@@ -141,58 +141,50 @@ static DWORD WINAPI EncodeFile(LPVOID pParam)
         unsigned long inputSamples;
         unsigned long maxOutputBytes;
 
-        /* open and setup the encoder */
-        faacEncHandle hEncoder = faacEncOpen(sampleRate, numChannels,
-            &inputSamples, &maxOutputBytes);
+        /* set up parameters and open the encoder */
+        faac_params params;
+        faac_encoder *hEncoder = NULL;
+	char szTemp[256];
 
-        if (hEncoder)
+        faac_params_init(&params);
+        params.sample_rate  = sampleRate;
+        params.num_channels = numChannels;
+        params.object_type  = FAAC_OBJ_LOW;
+        params.input_format = FAAC_INPUT_32BIT;   /* wav_read_int24 -> 24-in-32 int */
+        {
+            LRESULT mode = SendMessage(GetDlgItem(hWnd, IDC_JOINTMODE), CB_GETCURSEL, 0, 0);
+            params.joint_mode = (mode == CB_ERR) ? FAAC_JOINT_MIXED : (enum faac_joint_mode)mode;
+        }
+        params.use_tns = IsDlgButtonChecked(hWnd, IDC_USETNS) == BST_CHECKED;
+        params.use_lfe = IsDlgButtonChecked(hWnd, IDC_USELFE) == BST_CHECKED;
+        params.output_format = IsDlgButtonChecked(hWnd, IDC_USERAW) == BST_CHECKED
+                             ? FAAC_STREAM_RAW : FAAC_STREAM_ADTS;
+        params.mpeg_version = (enum faac_mpeg_version)
+            SendMessage(GetDlgItem(hWnd, IDC_MPEGVERSION), CB_GETCURSEL, 0, 0);
+
+        GetDlgItemText(hWnd, IDC_QUALITY, szTemp, sizeof(szTemp));
+	params.quant_quality = atoi(szTemp);
+	if (IsDlgButtonChecked(hWnd, IDC_BWCTL) == BST_CHECKED)
+	{
+            GetDlgItemText(hWnd, IDC_BANDWIDTH, szTemp, sizeof(szTemp));
+            params.bandwidth = atoi(szTemp);
+	}
+
+        if (faac_encoder_open(&params, &hEncoder) == FAAC_OK)
         {
             HANDLE hOutfile;
-	    char szTemp[256];
 
-            /* set encoder configuration */
-            faacEncConfigurationPtr config = faacEncGetCurrentConfiguration(hEncoder);
+            faac_encoder_info info;
+            info.struct_size = sizeof(info);
+            faac_encoder_get_info(hEncoder, &info);
 
-            {
-                LRESULT mode = SendMessage(GetDlgItem(hWnd, IDC_JOINTMODE), CB_GETCURSEL, 0, 0);
-                config->jointmode = (mode == CB_ERR) ? JOINT_MIXED : (unsigned int)mode;
-            }
-            config->useTns = IsDlgButtonChecked(hWnd, IDC_USETNS) == BST_CHECKED ? 1 : 0;
-            config->useLfe = IsDlgButtonChecked(hWnd, IDC_USELFE) == BST_CHECKED ? 1 : 0;
-            config->outputFormat = IsDlgButtonChecked(hWnd, IDC_USERAW) == BST_CHECKED ? 0 : 1;
+            inputSamples   = (unsigned long)info.frame_samples * numChannels;
+            maxOutputBytes = info.max_output_bytes;
 
-            config->mpegVersion = SendMessage(GetDlgItem(hWnd, IDC_MPEGVERSION), CB_GETCURSEL, 0, 0);
-            config->aacObjectType = SendMessage(GetDlgItem(hWnd, IDC_OBJECTTYPE), CB_GETCURSEL, 0, 0);
-            config->aacObjectType = LOW;
-
-            GetDlgItemText(hWnd, IDC_QUALITY, szTemp, sizeof(szTemp));
-	    config->quantqual = atoi(szTemp);
-	    if (IsDlgButtonChecked(hWnd, IDC_BWCTL) == BST_CHECKED)
-	    {
-            GetDlgItemText(hWnd, IDC_BANDWIDTH, szTemp, sizeof(szTemp));
-            config->bandWidth = atoi(szTemp);
-	    }
-	    else
-	      config->bandWidth = 0;
-
-            if (!faacEncSetConfiguration(hEncoder, config))
-            {
-                faacEncClose(hEncoder);
-                wav_close(infile);
-
-                MessageBox (hWnd, "faacEncSetConfiguration failed!", "Error", MB_OK | MB_ICONSTOP);
-
-                SendMessage(hWnd,WM_SETTEXT,0,(LPARAM)"FAAC GUI");
-                Encoding = FALSE;
-                SetDlgItemText(hWnd, IDOK, "Encode");
-
-                return 0;
-            }
-
-	    sprintf(szTemp, "%ld", config->quantqual);
+	    sprintf(szTemp, "%u", info.quant_quality);
 	    SetDlgItemText(hWnd, IDC_QUALITY, szTemp);
 
-	    sprintf(szTemp, "%d", config->bandWidth);
+	    sprintf(szTemp, "%u", info.bandwidth);
 	    SetDlgItemText(hWnd, IDC_BANDWIDTH, szTemp);
 
             /* open the output file */
@@ -260,11 +252,16 @@ static DWORD WINAPI EncodeFile(LPVOID pParam)
                     }
 
                     /* call the actual encoding routine */
-                    bytesWritten = faacEncEncode(hEncoder,
-                        pcmbuf,
-                        bytesInput/sizeof(int),
-                        bitbuf,
-                        maxOutputBytes);
+                    {
+                        uint32_t nbytes = 0;
+                        faac_status st = faac_encoder_encode(hEncoder,
+                            pcmbuf,
+                            (uint32_t)(bytesInput/sizeof(int)),
+                            bitbuf,
+                            (uint32_t)maxOutputBytes,
+                            &nbytes);
+                        bytesWritten = (st == FAAC_OK) ? (int)nbytes : -1;
+                    }
 
                     /* Stop Pressed */
                     if ( !Encoding )
@@ -276,7 +273,7 @@ static DWORD WINAPI EncodeFile(LPVOID pParam)
 
                     if (bytesWritten < 0)
                     {
-                        MessageBox (hWnd, "faacEncEncodeFrame failed!", "Error", MB_OK | MB_ICONSTOP);
+                        MessageBox (hWnd, "faac_encoder_encode failed!", "Error", MB_OK | MB_ICONSTOP);
                         break;
                     }
 
@@ -289,7 +286,7 @@ static DWORD WINAPI EncodeFile(LPVOID pParam)
                 if (bitbuf) LocalFree(bitbuf);
             }
 
-            faacEncClose(hEncoder);
+            faac_encoder_close(&hEncoder);
         }
 
         wav_close(infile);
@@ -312,25 +309,11 @@ static BOOL WINAPI DialogProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
     {
     case WM_INITDIALOG:
       {
-        unsigned long samplesInput, maxBytesOutput;
-	faacEncHandle hEncoder =
-	  faacEncOpen(44100, 2, &samplesInput, &maxBytesOutput);
-	faacEncConfigurationPtr myFormat =
-	  faacEncGetCurrentConfiguration(hEncoder);
-
-	if (myFormat->version == FAAC_CFG_VERSION)
-	{
-	  char txt[100];
-	  sprintf(txt, "libfaac version %s", myFormat->name);
-	  SetDlgItemText(hWnd, IDC_COMPILEDATE, txt);
-	}
-	else
-	{
-	  MessageBox(hWnd, "wrong libfaac version", "FAAC",
-		     MB_OK | MB_ICONERROR);
-          PostMessage(hWnd, WM_CLOSE, 0, 0);
-	}
-	faacEncClose(hEncoder);
+	faac_library_info libinfo = { .struct_size = sizeof(libinfo) };
+	char txt[100];
+	faac_get_library_info(&libinfo);
+	sprintf(txt, "libfaac version %s", libinfo.version ? libinfo.version : "?");
+	SetDlgItemText(hWnd, IDC_COMPILEDATE, txt);
       }
 
         inputFilename[0] = 0x00;

@@ -27,6 +27,8 @@ common_src = [
     'coder.h',
     'cpu_compute.c',
     'cpu_compute.h',
+    'faac.c',
+    'faac_internal.h',
     'filtbank.c',
     'filtbank.h',
     'fft.c',
@@ -77,7 +79,7 @@ if default_lib == 'shared' or default_lib == 'both'
         'faac',
         common_src,
         kwargs : common_args + {
-          'version' : '0.0.0',
+          'version' : '1.0.0',
           'vs_module_defs' : 'libfaac.def',
           'override_options' : ['b_lto=true'],
         },

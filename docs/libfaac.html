@@ -19,31 +19,13 @@ Contents
 <menu>
  <li><a href="#scope">Scope</a>
  <li><a href="#interface">Interface description</a>
- <li><a href="#usage">Usage</a>
+ <li><a href="#api">API (faac.h)</a>
  <menu>
-  <li><a href="#callseq">Calling sequence</a>
+  <li><a href="#api-callseq">Calling sequence</a>
+  <li><a href="#api-errors">Error handling</a>
+  <li><a href="#api-funcref">Function reference</a>
  </menu>
- <li><a href="#funcref">Function reference</a>
- <menu>
-  <li><a href="#init">Initialization / De-initialization</a>
-  <menu>
-   <li><a href="#encopen">faacEncOpen()</a>
-   <li><a href="#encclose">faacEncClose()</a>
-  </menu>
-  <li><a href="#encconf">Encoder configuration</a>
-  <menu>
-   <li><a href="#getconf">faacEncGetCurrentConfiguration()</a>
-   <li><a href="#setconfig">faacEncSetConfiguration()</a>
-  </menu>
-  <li><a href="#encfunc">Encoding functions</a>
-  <menu>
-   <li><a href="#encenc">faacEncEncode()</a>
-  </menu>
- </menu>
-  <li><a href="#datastruct">Data structures reference</a>
-  <menu>
-  <li><a href="#encconfig">faacEncConfiguration</a>
-  </menu>
+ <li><a href="#porting">Porting from the legacy faacEnc* API</a>
 </menu>
 
 
@@ -56,143 +38,165 @@ Developed for the Freeware Advanced Audio Coding project.
 <a name="interface">
 <h4>Interface description</h4>
 The ISO/MPEG 2/4 AAC Encoder Library provides a high-level
-interface for encoding MPEG2 and MPEG4 ISO AAC files. The
-following header file is provided for usage in C/C++ programs:<br><br>
+interface for encoding MPEG2 and MPEG4 ISO AAC files. A single header file is
+provided for usage in C/C++ programs:<br><br>
 
-<b>faac.h</b>: function prototypes<br><br>
+<b>faac.h</b>: the <b>faac_*</b> API &mdash; function prototypes and types.<br><br>
 
 The encoder core resides in a statically linkable library called
 
 libfaac.lib <i>(Microsoft Window</i>s) or libfaac.a <i>(UNI</i>X). There
-are various example programs that show how to use the library.
+are various example programs that show how to use the library.<br><br>
 
-<a name="usage">
-<h4>Usage</h4>
+<a name="api">
+<h4>API (faac.h)</h4>
 
-<a name="callseq">
-<h4>Calling sequence</h4>
+The API supplies all encoder parameters once, up front, to
+<i>faac_encoder_open()</i>. The encoder therefore never exists in a
+half-configured state, and every derived quantity (frame size, output-buffer
+bound, effective sample rate, resolved object type) is known and queryable the
+instant open returns. Every fallible call returns a <i>faac_status</i> code;
+fixed-width integer types and width-pinned enums keep the ABI identical across
+platforms.
 
-For encoding AAC bitstreams the following calling sequence is
-mandatory:<br>
-
+<a name="api-callseq">
+<h5>Calling sequence</h5>
 <menu>
-<li>Call <i>faacEncOpen()</i>
- for every encoder instance you need.
-<li>To set encoder options, call <i>faacEncGetCurrentConfiguration()</i>,
- change the parameters in the structure accessible by the returned pointer
- and then call <i>faacEncSetConfiguration()</i>.
-<li>As long as there are still samples left to encode, call
- <i>faacEncEncode()</i>
- to encode the data.
- The encoder returns
- the bitstream data in a client-supplied buffer.
-<li>
- Once you call
- <i>faacEncEncode()</i>
- with zero samples of input
- the flushing process is initiated; afterwards you may call
- <i>faacEncEncode()</i>
- with zero samples input only.<br>
- <i>faacEncEncode()</i> will continue to write out data until all audio
- samples have been encoded.
-<li>
- Once 
- <i>faacEncEncode()</i>
-	has returned with zero bytes written,
-	call <i>faacEncClose()</i>
-	to destroy this encoder instance.
+<li>Zero-initialize a <i>faac_params</i> with <i>faac_params_init()</i>. This is
+ mandatory &mdash; it stamps <i>struct_size</i> and clears padding, which is how
+ the struct stays compatible as it grows in future releases.
+<li>Set the fields you care about (at minimum <i>sample_rate</i> and
+ <i>num_channels</i>), then call <i>faac_encoder_open()</i>.
+<li>Fill a <i>faac_encoder_info</i> with <i>faac_encoder_get_info()</i> (set its
+ <i>struct_size</i> first) and size your buffers from it: input PCM holds
+ <i>info.frame_samples</i> &times; <i>num_channels</i> samples; the output buffer
+ must be at least <i>info.max_output_bytes</i>. The same struct also reports the
+ resolved sample rate, object type, and rate-control settings. If you write a
+ raw stream, fetch the AudioSpecificConfig with <i>faac_encoder_asc()</i>
+ (library-owned &mdash; do <b>not</b> free it).
+<li>Call <i>faac_encoder_encode()</i> for each block of input; it emits at most
+ one frame per call and reports the byte count via an out-parameter.
+<li>Pass <i>in_samples</i> == 0 to flush; keep calling until
+ <i>bytes_written</i> is 0.
+<li>Call <i>faac_encoder_close()</i>, passing the address of your handle; it is
+ set to NULL on success.
 </menu>
 
-<a name="funcref">
-<h4>Function reference</h4>
+<a name="api-errors">
+<h5>Error handling</h5>
+Every fallible entry point returns a <i>faac_status</i>. <i>FAAC_OK</i> is 0 and
+all error codes are negative, so <code>status &lt; 0</code> tests for failure.
+<i>faac_strerror()</i> maps any status to a static human-readable string (never
+NULL). Notable codes: <i>FAAC_ERR_INVALID_ARGUMENT</i> (NULL, bad
+<i>struct_size</i>, or an out-of-range field), <i>FAAC_ERR_UNSUPPORTED</i> (an
+object type this build does not implement, or a request with no ASC),
+<i>FAAC_ERR_OUTPUT_TOO_SMALL</i>, and <i>FAAC_ERR_INPUT_OVERFLOW</i>.
 
-<a name="init">
-<h4>Initialization / De-initialization</h4>
-
-<a name="encopen">
-<h5><i>faacEncOpen()</i></h5>
-
+<a name="api-funcref">
+<h5>Function reference</h5>
 <pre>
-<b>Prototype</b>
-faacEncHandle FAACAPI faacEncOpen
-(
-unsigned long sampleRate,
-unsigned int numChannels,
-unsigned long *inputSamples,
-unsigned long *maxOutputBytes
-);
-<b>Description</b>
-Open and initialize one instance of the encoder.
-<b>Parameters</b>
-<li><i>sampleRate</i>
-	The samplerate of the encoder input data.
-<li><i>numChannels</i>
-	The number of channels of the encoder input data.
-<li><i>inputSamples</i>
-	Receives the total number of samples that should be fed to
-	faacEncEncode() in each call.
-<li><i>maxOutputBytes</i>
-	Receives the maximum number of bytes that can be in the
-	output buffer after a call to faacEncEncode().
-<b>Return value</b>
-An initialized encoder handle. If anything goes wrong NULL is returned.
+/* library-global facts: compiled channel ceiling, version/copyright */
+faac_status faac_get_library_info(faac_library_info *out);
+
+faac_status faac_params_init(faac_params *p);
+faac_status faac_encoder_open(const faac_params *p, faac_encoder **out);
+faac_status faac_encoder_close(faac_encoder **enc);   /* sets *enc = NULL */
+
+/* resolved properties, valid after open; set out.struct_size first */
+faac_status faac_encoder_get_info(faac_encoder *enc, faac_encoder_info *out);
+
+/* AudioSpecificConfig: library-owned, valid until close, do NOT free */
+faac_status faac_encoder_asc(faac_encoder *enc, const uint8_t **buf, uint32_t *len);
+
+faac_status faac_encoder_encode(faac_encoder *enc,
+                                const void *in, uint32_t in_samples,
+                                uint8_t *out, uint32_t out_cap,
+                                uint32_t *bytes_written);
+
+const char *faac_strerror(faac_status status);
 </pre>
+The <i>object_type</i> field of <i>faac_params</i> uses MPEG-4 Audio Object Type
+numbers: <i>FAAC_OBJ_LOW</i> (2) is AAC-LC. <i>FAAC_OBJ_HE_AAC_V1</i> (5) and
+<i>FAAC_OBJ_HE_AAC_V2</i> (29) are defined but not implemented in this release;
+requesting them returns <i>FAAC_ERR_UNSUPPORTED</i>.
 
-<a name="encclose">
-<h5><i>faacEncClose()</i></h5>
-<pre>
-<b>Prototype</b>
-void FAACAPI faacEncClose
-(
-faacEncHandle hEncoder
-);
-<b>Description</b>
-Closes an encoder instance.
-<b>Parameters</b>
-<li>hEncoder
-	An encoder handle returned by faacEncOpen().
-</pre>
+<a name="porting">
+<h4>Porting from the legacy faacEnc* API</h4>
+The classic <i>faacEnc*</i> surface (<i>faacEncOpen</i>,
+<i>faacEncGetCurrentConfiguration</i>/<i>faacEncSetConfiguration</i>,
+<i>faacEncEncode</i>, <i>faacEncClose</i>, <i>faacEncGetVersion</i>,
+<i>faacEncGetDecoderSpecificInfo</i>, and the <i>faacEncConfiguration</i>
+struct from <i>faaccfg.h</i>) has been removed. There is no compatibility
+shim &mdash; callers must move to <i>faac_*</i>. The changes are mechanical:
 
-<a name="encconf">
-<h4>Encoder configuration</h4>
-
-<a name="getconf">
-<h5><i>faacEncGetCurrentConfiguration()</i></h5>
-
-<pre>
-<b>Prototype</b>
-faacEncConfigurationPtr FAACAPI
-faacEncGetCurrentConfiguration
-(
-faacEncHandle hEncoder
-);
-<b>Description</b>
-Get a pointer to a structure describing the current encoder
-configuration. You may change this structure and feed it into
-<i>faacEncSetConfiguration()</i>.
-</pre>
-
-<a name="setconf">
-<h5><i>faacEncSetConfiguration()</i></h4>
-
-<pre>
-<b>Prototype</b>
-int FAACAPI faacEncSetConfiguration
-(
-faacDecHandle hDecoder,
-faacEncConfigurationPtr config
-);
-<b>Description</b>
-Set a new encoder configuration. See
-faacEncGetCurrentConfiguration().
-</pre>
-
-
-<a name="">
-<h4></h4>
-<a name="">
-<h4></h4>
-
+<menu>
+<li><b>Open sequence.</b> The old two-step open (<i>faacEncOpen()</i> to get a
+ handle plus <i>inputSamples</i>/<i>maxOutputBytes</i> out-params, then
+ <i>faacEncGetCurrentConfiguration()</i> / <i>faacEncSetConfiguration()</i> to
+ apply options after the fact) collapses into one step: build a
+ <i>faac_params</i>, fill in the fields you care about, and call
+ <i>faac_encoder_open()</i> once. There is no live-pointer configuration
+ struct to mutate after opening.
+<li><b>Buffer sizing.</b> Where you previously read <i>inputSamples</i> and
+ <i>maxOutputBytes</i> from <i>faacEncOpen()</i>, call
+ <i>faac_encoder_get_info()</i> after <i>faac_encoder_open()</i> and use
+ <i>info.frame_samples</i> &times; <i>num_channels</i> and
+ <i>info.max_output_bytes</i> instead.
+<li><b>Version info.</b> <i>faacEncGetVersion()</i> is replaced by
+ <i>faac_get_library_info()</i>, which also reports <i>max_channels</i>; the
+ removed <i>name</i>/<i>copyright</i> write-only config fields are gone along
+ with it.
+<li><b>Decoder-specific info.</b> <i>faacEncGetDecoderSpecificInfo()</i> is
+ replaced by <i>faac_encoder_asc()</i>. The buffer is still library-owned and
+ valid until close &mdash; do not free it.
+<li><b>Encoding loop.</b> <i>faacEncEncode()</i> becomes
+ <i>faac_encoder_encode()</i> with the byte count returned via an
+ out-parameter (<i>bytes_written</i>) instead of the return value; the return
+ value is now a <i>faac_status</i>. Flush and end-of-stream detection are
+ unchanged: pass <i>in_samples</i> == 0 to flush, and keep calling until
+ <i>bytes_written</i> is 0.
+<li><b>Close.</b> <i>faacEncClose(hEncoder)</i> becomes
+ <i>faac_encoder_close(&amp;enc)</i> &mdash; pass the address of your handle,
+ not the handle itself; the library NULLs it on success.
+<li><b>Return values.</b> Where the old API returned NULL handles or -1 on
+ error, every fallible <i>faac_*</i> call returns a <i>faac_status</i>; test
+ <code>status &lt; 0</code> and use <i>faac_strerror()</i> for a message.
+<li><b>Configuration field renames.</b> <i>faacEncConfiguration</i> fields map
+ onto <i>faac_params</i> fields as follows:
+ <menu>
+ <li><i>aacObjectType</i> &rarr; <i>object_type</i> (now uses
+  <i>FAAC_OBJ_*</i> constants, numbered per the MPEG-4 AOT registry, rather
+  than the old MAIN/LOW/SSR/LTP enum &mdash; MAIN, SSR, and LTP are retired,
+  unimplemented object types).
+ <li><i>mpegVersion</i> &rarr; <i>mpeg_version</i> (<i>FAAC_MPEG4</i> /
+  <i>FAAC_MPEG2</i>).
+ <li><i>jointmode</i> &rarr; <i>joint_mode</i> (<i>FAAC_JOINT_*</i>).
+  <i>allowMidside</i> was a compatibility alias sharing storage with
+  <i>jointmode</i> in a union; it has no separate replacement, use
+  <i>joint_mode</i> directly.
+ <li><i>useLfe</i> &rarr; <i>use_lfe</i>; <i>useTns</i> &rarr; <i>use_tns</i>
+  (now <i>bool</i>).
+ <li><i>shortctl</i> &rarr; <i>short_control</i> (<i>FAAC_SHORTCTL_*</i>).
+ <li><i>bitRate</i> &rarr; <i>bit_rate</i>; <i>bandWidth</i> &rarr;
+  <i>bandwidth</i>; <i>quantqual</i> &rarr; <i>quant_quality</i>;
+  <i>pnslevel</i> &rarr; <i>pns_level</i> (same units and semantics).
+ <li><i>outputFormat</i> &rarr; <i>output_format</i> (<i>FAAC_STREAM_*</i>);
+  <i>inputFormat</i> &rarr; <i>input_format</i> (<i>FAAC_INPUT_*</i>).
+ <li><i>channel_map[64]</i> &rarr; <i>channel_map</i> plus an explicit
+  <i>channel_map_count</i> (the old fixed-size array was implicitly sized by
+  <i>numChannels</i>).
+ <li><i>version</i>, <i>name</i>, and <i>copyright</i> were unused or
+  library-populated informational fields in the legacy config struct; their
+  closest analogs are <i>faac_params.struct_size</i> (for <i>version</i>-style
+  compatibility checks) and <i>faac_library_info.version</i>/<i>copyright</i>
+  (queried via <i>faac_get_library_info()</i>), not a <i>faac_params</i> field.
+ </menu>
+<li><b>Struct growth.</b> Always call <i>faac_params_init()</i> before setting
+ any fields, and set <i>struct_size</i> on any struct you pass to a query
+ function (<i>faac_encoder_get_info()</i>, <i>faac_get_library_info()</i>).
+ This is how the ABI stays stable as these structs grow in later releases;
+ the legacy config struct had no equivalent versioning.
+</menu>
 
 
 <center>
