@@ -15,6 +15,7 @@
 
 #include "bitstream.h"
 #include "util.h"
+#include <assert.h>
 #include <string.h>
 #include <stdlib.h>
 
@@ -23,11 +24,7 @@ BitStream *OpenBitStream(uint32_t size, uint8_t *buffer)
     BitStream *bs = (BitStream *)AllocMemory(sizeof(BitStream));
     if (!bs) return NULL;
 
-    bs->data = buffer;
-    bs->size = size;
-    bs->currentBit = 0;
-
-    if (buffer) memset(buffer, 0, size);
+    InitBitStream(bs, buffer, size);
 
     return bs;
 }
@@ -38,6 +35,15 @@ int CloseBitStream(BitStream *bs)
     int bytes = (int)((bs->currentBit + 7) >> 3);
     FreeMemory(bs);
     return bytes;
+}
+
+void InitBitStream(BitStream *bs, uint8_t *buffer, uint32_t size)
+{
+    bs->data = buffer;
+    bs->size = size;
+    bs->currentBit = 0;
+
+    if (buffer) memset(buffer, 0, size);
 }
 
 /* Packs the low `numBits` bits of `data` into `bs`, MSB-first. Returns 0,
@@ -62,7 +68,13 @@ int PutBit(BitStream *bs, uint32_t data, int numBits)
 
     if ((start >> 3) == ((end - 1) >> 3)) {
         uint32_t bitsAvailable = ((end - 1) & 7) + 1;
-        bs->data[start >> 3] |= (uint8_t)(data << (8 - bitsAvailable));
+        uint32_t shift = 8 - bitsAvailable;
+        /* PutBit ORs bits into place; it never zeroes them first, so every
+         * caller-supplied buffer must already be zeroed (OpenBitStream does
+         * this). A stale/reused buffer that skips OpenBitStream will corrupt
+         * silently in release builds -- catch it here in debug builds. */
+        assert((bs->data[start >> 3] & (((1U << (uint32_t)numBits) - 1) << shift)) == 0);
+        bs->data[start >> 3] |= (uint8_t)(data << shift);
         return 0;
     }
 
@@ -73,6 +85,7 @@ int PutBit(BitStream *bs, uint32_t data, int numBits)
         uint32_t take = (uint32_t)numBits < bitsAvailable ? (uint32_t)numBits : bitsAvailable;
         uint32_t shift = 8 - bitsAvailable;
 
+        assert((bs->data[byteIndex] & (((1U << take) - 1) << shift)) == 0);
         bs->data[byteIndex] |= (uint8_t)((data & ((1U << take) - 1)) << shift);
 
         data >>= take;

@@ -1,4 +1,4 @@
-.TH FAAC 1 "2017-08-16" "1.29.5" "Free Advanced Audio Coder"
+.TH FAAC 1 "2026-06-25" "1.50.0" "Free Advanced Audio Coder"
 
 .SH NAME
 faac \- open source MPEG-4 and MPEG-2 AAC encoder
@@ -28,7 +28,7 @@ is not up to par with the currently best AAC encoders available.
 .TP
 * Fast
 .TP
-* LC, Main, LTP support
+* AAC-LC and HE-AAC v1 (SBR) support
 
 .SH HELP OPTIONS
 .TP
@@ -55,6 +55,34 @@ Quality-related options
 Advanced options, only for testing purposes
 
 .SH QUALITY-RELATED OPTIONS
+.TP
+.BR --object-type\ <\fItype\fP>
+Force the AAC object type:
+.B lc
+(Low Complexity),
+.B he-aac-v1
+(High-Efficiency AAC v1, i.e. AAC-LC plus Spectral Band Replication), or
+.B auto
+(default), which selects LC or HE-AAC v1 from the bitrate and sample rate.
+HE-AAC v1 targets low bitrates; its core is coded at half the input sample
+rate and reconstructed to full rate by SBR in the decoder.
+.TP
+.BR --joint\ <\fImode\fP>
+Joint stereo coding mode:
+.B 0
+(off, independent left/right),
+.B 1
+(Mid/Side),
+.B 2
+(Intensity Stereo), or
+.B 3
+(Mixed Mode, dynamic per-band Mid/Side and Intensity Stereo). Default is
+.BR 3 .
+.TP
+.BR --pns\ <\fIlevel\fP>
+Perceptual Noise Substitution level, 0 to 10;
+.B 0
+disables PNS.
 .TP
 .BR -q\ <\fIquality\fP>
 Set encoding quality. Set default variable bitrate (VBR) quality level in percent.
@@ -179,9 +207,6 @@ Enable coding of TNS, temporal noise shaping.
 .TP
 .BR --no-tns
 Disable coding of TNS, temporal noise shaping.
-.TP
-.BR --no-midside
-Don't use mid/side coding.
 .TP
 .BR --mpeg-vers\ \fIX\fP
 Force AAC MPEG version, X can be 2 or 4

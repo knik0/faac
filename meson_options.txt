@@ -9,6 +9,21 @@ option('floating-point',
     choices: ['single', 'double'],
     value: 'double')
 
+# SBR spectral analysis density: analyse every Nth slot per frame.
+# 1 = full quality (every slot); higher values trade MOS for faster encode.
+# Max 8: above that, both halves of the frame are sampled but the gain is negligible.
+# Only affects HE-AAC; LC encodes are identical regardless of this setting.
+#   1: every slot  -- reference quality (MOS d: 0)
+#   2: every 2nd   -- ~20% faster HE-AAC encode; MOS d: -0.004
+#   4: every 4th   -- ~30% faster HE-AAC encode; MOS d: -0.015
+#   8: every 8th   -- ~36% faster HE-AAC encode; MOS d: -0.028
+option('sbr-decimation',
+    description: 'SBR spectral analysis density: analyse every Nth slot (1=full quality, max=8)',
+    type: 'integer',
+    min: 1,
+    max: 8,
+    value: 1)
+
 option('max-channels',
     description: 'Maximum number of channels',
     type: 'integer',

@@ -36,6 +36,13 @@ extern "C" {
 #define min(a, b) (((a) < (b)) ? (a) : (b))
 #endif
 
+static inline int clamp_int(int x, int lo, int hi)
+{
+    if (x < lo) return lo;
+    if (x > hi) return hi;
+    return x;
+}
+
 #ifndef M_PI
 #define M_PI        3.14159265358979323846
 #endif

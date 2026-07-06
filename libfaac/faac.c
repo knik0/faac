@@ -35,7 +35,8 @@
 
 #include <faac.h>
 #include "frame.h"
-#include "bitstream.h"   /* ADTS_FRAMESIZE */
+#include "bitstream.h"
+#include "sbr.h"
 
 /* The public enums are width-pinned to 32 bits by their FAAC_*_MAX sentinels;
  * verify the compiler honored that so the ABI matches the documented layout. */
@@ -50,7 +51,8 @@ _Static_assert(sizeof(enum faac_input_format)  == 4, "faac_input_format must be 
 /* The modern enums mirror the legacy numeric values one-for-one, so parameter
  * translation is a plain field copy. Guard that assumption. */
 _Static_assert((int)FAAC_MPEG4 == MPEG4 && (int)FAAC_MPEG2 == MPEG2, "mpeg version drift");
-_Static_assert((int)FAAC_OBJ_LOW == LOW, "object type drift");
+_Static_assert((int)FAAC_OBJ_AUTO == AUTO && (int)FAAC_OBJ_LOW == LOW
+               && (int)FAAC_OBJ_HE_AAC_V1 == HE_V1, "object type drift");
 _Static_assert((int)FAAC_JOINT_NONE == JOINT_NONE && (int)FAAC_JOINT_MIXED == JOINT_MIXED, "joint mode drift");
 _Static_assert((int)FAAC_SHORTCTL_NORMAL == SHORTCTL_NORMAL && (int)FAAC_SHORTCTL_NOLONG == SHORTCTL_NOLONG, "shortctl drift");
 _Static_assert((int)FAAC_STREAM_RAW == RAW_STREAM && (int)FAAC_STREAM_ADTS == ADTS_STREAM, "stream format drift");
@@ -76,9 +78,10 @@ FAACAPI faac_status faac_get_library_info(faac_library_info *out)
     faacEncGetVersion(&vid, &vcopy);
 
     memset(&info, 0, sizeof(info));
-    info.max_channels = (uint32_t)MAX_CHANNELS;
-    info.version      = vid;
-    info.copyright    = vcopy;
+    info.max_channels   = (uint32_t)MAX_CHANNELS;
+    info.version        = vid;
+    info.copyright      = vcopy;
+    info.sbr_decimation = (uint32_t)FAAC_SBR_DECIMATION;
 
     /* Write at most the caller's struct_size so a newer library cannot overrun
      * an older, smaller faac_library_info; report the byte count actually set. */
@@ -120,10 +123,10 @@ static faac_status validate_params(const faac_params *p)
         default: return FAAC_ERR_INVALID_ARGUMENT;
     }
     switch (p->object_type) {
-        case FAAC_OBJ_AUTO: case FAAC_OBJ_LOW:
+        case FAAC_OBJ_AUTO: case FAAC_OBJ_LOW: case FAAC_OBJ_HE_AAC_V1:
             break;
-        case FAAC_OBJ_HE_AAC_V1: case FAAC_OBJ_HE_AAC_V2:
-            return FAAC_ERR_UNSUPPORTED;   /* SBR/PS not implemented in this build */
+        case FAAC_OBJ_HE_AAC_V2:
+            return FAAC_ERR_UNSUPPORTED;   /* parametric stereo not implemented */
         default:
             return FAAC_ERR_INVALID_ARGUMENT;
     }
@@ -198,12 +201,11 @@ FAACAPI faac_status faac_encoder_open(const faac_params *p, faac_encoder **out)
     if (!h)
         return FAAC_ERR_NO_MEMORY;
 
-    /* Translate params onto the handle's own configuration (the same struct
-     * faacEncGetCurrentConfiguration would hand back) and run it through the
-     * shared core validation/derivation in faacEncSetConfiguration. */
+    /* Translate params onto the handle's own configuration and run it through
+     * the shared core validation/derivation in faacEncApplyConfig. */
     cfg = &h->config;
     cfg->mpegVersion   = (unsigned int)p->mpeg_version;
-    cfg->aacObjectType = LOW;                       /* AUTO and LOW both resolve to LC here */
+    cfg->aacObjectType = (unsigned int)p->object_type;  /* LOW / HE_V1 / AUTO */
     cfg->jointmode     = (unsigned int)p->joint_mode;
     cfg->useLfe        = p->use_lfe ? 1 : 0;
     cfg->useTns        = p->use_tns ? 1 : 0;
@@ -221,7 +223,7 @@ FAACAPI faac_status faac_encoder_open(const faac_params *p, faac_encoder **out)
     }
     /* else: faacEncOpen already installed the identity map */
 
-    if (!faacEncSetConfiguration((faacEncHandle)h, cfg)) {
+    if (!faacEncApplyConfig(h, cfg)) {
         faacEncClose((faacEncHandle)h);
         return FAAC_ERR_INVALID_ARGUMENT;
     }
@@ -255,9 +257,11 @@ FAACAPI faac_status faac_encoder_get_info(faac_encoder *enc, faac_encoder_info *
     h = unwrap(enc);
 
     memset(&info, 0, sizeof(info));
-    info.frame_samples    = (uint32_t)FRAME_LEN;
+    info.frame_samples    = faacFrameSamples(h);
     info.max_output_bytes = (uint32_t)ADTS_FRAMESIZE;
-    info.sample_rate      = (uint32_t)h->sampleRate;
+    /* The handle holds the halved core rate for HE-AAC; report the rate the
+     * decoder reconstructs. */
+    info.sample_rate      = (uint32_t)SbrContextGetFullRate(h->sbrContext, h->sampleRate);
     info.object_type      = (enum faac_object_type)h->config.aacObjectType;
     info.bit_rate         = (uint32_t)h->config.bitRate;
     info.bandwidth        = (uint32_t)h->config.bandWidth;
@@ -315,7 +319,7 @@ FAACAPI faac_status faac_encoder_encode(faac_encoder *enc,
 
     if (out_cap < (uint32_t)ADTS_FRAMESIZE)
         return FAAC_ERR_OUTPUT_TOO_SMALL;
-    if (in_samples > (uint32_t)FRAME_LEN * h->numChannels)
+    if (in_samples > faacFrameSamples(h) * h->numChannels)
         return FAAC_ERR_INPUT_OVERFLOW;
 
     /* faacEncEncode reinterprets the input bytes per the configured

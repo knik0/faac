@@ -43,6 +43,16 @@ typedef struct BitStream {
 
 BitStream *OpenBitStream(uint32_t size, uint8_t *buffer);
 int CloseBitStream(BitStream *bs);
+
+/* Non-allocating alternative to OpenBitStream: initializes *bs to write into
+ * a caller-owned buffer (zeroing it, same as OpenBitStream) without the
+ * malloc/free of a heap BitStream. For scratch streams built over a
+ * reused/persistent buffer (e.g. a cache rebuilt once per frame) -- PutBit
+ * ORs bits into place and never zeroes them itself, so any such buffer must
+ * be zeroed before (re)use or stale bits from a prior, longer write leak
+ * through. */
+void InitBitStream(BitStream *bs, uint8_t *buffer, uint32_t size);
+
 int PutBit(BitStream *bs, uint32_t data, int numBits);
 int ByteAlign(BitStream *bs);
 
