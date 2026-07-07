@@ -1,39 +1,21 @@
-/************************* MPEG-2 NBC Audio Decoder **************************
- *                                                                           *
-"This software module was originally developed by
-AT&T, Dolby Laboratories, Fraunhofer Gesellschaft IIS in the course of
-development of the MPEG-2 NBC/MPEG-4 Audio standard ISO/IEC 13818-7,
-14496-1,2 and 3. This software module is an implementation of a part of one or more
-MPEG-2 NBC/MPEG-4 Audio tools as specified by the MPEG-2 NBC/MPEG-4
-Audio standard. ISO/IEC  gives users of the MPEG-2 NBC/MPEG-4 Audio
-standards free license to this software module or modifications thereof for use in
-hardware or software products claiming conformance to the MPEG-2 NBC/MPEG-4
-Audio  standards. Those intending to use this software module in hardware or
-software products are advised that this use may infringe existing patents.
-The original developer of this software module and his/her company, the subsequent
-editors and their companies, and ISO/IEC have no liability for use of this software
-module or modifications thereof in an implementation. Copyright is not released for
-non MPEG-2 NBC/MPEG-4 Audio conforming products.The original developer
-retains full right to use the code for his/her  own purpose, assign or donate the
-code to a third party and to inhibit third party from using the code for non
-MPEG-2 NBC/MPEG-4 Audio conforming products. This copyright notice must
-be included in all copies or derivative works."
-Copyright(c)1996.
- *                                                                           *
- ****************************************************************************/
 /*
- * $Id: filtbank.c,v 1.14 2012/03/01 18:34:17 knik Exp $
- */
-
-/*
- * CHANGES:
- *  2001/01/17: menno: Added frequency cut off filter.
+ * FAAC - Freeware Advanced Audio Coder
+ * Copyright (C) 2026 Nils Schimmelmann
  *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
  */
 
+#include <float.h>
 #include <math.h>
-#include <stdio.h>
-#include <stdlib.h>
+#include <stdbool.h>
 #include <string.h>
 
 #include "coder.h"
@@ -42,16 +24,88 @@ Copyright(c)1996.
 #include "fft.h"
 #include "util.h"
 
-#define  TWOPI       2*M_PI
+/* Sine and Kaiser-Bessel-Derived windows, ISO/IEC 13818-7 Annex 4.6.4.
+ * KBD argument uses the product form i*(halfLen-i) (a difference-of-
+ * squares factoring of the spec's (2i/halfLen-1)^2 shape term) so the
+ * Bessel argument is one multiply instead of a subtract-then-square. */
 
+static faac_real BesselI0(faac_real x)
+{
+#ifdef FAAC_PRECISION_SINGLE
+    const faac_real tolerance = (faac_real)FLT_EPSILON;
+#else
+    const faac_real tolerance = (faac_real)DBL_EPSILON;
+#endif
+    faac_real halfX = x * (faac_real)0.5;
+    faac_real term = 1.0;
+    faac_real series = 1.0;
+    int k = 1;
 
-static void		CalculateKBDWindow	( faac_real* win, faac_real alpha, int length );
-static faac_real	Izero				( faac_real x);
+    do {
+        faac_real ratio = halfX / (faac_real)k;
+        term *= ratio * ratio;
+        series += term;
+        k++;
+    } while (term > tolerance * series);
 
+    return series;
+}
+
+static void FillSineWindow(faac_real *win, int halfLen)
+{
+    int i;
+
+    for (i = 0; i < halfLen; i++)
+        win[i] = FAAC_SIN((M_PI / (2 * halfLen)) * (i + 0.5));
+}
+
+static void FillKbdWindow(faac_real *win, int halfLen, faac_real alpha)
+{
+    const faac_real omega = alpha * (faac_real)M_PI / (faac_real)halfLen;
+    const faac_real alpha2 = (faac_real)4.0 * omega * omega;
+    const int quarterLen = halfLen / 2;
+    faac_real shapeTerm[BLOCK_LEN_LONG / 2 + 1];
+    faac_real weightedTotal = 0.0;
+    faac_real running = 0.0;
+    faac_real scale;
+    int i;
+
+    /* Symmetric around quarterLen, so interior terms count twice below. */
+    for (i = 0; i <= quarterLen; i++) {
+        faac_real symmetric = (faac_real)i * (faac_real)(halfLen - i) * alpha2;
+        int isInterior = (i > 0) && (i < quarterLen);
+
+        shapeTerm[i] = BesselI0(FAAC_SQRT(symmetric));
+        weightedTotal += shapeTerm[i] * (faac_real)(isInterior ? 2 : 1);
+    }
+    scale = (faac_real)1.0 / (weightedTotal + (faac_real)1.0);
+
+    for (i = 0; i <= quarterLen; i++) {
+        running += shapeTerm[i];
+        win[i] = FAAC_SQRT(running * scale);
+    }
+    /* Past the midpoint, reuse the mirrored term instead of recomputing it. */
+    for (; i < halfLen; i++) {
+        running += shapeTerm[halfLen - i];
+        win[i] = FAAC_SQRT(running * scale);
+    }
+}
+
+typedef struct {
+    faac_real *sine;
+    faac_real *kbd;
+} WindowPair;
+
+static void BuildWindowPair(WindowPair *wp, int halfLen, faac_real kbdAlpha)
+{
+    FillSineWindow(wp->sine, halfLen);
+    FillKbdWindow(wp->kbd, halfLen, kbdAlpha);
+}
 
 void FilterBankInit(faacEncStruct* hEncoder)
 {
-    unsigned int i, channel;
+    unsigned int channel;
+    WindowPair longPair, shortPair;
 
     for (channel = 0; channel < hEncoder->numChannels; channel++) {
         hEncoder->freqBuff[channel] = (faac_real*)AllocMemory(2*FRAME_LEN*sizeof(faac_real));
@@ -67,13 +121,13 @@ void FilterBankInit(faacEncStruct* hEncoder)
         !hEncoder->kbd_window_long || !hEncoder->kbd_window_short)
         return;
 
-    for( i=0; i<BLOCK_LEN_LONG; i++ )
-        hEncoder->sin_window_long[i] = FAAC_SIN((M_PI/(2*BLOCK_LEN_LONG)) * (i + 0.5));
-    for( i=0; i<BLOCK_LEN_SHORT; i++ )
-        hEncoder->sin_window_short[i] = FAAC_SIN((M_PI/(2*BLOCK_LEN_SHORT)) * (i + 0.5));
+    longPair.sine = hEncoder->sin_window_long;
+    longPair.kbd = hEncoder->kbd_window_long;
+    shortPair.sine = hEncoder->sin_window_short;
+    shortPair.kbd = hEncoder->kbd_window_short;
 
-    CalculateKBDWindow(hEncoder->kbd_window_long, 4, BLOCK_LEN_LONG*2);
-    CalculateKBDWindow(hEncoder->kbd_window_short, 6, BLOCK_LEN_SHORT*2);
+    BuildWindowPair(&longPair, BLOCK_LEN_LONG, 4.0);
+    BuildWindowPair(&shortPair, BLOCK_LEN_SHORT, 6.0);
 
     hEncoder->gpsyInfo.sharedWorkBuffLong = (faac_real*)AllocMemory(2*BLOCK_LEN_LONG*sizeof(faac_real));
 }
@@ -94,244 +148,177 @@ void FilterBankEnd(faacEncStruct* hEncoder)
     if (hEncoder->gpsyInfo.sharedWorkBuffLong) FreeMemory(hEncoder->gpsyInfo.sharedWorkBuffLong);
 }
 
+/* Four ICS window sequences, ISO/IEC 13818-7 4.3.2.4. */
+
+typedef struct {
+    faac_real *dst;
+    const faac_real *src;
+    const faac_real *win;
+    int len;
+    bool reverse;
+} WindowSeg;
+
+static void ApplyWindowSeg(const WindowSeg *seg)
+{
+    int i;
+
+    if (seg->reverse) {
+        for (i = 0; i < seg->len; i++)
+            seg->dst[i] = seg->src[i] * seg->win[seg->len - 1 - i];
+    } else {
+        for (i = 0; i < seg->len; i++)
+            seg->dst[i] = seg->src[i] * seg->win[i];
+    }
+}
+
+static void CopyFlat(faac_real *dst, const faac_real *src, int len)
+{
+    memcpy(dst, src, len * sizeof(faac_real));
+}
+
+static void ZeroFlat(faac_real *dst, int len)
+{
+    SetMemory(dst, 0, len * sizeof(faac_real));
+}
+
+static const faac_real *SelectWindow(faacEncStruct *hEncoder, int shape, bool isLong)
+{
+    if (shape == KBD_WINDOW)
+        return isLong ? hEncoder->kbd_window_long : hEncoder->kbd_window_short;
+    return isLong ? hEncoder->sin_window_long : hEncoder->sin_window_short;
+}
+
 void FilterBank(faacEncStruct* hEncoder,
                 CoderInfo *coderInfo,
                 faac_real * restrict p_prev_data,
                 faac_real * restrict p_in_data,
                 faac_real * restrict p_out_mdct)
 {
-    faac_real *p_o_buf, *first_window, *second_window;
-    faac_real * restrict transf_buf;
-    int k, i;
+    faac_real * restrict overlapBuf = hEncoder->gpsyInfo.sharedWorkBuffLong;
     int block_type = coderInfo->block_type;
+    const faac_real *leftWin, *rightWin;
+    int k;
 
-    transf_buf = hEncoder->gpsyInfo.sharedWorkBuffLong;
+    /* Assemble the 2048-sample overlap window from the previous and
+       current frame's time-domain samples. */
+    memcpy(overlapBuf, p_prev_data, BLOCK_LEN_LONG*sizeof(faac_real));
+    memcpy(overlapBuf+BLOCK_LEN_LONG, p_in_data, BLOCK_LEN_LONG*sizeof(faac_real));
 
-    /* Assembly of the 2048-sample window from consecutive frames in the FIFO rotation */
-    memcpy(transf_buf, p_prev_data, BLOCK_LEN_LONG*sizeof(faac_real));
-    memcpy(transf_buf+BLOCK_LEN_LONG, p_in_data, BLOCK_LEN_LONG*sizeof(faac_real));
-
-    /*  Window shape processing */
-    switch (coderInfo->prev_window_shape) {
-    case SINE_WINDOW:
-        if ( (block_type == ONLY_LONG_WINDOW) || (block_type == LONG_SHORT_WINDOW))
-            first_window = hEncoder->sin_window_long;
-        else
-            first_window = hEncoder->sin_window_short;
-        break;
-    default:
-    case KBD_WINDOW:
-        if ( (block_type == ONLY_LONG_WINDOW) || (block_type == LONG_SHORT_WINDOW))
-            first_window = hEncoder->kbd_window_long;
-        else
-            first_window = hEncoder->kbd_window_short;
-        break;
-    }
-
-    switch (coderInfo->window_shape){
-    case SINE_WINDOW:
-    default:
-        if ( (block_type == ONLY_LONG_WINDOW) || (block_type == SHORT_LONG_WINDOW))
-            second_window = hEncoder->sin_window_long;
-        else
-            second_window = hEncoder->sin_window_short;
-        break;
-    case KBD_WINDOW:
-        if ( (block_type == ONLY_LONG_WINDOW) || (block_type == SHORT_LONG_WINDOW))
-            second_window = hEncoder->kbd_window_long;
-        else
-            second_window = hEncoder->kbd_window_short;
-        break;
-    }
-
-    /* Set ptr to transf-Buffer */
-    p_o_buf = transf_buf;
-
-    /* Separate action for each Block Type */
+    /* isLong is a literal per case below, not carried in from before the
+       switch, so SelectWindow's dispatch folds to a single compare. */
     switch (block_type) {
-    case ONLY_LONG_WINDOW :
-        for ( i = 0 ; i < BLOCK_LEN_LONG ; i++){
-            p_out_mdct[i] = p_o_buf[i] * first_window[i];
-            p_out_mdct[i+BLOCK_LEN_LONG] = p_o_buf[i+BLOCK_LEN_LONG] * second_window[BLOCK_LEN_LONG-i-1];
-        }
-        MDCT( &hEncoder->fft_tables, p_out_mdct, 2*BLOCK_LEN_LONG, hEncoder->gpsyInfo.sharedWorkBuffLong );
-        break;
+    case ONLY_LONG_WINDOW: {
+        WindowSeg left  = { p_out_mdct, overlapBuf,
+                             SelectWindow(hEncoder, coderInfo->prev_window_shape, true), BLOCK_LEN_LONG, false };
+        WindowSeg right = { p_out_mdct+BLOCK_LEN_LONG, overlapBuf+BLOCK_LEN_LONG,
+                             SelectWindow(hEncoder, coderInfo->window_shape, true), BLOCK_LEN_LONG, true };
 
-    case LONG_SHORT_WINDOW :
-        for ( i = 0 ; i < BLOCK_LEN_LONG ; i++)
-            p_out_mdct[i] = p_o_buf[i] * first_window[i];
-        memcpy(p_out_mdct+BLOCK_LEN_LONG,p_o_buf+BLOCK_LEN_LONG,NFLAT_LS*sizeof(faac_real));
-        for ( i = 0 ; i < BLOCK_LEN_SHORT ; i++)
-            p_out_mdct[i+BLOCK_LEN_LONG+NFLAT_LS] = p_o_buf[i+BLOCK_LEN_LONG+NFLAT_LS] * second_window[BLOCK_LEN_SHORT-i-1];
-        SetMemory(p_out_mdct+BLOCK_LEN_LONG+NFLAT_LS+BLOCK_LEN_SHORT,0,NFLAT_LS*sizeof(faac_real));
-        MDCT( &hEncoder->fft_tables, p_out_mdct, 2*BLOCK_LEN_LONG, hEncoder->gpsyInfo.sharedWorkBuffLong );
+        ApplyWindowSeg(&left);
+        ApplyWindowSeg(&right);
+        MDCT(&hEncoder->fft_tables, p_out_mdct, 2*BLOCK_LEN_LONG, hEncoder->gpsyInfo.sharedWorkBuffLong);
         break;
+    }
 
-    case SHORT_LONG_WINDOW :
-        SetMemory(p_out_mdct,0,NFLAT_LS*sizeof(faac_real));
-        for ( i = 0 ; i < BLOCK_LEN_SHORT ; i++)
-            p_out_mdct[i+NFLAT_LS] = p_o_buf[i+NFLAT_LS] * first_window[i];
-        memcpy(p_out_mdct+NFLAT_LS+BLOCK_LEN_SHORT,p_o_buf+NFLAT_LS+BLOCK_LEN_SHORT,NFLAT_LS*sizeof(faac_real));
-        for ( i = 0 ; i < BLOCK_LEN_LONG ; i++)
-            p_out_mdct[i+BLOCK_LEN_LONG] = p_o_buf[i+BLOCK_LEN_LONG] * second_window[BLOCK_LEN_LONG-i-1];
-        MDCT( &hEncoder->fft_tables, p_out_mdct, 2*BLOCK_LEN_LONG, hEncoder->gpsyInfo.sharedWorkBuffLong );
+    case LONG_SHORT_WINDOW: {
+        WindowSeg left  = { p_out_mdct, overlapBuf,
+                             SelectWindow(hEncoder, coderInfo->prev_window_shape, true), BLOCK_LEN_LONG, false };
+        WindowSeg right = { p_out_mdct+BLOCK_LEN_LONG+NFLAT_LS, overlapBuf+BLOCK_LEN_LONG+NFLAT_LS,
+                             SelectWindow(hEncoder, coderInfo->window_shape, false), BLOCK_LEN_SHORT, true };
+
+        ApplyWindowSeg(&left);
+        CopyFlat(p_out_mdct+BLOCK_LEN_LONG, overlapBuf+BLOCK_LEN_LONG, NFLAT_LS);
+        ApplyWindowSeg(&right);
+        ZeroFlat(p_out_mdct+BLOCK_LEN_LONG+NFLAT_LS+BLOCK_LEN_SHORT, NFLAT_LS);
+        MDCT(&hEncoder->fft_tables, p_out_mdct, 2*BLOCK_LEN_LONG, hEncoder->gpsyInfo.sharedWorkBuffLong);
         break;
+    }
 
-    case ONLY_SHORT_WINDOW :
-        p_o_buf += NFLAT_LS;
-        for ( k=0; k < MAX_SHORT_WINDOWS; k++ ) {
-            for ( i = 0 ; i < BLOCK_LEN_SHORT ; i++ ){
-                p_out_mdct[i] = p_o_buf[i] * first_window[i];
-                p_out_mdct[i+BLOCK_LEN_SHORT] = p_o_buf[i+BLOCK_LEN_SHORT] * second_window[BLOCK_LEN_SHORT-i-1];
-            }
-            MDCT( &hEncoder->fft_tables, p_out_mdct, 2*BLOCK_LEN_SHORT, hEncoder->gpsyInfo.sharedWorkBuffLong );
-            p_out_mdct += BLOCK_LEN_SHORT;
-            p_o_buf += BLOCK_LEN_SHORT;
-            first_window = second_window;
+    case SHORT_LONG_WINDOW: {
+        WindowSeg left  = { p_out_mdct+NFLAT_LS, overlapBuf+NFLAT_LS,
+                             SelectWindow(hEncoder, coderInfo->prev_window_shape, false), BLOCK_LEN_SHORT, false };
+        WindowSeg right = { p_out_mdct+BLOCK_LEN_LONG, overlapBuf+BLOCK_LEN_LONG,
+                             SelectWindow(hEncoder, coderInfo->window_shape, true), BLOCK_LEN_LONG, true };
+
+        ZeroFlat(p_out_mdct, NFLAT_LS);
+        ApplyWindowSeg(&left);
+        CopyFlat(p_out_mdct+NFLAT_LS+BLOCK_LEN_SHORT, overlapBuf+NFLAT_LS+BLOCK_LEN_SHORT, NFLAT_LS);
+        ApplyWindowSeg(&right);
+        MDCT(&hEncoder->fft_tables, p_out_mdct, 2*BLOCK_LEN_LONG, hEncoder->gpsyInfo.sharedWorkBuffLong);
+        break;
+    }
+
+    case ONLY_SHORT_WINDOW: {
+        faac_real *src = overlapBuf + NFLAT_LS;
+        faac_real *dst = p_out_mdct;
+
+        leftWin  = SelectWindow(hEncoder, coderInfo->prev_window_shape, false);
+        rightWin = SelectWindow(hEncoder, coderInfo->window_shape, false);
+
+        for (k = 0; k < MAX_SHORT_WINDOWS; k++) {
+            WindowSeg left  = { dst, src, leftWin, BLOCK_LEN_SHORT, false };
+            WindowSeg right = { dst+BLOCK_LEN_SHORT, src+BLOCK_LEN_SHORT, rightWin, BLOCK_LEN_SHORT, true };
+
+            ApplyWindowSeg(&left);
+            ApplyWindowSeg(&right);
+            MDCT(&hEncoder->fft_tables, dst, 2*BLOCK_LEN_SHORT, hEncoder->gpsyInfo.sharedWorkBuffLong);
+
+            dst += BLOCK_LEN_SHORT;
+            src += BLOCK_LEN_SHORT;
+            leftWin = rightWin;
         }
         break;
     }
-}
-
-
-static faac_real Izero(faac_real x)
-{
-    const faac_real IzeroEPSILON = 1E-41;  /* Max error acceptable in Izero */
-    faac_real sum, u, halfx, temp;
-    int n;
-
-    sum = u = n = 1;
-    halfx = x/2.0;
-    do {
-        temp = halfx/(faac_real)n;
-        n += 1;
-        temp *= temp;
-        u *= temp;
-        sum += u;
-    } while (u >= IzeroEPSILON*sum);
-
-    return(sum);
-}
-
-static void CalculateKBDWindow(faac_real* win, faac_real alpha, int length)
-{
-    int i;
-    faac_real IBeta;
-    faac_real tmp;
-    faac_real sum = 0.0;
-
-    alpha *= M_PI;
-    IBeta = 1.0/Izero(alpha);
-
-    /* calculate lower half of Kaiser Bessel window */
-    for(i=0; i<(length>>1); i++) {
-        tmp = 4.0*(faac_real)i/(faac_real)length - 1.0;
-        win[i] = Izero(alpha*FAAC_SQRT(1.0-tmp*tmp))*IBeta;
-        sum += win[i];
-    }
-
-    sum = 1.0/sum;
-    tmp = 0.0;
-
-    /* calculate lower half of window */
-    for(i=0; i<(length>>1); i++) {
-        tmp += win[i];
-        win[i] = FAAC_SQRT(tmp*sum);
     }
 }
 
 void MDCT( FFT_Tables *fft_tables, faac_real * restrict data, int N, faac_real * restrict work )
 {
-    faac_real tempr, tempi;
-    int i;
-
-    /* Hoisted constants */
     const int N2 = N >> 1;
     const int N4 = N >> 2;
     const int N8 = N >> 3;
     const int logm = (N == 2 * BLOCK_LEN_LONG) ? 9 : 6;
 
-    /* Twiddle factors cos/sin(freq*(i+1/8)), precomputed once in fft_initialize.
-       Indexing them (instead of the old serial cos/sin recurrence) lets the
-       twiddle loops below vectorize. */
-    const fftfloat * restrict tc = fft_tables->mdct_cos[logm];
-    const fftfloat * restrict ts = fft_tables->mdct_sin[logm];
+    const fftfloat * restrict cosT = fft_tables->mdct_cos[logm];
+    const fftfloat * restrict sinT = fft_tables->mdct_sin[logm];
 
-    /* Pre/post-twiddle FFT buffers carved from the shared work buffer */
     faac_real * restrict xr = work;
     faac_real * restrict xi = work + N4;
 
-    /* Base pointers for address simplification */
-    faac_real *base0 = data + N4;
-    faac_real *base1 = data + (N4 - 1);
-    faac_real *base2 = data + (N + N4 - 1);
+    int i;
 
-    /* Induction variables */
-    int n1 = N2 - 1;  /* descending: N/2 - 1 - 2i */
-    int n2 = 0;       /* ascending: 2i */
-
-    /* Phase 1: i < N/8 */
+    /* Sign pattern flips at N/8 - the real input's symmetry folds
+       differently on either side of that midpoint. */
     for (i = 0; i < N8; i++) {
+        int n1 = N2 - 1 - 2*i;
+        int n2 = 2*i;
+        faac_real foldedRe = data[N4 + n1] + data[N + N4 - 1 - n1];
+        faac_real foldedIm = data[N4 + n2] - data[N4 - 1 - n2];
 
-        /* calculate real and imaginary parts of g(n) or G(p) */
-
-        /* use second form of e(n) for n = N / 2 - 1 - 2i */
-        tempr = base0[n1] + base2[-n1];
-
-        /* use first form of e(n) for n = 2i */
-        tempi = base0[n2] - base1[-n2];
-
-        /* calculate pre-twiddled FFT input */
-        xr[i] = tempr * tc[i] + tempi * ts[i];
-        xi[i] = tempi * tc[i] - tempr * ts[i];
-
-        n1 -= 2;
-        n2 += 2;
+        xr[i] = foldedRe * cosT[i] + foldedIm * sinT[i];
+        xi[i] = foldedIm * cosT[i] - foldedRe * sinT[i];
     }
-
-    /* Phase 2: i >= N/8 */
     for (; i < N4; i++) {
+        int n1 = N2 - 1 - 2*i;
+        int n2 = 2*i;
+        faac_real foldedRe = data[N4 + n1] - data[N4 - 1 - n1];
+        faac_real foldedIm = data[N4 + n2] + data[N + N4 - 1 - n2];
 
-        /* calculate real and imaginary parts of g(n) or G(p) */
-
-        /* use first form of e(n) for n = N / 2 - 1 - 2i */
-        tempr = base0[n1] - base1[-n1];
-
-        /* use second form of e(n) for n = 2i */
-        tempi = base0[n2] + base2[-n2];
-
-        /* calculate pre-twiddled FFT input */
-        xr[i] = tempr * tc[i] + tempi * ts[i];
-        xi[i] = tempi * tc[i] - tempr * ts[i];
-
-        n1 -= 2;
-        n2 += 2;
+        xr[i] = foldedRe * cosT[i] + foldedIm * sinT[i];
+        xi[i] = foldedIm * cosT[i] - foldedRe * sinT[i];
     }
 
-    /* Perform in-place complex FFT of length N/4 */
     fft( fft_tables, xr, xi, logm);
 
-    /* Base pointers for output mapping */
-    faac_real *base_even0 = data;
-    faac_real *base_odd0  = data + (N2 - 1);
-    faac_real *base_even1 = data + N2;
-    faac_real *base_odd1  = data + (N - 1);
-
-    n2 = 0;
-
-    /* post-twiddle FFT output and then get output data */
+    /* Unfold N/4 complex FFT outputs into N real coefficients, one write
+       per output quarter. */
     for (i = 0; i < N4; i++) {
+        int n2 = 2*i;
+        faac_real unfoldRe = (faac_real)2.0 * (xr[i] * cosT[i] + xi[i] * sinT[i]);
+        faac_real unfoldIm = (faac_real)2.0 * (xi[i] * cosT[i] - xr[i] * sinT[i]);
 
-        /* get post-twiddled FFT output */
-        tempr = (faac_real)2.0 * (xr[i] * tc[i] + xi[i] * ts[i]);
-        tempi = (faac_real)2.0 * (xi[i] * tc[i] - xr[i] * ts[i]);
-
-        /* fill in output values */
-        base_even0[n2] = -tempr;  /* first half even */
-        base_odd0[-n2] =  tempi;  /* first half odd */
-        base_even1[n2] = -tempi;  /* second half even */
-        base_odd1[-n2] =  tempr;  /* second half odd */
-
-        n2 += 2;
+        data[n2]             = -unfoldRe;
+        data[N2 - 1 - n2]    =  unfoldIm;
+        data[N2 + n2]        = -unfoldIm;
+        data[N - 1 - n2]     =  unfoldRe;
     }
 }
