@@ -22,11 +22,10 @@
 #ifndef _FFT_H_
 #define _FFT_H_
 
-#include "faac_real.h"
 
 #define FFT_MAXLOGM 9
 
-typedef faac_real fftfloat;
+typedef float fftfloat;
 
 typedef struct
 {
@@ -44,6 +43,6 @@ typedef struct
 void fft_initialize		( FFT_Tables *fft_tables );
 void fft_terminate	( FFT_Tables *fft_tables );
 
-void fft			( FFT_Tables *fft_tables, faac_real *xr, faac_real *xi, int logm );
+void fft			( FFT_Tables *fft_tables, float *xr, float *xi, int logm );
 
 #endif

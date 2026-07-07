@@ -34,11 +34,11 @@
 #if defined(__GNUC__)
 __attribute__((hot))
 #endif
-void SbrAnalyze(SignalAnalysis *sa, faac_real *fullPtrs[], int nch, int numSamples, struct SBRInfo *sbr)
+void SbrAnalyze(SignalAnalysis *sa, float *fullPtrs[], int nch, int numSamples, struct SBRInfo *sbr)
 {
     int num_slots = numSamples / SBR_QMF_BANDS_64;
     int sampled = (num_slots - 1) / FAAC_SBR_DECIMATION + 1;
-    faac_real workspace[SBR_QMF_OVL_LEN_64 + 2 * FRAME_LEN];
+    float workspace[SBR_QMF_OVL_LEN_64 + 2 * FRAME_LEN];
 
     sa->valid = 1;
     sa->numSlots = num_slots;
@@ -47,20 +47,20 @@ void SbrAnalyze(SignalAnalysis *sa, faac_real *fullPtrs[], int nch, int numSampl
     /* Pass 1: Time-domain transient detection. Identifies the temporal position
      * and strength of transients across all channels. */
     for (int ch = 0; ch < nch; ch++) {
-        faac_real smax = (faac_real)0.0, ssum = (faac_real)0.0;
+        float smax = 0.0f, ssum = 0.0f;
         int smax_idx = 0;
-        faac_real slot_hp_eng[128]; /* high-pass energy per slot (max slots = 2*1024/64 = 32) */
+        float slot_hp_eng[128]; /* high-pass energy per slot (max slots = 2*1024/64 = 32) */
 
         sa->ch[ch].wantShort = 0;
-        faac_real val_in = sa->ch[ch].lastVal;
-        const faac_real * restrict p_in = fullPtrs[ch];
+        float val_in = sa->ch[ch].lastVal;
+        const float * restrict p_in = fullPtrs[ch];
         for (int slot = 0; slot < num_slots; slot++) {
-            faac_real stot = (faac_real)0.0;
-            faac_real hp_stot = (faac_real)0.0;
+            float stot = 0.0f;
+            float hp_stot = 0.0f;
             for (int n = 0; n < SBR_QMF_BANDS_64; n += 4) {
-                faac_real v0 = p_in[0], v1 = p_in[1], v2 = p_in[2], v3 = p_in[3];
+                float v0 = p_in[0], v1 = p_in[1], v2 = p_in[2], v3 = p_in[3];
                 stot += v0 * v0 + v1 * v1 + v2 * v2 + v3 * v3;
-                faac_real d0 = v0 - val_in, d1 = v1 - v0, d2 = v2 - v1, d3 = v3 - v2;
+                float d0 = v0 - val_in, d1 = v1 - v0, d2 = v2 - v1, d3 = v3 - v2;
                 hp_stot += d0 * d0 + d1 * d1 + d2 * d2 + d3 * d3;
                 val_in = v3; p_in += 4;
             }
@@ -74,20 +74,20 @@ void SbrAnalyze(SignalAnalysis *sa, faac_real *fullPtrs[], int nch, int numSampl
         }
         sa->ch[ch].lastVal = val_in;
 
-        sa->ch[ch].transientStrength = smax * (faac_real)sampled / (ssum + SBR_ENERGY_FLOOR);
+        sa->ch[ch].transientStrength = smax * (float)sampled / (ssum + SBR_ENERGY_FLOOR);
         sa->ch[ch].transientSlot = smax_idx;
 
         /* Evaluate relative energy jumps to inform block switching. */
-        faac_real last_hp_eng = 0.0;
+        float last_hp_eng = 0.0f;
         int have_last = 0;
         for (int slot = 0; slot < num_slots; slot++) {
             if (slot >= 128) break;
-            faac_real hp_eng = slot_hp_eng[slot];
+            float hp_eng = slot_hp_eng[slot];
             if (have_last) {
-                faac_real toteng = (hp_eng < last_hp_eng) ? hp_eng : last_hp_eng;
-                faac_real volchg = (hp_eng > last_hp_eng) ? (hp_eng - last_hp_eng) : (last_hp_eng - hp_eng);
+                float toteng = (hp_eng < last_hp_eng) ? hp_eng : last_hp_eng;
+                float volchg = (hp_eng > last_hp_eng) ? (hp_eng - last_hp_eng) : (last_hp_eng - hp_eng);
                 /* PSY_TD_THRESH = 0.5 */
-                if (volchg > ((faac_real)0.5 * toteng)) {
+                if (volchg > (0.5f * toteng)) {
                     sa->ch[ch].wantShort = 1;
                     break;
                 }
@@ -99,7 +99,7 @@ void SbrAnalyze(SignalAnalysis *sa, faac_real *fullPtrs[], int nch, int numSampl
 
     /* Choose the temporal grid based on the strongest transient. Synchronizes
      * envelope borders across all channels to maintain spatial imaging. */
-    faac_real frameStrength = (faac_real)0.0;
+    float frameStrength = 0.0f;
     int frameSlot = 0;
     for (int ch = 0; ch < nch; ch++) {
         if (sa->ch[ch].transientStrength > frameStrength) {
@@ -150,20 +150,20 @@ void SbrAnalyze(SignalAnalysis *sa, faac_real *fullPtrs[], int nch, int numSampl
         memset(sa->ch[ch].bandHalfE, 0, sizeof(sa->ch[ch].bandHalfE));
 
         if (sbr) {
-            memcpy(workspace, sbr->ch[ch].qmfOvl64, SBR_QMF_OVL_LEN_64 * sizeof(faac_real));
-            memcpy(workspace + SBR_QMF_OVL_LEN_64, fullPtrs[ch], numSamples * sizeof(faac_real));
+            memcpy(workspace, sbr->ch[ch].qmfOvl64, SBR_QMF_OVL_LEN_64 * sizeof(float));
+            memcpy(workspace + SBR_QMF_OVL_LEN_64, fullPtrs[ch], numSamples * sizeof(float));
 
             for (int slot = 0; slot < num_slots; slot++) {
 #if FAAC_SBR_DECIMATION > 1
                 if (slot % FAAC_SBR_DECIMATION == 0)
 #endif
                 {
-                    faac_real slotEnergy[SBR_QMF_BANDS_64];
+                    float slotEnergy[SBR_QMF_BANDS_64];
                     SbrQmfAnalysis(sbr, workspace + slot * SBR_QMF_BANDS_64, slotEnergy, kx, kEnd);
 
                     int h = (sa->numEnvelopes > 1 && slot >= split) ? 1 : 0;
 
-                    faac_real * restrict bE = sa->ch[ch].bandHalfE[h];
+                    float * restrict bE = sa->ch[ch].bandHalfE[h];
                     for (int k = kx; k < kEnd; k++)
                         bE[k] += slotEnergy[k];
                 }

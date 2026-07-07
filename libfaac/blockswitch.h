@@ -20,7 +20,6 @@
 #ifndef BLOCKSWITCH_H
 #define BLOCKSWITCH_H
 
-#include "faac_real.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -41,10 +40,10 @@ typedef struct {
 } PsyInfo;
 
 typedef struct {
-	faac_real sampleRate;
+	float sampleRate;
 
 	/* shared work buffers */
-	faac_real *sharedWorkBuffLong;  /* Used for 2048-sample windows (filtbank, psy, tns, mdct) */
+	float *sharedWorkBuffLong;  /* Used for 2048-sample windows (filtbank, psy, tns, mdct) */
 } GlobalPsyInfo;
 
 void PsyInit (GlobalPsyInfo *gpsyInfo, PsyInfo *psyInfo,
@@ -53,8 +52,8 @@ void PsyEnd (PsyInfo *psyInfo, unsigned int numChannels);
 void PsyCalculate (ChannelInfo *channelInfo, PsyInfo *psyInfo,
 		unsigned int numChannels);
 void PsyBufferUpdate (GlobalPsyInfo * gpsyInfo, PsyInfo * psyInfo,
-		faac_real * restrict p_lookahead1,
-		faac_real * restrict p_lookahead2);
+		float * restrict p_lookahead1,
+		float * restrict p_lookahead2);
 void BlockSwitch (struct faacEncStruct *hEncoder, CoderInfo *coderInfo, PsyInfo *psyInfo,
 		unsigned int numChannels);
 

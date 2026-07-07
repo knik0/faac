@@ -3,12 +3,6 @@ option('frontend',
     type: 'boolean',
     value: true)
 
-option('floating-point',
-    description: 'Floating point precision',
-    type: 'combo',
-    choices: ['single', 'double'],
-    value: 'double')
-
 # SBR spectral analysis density: analyse every Nth slot per frame.
 # 1 = full quality (every slot); higher values trade MOS for faster encode.
 # Max 8: above that, both halves of the frame are sampled but the gain is negligible.

@@ -49,7 +49,7 @@ int GetSRIndex(unsigned int sampleRate)
 unsigned int MaxBitrate(unsigned long sampleRate)
 {
     /* max ADTS frame size 8k */
-    return 0x2000 * 8 * (faac_real)sampleRate/(faac_real)FRAME_LEN;
+    return 0x2000 * 8 * (float)sampleRate/(float)FRAME_LEN;
 }
 
 /* Returns the minimum bitrate per channel for that sampling frequency */

@@ -26,7 +26,7 @@
 
 /* Per-channel SBR state. Everything indexed [ch] in SBRInfo lives here. */
 typedef struct SBRChannel {
-    faac_real qmfOvl64[SBR_QMF_OVL_LEN_64]; /* QMF overlap state (carries across frames) */
+    float qmfOvl64[SBR_QMF_OVL_LEN_64]; /* QMF overlap state (carries across frames) */
     int envData  [SBR_MAX_ENVELOPES][SBR_MAX_BANDS]; /* quantised envelope indices */
     int noiseData[SBR_MAX_NOISE_ENVELOPES][SBR_MAX_NOISE_BANDS]; /* quantised noise floor indices */
     int invfMode;                                    /* bs_invf_mode (0–3) */
@@ -77,10 +77,10 @@ typedef struct SBRInfo {
     SBRChannel ch[MAX_CHANNELS];
 
     /* QMF analysis twiddle factors. */
-    faac_real twidCos[SBR_QMF_BANDS_64];
-    faac_real twidSin[SBR_QMF_BANDS_64];
-    faac_real oddCos [SBR_QMF_BANDS_64];
-    faac_real oddSin [SBR_QMF_BANDS_64];
+    float twidCos[SBR_QMF_BANDS_64];
+    float twidSin[SBR_QMF_BANDS_64];
+    float oddCos [SBR_QMF_BANDS_64];
+    float oddSin [SBR_QMF_BANDS_64];
     FFT_Tables *fftTables;   /* borrowed: the encoder's shared core FFT tables */
 } SBRInfo;
 
@@ -96,7 +96,7 @@ typedef struct SBRContext {
        SBR_DETECT_FIFO analyzed frames. Index 0 is the decision aligned to the
        core frame being coded now, which lags the freshest analysis by the core
        lookahead (LOOKAHEAD_DEPTH frames); newest sits at SBR_DETECT_FIFO-1. */
-    faac_real transientStrengthFIFO[MAX_CHANNELS][SBR_DETECT_FIFO];
+    float transientStrengthFIFO[MAX_CHANNELS][SBR_DETECT_FIFO];
     int       wantShortFIFO[MAX_CHANNELS][SBR_DETECT_FIFO];
 } SBRContext;
 
@@ -106,8 +106,8 @@ SBRInfo *SbrInit(int channels, int sampleRate, unsigned long bitRate, FFT_Tables
 void SbrUpdate(SBRInfo *sbr, unsigned long bitRate);
 void SbrEnd(SBRInfo *sbr);
 
-void SbrQmfAnalysis(SBRInfo *sbr, const faac_real * restrict ovl_pos, faac_real * restrict energy, int kx, int k2);
-void SbrEncode(SBRInfo *sbr, faac_real *timeDomain[MAX_CHANNELS], int numChannels, int numSamples, struct SignalAnalysis *sa);
+void SbrQmfAnalysis(SBRInfo *sbr, const float * restrict ovl_pos, float * restrict energy, int kx, int k2);
+void SbrEncode(SBRInfo *sbr, float *timeDomain[MAX_CHANNELS], int numChannels, int numSamples, struct SignalAnalysis *sa);
 int SbrWrite(SBRInfo *sbr, struct BitStream *bs, int id_aac, int writeFlag);
 
 #endif

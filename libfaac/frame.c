@@ -44,8 +44,8 @@
 #endif
 
 /* Rate control tuning constants */
-#define RC_DEADBAND_THRESHOLD  0.05  /* +/- 5% deadband */
-#define RC_DAMPING_FACTOR      0.6   /* Control loop damping */
+#define RC_DEADBAND_THRESHOLD  0.05f  /* +/- 5% deadband */
+#define RC_DAMPING_FACTOR      0.6f   /* Control loop damping */
 
 static char *libfaacName = PACKAGE_VERSION;
 static char *libCopyright =
@@ -244,9 +244,9 @@ int faacEncApplyConfig(faacEncStruct* hEncoder,
 
         if (!config->quantqual)
         {
-            config->quantqual = (faac_real)config->bitRate * hEncoder->numChannels / 1280;
+            config->quantqual = (float)config->bitRate * hEncoder->numChannels / 1280;
             if (config->quantqual > DEFQUAL)
-                config->quantqual = (config->quantqual - DEFQUAL) * 3.0 + DEFQUAL;
+                config->quantqual = (config->quantqual - DEFQUAL) * 3.0f + DEFQUAL;
         }
     }
 
@@ -309,7 +309,7 @@ int faacEncApplyConfig(faacEncStruct* hEncoder,
             if (!hEncoder->inputFifo[channel])
             {
                 hEncoder->inputFifo[channel] =
-                    (faac_real *)AllocMemory(cap * sizeof(faac_real));
+                    (float *)AllocMemory(cap * sizeof(float));
                 if (!hEncoder->inputFifo[channel]) return 0;
             }
         hEncoder->inputFifoCap  = cap;
@@ -396,13 +396,13 @@ faacEncHandle faacEncOpen(unsigned long sampleRate,
         hEncoder->coderInfo[channel].groups.len[0] = 1;
 
         for (buf = 0; buf < 4; buf++) {
-            hEncoder->audioFIFO[channel][buf] = (faac_real*)AllocMemory(FRAME_LEN*sizeof(faac_real));
+            hEncoder->audioFIFO[channel][buf] = (float*)AllocMemory(FRAME_LEN*sizeof(float));
             if (!hEncoder->audioFIFO[channel][buf])
             {
                 faacEncClose(hEncoder);
                 return NULL;
             }
-            memset(hEncoder->audioFIFO[channel][buf], 0, FRAME_LEN*sizeof(faac_real));
+            memset(hEncoder->audioFIFO[channel][buf], 0, FRAME_LEN*sizeof(float));
         }
     }
 
@@ -424,7 +424,7 @@ faacEncHandle faacEncOpen(unsigned long sampleRate,
 
 
 /* Append the caller's (interleaved) input to the per-channel input FIFO,
- * de-interleaving and converting to faac_real once here so the rest of the
+ * de-interleaving and converting to float once here so the rest of the
  * encoder is agnostic to the input format. samplesInput may be any count that
  * fits the FIFO; returns -1 on overflow or an invalid format. */
 static int appendInputFifo(faacEncStruct *hEncoder, int32_t *inputBuffer,
@@ -440,21 +440,21 @@ static int appendInputFifo(faacEncStruct *hEncoder, int32_t *inputBuffer,
         return -1;
 
     for (channel = 0; channel < numChannels; channel++) {
-        faac_real *dst = hEncoder->inputFifo[channel] + hEncoder->inputFifoFill;
+        float *dst = hEncoder->inputFifo[channel] + hEncoder->inputFifoFill;
         switch (hEncoder->config.inputFormat) {
             case INPUT_16BIT: {
                 short *src = (short *)inputBuffer + hEncoder->config.channel_map[channel];
-                for (i = 0; i < spch; i++) { dst[i] = (faac_real)*src; src += numChannels; }
+                for (i = 0; i < spch; i++) { dst[i] = (float)*src; src += numChannels; }
                 break;
             }
             case INPUT_32BIT: {
                 int32_t *src = (int32_t *)inputBuffer + hEncoder->config.channel_map[channel];
-                for (i = 0; i < spch; i++) { dst[i] = (1.0f/256) * (faac_real)*src; src += numChannels; }
+                for (i = 0; i < spch; i++) { dst[i] = (1.0f/256) * (float)*src; src += numChannels; }
                 break;
             }
             case INPUT_FLOAT: {
                 float *src = (float *)inputBuffer + hEncoder->config.channel_map[channel];
-                for (i = 0; i < spch; i++) { dst[i] = (faac_real)*src; src += numChannels; }
+                for (i = 0; i < spch; i++) { dst[i] = (float)*src; src += numChannels; }
                 break;
             }
             default:
@@ -478,7 +478,7 @@ static void consumeInputFifo(faacEncStruct *hEncoder, unsigned int n)
         for (channel = 0; channel < numChannels; channel++)
             memmove(hEncoder->inputFifo[channel],
                     hEncoder->inputFifo[channel] + n,
-                    rem * sizeof(faac_real));
+                    rem * sizeof(float));
     hEncoder->inputFifoFill = rem;
 }
 
@@ -530,7 +530,7 @@ int faacEncClose(faacEncHandle hpEncoder)
 __attribute__((cold, noinline))
 #endif
 static void doHEAACFrame(faacEncStruct *hEncoder, unsigned int realPerCh,
-                         faac_real *heHalfRate[MAX_CHANNELS])
+                         float *heHalfRate[MAX_CHANNELS])
 {
     SbrContextProcessFrame(hEncoder->sbrContext, hEncoder->numChannels, (int)realPerCh, hEncoder->inputFifo, heHalfRate);
 }
@@ -599,14 +599,14 @@ int faacEncEncode(faacEncHandle hpEncoder,
     GetChannelInfo(channelInfo, numChannels, useLfe);
 
     /* HE-AAC: run SBR + downsample first; the core then encodes heHalfRate. */
-    faac_real *heHalfRate[MAX_CHANNELS] = {0};
+    float *heHalfRate[MAX_CHANNELS] = {0};
     if (realPerCh > 0 && hEncoder->config.aacObjectType == HE_V1 && SbrContextIsPresent(hEncoder->sbrContext))
         doHEAACFrame(hEncoder, (unsigned int)realPerCh, heHalfRate);
 
     /* Update current sample buffers */
     for (channel = 0; channel < numChannels; channel++)
 	{
-		faac_real *tmp;
+		float *tmp;
 
 		tmp = hEncoder->audioFIFO[channel][FIFO_PAST];
 		hEncoder->audioFIFO[channel][FIFO_PAST]  = hEncoder->audioFIFO[channel][FIFO_CURR];
@@ -617,23 +617,23 @@ int faacEncEncode(faacEncHandle hpEncoder,
         if (realPerCh == 0)
         {
             /* start flushing*/
-            memset(hEncoder->audioFIFO[channel][FIFO_AHEAD2], 0, FRAME_LEN * sizeof(faac_real));
+            memset(hEncoder->audioFIFO[channel][FIFO_AHEAD2], 0, FRAME_LEN * sizeof(float));
         }
         else if (hEncoder->config.aacObjectType == HE_V1 && heHalfRate[channel])
         {
             /* core feeds on the SBR-downsampled signal, not the raw input */
-            memcpy(hEncoder->audioFIFO[channel][FIFO_AHEAD2], heHalfRate[channel], FRAME_LEN * sizeof(faac_real));
+            memcpy(hEncoder->audioFIFO[channel][FIFO_AHEAD2], heHalfRate[channel], FRAME_LEN * sizeof(float));
         }
         else
         {
-            /* LC: take one frame from the FIFO front (already faac_real),
+            /* LC: take one frame from the FIFO front (already float),
              * silence-padding a short final frame. */
             unsigned int spc = ((unsigned int)realPerCh < FRAME_LEN) ? (unsigned int)realPerCh : FRAME_LEN;
 
             memcpy(hEncoder->audioFIFO[channel][FIFO_AHEAD2], hEncoder->inputFifo[channel],
-                   spc * sizeof(faac_real));
+                   spc * sizeof(float));
             if (spc < FRAME_LEN)
-                memset(hEncoder->audioFIFO[channel][FIFO_AHEAD2] + spc, 0, (FRAME_LEN - spc) * sizeof(faac_real));
+                memset(hEncoder->audioFIFO[channel][FIFO_AHEAD2] + spc, 0, (FRAME_LEN - spc) * sizeof(float));
 		}
 
 		/* Psychoacoustics */
@@ -750,7 +750,7 @@ int faacEncEncode(faacEncHandle hpEncoder,
             ResetCoderSections(&coderInfo[channel]);
 
     AACstereo(coderInfo, channelInfo, hEncoder->freqBuff, numChannels,
-              (faac_real)hEncoder->aacquantCfg.quality/DEFQUAL, jointmode, hEncoder->sampleRate);
+              (float)hEncoder->aacquantCfg.quality/DEFQUAL, jointmode, hEncoder->sampleRate);
 
     for (channel = 0; channel < numChannels; channel++) {
         BlocQuant(&coderInfo[channel], hEncoder->freqBuff[channel],
@@ -790,27 +790,27 @@ int faacEncEncode(faacEncHandle hpEncoder,
             / hEncoder->sampleRate;
         int totalBits = frameBytes * 8;
         int sbrBits = 0;
-        faac_real fix;
+        float fix;
 
         /* Exclude SBR's fixed overhead from the core budget so the rate
          * controller doesn't starve the core to pay for SBR. */
         sbrBits = SbrContextGetBits(hEncoder->sbrContext, NULL, (int)numChannels, (int)hEncoder->config.aacObjectType, 0);
 
         if (totalBits > sbrBits)
-            fix = (faac_real)(desbits - sbrBits) / (faac_real)(totalBits - sbrBits);
+            fix = (float)(desbits - sbrBits) / (float)(totalBits - sbrBits);
         else
-            fix = 1.0;
+            fix = 1.0f;
 
-        if (fix < (1.0 - RC_DEADBAND_THRESHOLD)) {
+        if (fix < (1.0f - RC_DEADBAND_THRESHOLD)) {
             fix += RC_DEADBAND_THRESHOLD;
-        } else if (fix > (1.0 + RC_DEADBAND_THRESHOLD)) {
+        } else if (fix > (1.0f + RC_DEADBAND_THRESHOLD)) {
             fix -= RC_DEADBAND_THRESHOLD;
         } else {
-            fix = 1.0;
+            fix = 1.0f;
         }
 
         /* Apply damping to the quality adjustment */
-        fix = (fix - 1.0) * RC_DAMPING_FACTOR + 1.0;
+        fix = (fix - 1.0f) * RC_DAMPING_FACTOR + 1.0f;
         // printf("q: %.1f(f:%.4f)\n", hEncoder->aacquantCfg.quality, fix);
 
         hEncoder->aacquantCfg.quality *= fix;

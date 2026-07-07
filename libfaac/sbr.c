@@ -56,12 +56,12 @@ static int compute_k2(int sampleRate, int kx, int bs_stop_freq)
     int k2;
     if (bs_stop_freq < 14) {
         short stop_dk[13];
-        faac_real prod = (faac_real)stop_min;
+        float prod = (float)stop_min;
         int prev = stop_min;
-        faac_real base = FAAC_POW((faac_real)64.0 / (faac_real)stop_min, (faac_real)(1.0 / 13.0));
+        float base = powf(64.0f / (float)stop_min, (float)(1.0f / 13.0f));
         for (int i = 0; i < 12; i++) {
             prod *= base;
-            int present = (int)FAAC_LRINT(prod);
+            int present = (int)lrintf(prod);
             stop_dk[i] = (short)(present - prev);
             prev = present;
         }
@@ -112,10 +112,10 @@ SBRInfo *SbrInit(int channels, int sampleRate, unsigned long bitRate, FFT_Tables
      * These coefficients rotate the subband indices into the odd-frequency
      * DFT space required by the SBR modulation kernel. */
     for (int m = 0; m < SBR_QMF_BANDS_64; m++) {
-        sbr->twidCos[m] = (faac_real)cos(M_PI * m / 64.0);
-        sbr->twidSin[m] = (faac_real)sin(M_PI * m / 64.0);
-        sbr->oddCos[m] = (faac_real)cos(M_PI * (2 * m + 1) / 128.0);
-        sbr->oddSin[m] = (faac_real)sin(M_PI * (2 * m + 1) / 128.0);
+        sbr->twidCos[m] = (float)cos(M_PI_DOUBLE * m / 64.0);
+        sbr->twidSin[m] = (float)sin(M_PI_DOUBLE * m / 64.0);
+        sbr->oddCos[m] = (float)cos(M_PI_DOUBLE * (2 * m + 1) / 128.0);
+        sbr->oddSin[m] = (float)sin(M_PI_DOUBLE * (2 * m + 1) / 128.0);
     }
     /* Borrow the encoder's shared core FFT tables (same fft() routine, same
      * logm=6 size as the short-block MDCT). The core owns init/terminate; the
@@ -232,21 +232,21 @@ void SbrContextUpdateConfig(SBRContext *sCtx, int channels, unsigned long bitrat
         SbrUpdate(sCtx->sbrInfo, bitrate);
 }
 
-void SbrContextProcessFrame(SBRContext *sCtx, int numChannels, int realPerCh, faac_real *inputFifo[MAX_CHANNELS], faac_real *heHalfRate[MAX_CHANNELS])
+void SbrContextProcessFrame(SBRContext *sCtx, int numChannels, int realPerCh, float *inputFifo[MAX_CHANNELS], float *heHalfRate[MAX_CHANNELS])
 {
     unsigned int channel;
     Resampler *rs = sCtx->resampler;
-    faac_real *fullPtrs[MAX_CHANNELS];
+    float *fullPtrs[MAX_CHANNELS];
 
     for (channel = 0; channel < (unsigned int)numChannels; channel++) {
-        faac_real *fullRate = rs->fullRate[channel];
+        float *fullRate = rs->fullRate[channel];
         fullPtrs[channel] = fullRate;
-        memcpy(fullRate, inputFifo[channel], realPerCh * sizeof(faac_real));
+        memcpy(fullRate, inputFifo[channel], realPerCh * sizeof(float));
         /* Final partial frame: silence-pad the unfilled full-rate tail to
          * prevent the resampler from consuming stale data. SbrEncode reads
          * only [0, realPerCh), so it is unaffected. */
         if (realPerCh < 2 * FRAME_LEN)
-            memset(fullRate + realPerCh, 0, (2 * FRAME_LEN - realPerCh) * sizeof(faac_real));
+            memset(fullRate + realPerCh, 0, (2 * FRAME_LEN - realPerCh) * sizeof(float));
         heHalfRate[channel] = rs->halfRate[channel];
     }
 
@@ -257,7 +257,7 @@ void SbrContextProcessFrame(SBRContext *sCtx, int numChannels, int realPerCh, fa
      * the newest decision at SBR_DETECT_FIFO-1; index 0 stays aligned with the
      * core frame being coded (LOOKAHEAD_DEPTH frames behind this analysis). */
     for (channel = 0; channel < (unsigned int)numChannels; channel++) {
-        memmove(&sCtx->transientStrengthFIFO[channel][0], &sCtx->transientStrengthFIFO[channel][1], (SBR_DETECT_FIFO - 1) * sizeof(faac_real));
+        memmove(&sCtx->transientStrengthFIFO[channel][0], &sCtx->transientStrengthFIFO[channel][1], (SBR_DETECT_FIFO - 1) * sizeof(float));
         sCtx->transientStrengthFIFO[channel][SBR_DETECT_FIFO - 1] = sCtx->signalAnalysis.ch[channel].transientStrength;
         memmove(&sCtx->wantShortFIFO[channel][0], &sCtx->wantShortFIFO[channel][1], (SBR_DETECT_FIFO - 1) * sizeof(int));
         sCtx->wantShortFIFO[channel][SBR_DETECT_FIFO - 1] = sCtx->signalAnalysis.ch[channel].wantShort;
@@ -321,13 +321,13 @@ int SbrContextIsPresent(SBRContext *sCtx)
 #define FAST_LOG2_A         1.3424f
 #define FAST_LOG2_B         0.3427f
 #define FAST_LOG2_MANT_NORM (1.0f / (1 << 23))  /* 23-bit mantissa → [0, 1) */
-static inline faac_real fast_log2(faac_real x)
+static inline float fast_log2(float x)
 {
     union { float f; int32_t i; } vx;
     vx.f = (float)x;
     int32_t exp = (vx.i >> 23) & 0xFF;
     float m = (float)(vx.i & 0x7FFFFF) * FAST_LOG2_MANT_NORM;
-    return (faac_real)(exp - 127) + (faac_real)(m * (FAST_LOG2_A - FAST_LOG2_B * m));
+    return (float)(exp - 127) + (float)(m * (FAST_LOG2_A - FAST_LOG2_B * m));
 }
 
 /* 64-band subband energy analysis using a 64-point complex FFT.
@@ -338,19 +338,19 @@ static inline faac_real fast_log2(faac_real x)
 #if defined(__GNUC__)
 __attribute__((hot))
 #endif
-void SbrQmfAnalysis(SBRInfo *sbr, const faac_real * restrict ovl_pos, faac_real * restrict energy, int kx, int k2)
+void SbrQmfAnalysis(SBRInfo *sbr, const float * restrict ovl_pos, float * restrict energy, int kx, int k2)
 {
-    faac_real xr[64], xi[64];
+    float xr[64], xi[64];
     const sbrfloat * restrict p0 = qmf_c;
     const sbrfloat * restrict p1 = qmf_c + 1;
     for (int m = 0; m < 64; m++) {
         int n0 = 2 * m;
-        faac_real a = p0[0]   * ovl_pos[639 - n0]
+        float a = p0[0]   * ovl_pos[639 - n0]
                     + p0[128] * ovl_pos[511 - n0]
                     + p0[256] * ovl_pos[383 - n0]
                     + p0[384] * ovl_pos[255 - n0]
                     + p0[512] * ovl_pos[127 - n0];
-        faac_real b = p1[0]   * ovl_pos[638 - n0]
+        float b = p1[0]   * ovl_pos[638 - n0]
                     + p1[128] * ovl_pos[510 - n0]
                     + p1[256] * ovl_pos[382 - n0]
                     + p1[384] * ovl_pos[254 - n0]
@@ -364,16 +364,16 @@ void SbrQmfAnalysis(SBRInfo *sbr, const faac_real * restrict ovl_pos, faac_real 
     for (int k = kx; k < k2; k++) {
         int kr = 63 - k;
         /* Separate the two real-subsequence DFTs by conjugate symmetry. */
-        faac_real Ar = (faac_real)0.5 * (xr[k] + xr[kr]);
-        faac_real Ai = (faac_real)0.5 * (xi[kr] - xi[k]);
-        faac_real Br = (faac_real)-0.5 * (xi[k] + xi[kr]);
-        faac_real Bi = (faac_real)0.5 * (xr[kr] - xr[k]);
+        float Ar = 0.5f * (xr[k] + xr[kr]);
+        float Ai = 0.5f * (xi[kr] - xi[k]);
+        float Br = -0.5f * (xi[k] + xi[kr]);
+        float Bi = 0.5f * (xr[kr] - xr[k]);
         /* Sr = Ar + w_k_real * Br - w_k_imag * Bi
          * Si = Ai + w_k_real * Bi + w_k_imag * Br */
-        faac_real wr = sbr->oddCos[k];
-        faac_real wi = sbr->oddSin[k];
-        faac_real Sr = Ar + wr * Br - wi * Bi;
-        faac_real Si = Ai + wr * Bi + wi * Br;
+        float wr = sbr->oddCos[k];
+        float wi = sbr->oddSin[k];
+        float Sr = Ar + wr * Br - wi * Bi;
+        float Si = Ai + wr * Bi + wi * Br;
         energy[k] = Sr * Sr + Si * Si;
     }
 }
@@ -390,7 +390,7 @@ static void sbr_adopt_envelope_grid(SBRInfo *sbr, struct SignalAnalysis *sa)
 
 static void sbr_quantize_envelopes(SBRInfo *sbr, int nch, int sampled,
                                    struct SignalAnalysis *sa,
-                                   faac_real bandHalfE[2][2][SBR_QMF_BANDS_64])
+                                   float bandHalfE[2][2][SBR_QMF_BANDS_64])
 {
     int n_env = sbr->numEnvelopes;
 
@@ -407,15 +407,15 @@ static void sbr_quantize_envelopes(SBRInfo *sbr, int nch, int sampled,
                  * maintain normalized power levels across variable borders. */
                 int e_slots = (n_env == 1) ? sampled : sa->envSampled[e];
                 if (e_slots < 1) e_slots = 1;
-                faac_real E = 0;
+                float E = 0;
                 if (n_env == 1) {
                     for (int k = k_lo; k < k_hi; k++) E += bandHalfE[ch][0][k] + bandHalfE[ch][1][k];
                 } else {
                     for (int k = k_lo; k < k_hi; k++) E += bandHalfE[ch][e][k];
                 }
-                E /= (faac_real)(e_slots * (k_hi - k_lo));
-                faac_real factor = sbr->eff_amp_res ? (faac_real)1.0 : (faac_real)2.0;
-                int level = FAAC_LRINT(factor * (fast_log2(E + SBR_LOG_ENERGY_FLOOR) - SBR_ENV_LEVEL_LOG2_OFFSET));
+                E /= (float)(e_slots * (k_hi - k_lo));
+                float factor = sbr->eff_amp_res ? 1.0f : 2.0f;
+                int level = lrintf(factor * (fast_log2(E + SBR_LOG_ENERGY_FLOOR) - SBR_ENV_LEVEL_LOG2_OFFSET));
                 int raw_level = clamp_int(level, 0, 127);
                 if (prevLevel < 0) {
                     raw_level = clamp_int(raw_level, 0, sbr->eff_amp_res ? 63 : 127);
@@ -444,10 +444,10 @@ static void sbr_quantize_envelopes(SBRInfo *sbr, int nch, int sampled,
     }
 }
 
-void SbrEncode(SBRInfo *sbr, faac_real *timeDomain[MAX_CHANNELS], int numChannels, int numSamples, struct SignalAnalysis *sa)
+void SbrEncode(SBRInfo *sbr, float *timeDomain[MAX_CHANNELS], int numChannels, int numSamples, struct SignalAnalysis *sa)
 {
     int nch = clamp_int(numChannels, 1, 2);
-    faac_real bandHalfE[2][2][SBR_QMF_BANDS_64];
+    float bandHalfE[2][2][SBR_QMF_BANDS_64];
 
     /* New frame: the cached fill-element payload (built by SbrWrite) is now
      * stale. Invalidate it so the next write rebuilds from this frame's envelopes. */
@@ -455,9 +455,9 @@ void SbrEncode(SBRInfo *sbr, faac_real *timeDomain[MAX_CHANNELS], int numChannel
 
     for (int ch = 0; ch < nch; ch++) {
         /* Use shared transient strength and accumulated energies from SbrAnalyze. */
-        memcpy(bandHalfE[ch][0], sa->ch[ch].bandHalfE[0], SBR_QMF_BANDS_64 * sizeof(faac_real));
-        memcpy(bandHalfE[ch][1], sa->ch[ch].bandHalfE[1], SBR_QMF_BANDS_64 * sizeof(faac_real));
-        memcpy(sbr->ch[ch].qmfOvl64, timeDomain[ch] + numSamples - SBR_QMF_OVL_LEN_64, SBR_QMF_OVL_LEN_64 * sizeof(faac_real));
+        memcpy(bandHalfE[ch][0], sa->ch[ch].bandHalfE[0], SBR_QMF_BANDS_64 * sizeof(float));
+        memcpy(bandHalfE[ch][1], sa->ch[ch].bandHalfE[1], SBR_QMF_BANDS_64 * sizeof(float));
+        memcpy(sbr->ch[ch].qmfOvl64, timeDomain[ch] + numSamples - SBR_QMF_OVL_LEN_64, SBR_QMF_OVL_LEN_64 * sizeof(float));
     }
 
     sbr_adopt_envelope_grid(sbr, sa);

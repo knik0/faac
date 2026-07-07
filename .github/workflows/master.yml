@@ -25,14 +25,6 @@ jobs:
               os: ubuntu-latest,
               compiler: gcc,
               shell: bash,
-              options: -Dfloating-point=double,
-            }
-          - {
-              name: Linux GCC (Single Precision),
-              os: ubuntu-latest,
-              compiler: gcc,
-              shell: bash,
-              options: -Dfloating-point=single,
             }
           - {
               name: macOS Clang,
@@ -53,7 +45,6 @@ jobs:
               os: windows-latest,
               compiler: cl,
               shell: pwsh,
-              options: -Dfloating-point=double,
             }
 
     steps:
@@ -100,7 +91,7 @@ jobs:
         run: |
           mkdir -p build temp
           cd build
-          meson setup .. -Dprefix=$(realpath ../temp) ${{ matrix.config.options }}
+          meson setup .. -Dprefix=$(realpath ../temp)
           meson install
 
       - name: Build (General)
@@ -108,7 +99,7 @@ jobs:
         env:
           CC: ${{ matrix.config.compiler }}
         run: |
-          meson setup build -Dprefix="${{ github.workspace }}/temp" ${{ matrix.config.options }}
+          meson setup build -Dprefix="${{ github.workspace }}/temp"
           meson install -C build
 
       - name: Upload artifacts (Windows)

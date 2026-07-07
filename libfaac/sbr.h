@@ -25,7 +25,6 @@
 #endif
 
 #include "coder.h"
-#include "faac_real.h"
 #include "fft.h"
 #include "sbr_analysis.h"
 
@@ -76,15 +75,15 @@ struct BitStream;
 #define SBR_EXT_TYPE_SBR_CRC 0xe
 
 /* Transient detection threshold (peak-to-mean power ratio). */
-#define SBR_TRANSIENT_THRESH_DEFAULT    ((faac_real)4.0)
+#define SBR_TRANSIENT_THRESH_DEFAULT    (4.0f)
 /* div-by-zero guard for the peak/mean ratio in silence frames (~-150 dBFS^2). */
-#define SBR_ENERGY_FLOOR                ((faac_real)1e-15)
+#define SBR_ENERGY_FLOOR                (1e-15f)
 /* log2(0) guard in envelope quantization: -200 dBFS^2, below all SBR quantizer ranges. */
-#define SBR_LOG_ENERGY_FLOOR            ((faac_real)1e-20)
+#define SBR_LOG_ENERGY_FLOOR            (1e-20f)
 /* Default noise floor level (ISO 14496-3 §4.6.18.6.4). */
 #define SBR_NOISE_LEVEL_DEFAULT         4
 /* 6 = log2(64): normalises 64-band QMF energy to per-band level. ISO 14496-3 §4.6.18.6.3. */
-#define SBR_ENV_LEVEL_LOG2_OFFSET       ((faac_real)6.0)
+#define SBR_ENV_LEVEL_LOG2_OFFSET       (6.0f)
 /* Rate-dependent resolution thresholds. */
 #define SBR_AMP_RES_BITRATE_BPS         20000u
 #define SBR_COARSE_TABLE_BITRATE_BPS    32000u
@@ -104,7 +103,7 @@ void SbrContextEnd(SBRContext *sbrCtx);
 int SbrContextGetASC(SBRContext *sbrCtx, int coreSRIdx, int channels, unsigned char** ppBuffer, unsigned long* pSize);
 unsigned int SbrContextGetXOverBandwidth(SBRContext *sbrCtx);
 void SbrContextUpdateConfig(SBRContext *sCtx, int channels, unsigned long bitrate, FFT_Tables *fft_tables);
-void SbrContextProcessFrame(SBRContext *sCtx, int numChannels, int realPerCh, faac_real *inputFifo[MAX_CHANNELS], faac_real *heHalfRate[MAX_CHANNELS]);
+void SbrContextProcessFrame(SBRContext *sCtx, int numChannels, int realPerCh, float *inputFifo[MAX_CHANNELS], float *heHalfRate[MAX_CHANNELS]);
 int SbrContextIsPresent(SBRContext *sCtx);
 void SbrContextRestoreRate(SBRContext *sCtx, unsigned long *sampleRate, unsigned int *sampleRateIdx, SR_INFO **srInfo);
 unsigned long SbrContextGetFullRate(SBRContext *sCtx, unsigned long defaultRate);

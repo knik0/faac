@@ -30,7 +30,6 @@ Copyright (c) 1997.
 #ifndef TNS_H
 #define TNS_H
 
-#include "faac_real.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -39,7 +38,7 @@ extern "C" {
 
 void TnsInit(faacEncStruct* hEncoder);
 void TnsEncode(TnsInfo* tnsInfo, int numberOfBands,int maxSfb,enum WINDOW_TYPE blockType,
-               int* sfbOffsetTable,faac_real* spec, faac_real* temp);
+               int* sfbOffsetTable,float* spec, float* temp);
 
 #ifdef __cplusplus
 }

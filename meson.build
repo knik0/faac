@@ -27,12 +27,6 @@ cpu_family = target_machine.cpu_family()
 
 config_h.set('HAVE_SSE2', (cpu_family in ['x86', 'x86_64']) and config_h.get('HAVE_IMMINTRIN_H'))
 
-if get_option('floating-point') == 'double'
-    config_h.set('FAAC_PRECISION_DOUBLE', 1)
-else
-    config_h.set('FAAC_PRECISION_SINGLE', 1)
-endif
-
 config_h.set('FAAC_SBR_DECIMATION', get_option('sbr-decimation'))
 
 config_h.set('MAX_CHANNELS', get_option('max-channels'))

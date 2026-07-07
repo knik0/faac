@@ -22,13 +22,12 @@ concurrency:
 
 jobs:
   benchmark:
-    name: Benchmark ${{ matrix.arch }} / ${{ matrix.precision }}
+    name: Benchmark ${{ matrix.arch }}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
         arch: [amd64]
-        precision: [single, double]
 
     steps:
       - name: Install build dependencies
@@ -44,7 +43,7 @@ jobs:
       - name: Build Candidate
         run: |
           cd candidate
-          meson setup build_cand -Dfloating-point=${{ matrix.precision }} --buildtype=release
+          meson setup build_cand --buildtype=release
           ninja -C build_cand
 
       - name: Determine Baseline SHA
@@ -60,8 +59,8 @@ jobs:
         id: cache-baseline
         uses: actions/cache/restore@v4
         with:
-          path: results/${{ matrix.arch }}_${{ matrix.precision }}_base.json
-          key: ${{ runner.os }}-baseline-${{ matrix.arch }}-${{ matrix.precision }}-${{ steps.baseline-sha.outputs.sha }}
+          path: results/${{ matrix.arch }}_base.json
+          key: ${{ runner.os }}-baseline-${{ matrix.arch }}-${{ steps.baseline-sha.outputs.sha }}
 
       - name: Checkout Baseline
         if: steps.cache-baseline.outputs.cache-hit != 'true'
@@ -74,7 +73,7 @@ jobs:
         if: steps.cache-baseline.outputs.cache-hit != 'true'
         run: |
           cd baseline
-          meson setup build_base -Dfloating-point=${{ matrix.precision }} --buildtype=release
+          meson setup build_base --buildtype=release
           ninja -C build_base
 
       - name: Run Benchmark (Baseline)
@@ -83,15 +82,15 @@ jobs:
         with:
           faac-bin: ./baseline/build_base/frontend/faac
           libfaac-so: ./baseline/build_base/libfaac/libfaac.so
-          run-name: ${{ matrix.arch }}_${{ matrix.precision }}_base
-          output-json: ./results/${{ matrix.arch }}_${{ matrix.precision }}_base.json
+          run-name: ${{ matrix.arch }}_base
+          output-json: ./results/${{ matrix.arch }}_base.json
 
       - name: Save Baseline Results
         if: success() && steps.cache-baseline.outputs.cache-hit != 'true'
         uses: actions/cache/save@v4
         with:
-          path: results/${{ matrix.arch }}_${{ matrix.precision }}_base.json
-          key: ${{ runner.os }}-baseline-${{ matrix.arch }}-${{ matrix.precision }}-${{ steps.baseline-sha.outputs.sha }}
+          path: results/${{ matrix.arch }}_base.json
+          key: ${{ runner.os }}-baseline-${{ matrix.arch }}-${{ steps.baseline-sha.outputs.sha }}
 
       - name: Run Benchmark (Candidate)
         if: github.event_name == 'pull_request'
@@ -99,14 +98,14 @@ jobs:
         with:
           faac-bin: ./candidate/build_cand/frontend/faac
           libfaac-so: ./candidate/build_cand/libfaac/libfaac.so
-          run-name: ${{ matrix.arch }}_${{ matrix.precision }}_cand
-          output-json: ./results/${{ matrix.arch }}_${{ matrix.precision }}_cand.json
+          run-name: ${{ matrix.arch }}_cand
+          output-json: ./results/${{ matrix.arch }}_cand.json
 
       - name: Upload Results
         if: github.event_name == 'pull_request'
         uses: actions/upload-artifact@v4
         with:
-          name: results-${{ matrix.arch }}-${{ matrix.precision }}
+          name: results-${{ matrix.arch }}
           path: results/*.json
 
   report:

@@ -20,14 +20,18 @@
 #ifndef STEREO_H
 #define STEREO_H
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
 #include "channels.h"
 #include "util.h"
 
 void AACstereo(CoderInfo *coder,
                ChannelInfo *channel,
-               faac_real *s[MAX_CHANNELS],
+               float *s[MAX_CHANNELS],
                int maxchan,
-               faac_real quality,
+               float quality,
                int mode,
                int sampleRate
               );

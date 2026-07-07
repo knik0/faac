@@ -45,8 +45,8 @@ Copyright(c)1996.
 #define  TWOPI       2*M_PI
 
 
-static void		CalculateKBDWindow	( faac_real* win, faac_real alpha, int length );
-static faac_real	Izero				( faac_real x);
+static void		CalculateKBDWindow	( float* win, float alpha, int length );
+static double	Izero				( double x);
 
 
 void FilterBankInit(faacEncStruct* hEncoder)
@@ -54,28 +54,28 @@ void FilterBankInit(faacEncStruct* hEncoder)
     unsigned int i, channel;
 
     for (channel = 0; channel < hEncoder->numChannels; channel++) {
-        hEncoder->freqBuff[channel] = (faac_real*)AllocMemory(2*FRAME_LEN*sizeof(faac_real));
+        hEncoder->freqBuff[channel] = (float*)AllocMemory(2*FRAME_LEN*sizeof(float));
         if (!hEncoder->freqBuff[channel]) return;
     }
 
-    hEncoder->sin_window_long = (faac_real*)AllocMemory(BLOCK_LEN_LONG*sizeof(faac_real));
-    hEncoder->sin_window_short = (faac_real*)AllocMemory(BLOCK_LEN_SHORT*sizeof(faac_real));
-    hEncoder->kbd_window_long = (faac_real*)AllocMemory(BLOCK_LEN_LONG*sizeof(faac_real));
-    hEncoder->kbd_window_short = (faac_real*)AllocMemory(BLOCK_LEN_SHORT*sizeof(faac_real));
+    hEncoder->sin_window_long = (float*)AllocMemory(BLOCK_LEN_LONG*sizeof(float));
+    hEncoder->sin_window_short = (float*)AllocMemory(BLOCK_LEN_SHORT*sizeof(float));
+    hEncoder->kbd_window_long = (float*)AllocMemory(BLOCK_LEN_LONG*sizeof(float));
+    hEncoder->kbd_window_short = (float*)AllocMemory(BLOCK_LEN_SHORT*sizeof(float));
 
     if (!hEncoder->sin_window_long || !hEncoder->sin_window_short ||
         !hEncoder->kbd_window_long || !hEncoder->kbd_window_short)
         return;
 
     for( i=0; i<BLOCK_LEN_LONG; i++ )
-        hEncoder->sin_window_long[i] = FAAC_SIN((M_PI/(2*BLOCK_LEN_LONG)) * (i + 0.5));
+        hEncoder->sin_window_long[i] = (float)sin((M_PI_DOUBLE/(2*BLOCK_LEN_LONG)) * (i + 0.5));
     for( i=0; i<BLOCK_LEN_SHORT; i++ )
-        hEncoder->sin_window_short[i] = FAAC_SIN((M_PI/(2*BLOCK_LEN_SHORT)) * (i + 0.5));
+        hEncoder->sin_window_short[i] = (float)sin((M_PI_DOUBLE/(2*BLOCK_LEN_SHORT)) * (i + 0.5));
 
     CalculateKBDWindow(hEncoder->kbd_window_long, 4, BLOCK_LEN_LONG*2);
     CalculateKBDWindow(hEncoder->kbd_window_short, 6, BLOCK_LEN_SHORT*2);
 
-    hEncoder->gpsyInfo.sharedWorkBuffLong = (faac_real*)AllocMemory(2*BLOCK_LEN_LONG*sizeof(faac_real));
+    hEncoder->gpsyInfo.sharedWorkBuffLong = (float*)AllocMemory(2*BLOCK_LEN_LONG*sizeof(float));
 }
 
 void FilterBankEnd(faacEncStruct* hEncoder)
@@ -96,20 +96,20 @@ void FilterBankEnd(faacEncStruct* hEncoder)
 
 void FilterBank(faacEncStruct* hEncoder,
                 CoderInfo *coderInfo,
-                faac_real * restrict p_prev_data,
-                faac_real * restrict p_in_data,
-                faac_real * restrict p_out_mdct)
+                float * restrict p_prev_data,
+                float * restrict p_in_data,
+                float * restrict p_out_mdct)
 {
-    faac_real *p_o_buf, *first_window, *second_window;
-    faac_real * restrict transf_buf;
+    float *p_o_buf, *first_window, *second_window;
+    float * restrict transf_buf;
     int k, i;
     int block_type = coderInfo->block_type;
 
     transf_buf = hEncoder->gpsyInfo.sharedWorkBuffLong;
 
     /* Assembly of the 2048-sample window from consecutive frames in the FIFO rotation */
-    memcpy(transf_buf, p_prev_data, BLOCK_LEN_LONG*sizeof(faac_real));
-    memcpy(transf_buf+BLOCK_LEN_LONG, p_in_data, BLOCK_LEN_LONG*sizeof(faac_real));
+    memcpy(transf_buf, p_prev_data, BLOCK_LEN_LONG*sizeof(float));
+    memcpy(transf_buf+BLOCK_LEN_LONG, p_in_data, BLOCK_LEN_LONG*sizeof(float));
 
     /*  Window shape processing */
     switch (coderInfo->prev_window_shape) {
@@ -160,18 +160,18 @@ void FilterBank(faacEncStruct* hEncoder,
     case LONG_SHORT_WINDOW :
         for ( i = 0 ; i < BLOCK_LEN_LONG ; i++)
             p_out_mdct[i] = p_o_buf[i] * first_window[i];
-        memcpy(p_out_mdct+BLOCK_LEN_LONG,p_o_buf+BLOCK_LEN_LONG,NFLAT_LS*sizeof(faac_real));
+        memcpy(p_out_mdct+BLOCK_LEN_LONG,p_o_buf+BLOCK_LEN_LONG,NFLAT_LS*sizeof(float));
         for ( i = 0 ; i < BLOCK_LEN_SHORT ; i++)
             p_out_mdct[i+BLOCK_LEN_LONG+NFLAT_LS] = p_o_buf[i+BLOCK_LEN_LONG+NFLAT_LS] * second_window[BLOCK_LEN_SHORT-i-1];
-        SetMemory(p_out_mdct+BLOCK_LEN_LONG+NFLAT_LS+BLOCK_LEN_SHORT,0,NFLAT_LS*sizeof(faac_real));
+        SetMemory(p_out_mdct+BLOCK_LEN_LONG+NFLAT_LS+BLOCK_LEN_SHORT,0,NFLAT_LS*sizeof(float));
         MDCT( &hEncoder->fft_tables, p_out_mdct, 2*BLOCK_LEN_LONG, hEncoder->gpsyInfo.sharedWorkBuffLong );
         break;
 
     case SHORT_LONG_WINDOW :
-        SetMemory(p_out_mdct,0,NFLAT_LS*sizeof(faac_real));
+        SetMemory(p_out_mdct,0,NFLAT_LS*sizeof(float));
         for ( i = 0 ; i < BLOCK_LEN_SHORT ; i++)
             p_out_mdct[i+NFLAT_LS] = p_o_buf[i+NFLAT_LS] * first_window[i];
-        memcpy(p_out_mdct+NFLAT_LS+BLOCK_LEN_SHORT,p_o_buf+NFLAT_LS+BLOCK_LEN_SHORT,NFLAT_LS*sizeof(faac_real));
+        memcpy(p_out_mdct+NFLAT_LS+BLOCK_LEN_SHORT,p_o_buf+NFLAT_LS+BLOCK_LEN_SHORT,NFLAT_LS*sizeof(float));
         for ( i = 0 ; i < BLOCK_LEN_LONG ; i++)
             p_out_mdct[i+BLOCK_LEN_LONG] = p_o_buf[i+BLOCK_LEN_LONG] * second_window[BLOCK_LEN_LONG-i-1];
         MDCT( &hEncoder->fft_tables, p_out_mdct, 2*BLOCK_LEN_LONG, hEncoder->gpsyInfo.sharedWorkBuffLong );
@@ -194,16 +194,16 @@ void FilterBank(faacEncStruct* hEncoder,
 }
 
 
-static faac_real Izero(faac_real x)
+static double Izero(double x)
 {
-    const faac_real IzeroEPSILON = 1E-41;  /* Max error acceptable in Izero */
-    faac_real sum, u, halfx, temp;
+    const double IzeroEPSILON = 1E-41;  /* Max error acceptable in Izero */
+    double sum, u, halfx, temp;
     int n;
 
     sum = u = n = 1;
     halfx = x/2.0;
     do {
-        temp = halfx/(faac_real)n;
+        temp = halfx/(double)n;
         n += 1;
         temp *= temp;
         u *= temp;
@@ -213,21 +213,26 @@ static faac_real Izero(faac_real x)
     return(sum);
 }
 
-static void CalculateKBDWindow(faac_real* win, faac_real alpha, int length)
+/* Window shape is computed once at encoder init, so we do the Bessel series
+ * and normalization in double (rounding to float only when storing into
+ * win[]) for a correctly-rounded table at zero runtime cost. */
+static void CalculateKBDWindow(float* win, float alpha_deg, int length)
 {
     int i;
-    faac_real IBeta;
-    faac_real tmp;
-    faac_real sum = 0.0;
+    double alpha = (double)alpha_deg * M_PI_DOUBLE;
+    double IBeta;
+    double tmp;
+    double sum = 0.0;
 
-    alpha *= M_PI;
     IBeta = 1.0/Izero(alpha);
 
     /* calculate lower half of Kaiser Bessel window */
     for(i=0; i<(length>>1); i++) {
-        tmp = 4.0*(faac_real)i/(faac_real)length - 1.0;
-        win[i] = Izero(alpha*FAAC_SQRT(1.0-tmp*tmp))*IBeta;
-        sum += win[i];
+        double val;
+        tmp = 4.0*(double)i/(double)length - 1.0;
+        val = Izero(alpha*sqrt(1.0-tmp*tmp))*IBeta;
+        win[i] = (float)val;
+        sum += val;
     }
 
     sum = 1.0/sum;
@@ -236,13 +241,13 @@ static void CalculateKBDWindow(faac_real* win, faac_real alpha, int length)
     /* calculate lower half of window */
     for(i=0; i<(length>>1); i++) {
         tmp += win[i];
-        win[i] = FAAC_SQRT(tmp*sum);
+        win[i] = (float)sqrt(tmp*sum);
     }
 }
 
-void MDCT( FFT_Tables *fft_tables, faac_real * restrict data, int N, faac_real * restrict work )
+void MDCT( FFT_Tables *fft_tables, float * restrict data, int N, float * restrict work )
 {
-    faac_real tempr, tempi;
+    float tempr, tempi;
     int i;
 
     /* Hoisted constants */
@@ -258,13 +263,13 @@ void MDCT( FFT_Tables *fft_tables, faac_real * restrict data, int N, faac_real *
     const fftfloat * restrict ts = fft_tables->mdct_sin[logm];
 
     /* Pre/post-twiddle FFT buffers carved from the shared work buffer */
-    faac_real * restrict xr = work;
-    faac_real * restrict xi = work + N4;
+    float * restrict xr = work;
+    float * restrict xi = work + N4;
 
     /* Base pointers for address simplification */
-    faac_real *base0 = data + N4;
-    faac_real *base1 = data + (N4 - 1);
-    faac_real *base2 = data + (N + N4 - 1);
+    float *base0 = data + N4;
+    float *base1 = data + (N4 - 1);
+    float *base2 = data + (N + N4 - 1);
 
     /* Induction variables */
     int n1 = N2 - 1;  /* descending: N/2 - 1 - 2i */
@@ -312,10 +317,10 @@ void MDCT( FFT_Tables *fft_tables, faac_real * restrict data, int N, faac_real *
     fft( fft_tables, xr, xi, logm);
 
     /* Base pointers for output mapping */
-    faac_real *base_even0 = data;
-    faac_real *base_odd0  = data + (N2 - 1);
-    faac_real *base_even1 = data + N2;
-    faac_real *base_odd1  = data + (N - 1);
+    float *base_even0 = data;
+    float *base_odd0  = data + (N2 - 1);
+    float *base_even1 = data + N2;
+    float *base_odd1  = data + (N - 1);
 
     n2 = 0;
 
@@ -323,8 +328,8 @@ void MDCT( FFT_Tables *fft_tables, faac_real * restrict data, int N, faac_real *
     for (i = 0; i < N4; i++) {
 
         /* get post-twiddled FFT output */
-        tempr = (faac_real)2.0 * (xr[i] * tc[i] + xi[i] * ts[i]);
-        tempi = (faac_real)2.0 * (xi[i] * tc[i] - xr[i] * ts[i]);
+        tempr = 2.0f * (xr[i] * tc[i] + xi[i] * ts[i]);
+        tempi = 2.0f * (xi[i] * tc[i] - xr[i] * ts[i]);
 
         /* fill in output values */
         base_even0[n2] = -tempr;  /* first half even */
