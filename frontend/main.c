@@ -1380,6 +1380,8 @@ int main(int argc, char *argv[])
         free(bitbuf);
     if (aacFileNameGiven)
         free(aacFileName);
+    if (chanmap)
+        free(chanmap);
 
     return 0;
 }

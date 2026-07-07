@@ -118,37 +118,33 @@ void PsyEnd(PsyInfo * psyInfo, unsigned int numChannels)
 }
 
 /* Do psychoacoustical analysis */
-void PsyCalculate(ChannelInfo * channelInfo, PsyInfo * psyInfo,
+void PsyCalculate(AACElement * elements, int numElements, PsyInfo * psyInfo,
 			 unsigned int numChannels
 			)
 {
-  unsigned int channel;
+  if (elements == NULL) {
+      for (unsigned int channel = 0; channel < numChannels; channel++)
+          PsyCheckShort(&psyInfo[channel]);
+      return;
+  }
 
-  for (channel = 0; channel < numChannels; channel++)
+  for (int e = 0; e < numElements; e++)
   {
-    if (channelInfo[channel].present)
-    {
-
-      if (channelInfo[channel].type == ELEMENT_CPE &&
-	  channelInfo[channel].ch_is_left)
-      {				/* CPE */
-
-	int leftChan = channel;
-	int rightChan = channelInfo[channel].paired_ch;
-
-	PsyCheckShort(&psyInfo[leftChan]);
-	PsyCheckShort(&psyInfo[rightChan]);
+      AACElement *elem = &elements[e];
+      switch (elem->type) {
+          case ID_SCE:
+              PsyCheckShort(&psyInfo[elem->channels[0]]);
+              break;
+          case ID_CPE:
+              PsyCheckShort(&psyInfo[elem->channels[0]]);
+              PsyCheckShort(&psyInfo[elem->channels[1]]);
+              break;
+          case ID_LFE:
+              psyInfo[elem->channels[0]].block_type = ONLY_LONG_WINDOW;
+              break;
+          default:
+              break;
       }
-      else if (channelInfo[channel].type == ELEMENT_LFE)
-      {				/* LFE */
-        // Only set block type and it should be OK
-	psyInfo[channel].block_type = ONLY_LONG_WINDOW;
-      }
-      else if (channelInfo[channel].type == ELEMENT_SCE)
-      {				/* SCE */
-	PsyCheckShort(&psyInfo[channel]);
-      }
-    }
   }
 }
 
