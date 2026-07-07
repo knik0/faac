@@ -47,11 +47,6 @@ static char *libCopyright =
   " Copyright (C) 2002,2003,2017  Krzysztof Nikiel\n"
   "This software is based on the ISO MPEG-4 reference source code.\n";
 
-static const psymodellist_t psymodellist[] = {
-  {&psymodel2, "knipsycho psychoacoustic"},
-  {NULL, NULL}
-};
-
 static SR_INFO srInfo[12+1];
 
 static unsigned int CalcBandwidth(unsigned long bitRate, unsigned long sampleRate)
@@ -89,7 +84,7 @@ static unsigned int CalcBandwidth(unsigned long bitRate, unsigned long sampleRat
     return (bw > nyquist) ? nyquist : bw;
 }
 
-int FAACAPI faacEncGetVersion( char **faac_id_string,
+int faacEncGetVersion( char **faac_id_string,
 			      				char **faac_copyright_string)
 {
   if (faac_id_string)
@@ -102,7 +97,7 @@ int FAACAPI faacEncGetVersion( char **faac_id_string,
 }
 
 
-int FAACAPI faacEncGetDecoderSpecificInfo(faacEncHandle hpEncoder,unsigned char** ppBuffer,unsigned long* pSizeOfDecoderSpecificInfo)
+int faacEncGetDecoderSpecificInfo(faacEncHandle hpEncoder,unsigned char** ppBuffer,unsigned long* pSizeOfDecoderSpecificInfo)
 {
     faacEncStruct* hEncoder = (faacEncStruct*)hpEncoder;
     BitStream* pBitStream = NULL;
@@ -138,15 +133,7 @@ int FAACAPI faacEncGetDecoderSpecificInfo(faacEncHandle hpEncoder,unsigned char*
 }
 
 
-faacEncConfigurationPtr FAACAPI faacEncGetCurrentConfiguration(faacEncHandle hpEncoder)
-{
-    faacEncStruct* hEncoder = (faacEncStruct*)hpEncoder;
-    faacEncConfigurationPtr config = &(hEncoder->config);
-
-    return config;
-}
-
-int FAACAPI faacEncSetConfiguration(faacEncHandle hpEncoder,
+int faacEncSetConfiguration(faacEncHandle hpEncoder,
                                     faacEncConfigurationPtr config)
 {
     faacEncStruct* hEncoder = (faacEncStruct*)hpEncoder;
@@ -166,10 +153,10 @@ int FAACAPI faacEncSetConfiguration(faacEncHandle hpEncoder,
 
     switch( hEncoder->config.inputFormat )
     {
-        case FAAC_INPUT_16BIT:
-        //case FAAC_INPUT_24BIT:
-        case FAAC_INPUT_32BIT:
-        case FAAC_INPUT_FLOAT:
+        case INPUT_16BIT:
+        //case INPUT_24BIT:
+        case INPUT_32BIT:
+        case INPUT_FLOAT:
             break;
 
         default:
@@ -260,13 +247,8 @@ int FAACAPI faacEncSetConfiguration(faacEncHandle hpEncoder,
               &hEncoder->aacquantCfg);
 
     // reset psymodel
-    hEncoder->psymodel->PsyEnd(hEncoder->psyInfo, hEncoder->numChannels);
-    if (config->psymodelidx >= (int)(sizeof(psymodellist) / sizeof(psymodellist[0]) - 1))
-		config->psymodelidx = (int)(sizeof(psymodellist) / sizeof(psymodellist[0])) - 2;
-
-    hEncoder->config.psymodelidx = config->psymodelidx;
-    hEncoder->psymodel = (psymodel_t *)psymodellist[hEncoder->config.psymodelidx].ptr;
-    hEncoder->psymodel->PsyInit(&hEncoder->gpsyInfo, hEncoder->psyInfo, hEncoder->numChannels,
+    PsyEnd(hEncoder->psyInfo, hEncoder->numChannels);
+    PsyInit(&hEncoder->gpsyInfo, hEncoder->psyInfo, hEncoder->numChannels,
 			hEncoder->sampleRate);
 
 	/* load channel_map */
@@ -277,7 +259,7 @@ int FAACAPI faacEncSetConfiguration(faacEncHandle hpEncoder,
     return 1;
 }
 
-faacEncHandle FAACAPI faacEncOpen(unsigned long sampleRate,
+faacEncHandle faacEncOpen(unsigned long sampleRate,
                                   unsigned int numChannels,
                                   unsigned long *inputSamples,
                                   unsigned long *maxOutputBytes)
@@ -304,9 +286,6 @@ faacEncHandle FAACAPI faacEncOpen(unsigned long sampleRate,
     hEncoder->flushFrame = 0;
 
     /* Default configuration */
-    hEncoder->config.version = FAAC_CFG_VERSION;
-    hEncoder->config.name = libfaacName;
-    hEncoder->config.copyright = libCopyright;
     hEncoder->config.mpegVersion = MPEG4;
     hEncoder->config.aacObjectType = LOW;
     hEncoder->config.jointmode = JOINT_MIXED;
@@ -316,10 +295,6 @@ faacEncHandle FAACAPI faacEncOpen(unsigned long sampleRate,
     hEncoder->config.bitRate = 64000;
     hEncoder->config.bandWidth = CalcBandwidth(hEncoder->config.bitRate, sampleRate);
     hEncoder->config.quantqual = 0;
-    hEncoder->config.psymodellist = (psymodellist_t *)psymodellist;
-    hEncoder->config.psymodelidx = 0;
-    hEncoder->psymodel =
-      (psymodel_t *)hEncoder->config.psymodellist[hEncoder->config.psymodelidx].ptr;
     hEncoder->config.shortctl = SHORTCTL_NORMAL;
 
 	/* default channel map is straight-through */
@@ -331,7 +306,7 @@ faacEncHandle FAACAPI faacEncOpen(unsigned long sampleRate,
     /*
         be compatible with software which assumes 24bit in 32bit PCM
     */
-    hEncoder->config.inputFormat = FAAC_INPUT_32BIT;
+    hEncoder->config.inputFormat = INPUT_32BIT;
 
     /* find correct sampling rate depending parameters */
     hEncoder->srInfo = &srInfo[hEncoder->sampleRateIdx];
@@ -359,7 +334,7 @@ faacEncHandle FAACAPI faacEncOpen(unsigned long sampleRate,
     /* Initialize coder functions */
 	fft_initialize( &hEncoder->fft_tables );
 
-	hEncoder->psymodel->PsyInit(&hEncoder->gpsyInfo, hEncoder->psyInfo, hEncoder->numChannels,
+	PsyInit(&hEncoder->gpsyInfo, hEncoder->psyInfo, hEncoder->numChannels,
         hEncoder->sampleRate);
 
     FilterBankInit(hEncoder);
@@ -393,17 +368,17 @@ static int appendInputFifo(faacEncStruct *hEncoder, int32_t *inputBuffer,
     for (channel = 0; channel < numChannels; channel++) {
         faac_real *dst = hEncoder->inputFifo[channel] + hEncoder->inputFifoFill;
         switch (hEncoder->config.inputFormat) {
-            case FAAC_INPUT_16BIT: {
+            case INPUT_16BIT: {
                 short *src = (short *)inputBuffer + hEncoder->config.channel_map[channel];
                 for (i = 0; i < spch; i++) { dst[i] = (faac_real)*src; src += numChannels; }
                 break;
             }
-            case FAAC_INPUT_32BIT: {
+            case INPUT_32BIT: {
                 int32_t *src = (int32_t *)inputBuffer + hEncoder->config.channel_map[channel];
                 for (i = 0; i < spch; i++) { dst[i] = (1.0f/256) * (faac_real)*src; src += numChannels; }
                 break;
             }
-            case FAAC_INPUT_FLOAT: {
+            case INPUT_FLOAT: {
                 float *src = (float *)inputBuffer + hEncoder->config.channel_map[channel];
                 for (i = 0; i < spch; i++) { dst[i] = (faac_real)*src; src += numChannels; }
                 break;
@@ -433,13 +408,13 @@ static void consumeInputFifo(faacEncStruct *hEncoder, unsigned int n)
     hEncoder->inputFifoFill = rem;
 }
 
-int FAACAPI faacEncClose(faacEncHandle hpEncoder)
+int faacEncClose(faacEncHandle hpEncoder)
 {
     faacEncStruct* hEncoder = (faacEncStruct*)hpEncoder;
     unsigned int channel;
 
     /* Deinitialize coder functions */
-    hEncoder->psymodel->PsyEnd(hEncoder->psyInfo, hEncoder->numChannels);
+    PsyEnd(hEncoder->psyInfo, hEncoder->numChannels);
 
     FilterBankEnd(hEncoder);
 
@@ -458,6 +433,9 @@ int FAACAPI faacEncClose(faacEncHandle hpEncoder)
 			FreeMemory (hEncoder->inputFifo[channel]);
     }
 
+    if (hEncoder->ascCache)
+        free(hEncoder->ascCache);
+
     /* Free handle */
     if (hEncoder)
 		FreeMemory(hEncoder);
@@ -465,7 +443,7 @@ int FAACAPI faacEncClose(faacEncHandle hpEncoder)
     return 0;
 }
 
-int FAACAPI faacEncEncode(faacEncHandle hpEncoder,
+int faacEncEncode(faacEncHandle hpEncoder,
                           int32_t *inputBuffer,
                           unsigned int samplesInput,
                           unsigned char *outputBuffer,
@@ -557,7 +535,7 @@ int FAACAPI faacEncEncode(faacEncHandle hpEncoder,
 		/* LFE psychoacoustic can run without it */
 		if (channelInfo[channel].type != ELEMENT_LFE)
 		{
-			hEncoder->psymodel->PsyBufferUpdate(
+			PsyBufferUpdate(
 					&hEncoder->gpsyInfo,
 					&hEncoder->psyInfo[channel],
                     hEncoder->audioFIFO[channel][FIFO_AHEAD1],
@@ -573,9 +551,9 @@ int FAACAPI faacEncEncode(faacEncHandle hpEncoder,
         return 0;
 
     /* Psychoacoustics */
-    hEncoder->psymodel->PsyCalculate(channelInfo, hEncoder->psyInfo, numChannels);
+    PsyCalculate(channelInfo, hEncoder->psyInfo, numChannels);
 
-    hEncoder->psymodel->BlockSwitch(coderInfo, hEncoder->psyInfo, numChannels);
+    BlockSwitch(coderInfo, hEncoder->psyInfo, numChannels);
 
     /* force block type */
     if (shortctl == SHORTCTL_NOSHORT)

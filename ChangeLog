@@ -1,3 +1,17 @@
+Unreleased
+
+	[ Nils Schimmelmann ]
+	* Replace the classic `faacEnc*` C API with a new `faac_*` API in
+	  `faac.h`: parameters supplied once to `faac_encoder_open()`, uniform
+	  `faac_status` error reporting, resolved-property queries, and
+	  library-owned AudioSpecificConfig. The legacy `faacEnc*` surface and
+	  `faaccfg.h` are removed; the encoder core they exposed is now internal.
+	  SONAME bumped to 1 (libfaac.so.1).
+	* frontend: Port `faac` and the Win32 GUI to the new API; this fixes the
+	  AudioSpecificConfig memory leak on the MP4 output path.
+	* Retire the never-implemented MAIN/SSR/LTP object types and collapse the
+	  single-model psychoacoustic vtable into direct calls.
+
 1.50 (Apr 16, 2026)
 
 	[ Fabian Greffrath ]

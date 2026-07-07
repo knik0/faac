@@ -151,7 +151,7 @@ static help_t help_io[] = {
     "\t\tRaw PCM input sample size (default: 16, also possible 8, 24, 32\n"
     "\t\tbit fixed or float input).\n"},
     {"-C <channels>\tRaw PCM input channels.\n",
-    "\t\tRaw PCM input channels (default: 2, max. 33 + 1 LFE).\n"},
+    "\t\tRaw PCM input channels (default: 2, max. 8).\n"},
     {"-X\t\tRaw PCM swap input bytes\n",
     "\t\tRaw PCM swap input bytes (default: bigendian).\n"},
     {"-I <C[,LFE]>\tInput channel config, default is 3,4 (Center third, LF fourth)\n",
@@ -428,19 +428,20 @@ static int *mkChanMap(int channels, int center, int lf)
 int main(int argc, char *argv[])
 {
     int frames, currentFrame;
-    faacEncHandle hEncoder;
+    faac_encoder *hEncoder = NULL;
     pcmfile_t *infile = NULL;
 
     unsigned long samplesInput, maxBytesOutput, totalBytesWritten = 0;
 
-    faacEncConfigurationPtr myFormat;
-    unsigned int mpegVersion = MPEG4;
-    const unsigned int objectType = LOW;
+    faac_params params;
+    faac_status fstatus;
+    enum faac_mpeg_version mpegVersion = FAAC_MPEG4;
+    const enum faac_object_type objectType = FAAC_OBJ_LOW;
     int jointmode = -1;
     int pnslevel = -1;
     static int useTns = 0;
     enum container_format container = NO_CONTAINER;
-    enum stream_format stream = ADTS_STREAM;
+    enum faac_stream_format stream = FAAC_STREAM_ADTS;
     int cutOff = -1;
     int bitRate = 0;
     unsigned long quantqual = 0;
@@ -464,7 +465,7 @@ int main(int argc, char *argv[])
     int rawRate = 44100;
     int rawEndian = 1;
 
-    int shortctl = SHORTCTL_NORMAL;
+    int shortctl = FAAC_SHORTCTL_NORMAL;
 
     FILE *outfile = NULL;
 
@@ -484,8 +485,8 @@ int main(int argc, char *argv[])
     unsigned int delay_samples;
     unsigned int frameSize;
     uint64_t input_samples = 0;
-    char *faac_id_string;
-    char *faac_copyright_string;
+    const char *faac_id_string;
+    const char *faac_copyright_string;
     static int ignorelen = 0;
     int verbose = 1;
     static int overwrite = 0;
@@ -497,8 +498,11 @@ int main(int argc, char *argv[])
 #endif
 
     // get faac version
-    if (faacEncGetVersion(&faac_id_string, &faac_copyright_string) ==
-        FAAC_CFG_VERSION)
+    faac_library_info libinfo = { .struct_size = sizeof(libinfo) };
+    faac_get_library_info(&libinfo);
+    faac_id_string = libinfo.version;
+    faac_copyright_string = libinfo.copyright;
+    if (!strcmp(faac_id_string, PACKAGE_VERSION))
     {
         fprintf(stderr, "Freeware Advanced Audio Coder\nFAAC %s\n\n",
                 faac_id_string);
@@ -594,7 +598,7 @@ int main(int argc, char *argv[])
             break;
         case 'r':
             {
-                stream = RAW_STREAM;
+                stream = FAAC_STREAM_RAW;
                 break;
             }
         case 'c':
@@ -776,14 +780,13 @@ int main(int argc, char *argv[])
             shortctl = atoi(optarg);
             break;
         case MPEGVERS_FLAG:
-            mpegVersion = atoi(optarg);
-            switch (mpegVersion)
+            switch (atoi(optarg))
             {
             case 2:
-                mpegVersion = MPEG2;
+                mpegVersion = FAAC_MPEG2;
                 break;
             case 4:
-                mpegVersion = MPEG4;
+                mpegVersion = FAAC_MPEG4;
                 break;
             default:
                 dieMessage = "Unrecognised MPEG version!\n";
@@ -889,18 +892,6 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    /* open the encoder library */
-    hEncoder = faacEncOpen(infile->samplerate, infile->channels,
-                           &samplesInput, &maxBytesOutput);
-
-    if (hEncoder == NULL)
-    {
-        fprintf(stderr, "Couldn't open encoder instance for input file %s\n",
-                audioFileName);
-        wav_close(infile);
-        return 1;
-    }
-
     if (container != MP4_CONTAINER && (ntracks || trackno || artist ||
                                        artistsort || title ||
                                        album || albumartist ||
@@ -916,10 +907,86 @@ int main(int argc, char *argv[])
 
     if (container == MP4_CONTAINER)
     {
-        mpegVersion = MPEG4;
-        stream = RAW_STREAM;
+        mpegVersion = FAAC_MPEG4;
+        stream = FAAC_STREAM_RAW;
     }
 
+    if (cutOff <= 0)
+    {
+        if (cutOff < 0)         // default
+            cutOff = 0;
+        else                    // disabled
+            cutOff = infile->samplerate / 2;
+    }
+    if (cutOff > (infile->samplerate / 2))
+        cutOff = infile->samplerate / 2;
+
+    if (shortctl == FAAC_SHORTCTL_NOSHORT) {
+        fprintf(stderr, "disabling short blocks\n");
+    } else if (shortctl == FAAC_SHORTCTL_NOLONG) {
+        fprintf(stderr, "disabling long blocks\n");
+    }
+
+    if (pnslevel > 0 && mpegVersion == FAAC_MPEG2)
+    {
+        fprintf(stderr, "PNS not allowed in MPEG-2 mode, disabling PNS\n");
+        pnslevel = 0;
+    }
+
+    /* put the options into the parameter struct and open the encoder */
+    faac_params_init(&params);
+    params.sample_rate   = infile->samplerate;
+    params.num_channels  = infile->channels;
+    params.mpeg_version  = mpegVersion;
+    params.object_type   = objectType;
+    params.joint_mode    = (jointmode >= 0) ? (enum faac_joint_mode)jointmode
+                                            : params.joint_mode;
+    params.use_lfe       = (infile->channels >= 6);
+    params.use_tns       = useTns ? true : false;
+    params.short_control = (enum faac_shortctl_mode)shortctl;
+    if (pnslevel >= 0)
+        params.pns_level = pnslevel;
+    if (quantqual > 0)
+    {
+        params.quant_quality = quantqual;
+        params.bit_rate = 0;
+    }
+    if (bitRate)
+        params.bit_rate = bitRate / infile->channels;
+    params.bandwidth     = cutOff;
+    params.output_format = stream;
+    params.input_format  = FAAC_INPUT_FLOAT;
+
+    /* Reject too many channels with a specific message, rather than the generic
+     * "invalid argument" that faac_encoder_open would otherwise return. */
+    {
+        faac_library_info libinfo = { .struct_size = sizeof(libinfo) };
+        faac_get_library_info(&libinfo);
+        if ((unsigned)infile->channels > libinfo.max_channels)
+        {
+            fprintf(stderr, "Input file %s has %u channels, but this build of "
+                    "libfaac supports at most %u.\n",
+                    audioFileName, (unsigned)infile->channels, libinfo.max_channels);
+            wav_close(infile);
+            return 1;
+        }
+    }
+
+    fstatus = faac_encoder_open(&params, &hEncoder);
+    if (fstatus != FAAC_OK)
+    {
+        fprintf(stderr, "Couldn't open encoder instance for input file %s: %s\n",
+                audioFileName, faac_strerror(fstatus));
+        wav_close(infile);
+        return 1;
+    }
+
+    /* buffer sizes and resolved settings come from the now-configured encoder */
+    faac_encoder_info info;
+    info.struct_size = sizeof(info);
+    faac_encoder_get_info(hEncoder, &info);
+    samplesInput   = (unsigned long)info.frame_samples * infile->channels;
+    maxBytesOutput = info.max_output_bytes;
     frameSize = samplesInput / infile->channels;
     delay_samples = frameSize;  // encoder delay 1024 samples
     pcmbuf = (float *) malloc(samplesInput * sizeof(float));
@@ -934,61 +1001,6 @@ int main(int argc, char *argv[])
     {
         fprintf(stderr, "Remapping input channels: Center=%d, LFE=%d\n",
                 chanC, chanLF);
-    }
-
-    if (cutOff <= 0)
-    {
-        if (cutOff < 0)         // default
-            cutOff = 0;
-        else                    // disabled
-            cutOff = infile->samplerate / 2;
-    }
-    if (cutOff > (infile->samplerate / 2))
-        cutOff = infile->samplerate / 2;
-
-    /* put the options in the configuration struct */
-    myFormat = faacEncGetCurrentConfiguration(hEncoder);
-    myFormat->aacObjectType = objectType;
-    myFormat->mpegVersion = mpegVersion;
-    myFormat->useTns = useTns;
-    switch (shortctl)
-    {
-    case SHORTCTL_NOSHORT:
-        fprintf(stderr, "disabling short blocks\n");
-        myFormat->shortctl = shortctl;
-        break;
-    case SHORTCTL_NOLONG:
-        fprintf(stderr, "disabling long blocks\n");
-        myFormat->shortctl = shortctl;
-        break;
-    }
-    if (infile->channels >= 6)
-        myFormat->useLfe = 1;
-    if (jointmode >= 0)
-        myFormat->jointmode = jointmode;
-
-    if (pnslevel > 0 && mpegVersion == MPEG2)
-    {
-        fprintf(stderr, "PNS not allowed in MPEG-2 mode, disabling PNS\n");
-        pnslevel = 0;
-    }
-
-    if (pnslevel >= 0)
-        myFormat->pnslevel = pnslevel;
-    if (quantqual > 0)
-    {
-        myFormat->quantqual = quantqual;
-        myFormat->bitRate = 0;
-    }
-    if (bitRate)
-        myFormat->bitRate = bitRate / infile->channels;
-    myFormat->bandWidth = cutOff;
-    myFormat->outputFormat = stream;
-    myFormat->inputFormat = FAAC_INPUT_FLOAT;
-    if (!faacEncSetConfiguration(hEncoder, myFormat))
-    {
-        fprintf(stderr, "Unsupported output format!\n");
-        return 1;
     }
 
     /* initialize MP4 creation */
@@ -1026,9 +1038,11 @@ int main(int argc, char *argv[])
         }
     }
 
-    cutOff = myFormat->bandWidth;
-    quantqual = myFormat->quantqual;
-    bitRate = myFormat->bitRate;
+    /* report the effective settings the encoder resolved */
+    cutOff = info.bandwidth;
+    quantqual = info.quant_quality;
+    bitRate = info.bit_rate;
+    int resolvedPns = info.pns_level;
     if (bitRate)
     {
         fprintf(stderr, "Initial quantization quality: %ld\n", quantqual);
@@ -1038,25 +1052,27 @@ int main(int argc, char *argv[])
     else
         fprintf(stderr, "Quantization quality: %ld\n", quantqual);
     fprintf(stderr, "Bandwidth: %d Hz\n", cutOff);
-    if (myFormat->pnslevel > 0)
-        fprintf(stderr, "PNS level: %d\n", myFormat->pnslevel);
+    if (resolvedPns > 0)
+        fprintf(stderr, "PNS level: %d\n", resolvedPns);
     fprintf(stderr, "Object type: Low Complexity");
-    fprintf(stderr, " (MPEG-%d)", (mpegVersion == MPEG4) ? 4 : 2);
-    if (myFormat->useTns)
+    fprintf(stderr, " (MPEG-%d)", (mpegVersion == FAAC_MPEG4) ? 4 : 2);
+    if (params.use_tns)
         fprintf(stderr, " + TNS");
 
-    switch(myFormat->jointmode) {
-    case JOINT_MS:
+    switch(params.joint_mode) {
+    case FAAC_JOINT_MS:
         fprintf(stderr, " + M/S");
         break;
-    case JOINT_IS:
+    case FAAC_JOINT_IS:
         fprintf(stderr, " + IS");
         break;
-    case JOINT_MIXED:
+    case FAAC_JOINT_MIXED:
         fprintf(stderr, " + Mixed");
         break;
+    default:
+        break;
     }
-    if (myFormat->pnslevel > 0)
+    if (resolvedPns > 0)
         fprintf(stderr, " + PNS");
     fprintf(stderr, "\n");
 
@@ -1066,11 +1082,13 @@ int main(int argc, char *argv[])
     case NO_CONTAINER:
         switch (stream)
         {
-        case RAW_STREAM:
+        case FAAC_STREAM_RAW:
             fprintf(stderr, "Headerless AAC (RAW)\n");
             break;
-        case ADTS_STREAM:
+        case FAAC_STREAM_ADTS:
             fprintf(stderr, "Transport Stream (ADTS)\n");
+            break;
+        default:
             break;
         }
         break;
@@ -1129,9 +1147,12 @@ int main(int argc, char *argv[])
         input_samples += samplesRead / infile->channels;
 
         /* call the actual encoding routine */
-        bytesWritten = faacEncEncode(hEncoder,
-                                     (int32_t *) pcmbuf,
-                                     samplesRead, bitbuf, maxBytesOutput);
+        {
+            uint32_t nbytes = 0;
+            fstatus = faac_encoder_encode(hEncoder, pcmbuf, (uint32_t)samplesRead,
+                                          bitbuf, (uint32_t)maxBytesOutput, &nbytes);
+            bytesWritten = (fstatus == FAAC_OK) ? (int)nbytes : -1;
+        }
 
         if (bytesWritten)
         {
@@ -1208,7 +1229,8 @@ int main(int argc, char *argv[])
 
         if (bytesWritten < 0)
         {
-            fprintf(stderr, "faacEncEncode() failed\n");
+            fprintf(stderr, "faac_encoder_encode() failed: %s\n",
+                    faac_strerror(fstatus));
             break;
         }
 
@@ -1240,11 +1262,11 @@ int main(int argc, char *argv[])
             fprintf(stderr, "out of memory\n");
             return 1;
         }
-        unsigned char *ascData = NULL;
-        unsigned long ascSize = 0;
+        const uint8_t *ascData = NULL;
+        uint32_t ascSize = 0;
 
-        faacEncGetDecoderSpecificInfo(hEncoder, &ascData, &ascSize);
-        mp4_set_decoder_config(ascData, ascSize);
+        faac_encoder_asc(hEncoder, &ascData, &ascSize);
+        mp4_set_decoder_config((unsigned char *)ascData, ascSize);
         snprintf(version_string, strlen(faac_id_string) + 6, "FAAC %s", faac_id_string);
 
         mp4_set_encoder(version_string);
@@ -1346,7 +1368,7 @@ int main(int argc, char *argv[])
         fclose(outfile);
     }
 
-    faacEncClose(hEncoder);
+    faac_encoder_close(&hEncoder);
 
     wav_close(infile);
 

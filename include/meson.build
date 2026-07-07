@@ -1,1 +1,1 @@
-install_headers(['faac.h', 'faaccfg.h'])
+install_headers(['faac.h'])
