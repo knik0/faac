@@ -11,6 +11,10 @@ Unreleased
 	  AudioSpecificConfig memory leak on the MP4 output path.
 	* Retire the never-implemented MAIN/SSR/LTP object types and collapse the
 	  single-model psychoacoustic vtable into direct calls.
+	* Relicense: rewrite stereo, quantize, channels, bitstream, filtbank,
+	  and tns as original work under LGPL-2.1-or-later, and drop the
+	  matching MPEG reference-code preamble from README.md, --license,
+	  and docs/. Every source file is now free software.
 
 1.50 (Apr 16, 2026)
 
