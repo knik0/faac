@@ -95,10 +95,11 @@ static inline int clamp_sf_diff(int diff)
     return diff;
 }
 
-int huffbook(CoderInfo *coderInfo,
-             int *qs /* quantized spectrum */,
-             int len);
-int writebooks(CoderInfo *coder, BitStream *stream, int writeFlag);
-int writesf(CoderInfo *coder, BitStream *bitStream, int writeFlag);
+/* Forward declaration for CoderInfo */
+struct CoderInfo;
+
+int huffbook(struct CoderInfo *coder, int *qs, int len);
+int writebooks(struct CoderInfo *coder, BitStream *stream, int writeFlag);
+int writesf(struct CoderInfo *coder, BitStream *bitStream, int writeFlag);
 
 #endif /* HUFF2_H */

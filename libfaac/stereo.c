@@ -11,7 +11,7 @@
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  * Lesser General Public License for more details.
-
+ *
  * You should have received a copy of the GNU Lesser General Public
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
@@ -23,6 +23,7 @@
 #include "stereo.h"
 #include "huff2.h"
 #include "util.h"
+#include "faac_internal.h"
 
 /* Intensity stereo applies only at and above this frequency; below it the ear
  * localizes from waveform detail, so panning the band would be audible. */
@@ -124,12 +125,11 @@ static inline void apply_is(faac_real * restrict sl0, faac_real * restrict sr0,
     }
 }
 
-
 /* Unified CPE element processing.  Consolidating joint stereo modes into a single
  * pass minimizes cache misses on spectral data and allows the compiler to
  * optimize the mode-specific branches using constant propagation. */
 static inline int process_cpe(CoderInfo * restrict cl, CoderInfo * restrict cr,
-                               ChannelInfo * restrict channel,
+                               AACElement * restrict element,
                                faac_real * restrict sl0, faac_real * restrict sr0,
                                int * restrict sfcnt, int wstart, int wend,
                                faac_real thrmid, faac_real inv_isthr, faac_real thrside_sq,
@@ -142,7 +142,7 @@ static inline int process_cpe(CoderInfo * restrict cl, CoderInfo * restrict cr,
         *sfcnt += sfmin;
     } else {
         for (sfb = 0; sfb < sfmin; sfb++)
-            channel->msInfo.ms_used[(*sfcnt)++] = 0;
+            element->msInfo.ms_used[(*sfcnt)++] = 0;
     }
 
     for (sfb = sfmin; sfb < cl->sfbn; sfb++) {
@@ -156,7 +156,7 @@ static inline int process_cpe(CoderInfo * restrict cl, CoderInfo * restrict cr,
         if (es < 0) es = 0;
         if (ed < 0) ed = 0;
         if (etot <= 0) {
-            if (mode != JOINT_IS) channel->msInfo.ms_used[*sfcnt] = 0;
+            if (mode != JOINT_IS) element->msInfo.ms_used[*sfcnt] = 0;
             (*sfcnt)++;
             continue;
         }
@@ -175,13 +175,13 @@ static inline int process_cpe(CoderInfo * restrict cl, CoderInfo * restrict cr,
                  * intensity-coding it, keeping the band cheap for the quantizer. */
                 if (pan > IS_PAN_LIMIT) {
                     cl->book[*sfcnt] = HCB_ZERO;
-                    if (mode != JOINT_IS) channel->msInfo.ms_used[*sfcnt] = 0;
+                    if (mode != JOINT_IS) element->msInfo.ms_used[*sfcnt] = 0;
                     (*sfcnt)++;
                     continue;
                 }
                 if (pan < -IS_PAN_LIMIT) {
                     cr->book[*sfcnt] = HCB_ZERO;
-                    if (mode != JOINT_IS) channel->msInfo.ms_used[*sfcnt] = 0;
+                    if (mode != JOINT_IS) element->msInfo.ms_used[*sfcnt] = 0;
                     (*sfcnt)++;
                     continue;
                 }
@@ -190,7 +190,7 @@ static inline int process_cpe(CoderInfo * restrict cl, CoderInfo * restrict cr,
                 cr->book[*sfcnt] = hcb;
                 faac_real dom = (hcb == HCB_INTENSITY) ? es : ed;
                 apply_is(sl0, sr0, start, len, wstart, wend, hcb == HCB_INTENSITY, FAAC_SQRT(etot / dom));
-                if (mode != JOINT_IS) channel->msInfo.ms_used[*sfcnt] = 0;
+                if (mode != JOINT_IS) element->msInfo.ms_used[*sfcnt] = 0;
                 (*sfcnt)++;
                 continue;
             }
@@ -221,17 +221,16 @@ static inline int process_cpe(CoderInfo * restrict cl, CoderInfo * restrict cr,
                     apply_mute(sr0, start, len, wstart, wend);
                 }
             }
-            channel->msInfo.ms_used[*sfcnt] = ms;
+            element->msInfo.ms_used[*sfcnt] = ms;
         }
         (*sfcnt)++;
     }
     return msused;
 }
 
-void AACstereo(CoderInfo *coder, ChannelInfo *channel, faac_real *s[MAX_CHANNELS],
-               int maxchan, faac_real quality, int mode, int sampleRate)
+void AACstereo(CoderInfo *coder, AACElement *elements, int numElements, faac_real *s[MAX_CHANNELS],
+               faac_real quality, int mode, int sampleRate)
 {
-    int chn;
     faac_real inv_quality = 1.0 / quality;
     faac_real thrmid = 1.0, isthr = 1.0, thrside = 0.0;
 
@@ -267,52 +266,49 @@ void AACstereo(CoderInfo *coder, ChannelInfo *channel, faac_real *s[MAX_CHANNELS
     faac_real inv_isthr = 1.0 / (isthr * isthr);
     faac_real thrside_sq = thrside * thrside;
 
-    for (chn = 0; chn < maxchan; chn++) {
-        if (!channel[chn].present || channel[chn].type != ELEMENT_CPE || !channel[chn].ch_is_left)
+    for (int e = 0; e < numElements; e++) {
+        AACElement *elem = &elements[e];
+        if (elem->type != ID_CPE) continue;
+
+        int lch = elem->channels[0];
+        int rch = elem->channels[1];
+
+        elem->common_window = false;
+        elem->msInfo.is_present = false;
+
+        if (coder[lch].block_type != coder[rch].block_type || coder[lch].groups.n != coder[rch].groups.n)
             continue;
-        int rch = channel[chn].paired_ch;
-        channel[chn].common_window = 0;
-        channel[chn].msInfo.is_present = 0;
-        channel[rch].msInfo.is_present = 0;
-        if (coder[chn].block_type != coder[rch].block_type || coder[chn].groups.n != coder[rch].groups.n)
-            continue;
-        int g, ok = 1;
-        for (g = 0; g < coder[chn].groups.n; g++) {
-            if (coder[chn].groups.len[g] != coder[rch].groups.len[g]) {
-                ok = 0;
-                break;
+
+        int ok = 1;
+        for (int g = 0; g < coder[lch].groups.n; g++) {
+            if (coder[lch].groups.len[g] != coder[rch].groups.len[g]) {
+                ok = 0; break;
             }
         }
         if (!ok) continue;
 
-        channel[chn].common_window  = 1;
-        channel[chn].msInfo.is_present = (mode == JOINT_MS);
-        channel[rch].msInfo.is_present = (mode == JOINT_MS);
+        elem->common_window  = true;
+        elem->msInfo.is_present = (mode == JOINT_MS);
 
-        int start = 0, sfcnt = 0, is_start_sfb = coder[chn].sfbn, msused = 0;
+        int start = 0, sfcnt = 0, is_start_sfb = coder[lch].sfbn, msused = 0;
         if (mode == JOINT_MIXED) {
-            int sfb;
-            int mlen  = (coder[chn].block_type == ONLY_SHORT_WINDOW) ? 2*BLOCK_LEN_SHORT : 2*BLOCK_LEN_LONG;
+            int mlen  = (coder[lch].block_type == ONLY_SHORT_WINDOW) ? 2*BLOCK_LEN_SHORT : 2*BLOCK_LEN_LONG;
             int ifreq = IS_START_FREQ_HZ, cap = (sampleRate * IS_FREQ_CAP_NUM) / IS_FREQ_CAP_DEN;
             if (ifreq > cap) ifreq = cap;
-            for (sfb = 0; sfb < coder[chn].sfbn; sfb++) {
-                if ((coder[chn].sfb_offset[sfb] * sampleRate) / mlen >= ifreq) {
-                    is_start_sfb = sfb;
-                    break;
+            for (int sfb = 0; sfb < coder[lch].sfbn; sfb++) {
+                if ((coder[lch].sfb_offset[sfb] * sampleRate) / mlen >= ifreq) {
+                    is_start_sfb = sfb; break;
                 }
             }
         }
 
-        for (g = 0; g < coder[chn].groups.n; g++) {
-            int end = start + coder[chn].groups.len[g];
-            msused |= process_cpe(coder+chn, coder+rch, channel+chn, s[chn], s[rch],
+        for (int g = 0; g < coder[lch].groups.n; g++) {
+            int end = start + coder[lch].groups.len[g];
+            msused |= process_cpe(coder+lch, coder+rch, elem, s[lch], s[rch],
                                   &sfcnt, start, end, thrmid, inv_isthr, thrside_sq,
                                   is_start_sfb, mode);
             start = end;
         }
-        if (mode == JOINT_MIXED && msused) {
-            channel[chn].msInfo.is_present = 1;
-            channel[rch].msInfo.is_present = 1;
-        }
+        if (mode == JOINT_MIXED && msused) elem->msInfo.is_present = true;
     }
 }

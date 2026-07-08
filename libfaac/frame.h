@@ -48,7 +48,7 @@ extern "C" {
 #include "fft.h"
 #include "quantize.h"
 
-typedef struct {
+typedef struct faacEncStruct {
     /* number of channels in AAC file */
     unsigned int numChannels;
 
@@ -77,7 +77,11 @@ typedef struct {
 
     /* Channel and Coder data for all channels */
     CoderInfo coderInfo[MAX_CHANNELS];
-    ChannelInfo channelInfo[MAX_CHANNELS];
+
+    /* Element-centric configuration */
+    AACElement elements[MAX_CHANNELS];
+    int numElements;
+    bool isLfeChannel[MAX_CHANNELS]; /* per-channel LFE lookup, derived from elements[] whenever it changes */
 
     /* Psychoacoustics data */
     PsyInfo psyInfo[MAX_CHANNELS];

@@ -84,6 +84,18 @@ static unsigned int CalcBandwidth(unsigned long bitRate, unsigned long sampleRat
     return (bw > nyquist) ? nyquist : bw;
 }
 
+/* Element-to-channel mapping is fixed for the session once InitElements has
+ * run, so cache which channels are LFE here instead of rescanning
+ * hEncoder->elements[] for every channel on every frame. */
+static void RefreshLfeMap(faacEncStruct *hEncoder)
+{
+    memset(hEncoder->isLfeChannel, 0, sizeof(hEncoder->isLfeChannel));
+    for (int e = 0; e < hEncoder->numElements; e++) {
+        if (hEncoder->elements[e].type == ID_LFE)
+            hEncoder->isLfeChannel[hEncoder->elements[e].channels[0]] = true;
+    }
+}
+
 int faacEncGetVersion( char **faac_id_string,
 			      				char **faac_copyright_string)
 {
@@ -115,7 +127,7 @@ int faacEncGetDecoderSpecificInfo(faacEncHandle hpEncoder,unsigned char** ppBuff
 
     if(*ppBuffer != NULL){
         memset(*ppBuffer,0,*pSizeOfDecoderSpecificInfo);
-        pBitStream = OpenBitStream((int)*pSizeOfDecoderSpecificInfo, *ppBuffer);
+        pBitStream = OpenBitStream((uint32_t)*pSizeOfDecoderSpecificInfo, *ppBuffer);
         if (!pBitStream) {
             free(*ppBuffer);
             *ppBuffer = NULL;
@@ -154,14 +166,11 @@ int faacEncSetConfiguration(faacEncHandle hpEncoder,
     switch( hEncoder->config.inputFormat )
     {
         case INPUT_16BIT:
-        //case INPUT_24BIT:
         case INPUT_32BIT:
         case INPUT_FLOAT:
             break;
-
         default:
             return 0;
-            break;
     }
 
     if (hEncoder->config.aacObjectType != LOW)
@@ -175,10 +184,6 @@ int faacEncSetConfiguration(faacEncHandle hpEncoder,
         return 0;
     if (config->bitRate > (MaxBitrate(hEncoder->sampleRate) / hEncoder->numChannels))
         config->bitRate = MaxBitrate(hEncoder->sampleRate) / hEncoder->numChannels;
-#if 0
-    if (config->bitRate < MinBitrate())
-        return 0;
-#endif
 
     if (config->bitRate && !config->bandWidth)
     {
@@ -255,7 +260,9 @@ int faacEncSetConfiguration(faacEncHandle hpEncoder,
 	for( i = 0; i < MAX_CHANNELS; i++ )
 		hEncoder->config.channel_map[i] = config->channel_map[i];
 
-    /* OK */
+    InitElements(hEncoder->elements, &hEncoder->numElements, (int)hEncoder->numChannels, hEncoder->config.useLfe);
+    RefreshLfeMap(hEncoder);
+
     return 1;
 }
 
@@ -332,6 +339,9 @@ faacEncHandle faacEncOpen(unsigned long sampleRate,
     }
 
     /* Initialize coder functions */
+    InitElements(hEncoder->elements, &hEncoder->numElements, (int)hEncoder->numChannels, (bool)hEncoder->config.useLfe);
+    RefreshLfeMap(hEncoder);
+
 	fft_initialize( &hEncoder->fft_tables );
 
 	PsyInit(&hEncoder->gpsyInfo, hEncoder->psyInfo, hEncoder->numChannels,
@@ -358,12 +368,9 @@ static int appendInputFifo(faacEncStruct *hEncoder, int32_t *inputBuffer,
     unsigned int spch = samplesInput / numChannels;
     unsigned int channel, i;
 
-    if (spch == 0)
-        return 0;
-    if (spch > FRAME_LEN)  /* caller exceeded one nominal frame per channel */
-        return -1;
-    if (hEncoder->inputFifoFill + spch > hEncoder->inputFifoCap)
-        return -1;
+    if (spch == 0) return 0;
+    if (spch > FRAME_LEN) return -1;
+    if (hEncoder->inputFifoFill + spch > hEncoder->inputFifoCap) return -1;
 
     for (channel = 0; channel < numChannels; channel++) {
         faac_real *dst = hEncoder->inputFifo[channel] + hEncoder->inputFifoFill;
@@ -383,8 +390,7 @@ static int appendInputFifo(faacEncStruct *hEncoder, int32_t *inputBuffer,
                 for (i = 0; i < spch; i++) { dst[i] = (faac_real)*src; src += numChannels; }
                 break;
             }
-            default:
-                return -1;
+            default: return -1;
         }
     }
     hEncoder->inputFifoFill += spch;
@@ -397,14 +403,11 @@ static void consumeInputFifo(faacEncStruct *hEncoder, unsigned int n)
     unsigned int numChannels = hEncoder->numChannels;
     unsigned int channel, rem;
 
-    if (n > hEncoder->inputFifoFill)
-        n = hEncoder->inputFifoFill;
+    if (n > hEncoder->inputFifoFill) n = hEncoder->inputFifoFill;
     rem = hEncoder->inputFifoFill - n;
     if (rem)
         for (channel = 0; channel < numChannels; channel++)
-            memmove(hEncoder->inputFifo[channel],
-                    hEncoder->inputFifo[channel] + n,
-                    rem * sizeof(faac_real));
+            memmove(hEncoder->inputFifo[channel], hEncoder->inputFifo[channel] + n, rem * sizeof(faac_real));
     hEncoder->inputFifoFill = rem;
 }
 
@@ -413,14 +416,12 @@ int faacEncClose(faacEncHandle hpEncoder)
     faacEncStruct* hEncoder = (faacEncStruct*)hpEncoder;
     unsigned int channel;
 
-    /* Deinitialize coder functions */
+    if (!hEncoder) return 0;
+
     PsyEnd(hEncoder->psyInfo, hEncoder->numChannels);
-
     FilterBankEnd(hEncoder);
-
     fft_terminate(&hEncoder->fft_tables);
 
-    /* Free remaining buffer memory */
     for (channel = 0; channel < hEncoder->numChannels; channel++)
 	{
         int buf;
@@ -433,12 +434,8 @@ int faacEncClose(faacEncHandle hpEncoder)
 			FreeMemory (hEncoder->inputFifo[channel]);
     }
 
-    if (hEncoder->ascCache)
-        free(hEncoder->ascCache);
-
-    /* Free handle */
-    if (hEncoder)
-		FreeMemory(hEncoder);
+    if (hEncoder->ascCache) free(hEncoder->ascCache);
+    FreeMemory(hEncoder);
 
     return 0;
 }
@@ -454,13 +451,10 @@ int faacEncEncode(faacEncHandle hpEncoder,
     unsigned int channel;
     int sb, frameBytes;
     unsigned int offset;
-    BitStream *bitStream; /* bitstream used for writing the frame to */
+    BitStream *bitStream;
 
-    /* local copy's of parameters */
-    ChannelInfo *channelInfo = hEncoder->channelInfo;
     CoderInfo *coderInfo = hEncoder->coderInfo;
     unsigned int numChannels = hEncoder->numChannels;
-    unsigned int useLfe = hEncoder->config.useLfe;
     unsigned int useTns = hEncoder->config.useTns;
     unsigned int jointmode = hEncoder->config.jointmode;
     unsigned int shortctl = hEncoder->config.shortctl;
@@ -500,14 +494,10 @@ int faacEncEncode(faacEncHandle hpEncoder,
     if (hEncoder->flushFrame > (LOOKAHEAD_DEPTH + 1))
         return 0;
 
-    /* Determine the channel configuration */
-    GetChannelInfo(channelInfo, numChannels, useLfe);
-
     /* Update current sample buffers */
     for (channel = 0; channel < numChannels; channel++)
 	{
 		faac_real *tmp;
-
 		tmp = hEncoder->audioFIFO[channel][FIFO_PAST];
 		hEncoder->audioFIFO[channel][FIFO_PAST]  = hEncoder->audioFIFO[channel][FIFO_CURR];
 		hEncoder->audioFIFO[channel][FIFO_CURR]  = hEncoder->audioFIFO[channel][FIFO_AHEAD1];
@@ -524,20 +514,16 @@ int faacEncEncode(faacEncHandle hpEncoder,
             /* Take one frame from the FIFO front (already faac_real),
              * silence-padding a short final frame. */
             unsigned int spc = ((unsigned int)realPerCh < FRAME_LEN) ? (unsigned int)realPerCh : FRAME_LEN;
-            memcpy(hEncoder->audioFIFO[channel][FIFO_AHEAD2], hEncoder->inputFifo[channel],
-                   spc * sizeof(faac_real));
+            memcpy(hEncoder->audioFIFO[channel][FIFO_AHEAD2], hEncoder->inputFifo[channel], spc * sizeof(faac_real));
             if (spc < FRAME_LEN)
                 memset(hEncoder->audioFIFO[channel][FIFO_AHEAD2] + spc, 0, (FRAME_LEN - spc) * sizeof(faac_real));
 		}
 
-		/* Psychoacoustics */
-		/* Update buffers and run FFT on new samples */
-		/* LFE psychoacoustic can run without it */
-		if (channelInfo[channel].type != ELEMENT_LFE)
+		/* LFE's block_type is always forced to ONLY_LONG_WINDOW in PsyCalculate,
+		 * so the transient analysis below would be discarded -- skip it. */
+		if (!hEncoder->isLfeChannel[channel])
 		{
-			PsyBufferUpdate(
-					&hEncoder->gpsyInfo,
-					&hEncoder->psyInfo[channel],
+			PsyBufferUpdate(&hEncoder->gpsyInfo, &hEncoder->psyInfo[channel],
                     hEncoder->audioFIFO[channel][FIFO_AHEAD1],
                     hEncoder->audioFIFO[channel][FIFO_AHEAD2]);
 		}
@@ -551,8 +537,7 @@ int faacEncEncode(faacEncHandle hpEncoder,
         return 0;
 
     /* Psychoacoustics */
-    PsyCalculate(channelInfo, hEncoder->psyInfo, numChannels);
-
+    PsyCalculate(hEncoder->elements, hEncoder->numElements, hEncoder->psyInfo, numChannels);
     BlockSwitch(coderInfo, hEncoder->psyInfo, numChannels);
 
     /* force block type */
@@ -581,8 +566,6 @@ int faacEncEncode(faacEncHandle hpEncoder,
     }
 
     for (channel = 0; channel < numChannels; channel++) {
-        channelInfo[channel].msInfo.is_present = 0;
-
         if (coderInfo[channel].block_type == ONLY_SHORT_WINDOW) {
             coderInfo[channel].sfbn = hEncoder->aacquantCfg.max_cbs;
 
@@ -610,7 +593,7 @@ int faacEncEncode(faacEncHandle hpEncoder,
 
     /* Perform TNS analysis and filtering */
     for (channel = 0; channel < numChannels; channel++) {
-        if ((channelInfo[channel].type != ELEMENT_LFE) && (useTns)) {
+        if (!hEncoder->isLfeChannel[channel] && useTns) {
             TnsEncode(&(coderInfo[channel].tnsInfo),
                       coderInfo[channel].sfbn,
                       coderInfo[channel].sfbn,
@@ -622,21 +605,20 @@ int faacEncEncode(faacEncHandle hpEncoder,
         }
     }
 
-    for (channel = 0; channel < numChannels; channel++) {
+    for (int e = 0; e < hEncoder->numElements; e++) {
       // reduce LFE bandwidth
-		if (channelInfo[channel].type == ELEMENT_LFE)
+		if (hEncoder->elements[e].type == ID_LFE)
 		{
-                    coderInfo[channel].sfbn = 3;
+                    coderInfo[hEncoder->elements[e].channels[0]].sfbn = 3;
 		}
 	}
 
     /* Clear each channel's section state before AACstereo pre-loads intensity
      * bands and BlocQuant resolves the rest. */
     for (channel = 0; channel < numChannels; channel++)
-        if (channelInfo[channel].present)
-            ResetCoderSections(&coderInfo[channel]);
+        ResetCoderSections(&coderInfo[channel]);
 
-    AACstereo(coderInfo, channelInfo, hEncoder->freqBuff, numChannels,
+    AACstereo(coderInfo, hEncoder->elements, hEncoder->numElements, hEncoder->freqBuff,
               (faac_real)hEncoder->aacquantCfg.quality/DEFQUAL, jointmode, hEncoder->sampleRate);
 
     for (channel = 0; channel < numChannels; channel++) {
@@ -645,16 +627,14 @@ int faacEncEncode(faacEncHandle hpEncoder,
     }
 
     // fix max_sfb in CPE mode
-    for (channel = 0; channel < numChannels; channel++)
+    for (int e = 0; e < hEncoder->numElements; e++)
     {
-		if (channelInfo[channel].present
-				&& (channelInfo[channel].type == ELEMENT_CPE)
-				&& (channelInfo[channel].ch_is_left))
+		if (hEncoder->elements[e].type == ID_CPE)
 		{
 			CoderInfo *cil, *cir;
 
-			cil = &coderInfo[channel];
-			cir = &coderInfo[channelInfo[channel].paired_ch];
+			cil = &coderInfo[hEncoder->elements[e].channels[0]];
+			cir = &coderInfo[hEncoder->elements[e].channels[1]];
 
                         cil->sfbn = cir->sfbn = max(cil->sfbn, cir->sfbn);
 		}
@@ -664,7 +644,7 @@ int faacEncEncode(faacEncHandle hpEncoder,
     if (!bitStream)
         return -1;
 
-    if (WriteBitstream(hEncoder, coderInfo, channelInfo, bitStream, numChannels) < 0)
+    if (WriteBitstream(hEncoder, coderInfo, hEncoder->elements, hEncoder->numElements, bitStream) < 0)
         return -1;
 
     /* Close the bitstream and return the number of bytes written */
@@ -687,7 +667,6 @@ int faacEncEncode(faacEncHandle hpEncoder,
 
         /* Apply damping to the quality adjustment */
         fix = (fix - 1.0) * RC_DAMPING_FACTOR + 1.0;
-        // printf("q: %.1f(f:%.4f)\n", hEncoder->aacquantCfg.quality, fix);
 
         hEncoder->aacquantCfg.quality *= fix;
 

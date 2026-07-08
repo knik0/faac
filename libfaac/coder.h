@@ -15,8 +15,6 @@
  * You should have received a copy of the GNU Lesser General Public
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
- *
- * $Id: coder.h,v 1.13 2005/02/02 07:49:10 sur Exp $
  */
 
 #ifndef CODER_H
@@ -49,8 +47,10 @@ enum WINDOW_TYPE {
 #define DEF_TNS_COEFF_THRESH 0.1
 #define DEF_TNS_COEFF_RES 4
 #define DEF_TNS_RES_OFFSET 3
-#define LEN_TNS_NFILTL 2
-#define LEN_TNS_NFILTS 1
+/* Bound on TnsWindowData.tnsFilter[]. Must stay in sync with the bitstream
+ * field width LEN_TNS_NFILTL (channels.h) -- checked by a _Static_assert in
+ * channels.c, since this header can't include channels.h without a cycle. */
+#define TNS_MAX_FILTERS 4
 
 typedef struct {
     int order;                           /* Filter order */
@@ -65,7 +65,7 @@ typedef struct {
 typedef struct {
     int numFilters;                             /* Number of filters */
     int coefResolution;                         /* Coefficient resolution */
-    TnsFilterData tnsFilter[1<<LEN_TNS_NFILTL]; /* TNS filters */
+    TnsFilterData tnsFilter[TNS_MAX_FILTERS];    /* TNS filters */
 } TnsWindowData;
 
 typedef struct {
@@ -79,7 +79,7 @@ typedef struct {
     TnsWindowData windowData[MAX_SHORT_WINDOWS]; /* TNS data per window */
 } TnsInfo;
 
-typedef struct {
+typedef struct CoderInfo {
     int window_shape;
     int prev_window_shape;
     int block_type;

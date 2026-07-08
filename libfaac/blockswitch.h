@@ -48,7 +48,7 @@ typedef struct {
 void PsyInit (GlobalPsyInfo *gpsyInfo, PsyInfo *psyInfo,
 		unsigned int numChannels, unsigned int sampleRate);
 void PsyEnd (PsyInfo *psyInfo, unsigned int numChannels);
-void PsyCalculate (ChannelInfo *channelInfo, PsyInfo *psyInfo,
+void PsyCalculate (AACElement *elements, int numElements, PsyInfo *psyInfo,
 		unsigned int numChannels);
 void PsyBufferUpdate (GlobalPsyInfo * gpsyInfo, PsyInfo * psyInfo,
 		faac_real * restrict p_lookahead1,
