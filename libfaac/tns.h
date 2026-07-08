@@ -23,7 +23,6 @@
 #ifndef TNS_H
 #define TNS_H
 
-#include "faac_real.h"
 #include "coder.h"
 
 #ifdef __cplusplus
@@ -36,7 +35,7 @@ void TnsInit(faacEncStruct* hEncoder);
 /* Analyse one channel and, if it pays off, whiten `spec` in place. */
 void TnsEncode(TnsInfo* tnsInfo, int numBands,
                enum WINDOW_TYPE blockType, int* sfbOffsetTable,
-               faac_real* spec);
+               float* spec);
 
 #ifdef __cplusplus
 }

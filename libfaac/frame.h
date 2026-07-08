@@ -67,14 +67,14 @@ typedef struct faacEncStruct {
     SR_INFO *srInfo;
 
     /* sample buffers: FIFO_PAST (MDCT overlap), FIFO_CURR, FIFO_AHEAD1, FIFO_AHEAD2 */
-    faac_real *audioFIFO[MAX_CHANNELS][4];
+    float *audioFIFO[MAX_CHANNELS][4];
 
     /* Filterbank buffers */
-    faac_real *sin_window_long;
-    faac_real *sin_window_short;
-    faac_real *kbd_window_long;
-    faac_real *kbd_window_short;
-    faac_real *freqBuff[MAX_CHANNELS];
+    float *sin_window_long;
+    float *sin_window_short;
+    float *kbd_window_long;
+    float *kbd_window_short;
+    float *freqBuff[MAX_CHANNELS];
 
     /* Channel and Coder data for all channels */
     CoderInfo coderInfo[MAX_CHANNELS];
@@ -100,8 +100,8 @@ typedef struct faacEncStruct {
     /* Input FIFO: decouples the caller's per-call chunk size from the encoder
      * frame size. faacEncEncode appends whatever it is handed (any count) and
      * emits one frame once a full frame (mult*FRAME_LEN samples/ch, mult = 2 for
-     * HE-AAC, 1 for LC) has accumulated. Stores format-converted faac_real. */
-    faac_real    *inputFifo[MAX_CHANNELS];
+     * HE-AAC, 1 for LC) has accumulated. Stores format-converted float. */
+    float    *inputFifo[MAX_CHANNELS];
     unsigned int  inputFifoFill;     /* samples per channel currently buffered */
     unsigned int  inputFifoCap;      /* per-channel capacity in samples */
 

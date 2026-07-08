@@ -20,7 +20,6 @@
 #ifndef CODER_H
 #define CODER_H
 
-#include "faac_real.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -43,7 +42,7 @@ enum WINDOW_TYPE {
 };
 
 #define TNS_MAX_ORDER 12
-#define DEF_TNS_COEFF_THRESH 0.1
+#define DEF_TNS_COEFF_THRESH 0.1f
 #define DEF_TNS_COEFF_RES 4
 #define DEF_TNS_RES_OFFSET 3
 /* Bound on TnsWindowData.tnsFilter[]. Must stay in sync with the bitstream
@@ -56,7 +55,7 @@ typedef struct {
     int direction;                       /* Filtering direction */
     int coefCompress;                    /* Are coeffs compressed? */
     int length;                          /* Length, in bands */
-    faac_real aCoeffs[TNS_MAX_ORDER+1];  /* LPC (AR) coefficients */
+    float aCoeffs[TNS_MAX_ORDER+1];       /* LPC (AR) coefficients */
     int index[TNS_MAX_ORDER+1];          /* Quantized reflection-coeff indices */
 } TnsFilterData;
 

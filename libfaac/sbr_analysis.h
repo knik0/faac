@@ -24,7 +24,6 @@
 #include "config.h"
 #endif
 
-#include "faac_real.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -46,10 +45,10 @@ struct SBRInfo;
 
 typedef struct SignalAnalysisChannel {
     int       transientSlot;
-    faac_real transientStrength;
+    float transientStrength;
     int       wantShort;
-    faac_real lastVal;
-    faac_real bandHalfE[2][SBR_QMF_BANDS_64];
+    float lastVal;
+    float bandHalfE[2][SBR_QMF_BANDS_64];
 } SignalAnalysisChannel;
 
 typedef struct SignalAnalysis {
@@ -67,7 +66,7 @@ typedef struct SignalAnalysis {
     SignalAnalysisChannel ch[MAX_CHANNELS];
 } SignalAnalysis;
 
-void SbrAnalyze(SignalAnalysis *sa, faac_real *fullPtrs[], int nch, int numSamples, struct SBRInfo *sbr);
+void SbrAnalyze(SignalAnalysis *sa, float *fullPtrs[], int nch, int numSamples, struct SBRInfo *sbr);
 
 #ifdef __cplusplus
 }

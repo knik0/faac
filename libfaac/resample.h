@@ -24,7 +24,10 @@
 #ifndef RESAMPLE_H
 #define RESAMPLE_H
 
-#include "faac_real.h"
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
 #include "coder.h"
 
 #ifdef __cplusplus
@@ -36,9 +39,9 @@ typedef float resfloat;
 #define RESAMPLE_FILTER_LEN 63
 
 typedef struct Resampler {
-    faac_real  buf     [MAX_CHANNELS][RESAMPLE_FILTER_LEN]; /* FIR overlap state (carries between frames) */
-    faac_real  fullRate[MAX_CHANNELS][2 * FRAME_LEN];       /* full-rate input: caller fills, SBR reads, FIR consumes */
-    faac_real  halfRate[MAX_CHANNELS][FRAME_LEN];           /* downsampled output: written by Resample */
+    float  buf     [MAX_CHANNELS][RESAMPLE_FILTER_LEN]; /* FIR overlap state (carries between frames) */
+    float  fullRate[MAX_CHANNELS][2 * FRAME_LEN];       /* full-rate input: caller fills, SBR reads, FIR consumes */
+    float  halfRate[MAX_CHANNELS][FRAME_LEN];           /* downsampled output: written by Resample */
     int        channels;
 } Resampler;
 

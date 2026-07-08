@@ -68,7 +68,7 @@ void fft_initialize(FFT_Tables *fft_tables)
         {
             int logm = logms[t];
             int size = 1 << logm;
-            faac_real freq = (faac_real)(2.0 * M_PI) / (faac_real)(4 << logm);
+            double freq = 2.0 * M_PI_DOUBLE / (double)(4 << logm);
             fftfloat *c = AllocMemory(size * sizeof(fftfloat));
             fftfloat *s = AllocMemory(size * sizeof(fftfloat));
 
@@ -81,9 +81,9 @@ void fft_initialize(FFT_Tables *fft_tables)
 
             for (i = 0; i < size; i++)
             {
-                faac_real theta = freq * ((faac_real)i + (faac_real)0.125);
-                c[i] = (fftfloat)FAAC_COS(theta);
-                s[i] = (fftfloat)FAAC_SIN(theta);
+                double theta = freq * ((double)i + 0.125);
+                c[i] = (fftfloat)cos(theta);
+                s[i] = (fftfloat)sin(theta);
             }
             fft_tables->mdct_cos[logm] = c;
             fft_tables->mdct_sin[logm] = s;
@@ -152,16 +152,16 @@ static void check_tables_radix4(FFT_Tables *fft_tables, int logm)
 
         for (i = 0; i < size; i++)
         {
-            faac_real theta = 2.0 * M_PI * (faac_real)i / (faac_real)size;
-            fft_tables->costbl[logm][i] = (fftfloat)FAAC_COS(theta);
-            fft_tables->negsintbl[logm][i] = (fftfloat)-FAAC_SIN(theta);
+            double theta = 2.0 * M_PI_DOUBLE * (double)i / (double)size;
+            fft_tables->costbl[logm][i] = (fftfloat)cos(theta);
+            fft_tables->negsintbl[logm][i] = (fftfloat)-sin(theta);
         }
     }
 }
 
 static void radix4_dif_proc(
-    faac_real * restrict xr,
-    faac_real * restrict xi,
+    float * restrict xr,
+    float * restrict xi,
     int logm,
     const fftfloat * restrict costbl,
     const fftfloat * restrict sintbl)
@@ -177,26 +177,26 @@ static void radix4_dif_proc(
         n2 >>= 2;
         for (i = 0; i < n; i += n1)
         {
-            faac_real * restrict r1p = xr + i;
-            faac_real * restrict r2p = xr + i + n2;
-            faac_real * restrict r3p = xr + i + 2*n2;
-            faac_real * restrict r4p = xr + i + 3*n2;
-            faac_real * restrict i1p = xi + i;
-            faac_real * restrict i2p = xi + i + n2;
-            faac_real * restrict i3p = xi + i + 2*n2;
-            faac_real * restrict i4p = xi + i + 3*n2;
+            float * restrict r1p = xr + i;
+            float * restrict r2p = xr + i + n2;
+            float * restrict r3p = xr + i + 2*n2;
+            float * restrict r4p = xr + i + 3*n2;
+            float * restrict i1p = xi + i;
+            float * restrict i2p = xi + i + n2;
+            float * restrict i3p = xi + i + 2*n2;
+            float * restrict i4p = xi + i + 3*n2;
 
             /* j=0 unrolled: skip the twiddle multiply, it's the identity here */
             {
-                faac_real r1 = *r1p, i1 = *i1p;
-                faac_real r2 = *r2p, i2 = *i2p;
-                faac_real r3 = *r3p, i3 = *i3p;
-                faac_real r4 = *r4p, i4 = *i4p;
+                float r1 = *r1p, i1 = *i1p;
+                float r2 = *r2p, i2 = *i2p;
+                float r3 = *r3p, i3 = *i3p;
+                float r4 = *r4p, i4 = *i4p;
 
-                faac_real t1 = r1 + r3, t2 = i1 + i3;
-                faac_real t3 = r2 + r4, t4 = i2 + i4;
-                faac_real t5 = r1 - r3, t6 = i1 - i3;
-                faac_real t7 = r2 - r4, t8 = i2 - i4;
+                float t1 = r1 + r3, t2 = i1 + i3;
+                float t3 = r2 + r4, t4 = i2 + i4;
+                float t5 = r1 - r3, t6 = i1 - i3;
+                float t7 = r2 - r4, t8 = i2 - i4;
 
                 *r1p = t1 + t3; *i1p = t2 + t4;
                 *r3p = t5 + t8; *i3p = t6 - t7;
@@ -211,22 +211,22 @@ static void radix4_dif_proc(
             for (j = 1; j < n2; j++)
             {
                 int tw_idx = j << (2 * k);
-                const faac_real c1 = (faac_real)costbl[tw_idx];
-                const faac_real s1 = (faac_real)sintbl[tw_idx];
-                const faac_real c2 = (faac_real)costbl[2 * tw_idx];
-                const faac_real s2 = (faac_real)sintbl[2 * tw_idx];
-                const faac_real c3 = (faac_real)costbl[3 * tw_idx];
-                const faac_real s3 = (faac_real)sintbl[3 * tw_idx];
+                const float c1 = (float)costbl[tw_idx];
+                const float s1 = (float)sintbl[tw_idx];
+                const float c2 = (float)costbl[2 * tw_idx];
+                const float s2 = (float)sintbl[2 * tw_idx];
+                const float c3 = (float)costbl[3 * tw_idx];
+                const float s3 = (float)sintbl[3 * tw_idx];
 
-                faac_real r1 = *r1p, i1 = *i1p;
-                faac_real r2 = *r2p, i2 = *i2p;
-                faac_real r3 = *r3p, i3 = *i3p;
-                faac_real r4 = *r4p, i4 = *i4p;
+                float r1 = *r1p, i1 = *i1p;
+                float r2 = *r2p, i2 = *i2p;
+                float r3 = *r3p, i3 = *i3p;
+                float r4 = *r4p, i4 = *i4p;
 
-                faac_real t1 = r1 + r3, t2 = i1 + i3;
-                faac_real t3 = r2 + r4, t4 = i2 + i4;
-                faac_real t5 = r1 - r3, t6 = i1 - i3;
-                faac_real t7 = r2 - r4, t8 = i2 - i4;
+                float t1 = r1 + r3, t2 = i1 + i3;
+                float t3 = r2 + r4, t4 = i2 + i4;
+                float t5 = r1 - r3, t6 = i1 - i3;
+                float t7 = r2 - r4, t8 = i2 - i4;
 
                 *r1p = t1 + t3;
                 *i1p = t2 + t4;
@@ -251,14 +251,14 @@ static void radix4_dif_proc(
     /* odd logm: 4^k can't fill it, one radix-2 stage mops up the remainder */
     if (logm & 1)
     {
-        faac_real * restrict r1p = xr;
-        faac_real * restrict r2p = xr + 1;
-        faac_real * restrict i1p = xi;
-        faac_real * restrict i2p = xi + 1;
+        float * restrict r1p = xr;
+        float * restrict r2p = xr + 1;
+        float * restrict i1p = xi;
+        float * restrict i2p = xi + 1;
         for (i = 0; i < n; i += 2)
         {
-            faac_real r1 = *r1p, i1 = *i1p;
-            faac_real r2 = *r2p, i2 = *i2p;
+            float r1 = *r1p, i1 = *i1p;
+            float r2 = *r2p, i2 = *i2p;
             *r1p = r1 + r2; *i1p = i1 + i2;
             *r2p = r1 - r2; *i2p = i1 - i2;
             r1p += 2; r2p += 2; i1p += 2; i2p += 2;
@@ -267,8 +267,8 @@ static void radix4_dif_proc(
 }
 
 static void bit_reverse(
-    faac_real * restrict xr,
-    faac_real * restrict xi,
+    float * restrict xr,
+    float * restrict xi,
     int logm,
     const unsigned short * restrict r)
 {
@@ -280,13 +280,13 @@ static void bit_reverse(
         int j = (int)r[i];
         if (j > i)
         {
-            faac_real tr = xr[i]; xr[i] = xr[j]; xr[j] = tr;
-            faac_real ti = xi[i]; xi[i] = xi[j]; xi[j] = ti;
+            float tr = xr[i]; xr[i] = xr[j]; xr[j] = tr;
+            float ti = xi[i]; xi[i] = xi[j]; xi[j] = ti;
         }
     }
 }
 
-void fft(FFT_Tables *fft_tables, faac_real *xr, faac_real *xi, int logm)
+void fft(FFT_Tables *fft_tables, float *xr, float *xi, int logm)
 {
     if (logm > FFT_MAXLOGM) return;
     if (logm < 1) return;

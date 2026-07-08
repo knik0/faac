@@ -20,7 +20,6 @@
 #ifndef UTIL_H
 #define UTIL_H
 
-#include "faac_real.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -44,11 +43,16 @@ static inline int clamp_int(int x, int lo, int hi)
 }
 
 #ifndef M_PI
-#define M_PI        3.14159265358979323846
+#define M_PI        3.14159265358979323846f
 #endif
 #ifndef M_SQRT2
-#define M_SQRT2     1.41421356237309504880
+#define M_SQRT2     1.41421356237309504880f
 #endif
+
+/* Double-precision pi, for one-time table/window generation at encoder init
+ * (FFT/MDCT twiddles, SBR QMF twiddles, MDCT window shapes) where the extra
+ * precision is free — these run once, never in the per-sample hot path. */
+#define M_PI_DOUBLE 3.14159265358979323846
 
 /* Memory functions */
 #define AllocMemory(size) malloc(size)
