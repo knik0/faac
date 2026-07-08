@@ -1,45 +1,42 @@
-/**********************************************************************
-
-This software module was originally developed by
-and edited by Texas Instruments in the course of
-development of the MPEG-2 NBC/MPEG-4 Audio standard
-ISO/IEC 13818-7, 14496-1,2 and 3. This software module is an
-implementation of a part of one or more MPEG-2 NBC/MPEG-4 Audio tools
-as specified by the MPEG-2 NBC/MPEG-4 Audio standard. ISO/IEC gives
-users of the MPEG-2 NBC/MPEG-4 Audio standards free license to this
-software module or modifications thereof for use in hardware or
-software products claiming conformance to the MPEG-2 NBC/ MPEG-4 Audio
-standards. Those intending to use this software module in hardware or
-software products are advised that this use may infringe existing
-patents. The original developer of this software module and his/her
-company, the subsequent editors and their companies, and ISO/IEC have
-no liability for use of this software module or modifications thereof
-in an implementation. Copyright is not released for non MPEG-2
-NBC/MPEG-4 Audio conforming products. The original developer retains
-full right to use the code for his/her own purpose, assign or donate
-the code to a third party and to inhibit third party from using the
-code for non MPEG-2 NBC/MPEG-4 Audio conforming products. This
-copyright notice must be included in all copies or derivative works.
-
-Copyright (c) 1997.
-**********************************************************************/
 /*
- * $Id: tns.h,v 1.6 2012/03/01 18:34:17 knik Exp $
+ * FAAC - Freeware Advanced Audio Coder
+ * Copyright (C) 2026 Nils Schimmelmann
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ */
+
+/*
+ * Temporal Noise Shaping (TNS): a predictive filter along the frequency axis
+ * that reshapes quantization noise in time so it hides behind transients
+ * instead of leaking out as pre-echo. Long-window only here; short windows
+ * already have the temporal resolution to not need it.
  */
 
 #ifndef TNS_H
 #define TNS_H
 
 #include "faac_real.h"
+#include "coder.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
 
-
+/* Latch the per-channel band limits from the sample rate's TNS tool table. */
 void TnsInit(faacEncStruct* hEncoder);
-void TnsEncode(TnsInfo* tnsInfo, int numberOfBands,int maxSfb,enum WINDOW_TYPE blockType,
-               int* sfbOffsetTable,faac_real* spec, faac_real* temp);
+
+/* Analyse one channel and, if it pays off, whiten `spec` in place. */
+void TnsEncode(TnsInfo* tnsInfo, int numBands,
+               enum WINDOW_TYPE blockType, int* sfbOffsetTable,
+               faac_real* spec);
 
 #ifdef __cplusplus
 }

@@ -255,6 +255,8 @@ static void assign_band_codebooks(CoderInfo * __restrict ci, const faac_real * _
             continue;
         }
 
+        /* PNS is fine inside TNS-covered bands -- the decoder's inverse
+         * TNS filter shapes the substituted noise too. */
         if (target[sb] < pns_threshold)
         {
             ci->book[band] = HCB_PNS;
