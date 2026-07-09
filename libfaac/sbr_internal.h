@@ -32,7 +32,7 @@ typedef struct SBRChannel {
     int invfMode;                                    /* bs_invf_mode (0–3) */
 } SBRChannel;
 
-typedef struct SBRInfo {
+struct SBRInfo {
     int sbrPresent;
     int headerSent;
     int frameCount;
@@ -83,9 +83,9 @@ typedef struct SBRInfo {
     float oddCos [SBR_QMF_BANDS_64];
     float oddSin [SBR_QMF_BANDS_64];
     FFT_Tables *fftTables;   /* borrowed: the encoder's shared core FFT tables */
-} SBRInfo;
+};
 
-typedef struct SBRContext {
+struct SBRContext {
     unsigned long fullSampleRate;
     unsigned int  fullSampleRateIdx;
     SBRInfo      *sbrInfo;
@@ -99,7 +99,7 @@ typedef struct SBRContext {
        lookahead (LOOKAHEAD_DEPTH frames); newest sits at SBR_DETECT_FIFO-1. */
     float transientStrengthFIFO[MAX_CHANNELS][SBR_DETECT_FIFO];
     int       wantShortFIFO[MAX_CHANNELS][SBR_DETECT_FIFO];
-} SBRContext;
+};
 
 SBRInfo *SbrInit(int channels, int sampleRate, unsigned long bitRate, FFT_Tables *fft_tables);
 /* Recompute the bitrate-dependent band config without reallocating; lets
