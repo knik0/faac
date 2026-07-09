@@ -43,9 +43,11 @@
 static char *libfaacName = PACKAGE_VERSION;
 static char *libCopyright =
   "FAAC - Freeware Advanced Audio Coder (http://faac.sourceforge.net/)\n"
-  " Copyright (C) 1999,2000,2001  Menno Bakker\n"
-  " Copyright (C) 2002,2003,2017  Krzysztof Nikiel\n"
-  "This software is based on the ISO MPEG-4 reference source code.\n";
+  " Copyright (C) 1999-2001, Menno Bakker\n"
+  " Copyright (C) 2002-2017, Krzysztof Nikiel\n"
+  " Copyright (C) 2004, Dan Villiom P. Christiansen\n"
+  " Copyright (C) 2005-2026, Fabian Greffrath\n"
+  " Copyright (C) 2026, Nils Schimmelmann\n";
 
 static SR_INFO srInfo[12+1];
 
