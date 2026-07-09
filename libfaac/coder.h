@@ -43,7 +43,6 @@ enum WINDOW_TYPE {
 };
 
 #define TNS_MAX_ORDER 12
-#define DEF_TNS_GAIN_THRESH 1.4
 #define DEF_TNS_COEFF_THRESH 0.1
 #define DEF_TNS_COEFF_RES 4
 #define DEF_TNS_RES_OFFSET 3
@@ -57,9 +56,8 @@ typedef struct {
     int direction;                       /* Filtering direction */
     int coefCompress;                    /* Are coeffs compressed? */
     int length;                          /* Length, in bands */
-    faac_real aCoeffs[TNS_MAX_ORDER+1];     /* AR Coefficients */
-    faac_real kCoeffs[TNS_MAX_ORDER+1];     /* Reflection Coefficients */
-    int index[TNS_MAX_ORDER+1];          /* Coefficient indices */
+    faac_real aCoeffs[TNS_MAX_ORDER+1];  /* LPC (AR) coefficients */
+    int index[TNS_MAX_ORDER+1];          /* Quantized reflection-coeff indices */
 } TnsFilterData;
 
 typedef struct {
@@ -71,12 +69,9 @@ typedef struct {
 typedef struct {
     int tnsDataPresent;
     int tnsMinBandNumberLong;
-    int tnsMinBandNumberShort;
     int tnsMaxBandsLong;
-    int tnsMaxBandsShort;
-    int tnsMaxOrderLong;
-    int tnsMaxOrderShort;
-    TnsWindowData windowData[MAX_SHORT_WINDOWS]; /* TNS data per window */
+    int tnsNumSwbLong;      /* full swb count for the sample rate (decoder's num_swb) */
+    TnsWindowData windowData;   /* long-only: one window per frame, not per-short-window */
 } TnsInfo;
 
 typedef struct CoderInfo {
