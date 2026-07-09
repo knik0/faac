@@ -18,8 +18,6 @@
  *
  */
 
-#include <math.h>
-
 #include "util.h"
 #include "coder.h"  // FRAME_LEN
 
