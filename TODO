@@ -1,9 +1,7 @@
-- fix scalefactor encoding check (-60 .. 60)
-- optimize quantization bias
-- optimize codebook list (section_data)
-- optimize CPE windows grouping
-- Add bit reservoir control
-- Add resampler and downmixer (hans-juergen, Oct 17, 2004)
-- Add HE AAC (hans-juergen, Oct 17, 2004)
-- Test TNS(arcen, Apr 8th, 2012)
+- optimize codebook list (section_data) via joint/DP optimization
+- optimize CPE windows grouping jointly across channel pairs
+- Add adaptive bit reservoir control
 - add PCE (Program Config Element) or 4-bit AudioSpecificConfig
+- HE-AAC v1: SBR noise floor / invf mode from within-band tonality
+- HE-AAC v1: Move numEnvelopes/eff_amp_res/tEnv to SBRChannel for independent borders
+- HE-AAC v1: Use dedicated noise Huffman tables in write_sbr_noise

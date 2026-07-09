@@ -116,9 +116,16 @@ faac_status faac_encoder_encode(faac_encoder *enc,
 const char *faac_strerror(faac_status status);
 </pre>
 The <i>object_type</i> field of <i>faac_params</i> uses MPEG-4 Audio Object Type
-numbers: <i>FAAC_OBJ_LOW</i> (2) is AAC-LC. <i>FAAC_OBJ_HE_AAC_V1</i> (5) and
-<i>FAAC_OBJ_HE_AAC_V2</i> (29) are defined but not implemented in this release;
-requesting them returns <i>FAAC_ERR_UNSUPPORTED</i>.
+numbers: <i>FAAC_OBJ_LOW</i> (2) is AAC-LC and <i>FAAC_OBJ_HE_AAC_V1</i> (5) is
+HE-AAC v1 (AAC-LC core + SBR). <i>FAAC_OBJ_AUTO</i> (0) lets the library choose
+LC or HE-AAC from the bitrate. <i>FAAC_OBJ_HE_AAC_V2</i> (29) is defined but not
+implemented; requesting it returns <i>FAAC_ERR_UNSUPPORTED</i>.
+<br><br>
+For an HE-AAC encoder the SBR core runs at half the input rate and codes a
+2048-sample frame, so <i>faac_encoder_get_info()</i> reports
+<i>frame_samples</i> == 2048 and <i>sample_rate</i> == the full (un-halved)
+output rate. Buffer sizing and rate reporting therefore stay correct without
+the caller knowing any SBR internals.
 
 <a name="porting">
 <h4>Porting from the legacy faacEnc* API</h4>

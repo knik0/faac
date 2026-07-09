@@ -16,6 +16,7 @@
 #include "channels.h"
 #include "huff2.h"
 #include "frame.h"
+#include "sbr.h"
 #include <string.h>
 #include <stdio.h>
 
@@ -238,7 +239,8 @@ static int WriteADTSHeader(struct faacEncStruct *hEncoder, BitStream *bs, bool w
         PutBit(bs, hEncoder->config.mpegVersion, LEN_ADTS_ID);
         PutBit(bs, 0, LEN_ADTS_LAYER);
         PutBit(bs, 1, LEN_ADTS_ABSENT);
-        PutBit(bs, hEncoder->config.aacObjectType - 1, LEN_ADTS_PROFILE);
+        /* profile: always LC. HE-AAC's core is LC too; SBR is implicit via fill element. */
+        PutBit(bs, LOW - 1, LEN_ADTS_PROFILE);
         PutBit(bs, hEncoder->sampleRateIdx, LEN_ADTS_FREQ);
         PutBit(bs, 0, LEN_ADTS_PRIV);
         PutBit(bs, hEncoder->numChannels, LEN_ADTS_CH_CFG);
@@ -283,6 +285,11 @@ static int BuildFrame(struct faacEncStruct *hEncoder, CoderInfo *coder, AACEleme
     int f = (bits < (8 - LEN_SE_ID)) ? (8 - LEN_SE_ID - bits) : 0;
     f += 6;
     bits += (f - WriteAACFillBits(bs, f, write));
+
+    /* HE-AAC: SBR payload rides in a fill element (EXT_SBR_DATA) */
+    bits += SbrContextGetBits(hEncoder->sbrContext, write ? bs : NULL,
+                               (int)hEncoder->numChannels, (int)hEncoder->config.aacObjectType, write);
+
     if (write) PutBit(bs, ID_END, LEN_SE_ID);
     bits += LEN_SE_ID;
     int pad = (8 - (bits & 7)) & 7;
