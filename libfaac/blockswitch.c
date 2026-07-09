@@ -16,6 +16,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -50,14 +51,14 @@ psydata_t;
  * blocks on stationary music; what's left tracks the band where pre-echo is
  * audible. A relative energy jump between sub-blocks past this threshold is a
  * transient. */
-#define PSY_TD_THRESH ((faac_real)0.5)
+#define PSY_TD_THRESH (0.5f)
 
 static void PsyCheckShort(PsyInfo * psyInfo)
 {
   enum {PREVS = 2, NEXTS = 2};
   psydata_t *psydata = (psydata_t *)psyInfo->data;
   int win;
-  faac_real lasteng = (faac_real)psydata->eng[ENG_WIN_CUR - PREVS]; /* start at PREVS before current */
+  float lasteng = (float)psydata->eng[ENG_WIN_CUR - PREVS]; /* start at PREVS before current */
 
   psyInfo->block_type = ONLY_LONG_WINDOW;
 
@@ -65,10 +66,10 @@ static void PsyCheckShort(PsyInfo * psyInfo)
      The search range is [curr-2, curr+9]. */
   for (win = 1; win < PREVS + SUBBLOCKS_PER_FRAME + NEXTS; win++)
   {
-      faac_real eng = (faac_real)psydata->eng[ENG_WIN_CUR - PREVS + win];
+      float eng = (float)psydata->eng[ENG_WIN_CUR - PREVS + win];
 
-      faac_real toteng = (eng < lasteng) ? eng : lasteng;
-      faac_real volchg = FAAC_FABS(eng - lasteng);
+      float toteng = (eng < lasteng) ? eng : lasteng;
+      float volchg = fabsf(eng - lasteng);
 
       /* Relative energy jump indicates a transient. IEEE divide handles silence cases. */
       if (volchg / toteng > PSY_TD_THRESH)
@@ -86,7 +87,7 @@ void PsyInit(GlobalPsyInfo * gpsyInfo, PsyInfo * psyInfo, unsigned int numChanne
   unsigned int channel;
   int size;
 
-  gpsyInfo->sampleRate = (faac_real) sampleRate;
+  gpsyInfo->sampleRate = (float) sampleRate;
 
   for (channel = 0; channel < numChannels; channel++)
   {
@@ -150,11 +151,11 @@ void PsyCalculate(AACElement * elements, int numElements, PsyInfo * psyInfo,
 }
 
 void PsyBufferUpdate(GlobalPsyInfo * gpsyInfo, PsyInfo * psyInfo,
-                            faac_real * restrict p_lookahead1,
-                            faac_real * restrict p_lookahead2)
+                            float * restrict p_lookahead1,
+                            float * restrict p_lookahead2)
 {
   int win;
-  faac_real * restrict transBuff = gpsyInfo->sharedWorkBuffLong;
+  float * restrict transBuff = gpsyInfo->sharedWorkBuffLong;
   psydata_t *psydata = (psydata_t *)psyInfo->data;
 
   /* Shift the energy windows down by one frame: PREV<-CUR, CUR<-NEXT, freeing
@@ -163,20 +164,20 @@ void PsyBufferUpdate(GlobalPsyInfo * gpsyInfo, PsyInfo * psyInfo,
           2 * SUBBLOCKS_PER_FRAME * sizeof(psyfloat));
 
   /* Assembly of the newest 2048-sample window for energy analysis */
-  memcpy(transBuff, p_lookahead1, BLOCK_LEN_LONG * sizeof(faac_real));
-  memcpy(transBuff + BLOCK_LEN_LONG, p_lookahead2, BLOCK_LEN_LONG * sizeof(faac_real));
+  memcpy(transBuff, p_lookahead1, BLOCK_LEN_LONG * sizeof(float));
+  memcpy(transBuff + BLOCK_LEN_LONG, p_lookahead2, BLOCK_LEN_LONG * sizeof(float));
 
   for (win = 0; win < SUBBLOCKS_PER_FRAME; win++)
   {
     /* seg[-1] is in bounds (seg starts >= 448 samples in), so the first
      * difference carries across the sub-block boundary instead of resetting. */
-    faac_real *seg = transBuff + (win * BLOCK_LEN_SHORT) + (BLOCK_LEN_LONG - BLOCK_LEN_SHORT) / 2;
-    faac_real e = 0.0;
+    float *seg = transBuff + (win * BLOCK_LEN_SHORT) + (BLOCK_LEN_LONG - BLOCK_LEN_SHORT) / 2;
+    float e = 0.0f;
     int l, n = 2 * psyInfo->sizeS;
 
     for (l = 0; l < n; l++)
     {
-      faac_real d = seg[l] - seg[l - 1];
+      float d = seg[l] - seg[l - 1];
       e += d * d;
     }
     psydata->eng[ENG_WIN_NEXT + win] = (psyfloat)e;

@@ -39,19 +39,19 @@
 /* Accumulate channel energies and cross-correlation for a scale factor band.
  * Using three independent accumulators maximizes instruction-level parallelism
  * by avoiding read-after-write dependencies on the FPU pipeline. */
-static inline void calculate_energies(const faac_real * restrict sl0, const faac_real * restrict sr0,
+static inline void calculate_energies(const float * restrict sl0, const float * restrict sr0,
                                int start, int len, int wstart, int wend,
-                               faac_real * restrict el_out, faac_real * restrict er_out, faac_real * restrict elr_out)
+                               float * restrict el_out, float * restrict er_out, float * restrict elr_out)
 {
-    faac_real el = 0, er = 0, elr = 0;
+    float el = 0, er = 0, elr = 0;
     int win, i;
 
     for (win = wstart; win < wend; win++) {
-        const faac_real * restrict sl = sl0 + win * BLOCK_LEN_SHORT + start;
-        const faac_real * restrict sr = sr0 + win * BLOCK_LEN_SHORT + start;
+        const float * restrict sl = sl0 + win * BLOCK_LEN_SHORT + start;
+        const float * restrict sr = sr0 + win * BLOCK_LEN_SHORT + start;
         for (i = 0; i < len; i++) {
-            faac_real l = sl[i];
-            faac_real r = sr[i];
+            float l = sl[i];
+            float r = sr[i];
             el  += l * l;
             er  += r * r;
             elr += l * r;
@@ -63,63 +63,63 @@ static inline void calculate_energies(const faac_real * restrict sl0, const faac
 }
 
 /* Fast memory-clearing utility for suppressed channels. */
-static inline void apply_mute(faac_real * restrict s0, int start, int len, int wstart, int wend)
+static inline void apply_mute(float * restrict s0, int start, int len, int wstart, int wend)
 {
     int win;
     for (win = wstart; win < wend; win++) {
-        faac_real * restrict s = s0 + win * BLOCK_LEN_SHORT + start;
-        memset(s, 0, len * sizeof(faac_real));
+        float * restrict s = s0 + win * BLOCK_LEN_SHORT + start;
+        memset(s, 0, len * sizeof(float));
     }
 }
 
 /* When one component (mid or side) dominates, collapse both channels to that
  * component and zero the other — it costs no bits and the signal loss is masked.
  * Factor of 0.5 keeps the coded amplitude on the same scale as L/R. */
-static inline void apply_ms(faac_real * restrict sl0, faac_real * restrict sr0,
+static inline void apply_ms(float * restrict sl0, float * restrict sr0,
                             int start, int len, int wstart, int wend, int in_phase)
 {
     int win, i;
     if (in_phase) {
         for (win = wstart; win < wend; win++) {
-            faac_real * restrict sl = sl0 + win * BLOCK_LEN_SHORT + start;
-            faac_real * restrict sr = sr0 + win * BLOCK_LEN_SHORT + start;
+            float * restrict sl = sl0 + win * BLOCK_LEN_SHORT + start;
+            float * restrict sr = sr0 + win * BLOCK_LEN_SHORT + start;
             for (i = 0; i < len; i++) {
-                sl[i] = 0.5 * (sl[i] + sr[i]);
-                sr[i] = 0.0;
+                sl[i] = 0.5f * (sl[i] + sr[i]);
+                sr[i] = 0.0f;
             }
         }
     } else {
         for (win = wstart; win < wend; win++) {
-            faac_real * restrict sl = sl0 + win * BLOCK_LEN_SHORT + start;
-            faac_real * restrict sr = sr0 + win * BLOCK_LEN_SHORT + start;
+            float * restrict sl = sl0 + win * BLOCK_LEN_SHORT + start;
+            float * restrict sr = sr0 + win * BLOCK_LEN_SHORT + start;
             for (i = 0; i < len; i++) {
-                sr[i] = 0.5 * (sl[i] - sr[i]);
-                sl[i] = 0.0;
+                sr[i] = 0.5f * (sl[i] - sr[i]);
+                sl[i] = 0.0f;
             }
         }
     }
 }
 
-static inline void apply_is(faac_real * restrict sl0, faac_real * restrict sr0,
-                            int start, int len, int wstart, int wend, int in_phase, faac_real vfix)
+static inline void apply_is(float * restrict sl0, float * restrict sr0,
+                            int start, int len, int wstart, int wend, int in_phase, float vfix)
 {
     int win, i;
     if (in_phase) {
         for (win = wstart; win < wend; win++) {
-            faac_real * restrict sl = sl0 + win * BLOCK_LEN_SHORT + start;
-            faac_real * restrict sr = sr0 + win * BLOCK_LEN_SHORT + start;
+            float * restrict sl = sl0 + win * BLOCK_LEN_SHORT + start;
+            float * restrict sr = sr0 + win * BLOCK_LEN_SHORT + start;
             for (i = 0; i < len; i++) {
                 sl[i] = (sl[i] + sr[i]) * vfix;
-                sr[i] = 0.0;
+                sr[i] = 0.0f;
             }
         }
     } else {
         for (win = wstart; win < wend; win++) {
-            faac_real * restrict sl = sl0 + win * BLOCK_LEN_SHORT + start;
-            faac_real * restrict sr = sr0 + win * BLOCK_LEN_SHORT + start;
+            float * restrict sl = sl0 + win * BLOCK_LEN_SHORT + start;
+            float * restrict sr = sr0 + win * BLOCK_LEN_SHORT + start;
             for (i = 0; i < len; i++) {
                 sl[i] = (sl[i] - sr[i]) * vfix;
-                sr[i] = 0.0;
+                sr[i] = 0.0f;
             }
         }
     }
@@ -130,9 +130,9 @@ static inline void apply_is(faac_real * restrict sl0, faac_real * restrict sr0,
  * optimize the mode-specific branches using constant propagation. */
 static inline int process_cpe(CoderInfo * restrict cl, CoderInfo * restrict cr,
                                AACElement * restrict element,
-                               faac_real * restrict sl0, faac_real * restrict sr0,
+                               float * restrict sl0, float * restrict sr0,
                                int * restrict sfcnt, int wstart, int wend,
-                               faac_real thrmid, faac_real inv_isthr, faac_real thrside_sq,
+                               float thrmid, float inv_isthr, float thrside_sq,
                                int is_start_sfb, int mode)
 {
     int sfb, sfmin = (cl->block_type == ONLY_SHORT_WINDOW) ? 1 : 8, msused = 0;
@@ -147,12 +147,12 @@ static inline int process_cpe(CoderInfo * restrict cl, CoderInfo * restrict cr,
 
     for (sfb = sfmin; sfb < cl->sfbn; sfb++) {
         int start = sfb_offset[sfb], len = sfb_offset[sfb+1] - start;
-        faac_real el, er, elr;
+        float el, er, elr;
         calculate_energies(sl0, sr0, start, len, wstart, wend, &el, &er, &elr);
 
-        faac_real es   = el + er + 2.0*elr;
-        faac_real ed   = el + er - 2.0*elr;
-        faac_real etot = el + er;
+        float es   = el + er + 2.0f*elr;
+        float ed   = el + er - 2.0f*elr;
+        float etot = el + er;
         if (es < 0) es = 0;
         if (ed < 0) ed = 0;
         if (etot <= 0) {
@@ -165,12 +165,12 @@ static inline int process_cpe(CoderInfo * restrict cl, CoderInfo * restrict cr,
          * (sqrt(L)+sqrt(R))^2 to (L+R + 2*sqrt(L*R)) to eliminate one square
          * root per band while maintaining identical decision margins. */
         if ((mode == JOINT_IS || (mode == JOINT_MIXED && sfb >= is_start_sfb)) && el > 0 && er > 0) {
-            faac_real th = (el + er + 2.0 * FAAC_SQRT(el * er)) * inv_isthr;
+            float th = (el + er + 2.0f * sqrtf(el * er)) * inv_isthr;
             int hcb = (es >= th) ? HCB_INTENSITY : (ed >= th ? HCB_INTENSITY2 : HCB_NONE);
             if (hcb != HCB_NONE) {
-                faac_real inv_etot = 1.0 / etot;
-                int sf  = FAAC_LRINT(FAAC_LOG10(el * inv_etot) * SF_STEP_ENRG);
-                int pan = FAAC_LRINT(FAAC_LOG10(er * inv_etot) * SF_STEP_ENRG) - sf;
+                float inv_etot = 1.0f / etot;
+                int sf  = lrintf(log10f(el * inv_etot) * SF_STEP_ENRG);
+                int pan = lrintf(log10f(er * inv_etot) * SF_STEP_ENRG) - sf;
                 /* Extreme pan: drop the inaudible channel to HCB_ZERO instead of
                  * intensity-coding it, keeping the band cheap for the quantizer. */
                 if (pan > IS_PAN_LIMIT) {
@@ -188,8 +188,8 @@ static inline int process_cpe(CoderInfo * restrict cl, CoderInfo * restrict cr,
                 cl->sf[*sfcnt]   = sf;
                 cr->sf[*sfcnt]   = -pan;
                 cr->book[*sfcnt] = hcb;
-                faac_real dom = (hcb == HCB_INTENSITY) ? es : ed;
-                apply_is(sl0, sr0, start, len, wstart, wend, hcb == HCB_INTENSITY, FAAC_SQRT(etot / dom));
+                float dom = (hcb == HCB_INTENSITY) ? es : ed;
+                apply_is(sl0, sr0, start, len, wstart, wend, hcb == HCB_INTENSITY, sqrtf(etot / dom));
                 if (mode != JOINT_IS) element->msInfo.ms_used[*sfcnt] = 0;
                 (*sfcnt)++;
                 continue;
@@ -201,12 +201,12 @@ static inline int process_cpe(CoderInfo * restrict cl, CoderInfo * restrict cr,
         if (mode == JOINT_MS || mode == JOINT_MIXED) {
             /* M/S fires when min(L,R) * thrmid ≥ dominant component: the weaker channel
              * contributes enough to justify the transform overhead. 0.25 accounts for halving. */
-            faac_real em = 0.25 * es, side = 0.25 * ed;
+            float em = 0.25f * es, side = 0.25f * ed;
             if (min(el, er) * thrmid >= max(em, side)) {
-                if (em * thrmid * 2.0 >= etot) {
+                if (em * thrmid * 2.0f >= etot) {
                     ms = 1;
                     apply_ms(sl0, sr0, start, len, wstart, wend, 1);
-                } else if (side * thrmid * 2.0 >= etot) {
+                } else if (side * thrmid * 2.0f >= etot) {
                     ms = 1;
                     apply_ms(sl0, sr0, start, len, wstart, wend, 0);
                 }
@@ -228,32 +228,32 @@ static inline int process_cpe(CoderInfo * restrict cl, CoderInfo * restrict cr,
     return msused;
 }
 
-void AACstereo(CoderInfo *coder, AACElement *elements, int numElements, faac_real *s[MAX_CHANNELS],
-               faac_real quality, int mode, int sampleRate)
+void AACstereo(CoderInfo *coder, AACElement *elements, int numElements, float *s[MAX_CHANNELS],
+               float quality, int mode, int sampleRate)
 {
-    faac_real inv_quality = 1.0 / quality;
-    faac_real thrmid = 1.0, isthr = 1.0, thrside = 0.0;
+    float inv_quality = 1.0f / quality;
+    float thrmid = 1.0f, isthr = 1.0f, thrside = 0.0f;
 
     switch (mode) {
         case JOINT_MIXED:
-            thrmid = (0.09 * 0.85) * inv_quality;
-            if (thrmid > 0.25) thrmid = 0.25;
-            thrmid += 1.0;
-            isthr = 0.18 * inv_quality + 1.0;
+            thrmid = (0.09f * 0.85f) * inv_quality;
+            if (thrmid > 0.25f) thrmid = 0.25f;
+            thrmid += 1.0f;
+            isthr = 0.18f * inv_quality + 1.0f;
             if (isthr > M_SQRT2) isthr = M_SQRT2;
-            thrside = 0.1 * inv_quality;
-            if (thrside > 0.3) thrside = 0.3;
+            thrside = 0.1f * inv_quality;
+            if (thrside > 0.3f) thrside = 0.3f;
             break;
         case JOINT_MS:
-            thrmid = (1.09 - 1.0) * inv_quality;
-            if (thrmid > 0.25) thrmid = 0.25;
-            thrmid += 1.0;
-            thrside = 0.1 * inv_quality;
-            if (thrside > 0.3) thrside = 0.3;
+            thrmid = (1.09f - 1.0f) * inv_quality;
+            if (thrmid > 0.25f) thrmid = 0.25f;
+            thrmid += 1.0f;
+            thrside = 0.1f * inv_quality;
+            if (thrside > 0.3f) thrside = 0.3f;
             break;
         case JOINT_IS:
-            isthr = 0.18 * (inv_quality * inv_quality);
-            isthr += 1.0;
+            isthr = 0.18f * (inv_quality * inv_quality);
+            isthr += 1.0f;
             if (isthr > M_SQRT2) isthr = M_SQRT2;
             break;
         default:
@@ -263,8 +263,8 @@ void AACstereo(CoderInfo *coder, AACElement *elements, int numElements, faac_rea
      * Each threshold scales inversely with quality — higher quality encodes
      * apply stereo coding more conservatively, touching the signal less. */
     thrmid *= thrmid;
-    faac_real inv_isthr = 1.0 / (isthr * isthr);
-    faac_real thrside_sq = thrside * thrside;
+    float inv_isthr = 1.0f / (isthr * isthr);
+    float thrside_sq = thrside * thrside;
 
     for (int e = 0; e < numElements; e++) {
         AACElement *elem = &elements[e];

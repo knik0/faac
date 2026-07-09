@@ -21,24 +21,19 @@
 #define QUANTIZE_H
 
 #include "coder.h"
-#include "faac_real.h"
 
 typedef struct
 {
-    faac_real quality;
+    float quality;
     int max_cbl;
     int max_cbs;
     int max_l;
     int pnslevel;
 } AACQuantCfg;
 
-/* Rounding bias for the x^(3/4) quantization: 0.4054 minimizes average
+/* Rounding bias for the x^(3/4) quantization: 0.4054f minimizes average
  * quantization error for a uniform distribution (ISO 14496-3 §8.3.5). */
-#ifdef FAAC_PRECISION_SINGLE
 #define MAGIC_NUMBER 0.4054f
-#else
-#define MAGIC_NUMBER 0.4054
-#endif
 
 enum {
     DEFQUAL = 100,
@@ -48,9 +43,9 @@ enum {
 };
 
 void ResetCoderSections(CoderInfo *coderInfo);
-int BlocQuant(CoderInfo *coderInfo, faac_real *xr, AACQuantCfg *aacquantCfg);
+int BlocQuant(CoderInfo *coderInfo, float *xr, AACQuantCfg *aacquantCfg);
 void CalcBW(unsigned *bw, int rate, SR_INFO *sr, AACQuantCfg *aacquantCfg);
-void BlocGroup(faac_real *xr, CoderInfo *coderInfo, AACQuantCfg *aacquantCfg);
+void BlocGroup(float *xr, CoderInfo *coderInfo, AACQuantCfg *aacquantCfg);
 void QuantizeInit(void);
 
 #endif

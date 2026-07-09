@@ -157,18 +157,18 @@ static void quantize_coeffs(int order, int res, float * k, int * idx)
  * reflection coefficients, so this runs the standard lattice-to-direct
  * step-up. Called after quantize_coeffs so the polynomial matches what's
  * actually transmitted, not the pre-quantization float values. */
-static void finalize_filter(int order, const float * k, faac_real * a)
+static void finalize_filter(int order, const float * k, float * a)
 {
     int i, m;
 
-    a[0] = 1.0;
+    a[0] = 1.0f;
     for (m = 1; m <= order; m++) {
-        faac_real km = (faac_real)k[m];
+        float km = k[m];
         int half = (m + 1) / 2;
 
         for (i = 1; i < half; i++) {
-            faac_real t1 = a[i];
-            faac_real t2 = a[m - i];
+            float t1 = a[i];
+            float t2 = a[m - i];
             a[i] = t1 + km * t2;
             a[m - i] = t2 + km * t1;
         }
@@ -182,15 +182,15 @@ static void finalize_filter(int order, const float * k, faac_real * a)
  * the prediction to run towards the transient (so quantization noise piles
  * up where it'll be masked), and the transient can sit at either edge of
  * the analysis window. */
-static void filter_spec(int length, int order, int direction, const faac_real * a, faac_real * spec)
+static void filter_spec(int length, int order, int direction, const float * a, float * spec)
 {
-    faac_real hist[BLOCK_LEN_LONG];
+    float hist[BLOCK_LEN_LONG];
     int i, j;
 
-    memcpy(hist, spec, length * sizeof(faac_real));
+    memcpy(hist, spec, length * sizeof(float));
     if (direction) {
         for (i = length - 1; i >= 0; i--) {
-            faac_real acc = hist[i];
+            float acc = hist[i];
             int jmax = min(order, length - 1 - i);
 
             for (j = 1; j <= jmax; j++)
@@ -199,7 +199,7 @@ static void filter_spec(int length, int order, int direction, const faac_real * 
         }
     } else {
         for (i = 0; i < length; i++) {
-            faac_real acc = hist[i];
+            float acc = hist[i];
             int jmax = min(order, i);
 
             for (j = 1; j <= jmax; j++)
@@ -224,10 +224,10 @@ void TnsInit(faacEncStruct* hEncoder)
 }
 
 void TnsEncode(TnsInfo* tnsInfo, int numBands, enum WINDOW_TYPE blockType, int* sfbOffsetTable,
-               faac_real* spec)
+               float* spec)
 {
     int b_start, b_stop, i_start, length;
-    faac_real *band, energy;
+    float *band, energy;
     float wspec[BLOCK_LEN_LONG];
     float r[TNS_MAX_ORDER + 1] = {0};
     float k[TNS_MAX_ORDER + 1] = {0};
@@ -253,10 +253,10 @@ void TnsEncode(TnsInfo* tnsInfo, int numBands, enum WINDOW_TYPE blockType, int* 
         return;
 
     band = spec + i_start;
-    energy = 0.0;
+    energy = 0.0f;
     for (i = 0; i < length; i++)
         energy += band[i] * band[i];
-    if (energy < (faac_real)TNS_MIN_ENERGY)
+    if (energy < TNS_MIN_ENERGY)
         return;
 
     /* Per-band RMS-normalize before autocorrelation, floored at 1% of the
@@ -350,18 +350,18 @@ void TnsEncode(TnsInfo* tnsInfo, int numBands, enum WINDOW_TYPE blockType, int* 
      * transmitted no longer pays for itself. Re-check on a trial run of the
      * real (quantized) filter before committing to writing it out. */
     {
-        faac_real trial[BLOCK_LEN_LONG];
-        faac_real orig_e = 0.0, filt_e = 0.0;
+        float trial[BLOCK_LEN_LONG];
+        float orig_e = 0.0f, filt_e = 0.0f;
 
-        memcpy(trial, wspec, length * sizeof(faac_real));
+        memcpy(trial, wspec, length * sizeof(float));
         filter_spec(length, order, filter->direction, filter->aCoeffs, trial);
         for (i = 0; i < length; i++) {
-            orig_e += (faac_real)wspec[i] * (faac_real)wspec[i];
+            orig_e += wspec[i] * wspec[i];
             filt_e += trial[i] * trial[i];
         }
-        if (filt_e < (faac_real)TNS_MIN_ENERGY)
-            filt_e = (faac_real)TNS_MIN_ENERGY;
-        if (orig_e < (faac_real)TNS_MEASURED_GAIN * filt_e)
+        if (filt_e < TNS_MIN_ENERGY)
+            filt_e = TNS_MIN_ENERGY;
+        if (orig_e < TNS_MEASURED_GAIN * filt_e)
             return;
     }
 

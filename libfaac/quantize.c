@@ -26,29 +26,29 @@
 #include "huff2.h"
 #include "cpu_compute.h"
 
-typedef void (*QuantizeFunc)(const faac_real * __restrict xr, int * __restrict xi, int n, faac_real sfacfix);
+typedef void (*QuantizeFunc)(const float * __restrict xr, int * __restrict xi, int n, float sfacfix);
 
 #if defined(HAVE_SSE2)
-extern void quantize_sse2(const faac_real * __restrict xr, int * __restrict xi, int n, faac_real sfacfix);
+extern void quantize_sse2(const float * __restrict xr, int * __restrict xi, int n, float sfacfix);
 #endif
 
-static void quantize_scalar(const faac_real * __restrict xr, int * __restrict xi, int n, faac_real sfacfix)
+static void quantize_scalar(const float * __restrict xr, int * __restrict xi, int n, float sfacfix)
 {
-    const faac_real magic = MAGIC_NUMBER;
+    const float magic = MAGIC_NUMBER;
     int i;
     for (i = 0; i < n; i++)
     {
-        faac_real val = xr[i];
-        faac_real tmp = FAAC_FABS(val) * sfacfix;
-        tmp = FAAC_SQRT(tmp * FAAC_SQRT(tmp));
+        float val = xr[i];
+        float tmp = fabsf(val) * sfacfix;
+        tmp = sqrtf(tmp * sqrtf(tmp));
         int q = (int)(tmp + magic);
         xi[i] = (val < 0) ? -q : q;
     }
 }
 
 static QuantizeFunc qfunc = quantize_scalar;
-static faac_real sfstep;
-static faac_real max_quant_limit;
+static float sfstep;
+static float max_quant_limit;
 
 #define SF_CHAIN_UNSET INT_MIN
 
@@ -63,38 +63,40 @@ void QuantizeInit(void)
         qfunc = quantize_scalar;
 
     sfstep = SF_STEP_AMPL;
-    max_quant_limit = FAAC_POW((faac_real)MAX_HUFF_ESC_VAL + 1.0 - MAGIC_NUMBER, 4.0/3.0);
+    /* One-time constant: computed in double so the stored float is
+     * correctly rounded, at zero runtime cost. */
+    max_quant_limit = (float)pow((double)MAX_HUFF_ESC_VAL + 1.0 - (double)MAGIC_NUMBER, 4.0/3.0);
 }
 
 /* sfac and gain are coupled; clamping one forces a recompute of the other. */
-static faac_real gain_with_overflow_clamp(int *sfac, faac_real band_peak)
+static float gain_with_overflow_clamp(int *sfac, float band_peak)
 {
-    faac_real gain = FAAC_POW(10, *sfac / sfstep);
-    if (band_peak > 0.0 && gain * band_peak > max_quant_limit)
+    float gain = powf(10, *sfac / sfstep);
+    if (band_peak > 0.0f && gain * band_peak > max_quant_limit)
     {
         gain = max_quant_limit / band_peak;
-        *sfac = (int)FAAC_FLOOR(FAAC_LOG10(gain) * sfstep);
-        gain = FAAC_POW(10, *sfac / sfstep);
+        *sfac = (int)floorf(log10f(gain) * sfstep);
+        gain = powf(10, *sfac / sfstep);
     }
     return gain;
 }
 
 // masking target per scalefactor band: 0 marks a band inaudible
-#define SILENCE_RMS            0.4     // per-sample RMS gate for silence
-#define AVG_ENERGY_WEIGHT      0.2     // noise-like (average-energy) share of the target
-#define PEAK_ENERGY_WEIGHT     0.45    // tonal (peak-energy) share of the remainder
-#define SHORT_BLOCK_TIGHTEN    0.45    // short blocks get a tighter target per unit of energy
-#define LOUDNESS_EXPONENT      0.4     // Zwicker-ish loudness compression
-#define AVG_ENERGY_FLOOR_FRAC  0.0010  // -30 dB floor, keeps quiet bands from collapsing the target
-#define PEAK_ENERGY_FLOOR_FRAC 0.0050  // ~-23 dB floor, same purpose for peak energy
+#define SILENCE_RMS            0.4f     // per-sample RMS gate for silence
+#define AVG_ENERGY_WEIGHT      0.2f     // noise-like (average-energy) share of the target
+#define PEAK_ENERGY_WEIGHT     0.45f    // tonal (peak-energy) share of the remainder
+#define SHORT_BLOCK_TIGHTEN    0.45f    // short blocks get a tighter target per unit of energy
+#define LOUDNESS_EXPONENT      0.4f     // Zwicker-ish loudness compression
+#define AVG_ENERGY_FLOOR_FRAC  0.0010f  // -30 dB floor, keeps quiet bands from collapsing the target
+#define PEAK_ENERGY_FLOOR_FRAC 0.0050f  // ~-23 dB floor, same purpose for peak energy
 
 typedef struct
 {
-    faac_real sum;      /* energy summed across group windows */
-    faac_real peak_amp; /* sqrt of the largest single-coefficient energy seen */
+    float sum;      /* energy summed across group windows */
+    float peak_amp; /* sqrt of the largest single-coefficient energy seen */
 } BandEnergy;
 
-static void measure_band_energy(const CoderInfo * __restrict ci, const faac_real * __restrict xr0,
+static void measure_band_energy(const CoderInfo * __restrict ci, const float * __restrict xr0,
                                  int gnum, BandEnergy * __restrict out)
 {
     int gsize = ci->groups.len[gnum];
@@ -103,76 +105,76 @@ static void measure_band_energy(const CoderInfo * __restrict ci, const faac_real
     for (sfb = 0; sfb < ci->sfbn; sfb++)
     {
         int lo = ci->sfb_offset[sfb], hi = ci->sfb_offset[sfb + 1];
-        faac_real sum = 0.0, peak = 0.0;
+        float sum = 0.0f, peak = 0.0f;
         int w;
 
         for (w = 0; w < gsize; w++)
         {
-            const faac_real *line = xr0 + w * BLOCK_LEN_SHORT + lo;
+            const float *line = xr0 + w * BLOCK_LEN_SHORT + lo;
             int k;
             for (k = 0; k < hi - lo; k++)
             {
-                faac_real e = line[k] * line[k];
+                float e = line[k] * line[k];
                 sum += e;
                 if (e > peak) peak = e;
             }
         }
         out[sfb].sum = sum;
-        out[sfb].peak_amp = FAAC_SQRT(peak);
+        out[sfb].peak_amp = sqrtf(peak);
     }
 }
 
-static faac_real loudness(faac_real energy_ratio)
+static float loudness(float energy_ratio)
 {
-    return FAAC_POW(energy_ratio, LOUDNESS_EXPONENT);
+    return powf(energy_ratio, LOUDNESS_EXPONENT);
 }
 
 // masking sensitivity drops above ~4 kHz; de-emphasize bands toward Nyquist
-static faac_real treble_rolloff(int lo, int hi, faac_real inv_block_len)
+static float treble_rolloff(int lo, int hi, float inv_block_len)
 {
-    return 10.0 / (1.0 + (faac_real)(lo + hi) * inv_block_len);
+    return 10.0f / (1.0f + (float)(lo + hi) * inv_block_len);
 }
 
-static void derive_masking_targets(CoderInfo * __restrict ci, int gnum, faac_real quality,
+static void derive_masking_targets(CoderInfo * __restrict ci, int gnum, float quality,
                                     const BandEnergy * __restrict be,
-                                    faac_real * __restrict target_out, faac_real * __restrict avg_out)
+                                    float * __restrict target_out, float * __restrict avg_out)
 {
     int gsize = ci->groups.len[gnum];
     int total_len = ci->sfb_offset[ci->sfbn];
-    faac_real group_total = 0.0;
+    float group_total = 0.0f;
     int sfb;
 
     for (sfb = 0; sfb < ci->sfbn; sfb++)
         group_total += be[sfb].sum;
 
     // whole group below the silence gate: force every band to a zero target
-    if (group_total < (SILENCE_RMS * SILENCE_RMS) * (faac_real)(gsize * total_len))
+    if (group_total < (SILENCE_RMS * SILENCE_RMS) * (float)(gsize * total_len))
     {
         for (sfb = 0; sfb < ci->sfbn; sfb++)
         {
-            target_out[sfb] = 0.0;
-            avg_out[sfb] = 0.0;
+            target_out[sfb] = 0.0f;
+            avg_out[sfb] = 0.0f;
         }
         return;
     }
 
     int block_len = (ci->block_type == ONLY_SHORT_WINDOW) ? BLOCK_LEN_SHORT : BLOCK_LEN_LONG;
-    faac_real inv_block_len = 1.0 / (faac_real)block_len;
+    float inv_block_len = 1.0f / (float)block_len;
 
     for (sfb = 0; sfb < ci->sfbn; sfb++)
     {
         int lo = ci->sfb_offset[sfb], hi = ci->sfb_offset[sfb + 1];
-        faac_real avg = be[sfb].sum;
-        faac_real peak = be[sfb].peak_amp * be[sfb].peak_amp;
-        faac_real ref = (group_total * inv_block_len) * (hi - lo);
-        faac_real target;
+        float avg = be[sfb].sum;
+        float peak = be[sfb].peak_amp * be[sfb].peak_amp;
+        float ref = (group_total * inv_block_len) * (hi - lo);
+        float target;
 
         // floor before pow(): formula is monotonic, so this floors the output too
         if (avg < ref * AVG_ENERGY_FLOOR_FRAC) avg = ref * AVG_ENERGY_FLOOR_FRAC;
         if (peak < ref * PEAK_ENERGY_FLOOR_FRAC) peak = ref * PEAK_ENERGY_FLOOR_FRAC;
 
         target = AVG_ENERGY_WEIGHT * loudness(avg / ref)
-               + (1.0 - AVG_ENERGY_WEIGHT) * PEAK_ENERGY_WEIGHT * loudness(peak / ref);
+               + (1.0f - AVG_ENERGY_WEIGHT) * PEAK_ENERGY_WEIGHT * loudness(peak / ref);
         if (ci->block_type == ONLY_SHORT_WINDOW)
             target *= SHORT_BLOCK_TIGHTEN;
         target *= treble_rolloff(lo, hi, inv_block_len);
@@ -187,10 +189,10 @@ static void derive_masking_targets(CoderInfo * __restrict ci, int gnum, faac_rea
 /* Re-derives gain after each clamp stage since scalefactor and gain are
  * coupled. Reports the final relative (bitstream-delta) and absolute
  * scalefactors. */
-static faac_real resolve_band_gain(int sfac, int sf_bias, faac_real band_peak, int last_abs,
+static float resolve_band_gain(int sfac, int sf_bias, float band_peak, int last_abs,
                                     int * __restrict out_sf_rel, int * __restrict out_sf_abs)
 {
-    faac_real gain = gain_with_overflow_clamp(&sfac, band_peak);
+    float gain = gain_with_overflow_clamp(&sfac, band_peak);
     int sf_rel = SF_OFFSET - sfac;
     int sf_abs = sf_bias + sf_rel;
 
@@ -224,13 +226,13 @@ static faac_real resolve_band_gain(int sfac, int sf_bias, faac_real band_peak, i
     return gain;
 }
 
-static void assign_band_codebooks(CoderInfo * __restrict ci, const faac_real * __restrict xr0,
-                                   const faac_real * __restrict target, const faac_real * __restrict bandenrg,
-                                   const faac_real * __restrict bandpeak, int gnum, int pnslevel,
+static void assign_band_codebooks(CoderInfo * __restrict ci, const float * __restrict xr0,
+                                   const float * __restrict target, const float * __restrict bandenrg,
+                                   const float * __restrict bandpeak, int gnum, int pnslevel,
                                    int * __restrict p_last_abs)
 {
     int gsize = ci->groups.len[gnum];
-    faac_real pns_threshold = 0.1 * (faac_real)pnslevel;
+    float pns_threshold = 0.1f * (float)pnslevel;
     int sb;
 
     for (sb = 0; sb < ci->sfbn && ci->bandcnt < MAX_SCFAC_BANDS; sb++)
@@ -245,10 +247,10 @@ static void assign_band_codebooks(CoderInfo * __restrict ci, const faac_real * _
 
         int lo = ci->sfb_offset[sb], hi = ci->sfb_offset[sb + 1];
         int width = hi - lo;
-        faac_real avg_per_window = bandenrg[sb] / (faac_real)gsize;
-        faac_real rms = FAAC_SQRT(avg_per_window / width);
+        float avg_per_window = bandenrg[sb] / (float)gsize;
+        float rms = sqrtf(avg_per_window / width);
 
-        if (rms < SILENCE_RMS || target[sb] == 0.0)
+        if (rms < SILENCE_RMS || target[sb] == 0.0f)
         {
             ci->book[band] = HCB_ZERO;
             ci->bandcnt++;
@@ -260,12 +262,12 @@ static void assign_band_codebooks(CoderInfo * __restrict ci, const faac_real * _
         if (target[sb] < pns_threshold)
         {
             ci->book[band] = HCB_PNS;
-            ci->sf[band] += FAAC_LRINT(FAAC_LOG10(avg_per_window) * SF_STEP_ENRG);
+            ci->sf[band] += lrintf(log10f(avg_per_window) * SF_STEP_ENRG);
             ci->bandcnt++;
             continue;
         }
 
-        int sfac = FAAC_LRINT(FAAC_LOG10(target[sb] / rms) * sfstep);
+        int sfac = lrintf(log10f(target[sb] / rms) * sfstep);
         int sf_rel = SF_OFFSET - sfac;
         int sf_bias = ci->sf[band];
 
@@ -276,7 +278,7 @@ static void assign_band_codebooks(CoderInfo * __restrict ci, const faac_real * _
         else
         {
             int sf_abs;
-            faac_real gain = resolve_band_gain(sfac, sf_bias, bandpeak[sb], *p_last_abs, &sf_rel, &sf_abs);
+            float gain = resolve_band_gain(sfac, sf_bias, bandpeak[sb], *p_last_abs, &sf_rel, &sf_abs);
             int xi[FRAME_LEN];
             int win;
 
@@ -300,13 +302,13 @@ void ResetCoderSections(CoderInfo *coder)
     }
 }
 
-int BlocQuant(CoderInfo * __restrict coder, faac_real * __restrict xr, AACQuantCfg *aacquantCfg)
+int BlocQuant(CoderInfo * __restrict coder, float * __restrict xr, AACQuantCfg *aacquantCfg)
 {
-    faac_real target[MAX_SCFAC_BANDS], bandenrg[MAX_SCFAC_BANDS];
+    float target[MAX_SCFAC_BANDS], bandenrg[MAX_SCFAC_BANDS];
     BandEnergy be[NSFB_LONG];
-    faac_real bandpeak[MAX_SCFAC_BANDS];
+    float bandpeak[MAX_SCFAC_BANDS];
     int i, lastsf = SF_CHAIN_UNSET;
-    faac_real *gxr = xr;
+    float *gxr = xr;
 
     coder->bandcnt = coder->datacnt = 0;
     for (i = 0; i < coder->groups.n; i++)
@@ -316,7 +318,7 @@ int BlocQuant(CoderInfo * __restrict coder, faac_real * __restrict xr, AACQuantC
         measure_band_energy(coder, gxr, i, be);
         for (sfb = 0; sfb < coder->sfbn; sfb++)
             bandpeak[sfb] = be[sfb].peak_amp;
-        derive_masking_targets(coder, i, (faac_real)aacquantCfg->quality / DEFQUAL, be, target, bandenrg);
+        derive_masking_targets(coder, i, (float)aacquantCfg->quality / DEFQUAL, be, target, bandenrg);
         assign_band_codebooks(coder, gxr, target, bandenrg, bandpeak, i, aacquantCfg->pnslevel, &lastsf);
         gxr += coder->groups.len[i] * BLOCK_LEN_SHORT;
     }
@@ -361,28 +363,28 @@ void CalcBW(unsigned *bw, int rate, SR_INFO *sr, AACQuantCfg *aacquantCfg)
     for (i = 0; i < sr->num_cb_short && l < max; i++)
         l += sr->cb_width_short[i];
     aacquantCfg->max_cbs = i;
-    if (aacquantCfg->pnslevel) *bw = (faac_real)l * rate / (BLOCK_LEN_SHORT << 1);
+    if (aacquantCfg->pnslevel) *bw = (float)l * rate / (BLOCK_LEN_SHORT << 1);
 
     l = 0, max = *bw * (BLOCK_LEN_LONG << 1) / rate;
     for (i = 0; i < sr->num_cb_long && l < max; i++)
         l += sr->cb_width_long[i];
     aacquantCfg->max_cbl = i;
     aacquantCfg->max_l = l;
-    *bw = (faac_real)l * rate / (BLOCK_LEN_LONG << 1);
+    *bw = (float)l * rate / (BLOCK_LEN_LONG << 1);
 }
 
 // short-window grouping: keep spectrally-similar windows together so they
 // share scalefactors; a transient onset starts a fresh group instead
 #define GROUP_MIN_SFB     2    // bands below this are too coarse/DC-heavy to inform grouping
-#define GROUP_ONSET_RATIO 3.0  // running max/min energy ratio that counts as a transient
+#define GROUP_ONSET_RATIO 3.0f  // running max/min energy ratio that counts as a transient
 
-static void window_band_energy(const CoderInfo * __restrict ci, const faac_real * __restrict w,
-                                int from_sfb, int to_sfb, faac_real * __restrict e_out)
+static void window_band_energy(const CoderInfo * __restrict ci, const float * __restrict w,
+                                int from_sfb, int to_sfb, float * __restrict e_out)
 {
     int sfb;
     for (sfb = from_sfb; sfb < to_sfb; sfb++)
     {
-        faac_real e = 0.0;
+        float e = 0.0f;
         int k;
         for (k = ci->sfb_offset[sfb]; k < ci->sfb_offset[sfb + 1]; k++)
             e += w[k] * w[k];
@@ -390,7 +392,7 @@ static void window_band_energy(const CoderInfo * __restrict ci, const faac_real 
     }
 }
 
-void BlocGroup(faac_real *xr, CoderInfo *coderInfo, AACQuantCfg *cfg)
+void BlocGroup(float *xr, CoderInfo *coderInfo, AACQuantCfg *cfg)
 {
     if (coderInfo->block_type != ONLY_SHORT_WINDOW)
     {
@@ -404,18 +406,18 @@ void BlocGroup(faac_real *xr, CoderInfo *coderInfo, AACQuantCfg *cfg)
     int active_bands = maxsfb - GROUP_MIN_SFB;
     int onset_quorum = (active_bands * 3) >> 2;
 
-    faac_real band_e[NSFB_SHORT], run_min[NSFB_SHORT], run_max[NSFB_SHORT];
+    float band_e[NSFB_SHORT], run_min[NSFB_SHORT], run_max[NSFB_SHORT];
     int win, group_start = 0;
 
     coderInfo->groups.n = 0;
 
     for (win = 0; win < MAX_SHORT_WINDOWS; win++)
     {
-        faac_real *w = xr + win * BLOCK_LEN_SHORT;
+        float *w = xr + win * BLOCK_LEN_SHORT;
         int k, sfb;
 
         for (k = cutoff; k < coderInfo->sfb_offset[maxsfb]; k++)
-            w[k] = 0.0;
+            w[k] = 0.0f;
 
         window_band_energy(coderInfo, w, GROUP_MIN_SFB, maxsfb, band_e);
 

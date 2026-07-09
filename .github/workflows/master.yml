@@ -25,14 +25,13 @@ jobs:
               os: ubuntu-latest,
               compiler: gcc,
               shell: bash,
-              options: -Dfloating-point=double,
             }
           - {
-              name: Linux GCC (Single Precision),
+              name: Linux GCC (SBR Decimation),
               os: ubuntu-latest,
               compiler: gcc,
               shell: bash,
-              options: -Dfloating-point=single,
+              options: -Dsbr-decimation=4,
             }
           - {
               name: macOS Clang,
@@ -53,7 +52,6 @@ jobs:
               os: windows-latest,
               compiler: cl,
               shell: pwsh,
-              options: -Dfloating-point=double,
             }
 
     steps:

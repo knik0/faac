@@ -39,13 +39,13 @@ void			FilterBankInit		( faacEncStruct* hEncoder );
 
 void			FilterBankEnd		( faacEncStruct* hEncoder );
 
-void			MDCT				( FFT_Tables *fft_tables, faac_real * restrict data, int N, faac_real * restrict work );
+void			MDCT				( FFT_Tables *fft_tables, float * restrict data, int N, float * restrict work );
 
 void			FilterBank( faacEncStruct* hEncoder,
 						CoderInfo *coderInfo,
-						faac_real * restrict p_prev_data,
-						faac_real * restrict p_in_data,
-						faac_real * restrict p_out_mdct);
+						float * restrict p_prev_data,
+						float * restrict p_in_data,
+						float * restrict p_out_mdct);
 
 
 #ifdef __cplusplus

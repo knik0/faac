@@ -63,21 +63,21 @@ int Resample(Resampler *r, int input_len)
     int ch, i, j;
 
     for (ch = 0; ch < r->channels; ch++) {
-        faac_real * __restrict in  = r->fullRate[ch];
-        faac_real * __restrict out = r->halfRate[ch];
-        faac_real * __restrict hist = r->buf[ch];
+        float * __restrict in  = r->fullRate[ch];
+        float * __restrict out = r->halfRate[ch];
+        float * __restrict hist = r->buf[ch];
 
         /* Fixed-size buffers to avoid VLA (MSVC portability): history + one
          * full-rate HE frame (2 * FRAME_LEN input samples). */
-        faac_real combined[RESAMPLE_FILTER_LEN - 1 + 2 * FRAME_LEN];
+        float combined[RESAMPLE_FILTER_LEN - 1 + 2 * FRAME_LEN];
 
-        memcpy(combined,     hist, H         * sizeof(faac_real));
-        memcpy(combined + H, in,   input_len * sizeof(faac_real));
+        memcpy(combined,     hist, H         * sizeof(float));
+        memcpy(combined + H, in,   input_len * sizeof(float));
 
         /* Exploit FIR symmetry to fold the tap-delay line before multiplication. */
         for (i = 0; i < output_len; i++) {
-            const faac_real * __restrict c = combined + 2 * i;
-            faac_real a0 = 0, a1 = 0, a2 = 0, a3 = 0;
+            const float * __restrict c = combined + 2 * i;
+            float a0 = 0, a1 = 0, a2 = 0, a3 = 0;
             for (j = 0; j < 16; j += 4) {
                 a0 += hb_even[j + 0] * (c[2 * (j + 0)] + c[2 * (31 - j - 0)]);
                 a1 += hb_even[j + 1] * (c[2 * (j + 1)] + c[2 * (31 - j - 1)]);
@@ -87,7 +87,7 @@ int Resample(Resampler *r, int input_len)
             *out++ = (a0 + a1) + (a2 + a3) + HB_CENTER * combined[2 * i + HALF];
         }
 
-        memcpy(hist, combined + input_len, H * sizeof(faac_real));
+        memcpy(hist, combined + input_len, H * sizeof(float));
     }
 
     return output_len;
