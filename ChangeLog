@@ -16,7 +16,9 @@ Unreleased
 	  `faac_status` error reporting, resolved-property queries, and
 	  library-owned AudioSpecificConfig. The legacy `faacEnc*` surface and
 	  `faaccfg.h` are removed; the encoder core they exposed is now internal.
-	  SONAME bumped to 1 (libfaac.so.1).
+	  SONAME bumped to 1 (libfaac.so.1). `faac.h` now defines
+	  `FAAC_VERSION_MAJOR`/`MINOR`/`PATCH`, tracking the SONAME, so callers
+	  can detect the new API at compile time (`FAAC_VERSION_MAJOR >= 1`).
 	* frontend: Port `faac` and the Win32 GUI to the new API; this fixes the
 	  AudioSpecificConfig memory leak on the MP4 output path.
 	* Add HE-AAC v1 (AAC-LC core + Spectral Band Replication) encoding via

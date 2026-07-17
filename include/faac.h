@@ -46,6 +46,19 @@ extern "C" {
 #include <stdint.h>
 #include <stdbool.h>
 
+/*
+ * Tracks the libfaac SONAME, not the project release version. Lets callers
+ * tell this faac_* API (SONAME >= 1) apart from the removed legacy faacEnc*
+ * one (SONAME 0):
+ *
+ *   #if defined(FAAC_VERSION_MAJOR) && (FAAC_VERSION_MAJOR >= 1)
+ */
+#define FAAC_VERSION_MAJOR 1
+#define FAAC_VERSION_MINOR 0
+#define FAAC_VERSION_PATCH 0
+#define FAAC_VERSION_HEX \
+    ((FAAC_VERSION_MAJOR << 16) | (FAAC_VERSION_MINOR << 8) | FAAC_VERSION_PATCH)
+
 /* Export/visibility marker. Shared with <faac.h>; guarded so including both
  * headers is harmless. */
 #if !defined(FAACAPI) && defined(__GNUC__) && (__GNUC__ >= 4)
