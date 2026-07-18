@@ -2,6 +2,14 @@
 
 FAAC is an open-source, dependency-free AAC encoder aimed at embedded and pipeline use cases where footprint and throughput matter as much as quality.
 
+### Key features:
+
+- MPEG-4 AAC-LC and HE-AAC v1 (SBR) profiles
+- Sample rates from 8 kHz to 96 kHz, supporting mono up to 5.1 multichannel
+- VBR and ABR rate control with a bit reservoir
+- Advanced encoding tools: Dynamic block-switching, PNS, and TNS
+- Flexible output options: Raw ADTS, ADIF bitstream
+
 ## Copyrights
 
 FAAC is free software, licensed under the GNU Lesser General Public License (LGPL), version 2.1 or later:

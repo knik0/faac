@@ -1,26 +1,75 @@
 Unreleased
 
+	[ Fabian Greffrath ]
+	* Remove obsolete pkg-config template
+	* Restrict LTO to the shared library only
+
+	[ Orbis Security AI ]
+	* filtbank: Fix an out-of-bounds `memcpy` in `FilterBank()` that used
+	  `FRAME_LEN` instead of `BLOCK_LEN_LONG` for the overlap buffer copies
+
 	[ Nils Schimmelmann ]
+	* Harden input parsing and guard against allocation failures.
 	* Replace the classic `faacEnc*` C API with a new `faac_*` API in
 	  `faac.h`: parameters supplied once to `faac_encoder_open()`, uniform
 	  `faac_status` error reporting, resolved-property queries, and
 	  library-owned AudioSpecificConfig. The legacy `faacEnc*` surface and
 	  `faaccfg.h` are removed; the encoder core they exposed is now internal.
-	  SONAME bumped to 1 (libfaac.so.1).
+	  SONAME bumped to 1 (libfaac.so.1). `faac.h` now defines
+	  `FAAC_VERSION_MAJOR`/`MINOR`/`PATCH`, tracking the SONAME, so callers
+	  can detect the new API at compile time (`FAAC_VERSION_MAJOR >= 1`).
 	* frontend: Port `faac` and the Win32 GUI to the new API; this fixes the
 	  AudioSpecificConfig memory leak on the MP4 output path.
-	* Retire the never-implemented MAIN/SSR/LTP object types and collapse the
-	  single-model psychoacoustic vtable into direct calls.
-	* Relicense: rewrite stereo, quantize, channels, bitstream, filtbank,
-	  and tns as original work under LGPL-2.1-or-later, and drop the
-	  matching MPEG reference-code preamble from README.md, --license,
-	  and docs/. Every source file is now free software.
 	* Add HE-AAC v1 (AAC-LC core + Spectral Band Replication) encoding via
 	  `FAAC_OBJ_HE_AAC_V1`, or `FAAC_OBJ_AUTO`, which picks LC or HE-AAC from
 	  the bitrate. The SBR core runs dual-rate (half-rate core, 2048-sample
 	  frame); `faac_encoder_get_info()` reports the full output rate and frame
 	  size so callers need no SBR-specific handling. CLI:
 	  `--object-type lc|he-aac-v1|auto`.
+	* stereo: Add Mixed Mode joint stereo (`--joint 3`) as the new default:
+	  per scale-factor band, picks IS above 5.5 kHz, M/S where channels are
+	  correlated, or L/R otherwise. Fix a midside band-silencing bug that
+	  produced L=R=0 on decode, guard against negative rounding before
+	  sqrt, and keep IS available at low sample rates.
+	* quantize: Restore short-window masking penalty, floor masking
+	  targets in quiet bands, drop stale tonal scaling in bmask, and keep
+	  `global_gain` a valid regular scalefactor -- fixing energy drops,
+	  quiet-band artifacts, and a decoder out-of-range error.
+	* tns: Cap TNS filter order to 12 to fix AAC-LC decoder rejections and
+	  audio dropouts in FFmpeg/FAAD.
+	* Retire the never-implemented MAIN/SSR/LTP object types across
+	  filtbank, frame, and the frontend, and collapse the single-model
+	  psychoacoustic vtable into direct calls.
+	* Fix a lookahead regression that had truncated the encoder's
+	  lookahead to an effective 1-frame delay, causing pre-echo artifacts
+	  and broken stereo coherence; then simplify the lookahead into a
+	  unified per-channel FIFO and energy timeline, replacing the ad hoc
+	  sampleBuff/next*SampleBuff/overlapBuff/prevSamples buffers.
+	* Relicense: rewrite stereo, quantize, channels, bitstream, filtbank,
+	  tns, huffdata, huff2, and the MP4 output code as original work under
+	  LGPL-2.1-or-later, and drop the matching MPEG reference-code preamble
+	  from README.md, --license, and docs/. Every source file is now free
+	  software. Update the license header itself from GNU Library GPL to
+	  Lesser GPL wording.
+	* fft: Replace the radix-2 FFT with radix-4 decimation-in-frequency as
+	  the sole implementation and precompute MDCT twiddles, for ~18%
+	  faster encode versus the radix-2 baseline.
+	* Standardize libfaac on single-precision floating point: drop the
+	  `floating-point` Meson build option and `faac_real.h`, and use
+	  `float`/`sinf`/`cosf`/`sqrtf` directly throughout the per-sample hot
+	  path. One-time init-time table generators (FFT/MDCT/SBR twiddles,
+	  window shapes, quantizer limits) keep `double` precision, where it's
+	  free. Benchmarked MOS-neutral versus the prior double-precision path.
+	* blockswitch: Move short-window detection to the time domain.
+	* Performance passes: reuse a shared work buffer for filtbank's MDCT
+	  scratch, and optimize TNS and stereo IS-gate hot paths.
+	* frame: Buffer encoder input so any input chunk size works.
+	* bitstream: Stop embedding the libfaac version string.
+	* build: Fix compiler warnings and transition to C11.
+	* frontend: Add a `--creation-time` flag for configurable MP4
+	  timestamps, vendor mingw-w64 wingetopt as a minimal-diff getopt
+	  fallback for MSVC builds, and keep TNS off by default in the GUI to
+	  match the CLI.
 
 1.50 (Apr 16, 2026)
 
