@@ -2,8 +2,7 @@ Unreleased
 
 	[ Fabian Greffrath ]
 	* Remove obsolete pkg-config template
-	* Disable LTO again, it breaks the static library; later bring it back
-	  for the shared library only
+	* Restrict LTO to the shared library only
 
 	[ Orbis Security AI ]
 	* filtbank: Fix an out-of-bounds `memcpy` in `FilterBank()` that used
