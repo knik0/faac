@@ -593,9 +593,12 @@ int faacEncEncode(faacEncHandle hpEncoder,
     if (hEncoder->flushFrame > (LOOKAHEAD_DEPTH + 1))
         return 0;
 
-    /* HE-AAC: run SBR + downsample first; the core then encodes heHalfRate. */
+    /* HE-AAC: run SBR + downsample first; the core then encodes heHalfRate.
+     * Flush frames (realPerCh == 0) included -- the SBR payload runs
+     * SBR_FRAME_FIFO-1 frames behind, so the pipeline has to keep ticking
+     * through the drain or the tail access units re-emit stale envelopes. */
     float *heHalfRate[MAX_CHANNELS] = {0};
-    if (realPerCh > 0 && hEncoder->config.aacObjectType == HE_V1 && SbrContextIsPresent(hEncoder->sbrContext))
+    if (hEncoder->config.aacObjectType == HE_V1 && SbrContextIsPresent(hEncoder->sbrContext))
         doHEAACFrame(hEncoder, (unsigned int)realPerCh, heHalfRate);
 
     /* Update current sample buffers */
