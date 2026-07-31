@@ -56,6 +56,13 @@ _Static_assert((int)FAAC_INPUT_NULL  == INPUT_NULL  && (int)FAAC_INPUT_16BIT == 
             && (int)FAAC_INPUT_24BIT == INPUT_24BIT && (int)FAAC_INPUT_32BIT == INPUT_32BIT
             && (int)FAAC_INPUT_FLOAT == INPUT_FLOAT, "input format drift");
 
+/* Baseline layout as first shipped. Frozen by the append-only rule: new fields
+ * go after reserved_trailing, so this offset never moves. Not sizeof(), which
+ * grows with every appended field and would reject older callers' binaries.
+ * A literal would be wrong too: the layout depends on pointer width. */
+#define PARAMS_BASELINE_SIZE \
+    ((uint32_t)(offsetof(faac_params, reserved_trailing) + sizeof(uint32_t)))
+
 /* faac_encoder* and faacEncHandle are the same underlying object. */
 static inline faacEncStruct *unwrap(faac_encoder *enc) { return (faacEncStruct *)enc; }
 
@@ -181,11 +188,8 @@ FAACAPI faac_status faac_encoder_open(const faac_params *p, faac_encoder **out)
     if (!p)
         return FAAC_ERR_INVALID_ARGUMENT;
 
-    /* struct_size lets the library reconcile a caller compiled against a
-     * different header revision. A caller must be at least as new as this
-     * build's struct (older/garbage/zero is rejected); newer callers are read
-     * only through the fields this build knows. */
-    if (p->struct_size < sizeof(faac_params))
+    /* Not sizeof(faac_params): that grows, which would reject older callers. */
+    if (p->struct_size < PARAMS_BASELINE_SIZE)
         return FAAC_ERR_INVALID_ARGUMENT;
 
     st = validate_params(p);
