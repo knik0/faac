@@ -20,13 +20,30 @@
 #include "sbr_analysis.h"
 #include "resample.h"
 
-/* Per-channel SBR state. Everything indexed [ch] in SBRInfo lives here. */
+/* Per-channel SBR analysis state. Everything indexed [ch] in SBRInfo lives here. */
 typedef struct SBRChannel {
     float qmfOvl64[SBR_QMF_OVL_LEN_64]; /* QMF overlap state (carries across frames) */
-    int envData  [SBR_MAX_ENVELOPES][SBR_MAX_BANDS]; /* quantised envelope indices */
-    int noiseData[SBR_MAX_NOISE_ENVELOPES][SBR_MAX_NOISE_BANDS]; /* quantised noise floor indices */
-    int invfMode;                                    /* bs_invf_mode (0–3) */
 } SBRChannel;
+
+/* One frame's coded SBR payload: every field SbrWrite reads that varies per
+ * frame. What it reads that is constant for the stream (bs_* header fields,
+ * numBands, numNoiseBands) stays in SBRInfo.
+ *
+ * Sole home for these values: SbrEncode quantizes into a SBRContext.frameFIFO
+ * slot and SbrWrite reads an older one, so the delay costs a ring index. Caching
+ * a copy anywhere else reintroduces the skew this ring exists to remove. */
+typedef struct SbrFrameData {
+    int numEnvelopes;
+    int eff_amp_res;
+    int frameClass;
+    int tEnv[SBR_MAX_ENVELOPES + 1];
+    int bsPointer;
+    struct {
+        int envData  [SBR_MAX_ENVELOPES][SBR_MAX_BANDS];
+        int noiseData[SBR_MAX_NOISE_ENVELOPES][SBR_MAX_NOISE_BANDS];
+        int invfMode;
+    } ch[SBR_MAX_CODED_CHANNELS];
+} SbrFrameData;
 
 struct SBRInfo {
     int sbrPresent;
@@ -52,17 +69,6 @@ struct SBRInfo {
     int bs_alter_scale;
 
     /* --- per-frame state --- */
-    int numEnvelopes;      /* 1 or 2, set by transient detection in SbrEncode */
-    int eff_amp_res;       /* forced to 0 for single-envelope FIXFIX (ISO 14496-3:2009 §4.6.18.3) */
-
-    /* Envelope time grid for the frame (frame-global, shared by both channels of
-     * a CPE). frameClass selects FIXFIX or VARFIX; tEnv[0..numEnvelopes] are the
-     * envelope borders in SBR time slots ([0, SBR_NUM_TIME_SLOTS]) and are only
-     * emitted for the variable classes. bsPointer marks the transient envelope. */
-    int frameClass;
-    int tEnv[SBR_MAX_ENVELOPES + 1];
-    int bsPointer;
-
     /* Whether SbrWrite should (re)send the sbr_header this frame. Frozen once
      * per frame (in SbrEncode) rather than recomputed in SbrWrite, since
      * headerSent/frameCount only advance on SbrWrite's real write pass, and
@@ -95,6 +101,12 @@ struct SBRContext {
        lookahead (LOOKAHEAD_DEPTH frames); newest sits at SBR_DETECT_FIFO-1. */
     float transientStrengthFIFO[MAX_CHANNELS][SBR_DETECT_FIFO];
     int       wantShortFIFO[MAX_CHANNELS][SBR_DETECT_FIFO];
+
+    /* Coded-payload delay ring; see SBR_FRAME_FIFO. frameHead is the newest
+       entry, so its successor (frameHead + 1) % SBR_FRAME_FIFO is the oldest --
+       the payload the current access unit emits. */
+    SbrFrameData frameFIFO[SBR_FRAME_FIFO];
+    int          frameHead;
 };
 
 SBRInfo *SbrInit(int channels, int sampleRate, unsigned long bitRate, FFT_Tables *fft_tables);
@@ -104,7 +116,9 @@ void SbrUpdate(SBRInfo *sbr, unsigned long bitRate);
 void SbrEnd(SBRInfo *sbr);
 
 void SbrQmfAnalysis(SBRInfo *sbr, const float * restrict ovl_pos, float * restrict energy, int kx, int k2);
-void SbrEncode(SBRInfo *sbr, float *timeDomain[MAX_CHANNELS], int numChannels, int numSamples, struct SignalAnalysis *sa);
-int SbrWrite(SBRInfo *sbr, struct BitStream *bs, int id_aac, int writeFlag);
+/* Quantizes this frame's payload directly into *fd (a delay-line slot). */
+void SbrEncode(SBRInfo *sbr, float *timeDomain[MAX_CHANNELS], int numChannels, int numSamples, struct SignalAnalysis *sa, SbrFrameData *fd);
+/* Emits the payload in *fd, which is a delayed slot, not the newest one. */
+int SbrWrite(SBRInfo *sbr, const SbrFrameData *fd, struct BitStream *bs, int id_aac, int writeFlag);
 
 #endif

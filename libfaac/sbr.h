@@ -41,6 +41,22 @@
    the newest (one extra slot for the newest entry itself). */
 #define SBR_DETECT_FIFO (LOOKAHEAD_DEPTH + 1)
 
+/* Depth of the coded-SBR-payload delay ring. Envelopes must describe the audio
+   the access unit actually carries, which is FIFO_PAST: the MDCT window spans
+   (FIFO_PAST, FIFO_CURR) and, at 50% overlap, an access unit completes the first
+   half of its own window. So the payload emitted on call N belongs to frame
+   N-(LOOKAHEAD_DEPTH+1), while SbrEncode has just analysed frame N -- that delay,
+   plus a slot for the newest entry.
+
+   Note this is one deeper than SBR_DETECT_FIFO: block switching wants the frame
+   *after* the coded one, so a transient gets a start window now and a short
+   window next, whereas envelopes must land on the coded frame itself. */
+#define SBR_FRAME_FIFO (LOOKAHEAD_DEPTH + 2)
+
+/* SBR codes exactly one element, an SCE or a CPE, so the payload never spans
+   more than two channels regardless of the core's channel count. */
+#define SBR_MAX_CODED_CHANNELS 2
+
 #ifdef __cplusplus
 extern "C" {
 #endif
