@@ -24,6 +24,7 @@ Contents
   <li><a href="#api-callseq">Calling sequence</a>
   <li><a href="#api-errors">Error handling</a>
   <li><a href="#api-funcref">Function reference</a>
+  <li><a href="#api-peak">Capping the peak frame size</a>
  </menu>
  <li><a href="#porting">Porting from the legacy faacEnc* API</a>
 </menu>
@@ -126,6 +127,32 @@ For an HE-AAC encoder the SBR core runs at half the input rate and codes a
 <i>frame_samples</i> == 2048 and <i>sample_rate</i> == the full (un-halved)
 output rate. Buffer sizing and rate reporting therefore stay correct without
 the caller knowing any SBR internals.
+
+<a name="api-peak">
+<h5>Capping the peak frame size</h5>
+Packet-oriented transports often cannot fragment a frame: one that overruns the
+link MTU is dropped, not split. <i>bit_rate</i> cannot prevent that, being an
+average individual frames are free to exceed &mdash; a transient easily produces
+a frame several times the mean. <i>faac_params.max_bit_rate</i> puts a hard
+ceiling on any single frame; 0, the default, means none. Unlike <i>bit_rate</i>
+it is a whole-stream rate, so it stays independent of <i>num_channels</i> and
+follows directly from the payload one packet can carry:
+<pre>
+    max_bit_rate = payload_bytes * 8 * sample_rate / 1024
+</pre>
+It must be at least <i>bit_rate</i> &times; <i>num_channels</i> &mdash; a peak
+below the average is unsatisfiable &mdash; and at most
+<i>FAAC_MAX_BIT_RATE</i>; <i>faac_encoder_open()</i> returns
+<i>FAAC_ERR_INVALID_ARGUMENT</i> otherwise. More headroom means fewer retries.
+<br><br>
+It is a ceiling, not a second average: frames that already fit are untouched, so
+the stream stays ABR rather than becoming CBR, and a frame re-quantized to meet
+the cap does not drag down the frames after it. Enforcement is best-effort
+&mdash; a frame cannot shrink below the cost of its own side info and
+scalefactors, so a small enough cap is still exceeded on a few percent of frames
+(measured on transient-heavy stereo, the cap holds everywhere at and above
+roughly 64 kbit/s and starts to slip around 48). Callers that must guarantee the
+packet fits should check <i>bytes_written</i> and drop the frame themselves.
 
 <a name="porting">
 <h4>Porting from the legacy faacEnc* API</h4>

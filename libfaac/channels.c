@@ -297,12 +297,36 @@ static int BuildFrame(struct faacEncStruct *hEncoder, CoderInfo *coder, AACEleme
     return bits + pad;
 }
 
+/* ADTS carries a frame length that is only known once the frame is written.
+ * Patching the 7 fixed-layout header bytes afterwards keeps BuildFrame to a
+ * single pass. Must reproduce WriteADTSHeader byte for byte. */
+static void PatchADTSHeader(struct faacEncStruct *hEncoder, BitStream *bs, int frameBytes)
+{
+    if (hEncoder->config.outputFormat == 1 && bs->data) {
+        bs->data[0] = 0xFF;
+        bs->data[1] = 0xF0 | (hEncoder->config.mpegVersion << 3) | 1;
+        bs->data[2] = ((LOW - 1) << 6) | (hEncoder->sampleRateIdx << 2) | (hEncoder->numChannels >> 2);
+        bs->data[3] = ((hEncoder->numChannels & 3) << 6) | (frameBytes >> 11);
+        bs->data[4] = (frameBytes >> 3) & 0xFF;
+        bs->data[5] = ((frameBytes & 7) << 5) | 0x1F;
+        bs->data[6] = 0xFC;
+    }
+}
+
 int WriteBitstream(struct faacEncStruct *hEncoder, CoderInfo *coder, AACElement *elems, int nElems, BitStream *bs)
 {
-    int bits = BuildFrame(hEncoder, coder, elems, nElems, bs, false);
+    /* Zero so the header's own length field is written as zero, then patched. */
+    hEncoder->usedBytes = 0;
+    bs->currentBit = 0;
+    int bits = BuildFrame(hEncoder, coder, elems, nElems, bs, true);
     if (bits < 0) return -1;
+
+    /* Safe to bounds-check after writing: PutBit refuses to write past
+     * bs->size, so an oversized frame truncates rather than overflowing. */
     hEncoder->usedBytes = (bits + 7) >> 3;
     if (hEncoder->usedBytes > bs->size) return -1;
     if (hEncoder->usedBytes > ADTS_MAX_FRAME_SIZE) return -1;
-    return BuildFrame(hEncoder, coder, elems, nElems, bs, true);
+
+    PatchADTSHeader(hEncoder, bs, hEncoder->usedBytes);
+    return bits;
 }

@@ -57,6 +57,7 @@ typedef struct faacEncConfiguration
     unsigned long bitRate;           /* per channel */
     unsigned int bandWidth;
     unsigned long quantqual;
+    unsigned long maxBitRate;        /* per channel, hard per-frame ceiling; 0 = unlimited */
     unsigned int outputFormat;       /* 0 = raw, 1 = ADTS */
     unsigned int inputFormat;
     int shortctl;

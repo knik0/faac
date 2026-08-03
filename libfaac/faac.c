@@ -57,11 +57,11 @@ _Static_assert((int)FAAC_INPUT_NULL  == INPUT_NULL  && (int)FAAC_INPUT_16BIT == 
             && (int)FAAC_INPUT_FLOAT == INPUT_FLOAT, "input format drift");
 
 /* Baseline layout as first shipped. Frozen by the append-only rule: new fields
- * go after reserved_trailing, so this offset never moves. Not sizeof(), which
+ * go after max_bit_rate, so this offset never moves. Not sizeof(), which
  * grows with every appended field and would reject older callers' binaries.
  * A literal would be wrong too: the layout depends on pointer width. */
 #define PARAMS_BASELINE_SIZE \
-    ((uint32_t)(offsetof(faac_params, reserved_trailing) + sizeof(uint32_t)))
+    ((uint32_t)(offsetof(faac_params, max_bit_rate) + sizeof(uint32_t)))
 
 /* faac_encoder* and faacEncHandle are the same underlying object. */
 static inline faacEncStruct *unwrap(faac_encoder *enc) { return (faacEncStruct *)enc; }
@@ -109,6 +109,7 @@ FAACAPI faac_status faac_params_init(faac_params *p)
     p->bit_rate      = 64000;          /* per channel; 0 would defer to quant_quality */
     p->bandwidth     = 0;              /* derive from bit_rate */
     p->quant_quality = 0;              /* derive from bit_rate */
+    p->max_bit_rate  = 0;              /* no per-frame peak cap */
     p->output_format = FAAC_STREAM_ADTS;
     p->input_format  = FAAC_INPUT_16BIT;
     p->short_control = FAAC_SHORTCTL_NORMAL;
@@ -169,8 +170,23 @@ static faac_status validate_params(const faac_params *p)
             if (p->channel_map[i] < 0 || (uint32_t)p->channel_map[i] >= p->num_channels)
                 return FAAC_ERR_INVALID_ARGUMENT;
     }
+    if (p->max_bit_rate) {
+        /* Bounded because it is converted into a per-frame bit budget; an
+         * absurd value is a caller error, not a request for an unlimited
+         * frame. */
+        if (p->max_bit_rate > FAAC_MAX_BIT_RATE)
+            return FAAC_ERR_INVALID_ARGUMENT;
+        /* A peak below the average is unsatisfiable by definition, and the two
+         * controllers actively fight: rate control raises quality to reach
+         * bit_rate while the limiter cuts it to stay under the cap, so frames
+         * end up larger the tighter the cap gets. Reject it rather than emit a
+         * stream that quietly busts the ceiling it was asked to respect.
+         * bit_rate is per channel and max_bit_rate is not, so scale to compare. */
+        if (p->bit_rate && p->max_bit_rate < (uint64_t)p->bit_rate * p->num_channels)
+            return FAAC_ERR_INVALID_ARGUMENT;
+    }
     /* reserved padding must be zero so future fields can claim it safely */
-    if (p->reserved[0] || p->reserved[1] || p->reserved_trailing)
+    if (p->reserved[0] || p->reserved[1])
         return FAAC_ERR_INVALID_ARGUMENT;
     return FAAC_OK;
 }
@@ -216,6 +232,7 @@ FAACAPI faac_status faac_encoder_open(const faac_params *p, faac_encoder **out)
     cfg->inputFormat   = (unsigned int)p->input_format;
     cfg->shortctl      = (int)p->short_control;
     cfg->pnslevel      = p->pns_level;
+    cfg->maxBitRate    = p->max_bit_rate;
     if (p->channel_map) {
         uint32_t i;
         for (i = 0; i < p->num_channels; i++)
@@ -267,6 +284,7 @@ FAACAPI faac_status faac_encoder_get_info(faac_encoder *enc, faac_encoder_info *
     info.bandwidth        = (uint32_t)h->config.bandWidth;
     info.quant_quality    = (uint32_t)h->config.quantqual;
     info.pns_level        = (int32_t)h->config.pnslevel;
+    info.max_bit_rate     = (uint32_t)h->config.maxBitRate;
 
     /* Write at most the caller's struct_size so a newer library cannot overrun
      * an older, smaller faac_encoder_info; report the byte count actually set. */
