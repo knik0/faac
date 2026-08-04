@@ -558,6 +558,17 @@ static void doHEAACFrame(faacEncStruct *hEncoder, unsigned int realPerCh,
     SbrContextProcessFrame(hEncoder->sbrContext, hEncoder->numChannels, (int)realPerCh, hEncoder->inputFifo, heHalfRate);
 }
 
+/* Admission gate: TNS shapes noise along the temporal envelope, so a window
+ * with no envelope discontinuity has nothing for it to do, but the LPC gate
+ * only discovers that after normalization, autocorrelation and Levinson-Durbin
+ * have run. Screening on the envelope first skips that work for frames headed
+ * for rejection anyway.
+ *
+ * Scaled to PsyGetAttack's statistic (largest relative energy jump between
+ * adjacent sub-blocks). Not portable to a different sub-block count/size --
+ * the same transient reads as a smaller jump with fewer, longer sub-blocks. */
+#define TNS_ATTACK_MIN 0.5f
+
 int faacEncEncode(faacEncHandle hpEncoder,
                           int32_t *inputBuffer,
                           unsigned int samplesInput,
@@ -736,6 +747,14 @@ int faacEncEncode(faacEncHandle hpEncoder,
     /* Perform TNS analysis and filtering */
     for (channel = 0; channel < numChannels; channel++) {
         if (!hEncoder->isLfeChannel[channel] && useTns) {
+            float attack = PsyGetAttack(&hEncoder->psyInfo[channel]);
+
+            /* No envelope available (HE-AAC skips PsyBufferUpdate) means no
+               basis to reject on, so admit and let the LPC gates decide. */
+            if (attack > 0.0f && attack < TNS_ATTACK_MIN) {
+                coderInfo[channel].tnsInfo.tnsDataPresent = 0;
+                continue;
+            }
             TnsEncode(&(coderInfo[channel].tnsInfo),
                       coderInfo[channel].sfbn,
                       coderInfo[channel].block_type,

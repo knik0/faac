@@ -104,6 +104,42 @@ void PsyInit(GlobalPsyInfo * gpsyInfo, PsyInfo * psyInfo, unsigned int numChanne
     psyInfo[channel].sizeS = size;
 }
 
+/* Strongest relative energy jump across the sub-blocks of the window the MDCT
+   is about to transform. ENG_WIN_PREV is exactly that window -- (FIFO_PAST,
+   FIFO_CURR) -- because PsyBufferUpdate has already shifted by the time TNS
+   runs.
+
+   Exposed so TNS can gate on the temporal envelope already sitting in
+   psydata instead of recomputing it. Returns 0 if PsyBufferUpdate hasn't
+   populated the energy windows for this channel yet -- callers must treat
+   that as "no basis to judge", not "flat". */
+float PsyGetAttack(PsyInfo * psyInfo)
+{
+  psydata_t *psydata = (psydata_t *)psyInfo->data;
+  float strength = 0.0f, total = 0.0f;
+  int win;
+
+  if (!psydata)
+    return 0.0f;
+
+  for (win = 0; win < SUBBLOCKS_PER_FRAME; win++)
+  {
+    float e = (float)psydata->eng[ENG_WIN_PREV + win];
+
+    total += e;
+    if (win)
+    {
+      float p = (float)psydata->eng[ENG_WIN_PREV + win - 1];
+      float lo = (e < p) ? e : p;
+      float s = fabsf(e - p) / lo;      /* IEEE divide covers silence */
+
+      if (s > strength) strength = s;
+    }
+  }
+
+  return total > 0.0f ? strength : 0.0f;
+}
+
 void PsyEnd(PsyInfo * psyInfo, unsigned int numChannels)
 {
   unsigned int channel;
