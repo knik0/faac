@@ -43,6 +43,13 @@
 #define RC_DEADBAND_THRESHOLD  0.05f  /* +/- 5% deadband */
 #define RC_DAMPING_FACTOR      0.6f   /* Control loop damping */
 
+/* Bounds on the peak limiter's quality scale factor: the ceiling guarantees
+ * each retry makes progress, the floor keeps one outsized frame from
+ * collapsing quality to MINQUAL in a single step. */
+#define PEAK_BACKOFF_CEILING   0.85f
+#define PEAK_BACKOFF_FLOOR     0.10f
+#define PEAK_MAX_RETRIES       12
+
 static char *libfaacName = PACKAGE_VERSION;
 static char *libCopyright =
   "FAAC - Freeware Advanced Audio Coder (http://faac.sourceforge.net/)\n"
@@ -323,6 +330,19 @@ int faacEncApplyConfig(faacEncStruct* hEncoder,
         hEncoder->inputFifoFill = 0;
     }
 
+    hEncoder->config.maxBitRate = config->maxBitRate;
+
+    /* Peak-limiter retry scratch: only encoders that set maxBitRate pay for it. */
+    if (hEncoder->config.maxBitRate) {
+        unsigned int ch;
+        for (ch = 0; ch < hEncoder->numChannels; ch++) {
+            if (!hEncoder->peakSnap[ch])
+                hEncoder->peakSnap[ch] = (int *)AllocMemory(2 * MAX_SCFAC_BANDS * sizeof(int));
+            if (!hEncoder->peakSnap[ch])
+                return 0;
+        }
+    }
+
     CalcBW(&hEncoder->config.bandWidth,
               hEncoder->sampleRate,
               hEncoder->srInfo,
@@ -508,6 +528,8 @@ int faacEncClose(faacEncHandle hpEncoder)
         }
 		if (hEncoder->inputFifo[channel])
 			FreeMemory (hEncoder->inputFifo[channel]);
+        if (hEncoder->peakSnap[channel])
+            FreeMemory(hEncoder->peakSnap[channel]);
     }
 
     if (hEncoder->ascCache) free(hEncoder->ascCache);
@@ -740,34 +762,96 @@ int faacEncEncode(faacEncHandle hpEncoder,
     AACstereo(coderInfo, hEncoder->elements, hEncoder->numElements, hEncoder->freqBuff,
               (float)hEncoder->aacquantCfg.quality/DEFQUAL, jointmode, hEncoder->sampleRate);
 
-    for (channel = 0; channel < numChannels; channel++) {
-        BlocQuant(&coderInfo[channel], hEncoder->freqBuff[channel],
-                  &(hEncoder->aacquantCfg));
-    }
+    /* AACstereo has already consumed freqBuff in place and BlocQuant
+     * accumulates into sf[] while reading book[], so a retry can re-run
+     * neither. Snapshot what they produce -- book, sf, and the sfbn the CPE fix
+     * below rewrites -- so a retry restarts from identical state. */
+    unsigned long long peakBits = 0;
+    float baseQuality = hEncoder->aacquantCfg.quality;
+    int sfbnSnap[MAX_CHANNELS];
+    int attempt;
 
-    // fix max_sfb in CPE mode
-    for (int e = 0; e < hEncoder->numElements; e++)
+    if (hEncoder->config.maxBitRate)
     {
-		if (hEncoder->elements[e].type == ID_CPE)
-		{
-			CoderInfo *cil, *cir;
+        /* maxBitRate is whole-stream, so no channel factor here. For HE-AAC
+         * sampleRate is the halved core rate, which is what makes FRAME_LEN
+         * cover the right span of output samples. */
+        peakBits = (unsigned long long)hEncoder->config.maxBitRate
+            * FRAME_LEN / hEncoder->sampleRate;
 
-			cil = &coderInfo[hEncoder->elements[e].channels[0]];
-			cir = &coderInfo[hEncoder->elements[e].channels[1]];
-
-                        cil->sfbn = cir->sfbn = max(cil->sfbn, cir->sfbn);
-		}
+        for (channel = 0; channel < numChannels; channel++) {
+            memcpy(hEncoder->peakSnap[channel], coderInfo[channel].book,
+                   MAX_SCFAC_BANDS * sizeof(int));
+            memcpy(hEncoder->peakSnap[channel] + MAX_SCFAC_BANDS, coderInfo[channel].sf,
+                   MAX_SCFAC_BANDS * sizeof(int));
+            sfbnSnap[channel] = coderInfo[channel].sfbn;
+        }
     }
-    /* Write the AAC bitstream */
-    bitStream = OpenBitStream(bufferSize, outputBuffer);
-    if (!bitStream)
-        return -1;
 
-    if (WriteBitstream(hEncoder, coderInfo, hEncoder->elements, hEncoder->numElements, bitStream) < 0)
-        return -1;
+    /* Retry while the frame busts peakBits. The search is bounded, not
+     * exact-fit: an exact fit can fail to terminate on pathological input. */
+    for (attempt = 0; attempt <= PEAK_MAX_RETRIES; attempt++)
+    {
+        for (channel = 0; channel < numChannels; channel++) {
+            BlocQuant(&coderInfo[channel], hEncoder->freqBuff[channel],
+                      &(hEncoder->aacquantCfg));
+        }
 
-    /* Close the bitstream and return the number of bytes written */
-    frameBytes = CloseBitStream(bitStream);
+        // fix max_sfb in CPE mode
+        for (int e = 0; e < hEncoder->numElements; e++)
+        {
+            if (hEncoder->elements[e].type == ID_CPE)
+            {
+                CoderInfo *cil, *cir;
+
+                cil = &coderInfo[hEncoder->elements[e].channels[0]];
+                cir = &coderInfo[hEncoder->elements[e].channels[1]];
+
+                cil->sfbn = cir->sfbn = max(cil->sfbn, cir->sfbn);
+            }
+        }
+
+        /* Write the AAC bitstream; the write doubles as the size probe. */
+        bitStream = OpenBitStream(bufferSize, outputBuffer);
+        if (!bitStream)
+            return -1;
+
+        if (WriteBitstream(hEncoder, coderInfo, hEncoder->elements, hEncoder->numElements, bitStream) < 0)
+            return -1;
+
+        /* Close the bitstream and return the number of bytes written */
+        frameBytes = CloseBitStream(bitStream);
+
+        if (!peakBits || (unsigned long long)frameBytes * 8 <= peakBits
+            || hEncoder->aacquantCfg.quality <= MINQUAL)
+            break;
+
+        /* Aim at the budget rather than stepping down by a fixed factor: rate
+         * control can park quality anywhere up to MAXQUAL (5000), and a fixed
+         * halving needs ~9 passes to cross that to MINQUAL (10), more than any
+         * sane retry budget. Frame bits grow sub-linearly with quality, so
+         * scaling by the bit ratio undershoots the budget and converges in a
+         * pass or two. */
+        float scale = (float)peakBits / (float)((unsigned long long)frameBytes * 8);
+        if (scale > PEAK_BACKOFF_CEILING) scale = PEAK_BACKOFF_CEILING;
+        if (scale < PEAK_BACKOFF_FLOOR)   scale = PEAK_BACKOFF_FLOOR;
+        hEncoder->aacquantCfg.quality *= scale;
+        if (hEncoder->aacquantCfg.quality < MINQUAL)
+            hEncoder->aacquantCfg.quality = MINQUAL;
+
+        for (channel = 0; channel < numChannels; channel++) {
+            memcpy(coderInfo[channel].book, hEncoder->peakSnap[channel],
+                   MAX_SCFAC_BANDS * sizeof(int));
+            memcpy(coderInfo[channel].sf, hEncoder->peakSnap[channel] + MAX_SCFAC_BANDS,
+                   MAX_SCFAC_BANDS * sizeof(int));
+            coderInfo[channel].sfbn = sfbnSnap[channel];
+        }
+    }
+
+    /* The cap is per frame, so the backoff must not outlive it: left sticky,
+     * one hard frame drags the rest of the stream down, and with bitRate == 0
+     * the rate controller below never runs to claw the quality back. */
+    hEncoder->aacquantCfg.quality = baseQuality;
 
     /* Adjust quality to get correct average bitrate */
     if (hEncoder->config.bitRate)

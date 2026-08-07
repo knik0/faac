@@ -94,6 +94,15 @@ stereo input file with 16 bit and 44.1 kHz sample rate
 Set average bitrate (ABR) to approximately <bitrate> kbps.
 max. ~500 (stereo)
 .TP
+.BR \-\-cap\-rate\ <\fIbitrate\fP>
+Cap any single frame at <bitrate> kbps, for packet-oriented transports that drop
+an oversized frame rather than splitting it. Must be at least the
+.B -b
+bitrate. A ceiling, not a second average: frames that already fit are left
+alone, so the stream stays ABR. Best-effort \(em a frame cannot shrink below the
+cost of its own side info, so a low enough cap is still exceeded on a few
+percent of frames.
+.TP
 .BR -c\ <\fIfreq\fP>
 Set the bandwidth in Hz.
 The actual frequency is adjusted to maximize upper spectral band usage.

@@ -54,7 +54,7 @@ extern "C" {
  *   #if defined(FAAC_VERSION_MAJOR) && (FAAC_VERSION_MAJOR >= 1)
  */
 #define FAAC_VERSION_MAJOR 1
-#define FAAC_VERSION_MINOR 0
+#define FAAC_VERSION_MINOR 1
 #define FAAC_VERSION_PATCH 0
 #define FAAC_VERSION_HEX \
     ((FAAC_VERSION_MAJOR << 16) | (FAAC_VERSION_MINOR << 8) | FAAC_VERSION_PATCH)
@@ -179,8 +179,28 @@ typedef struct faac_params {
                                             * NULL = identity. Caller-owned; copied by open(). */
     uint32_t                channel_map_count; /* entries in channel_map (0 if NULL) */
 
-    uint32_t                reserved_trailing; /* explicit pad to 8-byte boundary; must be 0 */
+    /* Ceiling on any single frame, for packet-oriented transports that cannot
+     * fragment one -- a frame that overruns the link MTU is dropped, not split.
+     * Unlike bit_rate this is a WHOLE-STREAM rate, so it stays independent of
+     * num_channels and follows from the payload a packet can carry:
+     *
+     *     max_bit_rate = payload_bytes * 8 * sample_rate / 1024
+     *
+     * Must be >= bit_rate * num_channels (a peak below the average is
+     * unsatisfiable) and <= FAAC_MAX_BIT_RATE; open() rejects anything else.
+     * More headroom means fewer retries.
+     *
+     * Best-effort: enforced by backing off quality over bounded retries, which
+     * cannot beat the irreducible per-frame cost of side info and scalefactors.
+     * Measured on transient-heavy stereo, the cap holds for every frame at and
+     * above ~64 kbit/s; below that the floor starts to show (~48 kbit/s
+     * overshoots on a few percent of frames). */
+    uint32_t                max_bit_rate;  /* whole-stream peak bits/sec; 0 = unlimited */
 } faac_params;
+
+/* Upper bound on faac_params.max_bit_rate: far above any real stream rate, and
+ * low enough that converting it to a per-frame bit budget cannot overflow. */
+#define FAAC_MAX_BIT_RATE ((uint32_t)100000000)
 
 /*
  * Resolved encoder properties, filled by faac_encoder_get_info(). All values are
@@ -203,6 +223,7 @@ typedef struct faac_encoder_info {
     uint32_t                bandwidth;        /* resolved cutoff in Hz                               */
     uint32_t                quant_quality;    /* resolved quantizer quality                          */
     int32_t                 pns_level;        /* resolved PNS level, 0..10                           */
+    uint32_t                max_bit_rate;     /* resolved peak cap, 0 if unlimited                   */
 } faac_encoder_info;
 
 /*
