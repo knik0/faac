@@ -56,70 +56,64 @@ static inline int is_nonzero(int x)
     return (int)(((unsigned int)x | (unsigned int)-x) >> 31);
 }
 
-/* Fast bit-length sizing for quantization trials. */
-static int huffcode_size(int *qs, int len, int bnum)
+/* Both books of a pair share the index expression and the sign-bit count; only
+ * the table differs. One walk, two lookups.
+ *
+ * bnum is always a pair base -- huffbook takes HCB_ESC without sizing it -- so
+ * there is deliberately no escape case. */
+static void huffcode_size_pair(int *qs, int len, int bnum, int *bits_a, int *bits_b)
 {
-    hcode16_t *book = hmap[bnum];
-    int bits = 0;
+    hcode16_t *booka = hmap[bnum];
+    hcode16_t *bookb = hmap[bnum + 1];
+    int a = 0, b = 0;
     int i;
 
     switch (bnum) {
     case HCB_1:
-    case HCB_2:
         for (i = 0; i < len; i += 4) {
             int idx = 40 + DIM_S4*DIM_S4*DIM_S4 * qs[i] + DIM_S4*DIM_S4 * qs[i+1] + DIM_S4 * qs[i+2] + qs[i+3];
-            bits += book[idx].len;
+            a += booka[idx].len;
+            b += bookb[idx].len;
         }
         break;
     case HCB_3:
-    case HCB_4:
         for (i = 0; i < len; i += 4) {
             int idx = DIM_M4*DIM_M4*DIM_M4 * abs(qs[i]) + DIM_M4*DIM_M4 * abs(qs[i+1]) + DIM_M4 * abs(qs[i+2]) + abs(qs[i+3]);
-            bits += book[idx].len;
             /* Branchless sign-bit counting using bitwise logic */
-            bits += is_nonzero(qs[i]) + is_nonzero(qs[i+1]) + is_nonzero(qs[i+2]) + is_nonzero(qs[i+3]);
+            int sign = is_nonzero(qs[i]) + is_nonzero(qs[i+1]) + is_nonzero(qs[i+2]) + is_nonzero(qs[i+3]);
+            a += booka[idx].len + sign;
+            b += bookb[idx].len + sign;
         }
         break;
     case HCB_5:
-    case HCB_6:
         for (i = 0; i < len; i += 2) {
             int idx = 40 + DIM_S2 * qs[i] + qs[i+1];
-            bits += book[idx].len;
+            a += booka[idx].len;
+            b += bookb[idx].len;
         }
         break;
     case HCB_7:
-    case HCB_8:
         for (i = 0; i < len; i += 2) {
             int idx = DIM_M2_7 * abs(qs[i]) + abs(qs[i+1]);
-            bits += book[idx].len;
-            bits += is_nonzero(qs[i]) + is_nonzero(qs[i+1]);
+            int sign = is_nonzero(qs[i]) + is_nonzero(qs[i+1]);
+            a += booka[idx].len + sign;
+            b += bookb[idx].len + sign;
         }
         break;
     case HCB_9:
-    case HCB_10:
         for (i = 0; i < len; i += 2) {
             int idx = DIM_M2_12 * abs(qs[i]) + abs(qs[i+1]);
-            bits += book[idx].len;
-            bits += is_nonzero(qs[i]) + is_nonzero(qs[i+1]);
-        }
-        break;
-    case HCB_ESC:
-        for (i = 0; i < len; i += 2) {
-            int x0 = abs(qs[i]), x1 = abs(qs[i+1]);
-            int v0 = (x0 > LAV_ESC) ? LAV_ESC : x0;
-            int v1 = (x1 > LAV_ESC) ? LAV_ESC : x1;
-            int idx = DIM_ESC * v0 + v1;
-            bits += book[idx].len;
-            bits += is_nonzero(qs[i]) + is_nonzero(qs[i+1]);
-            if (x0 >= LAV_ESC) bits += escape(x0, NULL);
-            if (x1 >= LAV_ESC) bits += escape(x1, NULL);
+            int sign = is_nonzero(qs[i]) + is_nonzero(qs[i+1]);
+            a += booka[idx].len + sign;
+            b += bookb[idx].len + sign;
         }
         break;
     default:
         break;
     }
 
-    return bits;
+    *bits_a = a;
+    *bits_b = b;
 }
 
 /* Bitstream mutation function, called once per finalized frame. */
@@ -237,7 +231,7 @@ static void huffcode_write(int *qs, int len, int bnum, CoderInfo *coder)
 int huffbook(CoderInfo *coder, int *qs, int len)
 {
     int i, maxq = 0;
-    int bookmin = HCB_ZERO, lenmin = 0;
+    int bookmin = HCB_ZERO;
 
     for (i = 0; i < len; i++) {
         int q = abs(qs[i]);
@@ -258,10 +252,9 @@ int huffbook(CoderInfo *coder, int *qs, int len)
         else pair_base = HCB_ESC;
 
         if (pair_base != HCB_ESC) {
-            bookmin = pair_base;
-            lenmin = huffcode_size(qs, len, bookmin);
-            int len2 = huffcode_size(qs, len, bookmin + 1);
-            if (len2 < lenmin) bookmin++;
+            int len1, len2;
+            huffcode_size_pair(qs, len, pair_base, &len1, &len2);
+            bookmin = (len2 < len1) ? pair_base + 1 : pair_base;
         } else {
             bookmin = HCB_ESC;
         }
