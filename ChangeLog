@@ -1,3 +1,11 @@
+2.1 (Aug 18, 2026)
+
+	[ Nils Schimmelmann ]
+	* Honor ABI backward compatibility for faac_params
+	* SBR: align payload timing with core audio frames
+	* Add optional hard per-frame peak-bitrate limiter (`--cap-rate`)
+	* HUFF2: size both books of a codebook pair in one pass
+
 2.0 (Jul 20, 2026)
 
 	[ Fabian Greffrath ]
