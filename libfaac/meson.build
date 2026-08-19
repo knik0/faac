@@ -92,7 +92,6 @@ if default_lib == 'shared' or default_lib == 'both'
           # Keep in sync with FAAC_VERSION_MAJOR/MINOR/PATCH in include/faac.h.
           'version' : '1.0.0',
           'vs_module_defs' : 'libfaac.def',
-          'override_options' : ['b_lto=true'],
         },
     )
 endif
