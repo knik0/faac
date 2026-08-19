@@ -924,7 +924,7 @@ int main(int argc, char *argv[])
     }
 
     /* put the options into the parameter struct and open the encoder */
-    faac_params_init(&params);
+    faac_params_init(&params, sizeof(params));
     params.sample_rate   = infile->samplerate;
     params.num_channels  = infile->channels;
     params.mpeg_version  = mpegVersion;

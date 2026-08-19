@@ -140,7 +140,7 @@ static DWORD WINAPI EncodeFile(LPVOID pParam)
         faac_encoder *hEncoder = NULL;
 	char szTemp[256];
 
-        faac_params_init(&params);
+        faac_params_init(&params, sizeof(params));
         params.sample_rate  = sampleRate;
         params.num_channels = numChannels;
         params.input_format = FAAC_INPUT_32BIT;   /* wav_read_int24 -> 24-in-32 int */

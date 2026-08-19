@@ -53,8 +53,8 @@ extern "C" {
  *
  *   #if defined(FAAC_VERSION_MAJOR) && (FAAC_VERSION_MAJOR >= 1)
  */
-#define FAAC_VERSION_MAJOR 1
-#define FAAC_VERSION_MINOR 1
+#define FAAC_VERSION_MAJOR 2
+#define FAAC_VERSION_MINOR 0
 #define FAAC_VERSION_PATCH 0
 #define FAAC_VERSION_HEX \
     ((FAAC_VERSION_MAJOR << 16) | (FAAC_VERSION_MINOR << 8) | FAAC_VERSION_PATCH)
@@ -152,7 +152,7 @@ enum faac_input_format {
  * open() will reject it. The struct only ever grows by appending named fields.
  */
 typedef struct faac_params {
-    uint32_t                struct_size;   /* set by faac_params_init to sizeof(faac_params) */
+    uint32_t                struct_size;   /* set by faac_params_init() */
 
     uint32_t                sample_rate;   /* input/output sample rate in Hz (required)      */
     uint32_t                num_channels;  /* channel count, 1..max_channels (required)       */
@@ -250,9 +250,13 @@ typedef struct faac_library_info {
 
 FAACAPI faac_status faac_get_library_info(faac_library_info *out);
 
-/* Zero-initialize *p and fill in library defaults and struct_size. Returns
- * FAAC_ERR_INVALID_ARGUMENT if p is NULL. */
-FAACAPI faac_status faac_params_init(faac_params *p);
+/* Zero-initialize *p and fill in library defaults and struct_size. Pass
+ * sizeof(*p) as caller_size; never writes past min(caller_size,
+ * sizeof(faac_params)), so a caller stays safe even if the loaded library's
+ * faac_params has grown since the caller was built. Returns
+ * FAAC_ERR_INVALID_ARGUMENT if p is NULL or caller_size is smaller than
+ * faac_params's original (baseline) layout. */
+FAACAPI faac_status faac_params_init(faac_params *p, uint32_t caller_size);
 
 /*
  * Create an encoder from a fully-specified faac_params. On success writes the

@@ -94,13 +94,18 @@ FAACAPI faac_status faac_get_library_info(faac_library_info *out)
     return FAAC_OK;
 }
 
-FAACAPI faac_status faac_params_init(faac_params *p)
+FAACAPI faac_status faac_params_init(faac_params *p, uint32_t caller_size)
 {
+    uint32_t n;
+
     if (!p)
         return FAAC_ERR_INVALID_ARGUMENT;
+    if (caller_size < PARAMS_BASELINE_SIZE)
+        return FAAC_ERR_INVALID_ARGUMENT;
 
-    memset(p, 0, sizeof(*p));
-    p->struct_size   = (uint32_t)sizeof(faac_params);
+    n = caller_size < (uint32_t)sizeof(*p) ? caller_size : (uint32_t)sizeof(*p);
+    memset(p, 0, n);
+    p->struct_size   = n;
     p->mpeg_version  = FAAC_MPEG4;
     p->object_type   = FAAC_OBJ_LOW;
     p->joint_mode    = FAAC_JOINT_MIXED;
