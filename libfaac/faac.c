@@ -63,6 +63,12 @@ _Static_assert((int)FAAC_INPUT_NULL  == INPUT_NULL  && (int)FAAC_INPUT_16BIT == 
 #define PARAMS_BASELINE_SIZE \
     ((uint32_t)(offsetof(faac_params, max_bit_rate) + sizeof(uint32_t)))
 
+/* Same pattern as PARAMS_BASELINE_SIZE above. */
+#define LIBRARY_INFO_BASELINE_SIZE \
+    ((uint32_t)(offsetof(faac_library_info, sbr_decimation) + sizeof(uint32_t)))
+#define ENCODER_INFO_BASELINE_SIZE \
+    ((uint32_t)(offsetof(faac_encoder_info, pns_level) + sizeof(int32_t)))
+
 /* faac_encoder* and faacEncHandle are the same underlying object. */
 static inline faacEncStruct *unwrap(faac_encoder *enc) { return (faacEncStruct *)enc; }
 
@@ -75,7 +81,7 @@ FAACAPI faac_status faac_get_library_info(faac_library_info *out)
     if (!out)
         return FAAC_ERR_INVALID_ARGUMENT;
     caller_size = out->struct_size;
-    if (caller_size < sizeof(info.struct_size))
+    if (caller_size < LIBRARY_INFO_BASELINE_SIZE)
         return FAAC_ERR_INVALID_ARGUMENT;
 
     faacEncGetVersion(&vid, &vcopy);
@@ -269,7 +275,7 @@ FAACAPI faac_status faac_encoder_get_info(faac_encoder *enc, faac_encoder_info *
     if (!enc || !out)
         return FAAC_ERR_INVALID_ARGUMENT;
     caller_size = out->struct_size;
-    if (caller_size < sizeof(info.struct_size))
+    if (caller_size < ENCODER_INFO_BASELINE_SIZE)
         return FAAC_ERR_INVALID_ARGUMENT;
     h = unwrap(enc);
 
