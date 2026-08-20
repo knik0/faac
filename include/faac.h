@@ -255,7 +255,15 @@ FAACAPI faac_status faac_get_library_info(faac_library_info *out);
  * sizeof(faac_params)), so a caller stays safe even if the loaded library's
  * faac_params has grown since the caller was built. Returns
  * FAAC_ERR_INVALID_ARGUMENT if p is NULL or caller_size is smaller than
- * faac_params's original (baseline) layout. */
+ * faac_params's original (baseline) layout.
+ *
+ * caller_size was added in SONAME 2; code that must build against both:
+ *   #if FAAC_VERSION_MAJOR >= 2
+ *       faac_params_init(&params, sizeof(params));
+ *   #else
+ *       faac_params_init(&params);
+ *   #endif
+ */
 FAACAPI faac_status faac_params_init(faac_params *p, uint32_t caller_size);
 
 /*

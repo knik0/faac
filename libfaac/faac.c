@@ -96,6 +96,7 @@ FAACAPI faac_status faac_get_library_info(faac_library_info *out)
 
 FAACAPI faac_status faac_params_init(faac_params *p, uint32_t caller_size)
 {
+    faac_params tmp;
     uint32_t n;
 
     if (!p)
@@ -103,22 +104,26 @@ FAACAPI faac_status faac_params_init(faac_params *p, uint32_t caller_size)
     if (caller_size < PARAMS_BASELINE_SIZE)
         return FAAC_ERR_INVALID_ARGUMENT;
 
-    n = caller_size < (uint32_t)sizeof(*p) ? caller_size : (uint32_t)sizeof(*p);
-    memset(p, 0, n);
-    p->struct_size   = n;
-    p->mpeg_version  = FAAC_MPEG4;
-    p->object_type   = FAAC_OBJ_LOW;
-    p->joint_mode    = FAAC_JOINT_MIXED;
-    p->use_lfe       = false;
-    p->use_tns       = false;
-    p->bit_rate      = 64000;          /* per channel; 0 would defer to quant_quality */
-    p->bandwidth     = 0;              /* derive from bit_rate */
-    p->quant_quality = 0;              /* derive from bit_rate */
-    p->max_bit_rate  = 0;              /* no per-frame peak cap */
-    p->output_format = FAAC_STREAM_ADTS;
-    p->input_format  = FAAC_INPUT_16BIT;
-    p->short_control = FAAC_SHORTCTL_NORMAL;
-    p->pns_level     = 4;
+    memset(&tmp, 0, sizeof(tmp));
+    tmp.mpeg_version  = FAAC_MPEG4;
+    tmp.object_type   = FAAC_OBJ_LOW;
+    tmp.joint_mode    = FAAC_JOINT_MIXED;
+    tmp.use_lfe       = false;
+    tmp.use_tns       = false;
+    tmp.bit_rate      = 64000;          /* per channel; 0 would defer to quant_quality */
+    tmp.bandwidth     = 0;              /* derive from bit_rate */
+    tmp.quant_quality = 0;              /* derive from bit_rate */
+    tmp.max_bit_rate  = 0;              /* no per-frame peak cap */
+    tmp.output_format = FAAC_STREAM_ADTS;
+    tmp.input_format  = FAAC_INPUT_16BIT;
+    tmp.short_control = FAAC_SHORTCTL_NORMAL;
+    tmp.pns_level     = 4;
+
+    /* Write at most the caller's struct_size so a newer library cannot overrun
+     * an older, smaller faac_params; report the byte count actually set. */
+    n = caller_size < (uint32_t)sizeof(faac_params) ? caller_size : (uint32_t)sizeof(faac_params);
+    tmp.struct_size = n;
+    memcpy(p, &tmp, n);
     return FAAC_OK;
 }
 
