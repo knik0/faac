@@ -1,10 +1,3 @@
-link_args = []
-if host_machine.system() == 'windows' and meson.get_compiler('c').get_id() == 'gcc'
-    # identifies mingw
-    link_args += '-Wl,--add-stdcall-alias'
-endif
-
-
 quantize_simd_libs = []
 
 if config_h.get('HAVE_SSE2')
@@ -64,7 +57,6 @@ libfaac = disabler()
 common_args = {
     'include_directories' : ['..', '../include'],
     'c_args' : c_args,
-    'link_args' : link_args,
     'dependencies' : [libm],
     'link_with' : quantize_simd_libs,
     'install' : true,
