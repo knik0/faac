@@ -82,7 +82,7 @@ if default_lib == 'shared' or default_lib == 'both'
         common_src,
         kwargs : common_args + {
           # Keep in sync with FAAC_VERSION_MAJOR/MINOR/PATCH in include/faac.h.
-          'version' : '1.0.0',
+          'version' : '2.0.0',
           'vs_module_defs' : 'libfaac.def',
         },
     )
