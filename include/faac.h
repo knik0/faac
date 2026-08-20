@@ -59,17 +59,15 @@ extern "C" {
 #define FAAC_VERSION_HEX \
     ((FAAC_VERSION_MAJOR << 16) | (FAAC_VERSION_MINOR << 8) | FAAC_VERSION_PATCH)
 
-/* Export/visibility marker. Shared with <faac.h>; guarded so including both
- * headers is harmless. */
-#if !defined(FAACAPI) && defined(__GNUC__) && (__GNUC__ >= 4)
-# if defined(_WIN32)
-#  define FAACAPI __stdcall __declspec(dllexport)
-# else
-#  define FAACAPI __attribute__((visibility("default")))
-# endif
-#endif
+/* Export/visibility marker. */
 #ifndef FAACAPI
+# if defined(_WIN32)
+#  define FAACAPI __declspec(dllexport)
+# elif defined(__GNUC__) && (__GNUC__ >= 4)
+#  define FAACAPI __attribute__((visibility("default")))
+# else
 #  define FAACAPI
+# endif
 #endif
 
 /* Opaque encoder handle */
