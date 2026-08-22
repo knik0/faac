@@ -114,7 +114,8 @@ static help_t help_qual[] = {
     },
     {"-b <bitrate>\tSet average bitrate to x kbps. (ABR)\n",
     "\t\tSet average bitrate (ABR) to approximately <bitrate> kbps.\n"
-    "\t\tmax. ~500 (stereo)\n"},
+    "\t\tmax. ~529 (stereo, 44.1kHz) to ~576 (stereo, 48kHz), the ISO\n"
+    "\t\t6144 bits/channel/frame limit\n"},
     {"-c <freq>\tSet the bandwidth in Hz.\n",
     "\t\tThe actual frequency is adjusted to maximize upper spectral band\n"
     "\t\tusage.\n"},
