@@ -99,6 +99,14 @@ struct BitStream;
 /* Rate-dependent resolution thresholds. */
 #define SBR_AMP_RES_BITRATE_BPS         20000u
 #define SBR_COARSE_TABLE_BITRATE_BPS    32000u
+/* Stop-frequency search bounds (bs_stop_freq). 13 is the largest worth
+ * searching: it already pins k2 to its 64-band ceiling at every supported
+ * rate, so higher indices would just signal more range for the same band. */
+#define SBR_STOP_FREQ_MIN               10
+#define SBR_STOP_FREQ_MAX               13
+/* Where widening aims. Past this the bands are inaudible to essentially every
+ * listener while costing exactly as much as the ones below. */
+#define SBR_STOP_FREQ_TARGET_HZ         20000
 /* Max delta-coded step for envelope data, per bs_amp_res grid (ISO 14496-3
  * §4.6.18.3.6): the fine (amp_res=1) grid has half the step size of the coarse
  * grid, so its delta range must be roughly double to cover the same dB span. */

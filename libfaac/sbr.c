@@ -73,6 +73,18 @@ static int compute_k2(int sampleRate, int kx, int bs_stop_freq)
     return clamp_int(k2, kx + 1, kx + max_span > 64 ? 64 : kx + max_span);
 }
 
+/* Smallest stop-frequency index reaching targetHz, or the largest useful one.
+ * Searched rather than tabulated: the index-to-frequency mapping comes from
+ * compute_k2 and shifts with sample rate, so a fixed table would overshoot
+ * at some rates. */
+static int pick_stop_freq(int sampleRate, int kx, int targetHz)
+{
+    for (int sf = SBR_STOP_FREQ_MIN; sf < SBR_STOP_FREQ_MAX; sf++)
+        if ((long)compute_k2(sampleRate, kx, sf) * sampleRate / (2 * SBR_QMF_BANDS_64) >= targetHz)
+            return sf;
+    return SBR_STOP_FREQ_MAX;
+}
+
 /* Distribute QMF bands into SBR master bands using uniform dk-spacing.
  * Residual bands are merged into the first/last pairs to maintain a
  * monotonic frequency grid. */
@@ -141,11 +153,14 @@ void SbrUpdate(SBRInfo *sbr, unsigned long bitRate)
         sbr->bs_alter_scale = 0;
         sbr->dk = 1;
     }
-    /* Stop frequency covers approximately 75% of the upper octave. */
-    sbr->bs_stop_freq = 10;
     sbr->bs_freq_res = 1; /* HIGH resolution */
     sbr->bs_xover_band = 0; /* every master band is an SBR band; no low-res split */
     sbr->kx = compute_kx(sampleRate, sbr->bs_start_freq);
+
+    /* Where the reconstruction stops. Aim at hearing rather than k2's ceiling:
+     * bands above the target cost the same envelope bits as the ones below, so
+     * there's no reason to stop short of what's audible. */
+    sbr->bs_stop_freq = pick_stop_freq(sampleRate, sbr->kx, SBR_STOP_FREQ_TARGET_HZ);
     sbr->k2 = compute_k2(sampleRate, sbr->kx, sbr->bs_stop_freq);
 
     build_freq_table(sbr);
