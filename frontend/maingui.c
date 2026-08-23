@@ -22,61 +22,55 @@
 
 #include <faac.h>
 #include "resource.h"
+#include "charset.h"
 
 
 static HINSTANCE hInstance;
 
-static char inputFilename[_MAX_PATH], outputFilename[_MAX_PATH];
+static WCHAR inputFilename[_MAX_PATH], outputFilename[_MAX_PATH];
 
 static BOOL Encoding = FALSE;
 
-static BOOL SelectFileName(HWND hParent, char *filename, BOOL forReading)
+static BOOL SelectFileName(HWND hParent, WCHAR *filename, BOOL forReading)
 {
-    OPENFILENAME ofn;
+    OPENFILENAMEW ofn;
 
-    ofn.lStructSize = sizeof(OPENFILENAME);
+    memset(&ofn, 0, sizeof(ofn));
+    ofn.lStructSize = sizeof(ofn);
     ofn.hwndOwner = hParent;
     ofn.hInstance = hInstance;
     ofn.nFilterIndex = 0;
     ofn.lpstrFileTitle = NULL;
-    ofn.nMaxFileTitle = 31;
-    filename [0] = 0x00;
-    ofn.lpstrFile = (LPSTR)filename;
+    ofn.nMaxFileTitle = 0;
+    filename[0] = L'\0';
+    ofn.lpstrFile = filename;
     ofn.nMaxFile = _MAX_PATH;
-    ofn.lpstrInitialDir = NULL;
-    ofn.lpstrCustomFilter = NULL;
-    ofn.nMaxCustFilter = 0;
-    ofn.nFileOffset = 0;
-    ofn.nFileExtension = 0;
-    ofn.lCustData = 0;
-    ofn.lpfnHook = NULL;
-    ofn.lpTemplateName = NULL;
 
     if (forReading)
     {
-        char filters[] = { "Wave Files (*.wav)\0*.wav\0" \
-            "AIFF Files (*.aif;*.aiff;*.aifc)\0*.aif;*.aiff;*.aifc\0" \
-            "AU Files (*.au)\0*.au\0" \
-            "All Files (*.*)\0*.*\0\0" };
+        static const WCHAR filters[] =
+            L"Wave Files (*.wav)\0*.wav\0"
+            L"AIFF Files (*.aif;*.aiff;*.aifc)\0*.aif;*.aiff;*.aifc\0"
+            L"AU Files (*.au)\0*.au\0"
+            L"All Files (*.*)\0*.*\0\0";
 
         ofn.lpstrFilter = filters;
-        ofn.lpstrDefExt = "wav";
-
+        ofn.lpstrDefExt = L"wav";
         ofn.Flags = OFN_EXPLORER | OFN_FILEMUSTEXIST | OFN_HIDEREADONLY;
-        ofn.lpstrTitle = "Select Source File";
+        ofn.lpstrTitle = L"Select Source File";
 
-        return GetOpenFileName (&ofn);
+        return GetOpenFileNameW(&ofn);
     } else {
-        char filters [] = { "AAC Files (*.aac)\0*.aac\0" \
-            "All Files (*.*)\0*.*\0\0" };
+        static const WCHAR filters[] =
+            L"AAC Files (*.aac)\0*.aac\0"
+            L"All Files (*.*)\0*.*\0\0";
 
         ofn.lpstrFilter = filters;
-        ofn.lpstrDefExt = "aac";
-
+        ofn.lpstrDefExt = L"aac";
         ofn.Flags = OFN_EXPLORER | OFN_PATHMUSTEXIST | OFN_OVERWRITEPROMPT | OFN_HIDEREADONLY;
-        ofn.lpstrTitle = "Select Output File";
+        ofn.lpstrTitle = L"Select Output File";
 
-        return GetSaveFileName(&ofn);
+        return GetSaveFileNameW(&ofn);
     }
 }
 
@@ -85,9 +79,16 @@ static void AwakeDialogControls(HWND hWnd)
     char szTemp[64];
     pcmfile_t *infile = NULL;
     unsigned int sampleRate, numChannels;
-    char *pExt;
+    WCHAR *pExt;
 
-    if ((infile = wav_open_read(inputFilename, 0)) == NULL)
+    char *utf8_input = win32_utf16_to_utf8(inputFilename);
+    if (!utf8_input)
+        return;
+
+    infile = wav_open_read(utf8_input, 0);
+    free(utf8_input);
+
+    if (!infile)
         return;
 
     /* determine input file parameters */
@@ -96,20 +97,20 @@ static void AwakeDialogControls(HWND hWnd)
 
     wav_close(infile);
 
-    SetDlgItemText (hWnd, IDC_INPUTFILENAME, inputFilename);
+    SetDlgItemTextW(hWnd, IDC_INPUTFILENAME, inputFilename);
 
-    strncpy(outputFilename, inputFilename, sizeof(outputFilename) - 5);
-    outputFilename[sizeof(outputFilename) - 5] = '\0';
+    wcsncpy(outputFilename, inputFilename, (sizeof(outputFilename) / sizeof(WCHAR)) - 5);
+    outputFilename[(sizeof(outputFilename) / sizeof(WCHAR)) - 5] = L'\0';
 
-    pExt = strrchr(outputFilename, '.');
+    pExt = wcsrchr(outputFilename, L'.');
 
-    if (pExt == NULL) lstrcat(outputFilename, ".aac");
-    else lstrcpy(pExt, ".aac");
+    if (pExt == NULL) wcscat(outputFilename, L".aac");
+    else wcscpy(pExt, L".aac");
 
     EnableWindow(GetDlgItem(hWnd, IDC_OUTPUTFILENAME), TRUE);
     EnableWindow(GetDlgItem(hWnd, IDC_SELECT_OUTPUTFILE), TRUE);
 
-    SetDlgItemText(hWnd, IDC_OUTPUTFILENAME, outputFilename);
+    SetDlgItemTextW(hWnd, IDC_OUTPUTFILENAME, outputFilename);
 
     wsprintf(szTemp, "%iHz %ich", sampleRate, numChannels);
     SetDlgItemText(hWnd, IDC_INPUTPARAMS, szTemp);
@@ -122,11 +123,18 @@ static DWORD WINAPI EncodeFile(LPVOID pParam)
     HWND hWnd = (HWND) pParam;
     pcmfile_t *infile = NULL;
 
-    GetDlgItemText(hWnd, IDC_INPUTFILENAME, inputFilename, sizeof(inputFilename));
-    GetDlgItemText(hWnd, IDC_OUTPUTFILENAME, outputFilename, sizeof(outputFilename));
+    GetDlgItemTextW(hWnd, IDC_INPUTFILENAME, inputFilename, sizeof(inputFilename) / sizeof(WCHAR));
+    GetDlgItemTextW(hWnd, IDC_OUTPUTFILENAME, outputFilename, sizeof(outputFilename) / sizeof(WCHAR));
+
+    char *utf8_input = win32_utf16_to_utf8(inputFilename);
+    if (utf8_input)
+    {
+        infile = wav_open_read(utf8_input, 0);
+        free(utf8_input);
+    }
 
     /* open the input file */
-    if ((infile = wav_open_read(inputFilename, 0)) != NULL)
+    if (infile != NULL)
     {
         /* determine input file parameters */
         unsigned int sampleRate = infile->samplerate;
@@ -188,7 +196,7 @@ static DWORD WINAPI EncodeFile(LPVOID pParam)
 	    SetDlgItemText(hWnd, IDC_BANDWIDTH, szTemp);
 
             /* open the output file */
-            hOutfile = CreateFile(outputFilename, GENERIC_WRITE, 0, NULL,
+            hOutfile = CreateFileW(outputFilename, GENERIC_WRITE, 0, NULL,
                 CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
 
             if (hOutfile != INVALID_HANDLE_VALUE)
@@ -351,7 +359,7 @@ static BOOL WINAPI DialogProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 
     case WM_DROPFILES:
 
-        if (DragQueryFile((HDROP) wParam, 0, (LPSTR) inputFilename, _MAX_PATH - 1))
+        if (DragQueryFileW((HDROP) wParam, 0, inputFilename, _MAX_PATH - 1))
             AwakeDialogControls(hWnd);
 
         DragFinish((HDROP) wParam);
@@ -393,7 +401,7 @@ static BOOL WINAPI DialogProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 
             if (SelectFileName(hWnd, outputFilename, FALSE))
             {
-                SetDlgItemText(hWnd, IDC_OUTPUTFILENAME, outputFilename);
+                SetDlgItemTextW(hWnd, IDC_OUTPUTFILENAME, outputFilename);
             }
 
             break;
