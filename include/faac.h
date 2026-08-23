@@ -180,7 +180,8 @@ typedef struct faac_params {
     /* Ceiling on any single frame, for packet-oriented transports that cannot
      * fragment one -- a frame that overruns the link MTU is dropped, not split.
      * Unlike bit_rate this is a WHOLE-STREAM rate, so it stays independent of
-     * num_channels and follows from the payload a packet can carry:
+     * num_channels and follows from the payload a packet can carry or standard
+     * ISO/IEC 14496-3 limits (6144 bits/channel per frame):
      *
      *     max_bit_rate = payload_bytes * 8 * sample_rate / 1024
      *

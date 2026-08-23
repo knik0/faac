@@ -22,6 +22,7 @@ extern "C" {
 #endif /* __cplusplus */
 
 #define FRAME_LEN 1024
+#define AAC_MAX_BITS_PER_CH 6144
 #define BLOCK_LEN_LONG 1024
 #define BLOCK_LEN_SHORT 128
 

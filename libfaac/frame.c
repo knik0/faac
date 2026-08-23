@@ -338,8 +338,8 @@ int faacEncApplyConfig(faacEncStruct* hEncoder,
 
     hEncoder->config.maxBitRate = config->maxBitRate;
 
-    /* Peak-limiter retry scratch: only encoders that set maxBitRate pay for it. */
-    if (hEncoder->config.maxBitRate) {
+    /* Peak-limiter retry scratch: allocated for all encoders to enforce ISO 6144 bits/ch frame ceiling. */
+    {
         unsigned int ch;
         for (ch = 0; ch < hEncoder->numChannels; ch++) {
             if (!hEncoder->peakSnap[ch])
@@ -796,21 +796,35 @@ int faacEncEncode(faacEncHandle hpEncoder,
     int sfbnSnap[MAX_CHANNELS];
     int attempt;
 
+    /* ISO/IEC 14496-3 standard frame limit: 6144 bits per channel */
+    peakBits = (unsigned long long)numChannels * AAC_MAX_BITS_PER_CH;
+
+    /* If output format is ADTS (outputFormat == 1), respect the 13-bit ADTS
+     * container frame length limit (ADTS_MAX_FRAME_SIZE = 8191 bytes = 65528 bits). */
+    if (hEncoder->config.outputFormat == 1)
+    {
+        unsigned long long adtsPeakBits = (unsigned long long)ADTS_MAX_FRAME_SIZE * 8;
+        if (adtsPeakBits < peakBits)
+            peakBits = adtsPeakBits;
+    }
+
     if (hEncoder->config.maxBitRate)
     {
         /* maxBitRate is whole-stream, so no channel factor here. For HE-AAC
          * sampleRate is the halved core rate, which is what makes FRAME_LEN
          * cover the right span of output samples. */
-        peakBits = (unsigned long long)hEncoder->config.maxBitRate
+        unsigned long long userPeakBits = (unsigned long long)hEncoder->config.maxBitRate
             * FRAME_LEN / hEncoder->sampleRate;
+        if (userPeakBits < peakBits)
+            peakBits = userPeakBits;
+    }
 
-        for (channel = 0; channel < numChannels; channel++) {
-            memcpy(hEncoder->peakSnap[channel], coderInfo[channel].book,
-                   MAX_SCFAC_BANDS * sizeof(int));
-            memcpy(hEncoder->peakSnap[channel] + MAX_SCFAC_BANDS, coderInfo[channel].sf,
-                   MAX_SCFAC_BANDS * sizeof(int));
-            sfbnSnap[channel] = coderInfo[channel].sfbn;
-        }
+    for (channel = 0; channel < numChannels; channel++) {
+        memcpy(hEncoder->peakSnap[channel], coderInfo[channel].book,
+               MAX_SCFAC_BANDS * sizeof(int));
+        memcpy(hEncoder->peakSnap[channel] + MAX_SCFAC_BANDS, coderInfo[channel].sf,
+               MAX_SCFAC_BANDS * sizeof(int));
+        sfbnSnap[channel] = coderInfo[channel].sfbn;
     }
 
     /* Retry while the frame busts peakBits. The search is bounded, not

@@ -134,9 +134,11 @@ Packet-oriented transports often cannot fragment a frame: one that overruns the
 link MTU is dropped, not split. <i>bit_rate</i> cannot prevent that, being an
 average individual frames are free to exceed &mdash; a transient easily produces
 a frame several times the mean. <i>faac_params.max_bit_rate</i> puts a hard
-ceiling on any single frame; 0, the default, means none. Unlike <i>bit_rate</i>
-it is a whole-stream rate, so it stays independent of <i>num_channels</i> and
-follows directly from the payload one packet can carry:
+ceiling on any single frame; 0, the default, means none beyond the encoder's
+own ISO/IEC 14496-3 peak ceiling of 6144 bits per channel per frame, enforced
+unconditionally to guarantee decoder compatibility across portable devices.
+Unlike <i>bit_rate</i> it is a whole-stream rate, so it stays independent of
+<i>num_channels</i> and follows directly from the payload one packet can carry:
 <pre>
     max_bit_rate = payload_bytes * 8 * sample_rate / 1024
 </pre>
