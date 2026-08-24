@@ -131,6 +131,13 @@ static struct {
     } cover;
 
     struct {
+        bool present;
+        uint32_t priming;
+        uint32_t padding;
+        uint64_t original_samples;
+    } gapless;
+
+    struct {
         const char *name;
         const char *value;
     } *custom;
@@ -341,6 +348,7 @@ static void reset_write_state(void) {
     g_mp4.mdatofs = 0;
     g_mp4.mdatsize = 0;
     memset(&g_mp4.bitrate, 0, sizeof(g_mp4.bitrate));
+    memset(&g_mp4.gapless, 0, sizeof(g_mp4.gapless));
     free(g_membuf);
     g_membuf = NULL;
 }
@@ -432,6 +440,13 @@ void mp4_set_disc(uint16_t num, uint16_t total) {
 void mp4_set_cover(const uint8_t *data, uint32_t size) {
     g_mp4.cover.data = data;
     g_mp4.cover.size = size;
+}
+
+void mp4_set_gapless(uint32_t priming, uint32_t padding, uint64_t original_samples) {
+    g_mp4.gapless.present = true;
+    g_mp4.gapless.priming = priming;
+    g_mp4.gapless.padding = padding;
+    g_mp4.gapless.original_samples = original_samples;
 }
 
 int mp4_add_custom_tag(const char *name, const char *value) {
@@ -546,7 +561,11 @@ static void put_tag_ext(const char *mean, const char *name, const char *val) {
     put_u32(0);
     put_data(name, strlen(name));
     end_atom(name_box);
-    put_itunes_data_box("data", ITUNES_DATA_TEXT, val, strlen(val));
+    long data_box = start_atom("data");
+    put_u32(ITUNES_DATA_TEXT);
+    put_u32(0);
+    put_data(val, strlen(val));
+    end_atom(data_box);
     end_atom(box);
 }
 
@@ -757,6 +776,16 @@ int mp4_finish(void) {
     if (g_mp4.trackno) put_tag_index("trkn", (uint16_t)g_mp4.trackno, (uint16_t)g_mp4.ntracks);
     if (g_mp4.discno) put_tag_index("disk", (uint16_t)g_mp4.discno, (uint16_t)g_mp4.ndiscs);
     if (g_mp4.cover.data) put_tag_image(g_mp4.cover.data, g_mp4.cover.size);
+    if (g_mp4.gapless.present) {
+        char smpb[128];
+        snprintf(smpb, sizeof(smpb),
+                 " 00000000 %08X %08X %08X%08X 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000",
+                 g_mp4.gapless.priming,
+                 g_mp4.gapless.padding,
+                 (uint32_t)(g_mp4.gapless.original_samples >> 32),
+                 (uint32_t)(g_mp4.gapless.original_samples & 0xFFFFFFFFULL));
+        put_tag_ext("com.apple.iTunes", "iTunSMPB", smpb);
+    }
     for (uint32_t i = 0; i < g_mp4.customcnt; i++)
         put_tag_ext("faac", g_mp4.custom[i].name, g_mp4.custom[i].value);
     end_atom(ilst);

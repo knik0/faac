@@ -26,6 +26,7 @@
 #include "config.h"
 #endif
 
+#include <assert.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -33,6 +34,7 @@
 #include "frame.h"
 #include "bitstream.h"
 #include "sbr.h"
+#include "resample.h"
 #include "util.h"
 
 /* The public enums are width-pinned to 32 bits by their FAAC_*_MAX sentinels;
@@ -279,6 +281,20 @@ FAACAPI faac_status faac_encoder_close(faac_encoder **enc)
     return FAAC_OK;
 }
 
+/* LC: one frame of 50% MDCT overlap. HE-AAC: that same core delay at full
+ * rate (2*FRAME_LEN) plus one extra full-rate frame the SBR/resample pipeline
+ * buffers ahead of the core, net of the resampler's own FIR group delay.
+ * Verified against decoded output, not derived from spec. */
+static uint32_t faacEncoderDelay(const faacEncStruct *h)
+{
+    switch (h->config.aacObjectType) {
+        case LOW:   return FRAME_LEN;
+        case HE_V1: return 3 * FRAME_LEN - RESAMPLE_FILTER_LEN / 2;
+    }
+    assert(0 && "faacEncoderDelay: unhandled aacObjectType");
+    return FRAME_LEN;
+}
+
 FAACAPI faac_status faac_encoder_get_info(faac_encoder *enc, faac_encoder_info *out)
 {
     faac_encoder_info info;
@@ -304,6 +320,7 @@ FAACAPI faac_status faac_encoder_get_info(faac_encoder *enc, faac_encoder_info *
     info.quant_quality    = (uint32_t)h->config.quantqual;
     info.pns_level        = (int32_t)h->config.pnslevel;
     info.max_bit_rate     = (uint32_t)h->config.maxBitRate;
+    info.encoder_delay    = faacEncoderDelay(h);
 
     /* Write at most the caller's struct_size so a newer library cannot overrun
      * an older, smaller faac_encoder_info; report the byte count actually set. */
