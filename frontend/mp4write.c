@@ -77,11 +77,14 @@ enum {
     MP4_URL_SELF_CONTAINED = 1, /* dref 'url ' flags bit: media data lives in this file, no external ref */
 
     MP4_IO_BUFSIZE = 65536, /* stdio buffer for the mdat write path, see mp4_open() */
+
+    ISO639_CHAR_OFFSET = 0x60,  /* Offset between ASCII character and 5-bit ISO 639-2 char code */
+    ISO639_UND_PACKED  = 0x55C4, /* 15-bit packed representation of undefined language "und" */
 };
 
 static struct {
     uint32_t samplerate;
-    uint32_t samples;
+    uint64_t samples;
     uint32_t channels;
     uint32_t bits;
     uint16_t buffersize;
@@ -89,8 +92,8 @@ static struct {
     struct {
         uint32_t max;
         uint32_t avg;
-        uint32_t size;
-        uint32_t samples;
+        uint64_t size;
+        uint64_t samples;
     } bitrate;
 
     uint32_t framesamples;
@@ -108,29 +111,30 @@ static struct {
 
     FILE *fout;
     uint32_t mdatofs;
-    uint32_t mdatsize;
+    uint64_t mdatsize;
 
     uint32_t creation_time;
     const char *encoder;
+    const char *language;
     const char *tags[MP4TAG_COUNT];
-    uint8_t compilation;
-    uint32_t trackno;
-    uint32_t ntracks;
-    uint32_t discno;
-    uint32_t ndiscs;
-    int genre;
+    bool compilation;
+    uint16_t trackno;
+    uint16_t ntracks;
+    uint16_t discno;
+    uint16_t ndiscs;
+    uint16_t genre;
 
     struct {
         const uint8_t *data;
-        int size;
+        uint32_t size;
     } cover;
 
     struct {
         const char *name;
         const char *value;
     } *custom;
-    int customcnt;
-    int customcap;
+    uint32_t customcnt;
+    uint32_t customcap;
 } g_mp4 = { 0 };
 
 /* Atom trees assembled all at once (ftyp/free in mp4_open, moov in
@@ -146,24 +150,37 @@ static size_t g_memcap = 0;
    mistaken for a successfully written one. */
 static int g_mem_error = 0;
 
+/* Grows g_membuf, if needed, so it can hold at least `extra` more bytes
+   past g_mempos, doubling capacity up to a 1GB cap. Returns false (and
+   frees g_membuf) if growth can't satisfy the request; the caller decides
+   how to surface that failure. */
+static inline bool grow_membuf(size_t extra) {
+    if (g_mempos + extra <= g_memcap)
+        return true;
+
+    size_t max_cap = ((size_t)1 << 30);
+    size_t new_cap = g_memcap ? g_memcap * 2 : 1024;
+    while (g_mempos + extra > new_cap && new_cap < max_cap) {
+        if (new_cap > max_cap / 2) { new_cap = max_cap; break; }
+        new_cap *= 2;
+    }
+    if (g_mempos + extra > new_cap)
+        return false;
+
+    void *tmp = realloc(g_membuf, new_cap);
+    if (!tmp) {
+        free(g_membuf);
+        g_membuf = NULL;
+        return false;
+    }
+    g_membuf = (uint8_t *)tmp;
+    g_memcap = new_cap;
+    return true;
+}
+
 static inline void mem_write(const void *data, size_t size) {
     if (g_membuf) {
-        if (g_mempos + size > g_memcap) {
-            size_t new_cap = g_memcap ? g_memcap * 2 : 1024;
-            /* cap growth so a bogus/huge write request can't spin the
-               doubling loop forever or overflow new_cap */
-            while (g_mempos + size > new_cap && new_cap < (1UL << 31)) new_cap *= 2;
-            if (g_mempos + size > new_cap) { g_mem_error = 1; return; }
-            void *tmp = realloc(g_membuf, new_cap);
-            if (!tmp) {
-                free(g_membuf);
-                g_membuf = NULL;
-                g_mem_error = 1;
-                return;
-            }
-            g_membuf = (uint8_t *)tmp;
-            g_memcap = new_cap;
-        }
+        if (!grow_membuf(size)) { g_mem_error = 1; return; }
         memcpy(g_membuf + g_mempos, data, size);
         g_mempos += size;
     } else if (g_mp4.fout && !g_mem_error) {
@@ -195,6 +212,38 @@ static inline void put_u16(uint16_t val) {
     } else {
         mem_write(&val, 2);
     }
+}
+
+static inline void put_u64(uint64_t val) {
+#ifndef WORDS_BIGENDIAN
+#if defined(MP4_HAVE_BSWAP_BUILTINS)
+    val = __builtin_bswap64(val);
+#elif defined(_MSC_VER)
+    val = _byteswap_uint64(val);
+#else
+    val = ((val >> 56) & 0x00000000000000FFULL) |
+          ((val >> 40) & 0x000000000000FF00ULL) |
+          ((val >> 24) & 0x0000000000FF0000ULL) |
+          ((val >> 8)  & 0x00000000FF000000ULL) |
+          ((val << 8)  & 0x000000FF00000000ULL) |
+          ((val << 24) & 0x0000FF0000000000ULL) |
+          ((val << 40) & 0x00FF000000000000ULL) |
+          ((val << 56) & 0xFF00000000000000ULL);
+#endif
+#endif
+    if (g_membuf && g_mempos + 8 <= g_memcap) {
+        memcpy(g_membuf + g_mempos, &val, 8);
+        g_mempos += 8;
+    } else {
+        mem_write(&val, 8);
+    }
+}
+
+/* Writes a version-0/version-1 time or duration field: mvhd/tkhd/mdhd
+   widen these to 64-bit together, gated on the same use64 flag, once the
+   sample count no longer fits a 32-bit duration. */
+static inline void put_time(uint64_t val, bool use64) {
+    if (use64) put_u64(val); else put_u32((uint32_t)val);
 }
 
 static inline void put_u8(uint8_t val) { mem_write(&val, 1); }
@@ -240,6 +289,22 @@ static uint32_t get_mp4_time(void) {
     return g_mp4.creation_time;
 }
 
+static uint16_t pack_language(const char *lang) {
+    if (!lang || strlen(lang) < 3)
+        lang = "und";
+
+    uint8_t c1 = (uint8_t)(lang[0] >= 'A' && lang[0] <= 'Z' ? lang[0] + 32 : lang[0]);
+    uint8_t c2 = (uint8_t)(lang[1] >= 'A' && lang[1] <= 'Z' ? lang[1] + 32 : lang[1]);
+    uint8_t c3 = (uint8_t)(lang[2] >= 'A' && lang[2] <= 'Z' ? lang[2] + 32 : lang[2]);
+
+    if (c1 < 'a' || c1 > 'z' || c2 < 'a' || c2 > 'z' || c3 < 'a' || c3 > 'z')
+        return ISO639_UND_PACKED;
+
+    return (uint16_t)(((c1 - ISO639_CHAR_OFFSET) << 10) |
+                      ((c2 - ISO639_CHAR_OFFSET) << 5) |
+                      (c3 - ISO639_CHAR_OFFSET));
+}
+
 /* MPEG-4 descriptor sizes are a base-128 varint with a continuation bit,
    but always emitted here as the full 4-byte form (continuation bit set
    on all but the last byte) since some parsers assume that fixed width
@@ -254,11 +319,17 @@ static void put_descriptor(uint8_t tag, uint32_t size) {
     mem_write(buf, 5);
 }
 
-/* Only resets per-output-file write state (frame table, mdat bookkeeping,
-   bitrate accumulators). Tag/format config set by the caller, which may
-   happen before or after mp4_open() depending on the option, is left
-   untouched. */
+/* Resets per-output-file write state: frame table, mdat bookkeeping, bitrate
+   accumulators, the open output handle, and the in-memory atom buffer. Tag
+   config (named metadata, custom tags via mp4_add_custom_tag()) is set by
+   the caller and may happen before *or* after mp4_open() depending on the
+   frontend, so it must survive this reset -- only mp4_close() clears it,
+   once the caller is actually done with this muxer session. */
 static void reset_write_state(void) {
+    if (g_mp4.fout) {
+        fclose(g_mp4.fout);
+        g_mp4.fout = NULL;
+    }
     free(g_mp4.frame.data);
     g_mp4.frame.data = NULL;
     g_mp4.frame.ents = 0;
@@ -269,11 +340,12 @@ static void reset_write_state(void) {
     g_mp4.mdatofs = 0;
     g_mp4.mdatsize = 0;
     memset(&g_mp4.bitrate, 0, sizeof(g_mp4.bitrate));
+    free(g_membuf);
+    g_membuf = NULL;
 }
 
-int mp4_open(const char *path, int overwrite) {
-    mp4_close(); /* in case of a retry after a failed previous mp4_open() */
-    reset_write_state();
+int mp4_open(const char *path, bool overwrite) {
+    reset_write_state(); /* in case of a retry after a failed previous mp4_open() */
     g_mem_error = 0;
 
     if (!overwrite && access(path, 0) == 0) return 1;
@@ -303,6 +375,10 @@ int mp4_open(const char *path, int overwrite) {
     free(g_membuf);
     g_membuf = NULL;
 
+    /* Emit 8-byte 'wide' atom placeholder between ftyp and mdat */
+    put_u32(8);
+    put_data("wide", 4);
+
     /* mdat's size isn't known until every frame has been written, so its
        header goes out now as a placeholder and gets patched in mp4_finish().
        stco also needs mdatofs to point past this header at the first
@@ -331,29 +407,31 @@ void mp4_set_tag(mp4_tag_id_t id, const char *value) {
         g_mp4.tags[id] = value;
 }
 
-void mp4_set_genre(int genre) { g_mp4.genre = genre; }
+void mp4_set_genre(uint16_t genre) { g_mp4.genre = genre; }
 
-void mp4_set_compilation(int flag) { g_mp4.compilation = (uint8_t)flag; }
+void mp4_set_language(const char *lang) { g_mp4.language = lang; }
 
-void mp4_set_track(uint32_t num, uint32_t total) {
+void mp4_set_compilation(bool flag) { g_mp4.compilation = flag; }
+
+void mp4_set_track(uint16_t num, uint16_t total) {
     g_mp4.trackno = num;
     g_mp4.ntracks = total;
 }
 
-void mp4_set_disc(uint32_t num, uint32_t total) {
+void mp4_set_disc(uint16_t num, uint16_t total) {
     g_mp4.discno = num;
     g_mp4.ndiscs = total;
 }
 
-void mp4_set_cover(const uint8_t *data, int size) {
+void mp4_set_cover(const uint8_t *data, uint32_t size) {
     g_mp4.cover.data = data;
     g_mp4.cover.size = size;
 }
 
 int mp4_add_custom_tag(const char *name, const char *value) {
     if (g_mp4.customcnt >= g_mp4.customcap) {
-        int new_cap = g_mp4.customcap ? g_mp4.customcap * 2 : 8;
-        void *tmp = realloc(g_mp4.custom, new_cap * sizeof(*g_mp4.custom));
+        uint32_t new_cap = g_mp4.customcap ? g_mp4.customcap * 2 : 8;
+        void *tmp = realloc(g_mp4.custom, (size_t)new_cap * sizeof(*g_mp4.custom));
         if (!tmp) return -1;
         g_mp4.custom = tmp;
         g_mp4.customcap = new_cap;
@@ -391,8 +469,8 @@ int mp4_write_frame(const uint8_t *data, uint32_t size, uint32_t samples) {
         uint32_t new_cap = g_mp4.frame.bufsize ? g_mp4.frame.bufsize * 2 : 1024;
         /* bound the frame table so an unreasonably long encode can't grow
            this without limit or overflow new_cap * sizeof(uint32_t) */
-        if (new_cap > (1UL << 30)) return -1;
-        uint32_t *tmp = (uint32_t *)realloc(g_mp4.frame.data, new_cap * sizeof(uint32_t));
+        if (new_cap > (1U << 28)) return -1;
+        uint32_t *tmp = (uint32_t *)realloc(g_mp4.frame.data, (size_t)new_cap * sizeof(uint32_t));
         if (!tmp) return -1;
         g_mp4.frame.data = tmp;
         g_mp4.frame.bufsize = new_cap;
@@ -403,61 +481,56 @@ int mp4_write_frame(const uint8_t *data, uint32_t size, uint32_t samples) {
     return 0;
 }
 
-static void put_tag(const char *name, const char *data) {
-    if (!data) return;
+static void put_itunes_data_box(const char *name, uint32_t type_code, const void *data, size_t len) {
+    if (!name || !data) return;
     long box      = start_atom(name);
     long data_box = start_atom("data");
-    put_u32(ITUNES_DATA_TEXT);
+    put_u32(type_code);
     put_u32(0);
-    put_data(data, strlen(data));
+    put_data(data, len);
     end_atom(data_box);
     end_atom(box);
+}
+
+static void put_tag(const char *name, const char *data) {
+    if (data)
+        put_itunes_data_box(name, ITUNES_DATA_TEXT, data, strlen(data));
 }
 
 static void put_tag_u8(const char *name, uint8_t val) {
-    long box      = start_atom(name);
-    long data_box = start_atom("data");
-    put_u32(ITUNES_DATA_UINT8);
-    put_u32(0);
-    put_u8(val);
-    end_atom(data_box);
-    end_atom(box);
+    put_itunes_data_box(name, ITUNES_DATA_UINT8, &val, 1);
 }
 
 static void put_tag_genre(uint16_t genre) {
-    long box      = start_atom("gnre");
-    long data_box = start_atom("data");
-    put_u32(ITUNES_DATA_BINARY);
-    put_u32(0);
-    put_u16(genre);
-    end_atom(data_box);
-    end_atom(box);
+#ifndef WORDS_BIGENDIAN
+    uint16_t val = BSWAP16(genre);
+#else
+    uint16_t val = genre;
+#endif
+    put_itunes_data_box("gnre", ITUNES_DATA_BINARY, &val, 2);
 }
 
 static void put_tag_index(const char *name, uint16_t num, uint16_t total) {
-    long box      = start_atom(name);
-    long data_box = start_atom("data");
-    put_u32(ITUNES_DATA_BINARY);
-    put_u32(0);
-    put_u16(0);
-    put_u16(num);
-    put_u16(total);
-    put_u16(0);
-    end_atom(data_box);
-    end_atom(box);
+    uint16_t buf[4] = {
+        0,
+#ifndef WORDS_BIGENDIAN
+        BSWAP16(num),
+        BSWAP16(total),
+#else
+        num,
+        total,
+#endif
+        0
+    };
+    put_itunes_data_box(name, ITUNES_DATA_BINARY, buf, sizeof(buf));
 }
 
-static void put_tag_image(const uint8_t *data, int size) {
-    long box      = start_atom("covr");
-    long data_box = start_atom("data");
-    put_u32(ITUNES_DATA_IMAGE);
-    put_u32(0);
-    put_data(data, size);
-    end_atom(data_box);
-    end_atom(box);
+static void put_tag_image(const uint8_t *data, uint32_t size) {
+    put_itunes_data_box("covr", ITUNES_DATA_IMAGE, data, size);
 }
 
 static void put_tag_ext(const char *mean, const char *name, const char *val) {
+    if (!mean || !name || !val) return;
     long box      = start_atom("----");
     long mean_box = start_atom("mean");
     put_u32(0);
@@ -467,11 +540,7 @@ static void put_tag_ext(const char *mean, const char *name, const char *val) {
     put_u32(0);
     put_data(name, strlen(name));
     end_atom(name_box);
-    long data_box = start_atom("data");
-    put_u32(ITUNES_DATA_TEXT);
-    put_u32(0);
-    put_data(val, strlen(val));
-    end_atom(data_box);
+    put_itunes_data_box("data", ITUNES_DATA_TEXT, val, strlen(val));
     end_atom(box);
 }
 
@@ -497,10 +566,19 @@ int mp4_finish(void) {
     g_mem_error = 0;
 
     /* now that all frames are written, go back and fill in the mdat
-       size placeholder left by mp4_open() */
+       header placeholder left by mp4_open() */
     long pos = ftell(g_mp4.fout);
-    fseek(g_mp4.fout, g_mp4.mdatofs - 8, SEEK_SET);
-    put_u32(g_mp4.mdatsize + 8);
+    if (g_mp4.mdatsize + 8 <= 0xFFFFFFFFULL) {
+        /* Standard 32-bit mdat size header */
+        fseek(g_mp4.fout, g_mp4.mdatofs - 8, SEEK_SET);
+        put_u32((uint32_t)(g_mp4.mdatsize + 8));
+    } else {
+        /* 64-bit extended mdat header, overwriting the preceding 8-byte 'wide' box */
+        fseek(g_mp4.fout, g_mp4.mdatofs - 16, SEEK_SET);
+        put_u32(1);
+        put_data("mdat", 4);
+        put_u64(g_mp4.mdatsize + 16);
+    }
     fseek(g_mp4.fout, pos, SEEK_SET);
     if (g_mem_error) return 1;
 
@@ -515,11 +593,18 @@ int mp4_finish(void) {
     g_membuf = (uint8_t *)malloc(g_memcap);
     if (!g_membuf) return 1;
 
+    /* version 0 duration/time fields are 32-bit and saturate past ~24-27h
+       of audio (sample count, not mdatsize) well before mdat itself would
+       need the 64-bit 'wide' rewrite above; switch mvhd/tkhd/mdhd to
+       version 1 (64-bit time fields) once that's reached */
+    bool use64_time = (g_mp4.samples > 0xFFFFFFFFULL);
+
     long moov = start_atom("moov");
     long mvhd = start_atom("mvhd");
     uint32_t now = get_mp4_time();
-    put_u32(0); put_u32(now); put_u32(now);
-    put_u32(g_mp4.samplerate); put_u32(g_mp4.samples);
+    put_u32(use64_time ? (1U << 24) : 0);
+    put_time(now, use64_time); put_time(now, use64_time);
+    put_u32(g_mp4.samplerate); put_time(g_mp4.samples, use64_time);
     put_u32(MP4_FP1616_ONE); put_u16(MP4_FP0808_ONE); put_u16(0); put_u32(0); put_u32(0);
     put_u32(MP4_FP1616_ONE); put_u32(0); put_u32(0);
     put_u32(0); put_u32(MP4_FP1616_ONE); put_u32(0);
@@ -530,8 +615,11 @@ int mp4_finish(void) {
 
     long trak = start_atom("trak");
     long tkhd = start_atom("tkhd");
-    put_u32(1); put_u32(now); put_u32(now); put_u32(MP4_TRACK_ID); put_u32(0);
-    put_u32(g_mp4.samples); put_u32(0); put_u32(0);
+    put_u32((use64_time ? (1U << 24) : 0) | 1);
+    put_time(now, use64_time); put_time(now, use64_time);
+    put_u32(MP4_TRACK_ID); put_u32(0);
+    put_time(g_mp4.samples, use64_time);
+    put_u32(0); put_u32(0);
     put_u16(0); put_u16(0); put_u16(MP4_FP0808_ONE); put_u16(0);
     put_u32(MP4_FP1616_ONE); put_u32(0); put_u32(0);
     put_u32(0); put_u32(MP4_FP1616_ONE); put_u32(0);
@@ -539,11 +627,13 @@ int mp4_finish(void) {
     put_u32(0); put_u32(0);
     end_atom(tkhd);
 
+    uint16_t packed_lang = pack_language(g_mp4.language);
     long mdia = start_atom("mdia");
     long mdhd = start_atom("mdhd");
-    put_u32(0); put_u32(now); put_u32(now);
-    put_u32(g_mp4.samplerate); put_u32(g_mp4.samples);
-    put_u16(0); put_u16(0);
+    put_u32(use64_time ? (1U << 24) : 0);
+    put_time(now, use64_time); put_time(now, use64_time);
+    put_u32(g_mp4.samplerate); put_time(g_mp4.samples, use64_time);
+    put_u16(packed_lang); put_u16(0);
     end_atom(mdhd);
 
     long hdlr = start_atom("hdlr");
@@ -611,18 +701,8 @@ int mp4_finish(void) {
            table has one entry per encoded frame, so for a long file it's
            the hottest loop in mp4_finish() */
         size_t stsz_size = (size_t)g_mp4.frame.ents * 4;
-        if (g_mempos + stsz_size > g_memcap) {
-            size_t new_cap = g_memcap ? g_memcap * 2 : 1024;
-            while (g_mempos + stsz_size > new_cap && new_cap < (1UL << 31)) new_cap *= 2;
-            void *tmp = (g_mempos + stsz_size > new_cap) ? NULL : realloc(g_membuf, new_cap);
-            if (!tmp) {
-                free(g_membuf);
-                g_membuf = NULL;
-                return 1;
-            }
-            g_membuf = (uint8_t *)tmp;
-            g_memcap = new_cap;
-        }
+        if (!grow_membuf(stsz_size))
+            return 1;
         uint8_t *p = g_membuf + g_mempos;
 #ifdef WORDS_BIGENDIAN
         memcpy(p, g_mp4.frame.data, stsz_size);
@@ -636,9 +716,15 @@ int mp4_finish(void) {
     }
     end_atom(stsz);
 
-    long stco = start_atom("stco");
-    put_u32(0); put_u32(1); put_u32(g_mp4.mdatofs);
-    end_atom(stco);
+    if ((uint64_t)g_mp4.mdatofs + g_mp4.mdatsize <= 0xFFFFFFFFULL) {
+        long stco = start_atom("stco");
+        put_u32(0); put_u32(1); put_u32(g_mp4.mdatofs);
+        end_atom(stco);
+    } else {
+        long co64 = start_atom("co64");
+        put_u32(0); put_u32(1); put_u64((uint64_t)g_mp4.mdatofs);
+        end_atom(co64);
+    }
 
     end_atom(stbl);
     end_atom(minf);
@@ -657,12 +743,12 @@ int mp4_finish(void) {
     put_tag("\xa9" "too", g_mp4.encoder);
     for (int i = 0; i < MP4TAG_COUNT; i++)
         put_tag(tag_atom_names[i], g_mp4.tags[i]);
-    if (g_mp4.genre) put_tag_genre((uint16_t)g_mp4.genre);
-    if (g_mp4.compilation) put_tag_u8("cpil", g_mp4.compilation);
+    if (g_mp4.genre) put_tag_genre(g_mp4.genre);
+    if (g_mp4.compilation) put_tag_u8("cpil", 1);
     if (g_mp4.trackno) put_tag_index("trkn", (uint16_t)g_mp4.trackno, (uint16_t)g_mp4.ntracks);
     if (g_mp4.discno) put_tag_index("disk", (uint16_t)g_mp4.discno, (uint16_t)g_mp4.ndiscs);
     if (g_mp4.cover.data) put_tag_image(g_mp4.cover.data, g_mp4.cover.size);
-    for (int i = 0; i < g_mp4.customcnt; i++)
+    for (uint32_t i = 0; i < g_mp4.customcnt; i++)
         put_tag_ext("faac", g_mp4.custom[i].name, g_mp4.custom[i].value);
     end_atom(ilst);
     end_atom(meta);
@@ -672,23 +758,26 @@ int mp4_finish(void) {
     int ok = !g_mem_error && fwrite(g_membuf, 1, g_mempos, g_mp4.fout) == g_mempos;
     free(g_membuf);
     g_membuf = NULL;
+
     return ok ? 0 : 1;
 }
 
+/* Custom tags (mp4_add_custom_tag()) are freed here, not in
+   reset_write_state(), so mp4_open() doesn't wipe them if a caller sets
+   them before the first open. A future multi-file/batch session reusing
+   this muxer across encodes would need to re-add custom tags after each
+   mp4_close() -- they don't survive it. */
 int mp4_close(void) {
-    if (g_mp4.fout) {
-        fclose(g_mp4.fout);
-        g_mp4.fout = NULL;
-    }
-    free(g_mp4.frame.data);
-    g_mp4.frame.data = NULL;
-    free(g_membuf);
-    g_membuf = NULL;
+    reset_write_state();
+    free(g_mp4.custom);
+    g_mp4.custom = NULL;
+    g_mp4.customcnt = 0;
+    g_mp4.customcap = 0;
     return 0;
 }
 
 uint32_t mp4_frame_count(void) { return g_mp4.frame.ents; }
-uint32_t mp4_sample_count(void) { return g_mp4.samples; }
+uint64_t mp4_sample_count(void) { return g_mp4.samples; }
 uint32_t mp4_max_bitrate(void) { return g_mp4.bitrate.max; }
 uint32_t mp4_avg_bitrate(void) { return g_mp4.bitrate.avg; }
-uint32_t mp4_max_frame_size(void) { return g_mp4.buffersize; }
+uint16_t mp4_max_frame_size(void) { return g_mp4.buffersize; }

@@ -53,6 +53,7 @@
 #endif
 
 #include "mp4write.h"
+#include "output.h"
 
 #ifdef _WIN32
 # undef stderr
@@ -94,7 +95,8 @@ enum flags
     OPT_JOINT,
     OPT_PNS,
     OBJTYPE_FLAG,
-    CAP_RATE_FLAG
+    CAP_RATE_FLAG,
+    LANG_FLAG
 };
 
 typedef struct {
@@ -187,6 +189,7 @@ static help_t help_mp4[] = {
     {"--cover-art <filename>\tRead cover art from file X\n",
     "\t\tSupported image formats are GIF, JPEG, and PNG.\n"},
     {"--comment <string>\tSet comment\n", NULL},
+    {"--lang <code3>\tSet ISO 639-2/T 3-letter language code (e.g. eng, ger)\n", NULL},
     {"--creation-time <value>\tSet creation/modification time (auto, now, or timestamp)\n", NULL},
     {NULL, NULL}
 };
@@ -329,69 +332,7 @@ static void help(int mode)
     }
 }
 
-static int check_image_header(const char *buf)
-{
-    if (!strncmp(buf, "\x89\x50\x4E\x47\x0D\x0A\x1A\x0A", 8))
-        return 1;               /* PNG */
-    else if (!strncmp(buf, "\xFF\xD8\xFF\xE0", 4) ||
-             !strncmp(buf, "\xFF\xD8\xFF\xE1", 4))
-        return 1;               /* JPEG */
-    else if (!strncmp(buf, "GIF87a", 6) || !strncmp(buf, "GIF89a", 6))
-        return 1;               /* GIF */
-    else
-        return 0;
-}
 
-static int *mkChanMap(int channels, int center, int lf)
-{
-    int *map;
-    int inpos;
-    int outpos;
-
-    if (!center && !lf)
-        return NULL;
-
-    if (channels < 3)
-        return NULL;
-
-    if (lf > 0)
-        lf--;
-    else
-        lf = channels - 1;      // default AAC position
-
-    if (center > 0)
-        center--;
-    else
-        center = 0;             // default AAC position
-
-    map = malloc(channels * sizeof(map[0]));
-    if (!map) return NULL;
-    memset(map, 0, channels * sizeof(map[0]));
-
-    outpos = 0;
-    if ((center >= 0) && (center < channels))
-        map[outpos++] = center;
-
-    inpos = 0;
-    for (; outpos < (channels - 1) && inpos < channels; inpos++)
-    {
-        if (inpos == center)
-            continue;
-        if (inpos == lf)
-            continue;
-
-        map[outpos++] = inpos;
-    }
-    if (outpos < channels)
-    {
-        if ((lf >= 0) && (lf < channels))
-            map[outpos] = lf;
-        else if (inpos < channels)
-            map[outpos] = inpos;
-    }
-
-    return map;
-}
 
 #define fprintf if(verbose)fprintf
 
@@ -421,7 +362,6 @@ int main(int argc, char *argv[])
 
     char *audioFileName = NULL;
     char *aacFileName = NULL;
-    char *aacFileExt = NULL;
     int aacFileNameGiven = 0;
 
     float *pcmbuf;
@@ -447,7 +387,7 @@ int main(int argc, char *argv[])
         *album = NULL, *albumartist = NULL,
         *albumartistsort = NULL, *albumsort = NULL,
         *year = NULL, *comment = NULL, *composer = NULL,
-        *composersort = NULL, *tagname = 0, *tagval = 0,
+        *composersort = NULL, *language = NULL, *tagname = 0, *tagval = 0,
         *creation_time_str = NULL;
     int genre = 0;
     uint8_t *artData = NULL;
@@ -537,6 +477,8 @@ int main(int argc, char *argv[])
             {"tag", 1, 0, TAG_FLAG},
             {"overwrite", 0, &overwrite, 1},
             {"creation-time", 1, 0, CREATION_TIME_FLAG},
+            {"lang", 1, 0, LANG_FLAG},
+            {"language", 1, 0, LANG_FLAG},
             {"cap-rate", 1, 0, CAP_RATE_FLAG},
             {0, 0, 0, 0}
         };
@@ -700,6 +642,9 @@ int main(int argc, char *argv[])
         case CREATION_TIME_FLAG:
             creation_time_str = optarg;
             break;
+        case LANG_FLAG:
+            language = optarg;
+            break;
         case COVER_ART_FLAG:
             {
                 FILE *artFile = fopen(optarg, "rb");
@@ -836,28 +781,16 @@ int main(int argc, char *argv[])
     /* generate the output file name, if necessary */
     if (!aacFileNameGiven)
     {
-        char *t = strrchr(audioFileName, '.');
-        int l = t ? strlen(audioFileName) - strlen(t) : strlen(audioFileName);
-
-        aacFileExt = container == MP4_CONTAINER ? ".m4a" : ".aac";
-
-        aacFileName = malloc(l + 1 + 4);
+        aacFileName = get_output_filename(audioFileName, container == MP4_CONTAINER);
         if (!aacFileName)
         {
             fprintf(stderr, "out of memory\n");
             return 1;
         }
-        memcpy(aacFileName, audioFileName, l);
-        memcpy(aacFileName + l, aacFileExt, 4);
-        aacFileName[l + 4] = '\0';
     }
     else
     {
-        aacFileExt = strrchr(aacFileName, '.');
-
-        if (aacFileExt
-            && (!strcmp(".m4a", aacFileExt) || !strcmp(".m4b", aacFileExt)
-                || !strcmp(".mp4", aacFileExt)))
+        if (is_mp4_filename(aacFileName))
             container = MP4_CONTAINER;
     }
 
@@ -890,7 +823,7 @@ int main(int argc, char *argv[])
                                        albumsort || year || artData ||
                                        genre || comment || discno || ndiscs ||
                                        composer || composersort ||
-                                       compilation))
+                                       compilation || language))
     {
         fprintf(stderr, "Metadata requires MP4 output!\n");
         return 1;
@@ -909,7 +842,7 @@ int main(int argc, char *argv[])
         else                    // disabled
             cutOff = infile->samplerate / 2;
     }
-    if (cutOff > (infile->samplerate / 2))
+    if ((uint32_t)cutOff > (infile->samplerate / 2))
         cutOff = infile->samplerate / 2;
 
     if (shortctl == FAAC_SHORTCTL_NOSHORT) {
@@ -989,7 +922,7 @@ int main(int argc, char *argv[])
         fprintf(stderr, "out of memory\n");
         return 1;
     }
-    chanmap = mkChanMap(infile->channels, chanC, chanLF);
+    chanmap = mk_chan_map(infile->channels, chanC, chanLF);
     if (chanmap)
     {
         fprintf(stderr, "Remapping input channels: Center=%d, LFE=%d\n",
@@ -1281,12 +1214,13 @@ int main(int argc, char *argv[])
         SETTAG(MP4TAG_YEAR, year);
         SETTAG(MP4TAG_COMMENT, comment);
 #undef SETTAG
-        if (trackno) mp4_set_track(trackno, ntracks);
-        if (discno) mp4_set_disc(discno, ndiscs);
-        if (compilation) mp4_set_compilation(compilation);
-        if (genre) mp4_set_genre(genre);
+        if (trackno) mp4_set_track((uint16_t)trackno, (uint16_t)ntracks);
+        if (discno) mp4_set_disc((uint16_t)discno, (uint16_t)ndiscs);
+        if (compilation) mp4_set_compilation(true);
+        if (genre) mp4_set_genre((uint16_t)genre);
+        if (language) mp4_set_language(language);
         if (artData && artSize)
-            mp4_set_cover(artData, (int)artSize);
+            mp4_set_cover(artData, (uint32_t)artSize);
 
         {
             uint32_t final_creation_time = 0;
@@ -1354,7 +1288,7 @@ int main(int argc, char *argv[])
         if (verbose >= 2)
         {
             fprintf(stderr, "%u frames\n", mp4_frame_count());
-            fprintf(stderr, "%u output samples\n", mp4_sample_count());
+            fprintf(stderr, "%llu output samples\n", (unsigned long long)mp4_sample_count());
             fprintf(stderr, "max bitrate: %u\n", mp4_max_bitrate());
             fprintf(stderr, "avg bitrate: %u\n", mp4_avg_bitrate());
             fprintf(stderr, "max frame size: %u\n", mp4_max_frame_size());

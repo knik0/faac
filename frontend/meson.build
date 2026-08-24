@@ -1,5 +1,5 @@
 faac = executable('faac',
-    ['main.c', 'input.c', 'mp4write.c', 'input.h', 'mp4write.h'],
+    ['main.c', 'input.c', 'mp4write.c', 'output.c', 'input.h', 'mp4write.h', 'output.h'],
     include_directories: ['..', '../include'],
     link_with: libfaac,
     install: true

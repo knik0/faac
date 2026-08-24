@@ -32,6 +32,9 @@
 	| ((x & 0xff0000) >> 8) | ((x & 0xff000000) >> 24))
 #define SWAP16(x) (((x & 0xff) << 8) | ((x & 0xff00) >> 8))
 
+#define PCM_16BIT_FLOAT_SCALE 32768.0f
+#define PCM_32BIT_FLOAT_SCALE 65536.0f
+
 #ifdef WORDS_BIGENDIAN
 # define UINT32(x) SWAP32(x)
 # define UINT16(x) SWAP16(x)
@@ -149,7 +152,7 @@ static int seekchunk(FILE *f, riffsub_t *riffsub, char *name)
  return 0;
 }
 
-pcmfile_t *wav_open_read(const char *name, int rawinput)
+pcmfile_t *wav_open_read(const char *name, bool rawinput)
 {
   FILE *wave_f;
   riff_t riff;
@@ -240,27 +243,32 @@ pcmfile_t *wav_open_read(const char *name, int rawinput)
   sndf->f = wave_f;
 
   if (UINT16(wave.Format.wFormatTag) == WAVE_FORMAT_FLOAT) {
-    sndf->isfloat = 1;
+    sndf->isfloat = true;
   } else {
     sndf->isfloat = (wave.SubFormat[0] == WAVE_FORMAT_FLOAT);
   }
   if (rawinput)
   {
-    sndf->bigendian = 1;
+    sndf->bigendian = true;
     if (dostdin)
       sndf->samples = 0;
     else
     {
-      fseek(sndf->f, 0 , SEEK_END);
-      sndf->samples = ftell(sndf->f);
+#ifdef _WIN32
+      _fseeki64(sndf->f, 0, SEEK_END);
+      sndf->samples = _ftelli64(sndf->f);
+#else
+      fseeko(sndf->f, 0, SEEK_END);
+      sndf->samples = (int64_t)ftello(sndf->f);
+#endif
       rewind(sndf->f);
     }
   }
   else
   {
-    sndf->bigendian = 0;
+    sndf->bigendian = false;
     sndf->channels = UINT16(wave.Format.nChannels);
-    sndf->samplebytes = UINT16(wave.Format.wBitsPerSample) / 8;
+    sndf->samplebytes = (uint8_t)(UINT16(wave.Format.wBitsPerSample) / 8);
     sndf->samplerate = UINT32(wave.Format.nSamplesPerSec);
 
     /* channel/sample-width bounds guard against a corrupt header (e.g. a
@@ -273,7 +281,7 @@ pcmfile_t *wav_open_read(const char *name, int rawinput)
       return NULL;
     }
 
-    sndf->samples = riffsub.len / (sndf->samplebytes * sndf->channels);
+    sndf->samples = (int64_t)riffsub.len / ((int64_t)sndf->samplebytes * sndf->channels);
   }
 
 #ifdef WORDS_BIGENDIAN
@@ -286,23 +294,70 @@ pcmfile_t *wav_open_read(const char *name, int rawinput)
 }
 
 
+int *mk_chan_map(uint16_t channels, uint16_t center, uint16_t lf)
+{
+  if (!center && !lf)
+    return NULL;
+
+  if (channels < 3)
+    return NULL;
+
+  uint16_t lf_pos = (lf > 0) ? (lf - 1) : (uint16_t)(channels - 1);       /* default AAC position */
+  uint16_t center_pos = (center > 0) ? (center - 1) : 0;                 /* default AAC position */
+
+  int *map = malloc((size_t)channels * sizeof(int));
+  if (!map)
+    return NULL;
+  memset(map, 0, (size_t)channels * sizeof(int));
+
+  uint16_t outpos = 0;
+  if (center_pos < channels)
+    map[outpos++] = (int)center_pos;
+
+  uint16_t inpos = 0;
+  for (; outpos < (channels - 1) && inpos < channels; inpos++)
+  {
+    if (inpos == center_pos || inpos == lf_pos)
+      continue;
+
+    map[outpos++] = (int)inpos;
+  }
+  if (outpos < channels)
+  {
+    if (lf_pos < channels)
+      map[outpos] = (int)lf_pos;
+    else if (inpos < channels)
+      map[outpos] = (int)inpos;
+  }
+
+  return map;
+}
+
 static void chan_remap(int32_t *buf, int channels, int blocks, int *map)
 {
-  int i;
-  int32_t *tmp = (int32_t*)malloc(channels * sizeof(int32_t));
+  if (channels < 1)
+    return;
 
-  if (!tmp) return;
+  int32_t tmp_stack[64];
+  int32_t *tmp = tmp_stack;
 
-  for (i = 0; i < blocks; i++)
+  if (channels > 64)
   {
-    int chn;
+    tmp = (int32_t *)malloc((size_t)channels * sizeof(int32_t));
+    if (!tmp)
+      return;
+  }
 
-    memcpy(tmp, buf + i * channels, sizeof(int32_t) * channels);
+  for (int i = 0; i < blocks; i++)
+  {
+    memcpy(tmp, buf + i * channels, (size_t)channels * sizeof(int32_t));
 
-    for (chn = 0; chn < channels; chn++)
+    for (int chn = 0; chn < channels; chn++)
       buf[i * channels + chn] = tmp[map[chn]];
   }
-  free(tmp);
+
+  if (channels > 64)
+    free(tmp);
 }
 
 size_t wav_read_float32(pcmfile_t *sndf, float *buf, size_t num, int *map)
@@ -328,7 +383,7 @@ size_t wav_read_float32(pcmfile_t *sndf, float *buf, size_t num, int *map)
       if (sndf->samplebytes == 4)
       {
           for (size_t i = 0; i < cnt; i++)
-              buf[i] *= 32768.0f;
+              buf[i] *= PCM_16BIT_FLOAT_SCALE;
       }
       else
       {
@@ -348,17 +403,21 @@ size_t wav_read_float32(pcmfile_t *sndf, float *buf, size_t num, int *map)
           break;
       case 2:
           {
-              int16_t *in = (int16_t*)bufi;
-              int swap = sndf->swap;
-              if (swap)
+              const int16_t *in = (const int16_t *)bufi;
+              if (sndf->swap)
               {
                   for (size_t i = 0; i < cnt; i++)
-                      buf[i] = (float)SWAP16(in[i]);
+                  {
+                      int16_t val = (int16_t)SWAP16(in[i]);
+                      buf[i] = (float)val;
+                  }
               }
               else
               {
                   for (size_t i = 0; i < cnt; i++)
+                  {
                       buf[i] = (float)in[i];
+                  }
               }
           }
           break;
@@ -392,12 +451,12 @@ size_t wav_read_float32(pcmfile_t *sndf, float *buf, size_t num, int *map)
               if (swap)
               {
                   for (size_t i = 0; i < cnt; i++)
-                      buf[i] = (float)SWAP32(in[i]) / 65536.0f;
+                      buf[i] = (float)SWAP32(in[i]) / PCM_32BIT_FLOAT_SCALE;
               }
               else
               {
                   for (size_t i = 0; i < cnt; i++)
-                      buf[i] = (float)in[i] / 65536.0f;
+                      buf[i] = (float)in[i] / PCM_32BIT_FLOAT_SCALE;
               }
           }
           break;
