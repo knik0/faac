@@ -166,10 +166,8 @@ static faac_status validate_params(const faac_params *p)
         default: return FAAC_ERR_INVALID_ARGUMENT;
     }
     switch (p->input_format) {
-        case FAAC_INPUT_16BIT: case FAAC_INPUT_32BIT: case FAAC_INPUT_FLOAT:
+        case FAAC_INPUT_16BIT: case FAAC_INPUT_24BIT: case FAAC_INPUT_32BIT: case FAAC_INPUT_FLOAT:
             break;
-        case FAAC_INPUT_24BIT:
-            return FAAC_ERR_UNSUPPORTED;   /* 24-in-24 not implemented */
         default:
             return FAAC_ERR_INVALID_ARGUMENT;
     }
