@@ -44,6 +44,7 @@
 #include <time.h>
 #include <sys/stat.h>
 #include <errno.h>
+#include <locale.h>
 
 #ifdef HAVE_GETOPT_H
 # include <getopt.h>
@@ -53,6 +54,7 @@
 #endif
 
 #include "mp4write.h"
+#include "charset.h"
 #include "output.h"
 
 #ifdef _WIN32
@@ -339,6 +341,55 @@ static void help(int mode)
 int main(int argc, char *argv[])
 {
     int frames, currentFrame;
+
+#ifndef _WIN32
+    signal(SIGINT, signal_handler);
+    signal(SIGTERM, signal_handler);
+    /* So charset.c's utf8_ensure() can read the real locale codeset via
+       nl_langinfo() instead of always seeing the default "C" locale. */
+    setlocale(LC_CTYPE, "");
+#endif
+
+#ifdef _WIN32
+    int wargc = 0;
+    wchar_t **wargv = CommandLineToArgvW(GetCommandLineW(), &wargc);
+    char **allocated_argv = NULL;
+    if (wargv && wargc > 0)
+    {
+        allocated_argv = calloc((size_t)wargc, sizeof(char *));
+        if (allocated_argv)
+        {
+            bool conv_ok = true;
+            for (int i = 0; i < wargc; i++)
+            {
+                char *utf8_arg = win32_utf16_to_utf8(wargv[i]);
+                if (!utf8_arg)
+                {
+                    conv_ok = false;
+                    break;
+                }
+                allocated_argv[i] = utf8_arg;
+            }
+
+            if (conv_ok)
+            {
+                argc = wargc;
+                argv = allocated_argv;
+            }
+            else
+            {
+                for (int i = 0; i < wargc; i++)
+                {
+                    if (allocated_argv[i])
+                        free(allocated_argv[i]);
+                }
+                free(allocated_argv);
+                allocated_argv = NULL;
+            }
+        }
+        LocalFree(wargv);
+    }
+#endif
     faac_encoder *hEncoder = NULL;
     pcmfile_t *infile = NULL;
 
@@ -636,8 +687,20 @@ int main(int argc, char *argv[])
                 dieMessage = "Missing tag value.\n";
             else
                 *(char *)tagval++ = 0;
-            if (!dieMessage && mp4_add_custom_tag(tagname, tagval))
-                dieMessage = "Couldn't add tag (out of memory).\n";
+            if (!dieMessage)
+            {
+                char *utf8_tagval = utf8_ensure(tagval);
+                if (utf8_tagval)
+                {
+                    if (mp4_add_custom_tag(tagname, utf8_tagval))
+                        dieMessage = "Couldn't add tag (out of memory).\n";
+                    free(utf8_tagval);
+                }
+                else
+                {
+                    dieMessage = "Couldn't add tag (out of memory).\n";
+                }
+            }
             break;
         case CREATION_TIME_FLAG:
             creation_time_str = optarg;
@@ -647,7 +710,11 @@ int main(int argc, char *argv[])
             break;
         case COVER_ART_FLAG:
             {
+#ifdef _WIN32
+                FILE *artFile = win32_fopen_utf8(optarg, "rb");
+#else
                 FILE *artFile = fopen(optarg, "rb");
+#endif
 
                 if (artFile)
                 {
@@ -958,7 +1025,11 @@ int main(int argc, char *argv[])
         }
         else
         {
+#ifdef _WIN32
+            outfile = win32_fopen_utf8(aacFileName, "wb");
+#else
             outfile = fopen(aacFileName, "wb");
+#endif
         }
         if (!outfile)
         {
@@ -1201,7 +1272,17 @@ int main(int argc, char *argv[])
 
         mp4_set_encoder(version_string);
 
-#define SETTAG(id, x) if(x) mp4_set_tag(id, x)
+        char *allocated_tags[MP4TAG_COUNT] = { 0 };
+        int num_allocated = 0;
+
+#define SETTAG(id, x) \
+    if (x) { \
+        char *utf8_val = utf8_ensure(x); \
+        if (utf8_val && num_allocated < MP4TAG_COUNT) { \
+            mp4_set_tag(id, utf8_val); \
+            allocated_tags[num_allocated++] = utf8_val; \
+        } \
+    }
         SETTAG(MP4TAG_ARTIST, artist);
         SETTAG(MP4TAG_ARTISTSORT, artistsort);
         SETTAG(MP4TAG_COMPOSER, composer);
@@ -1234,11 +1315,19 @@ int main(int argc, char *argv[])
                     }
                     else
                     {
+#ifdef _WIN32
+                        time_t mtime = 0;
+                        if (win32_mtime_utf8(audioFileName, &mtime) == 0)
+                        {
+                            final_creation_time = (uint32_t)mtime;
+                        }
+#else
                         struct stat st;
                         if (stat(audioFileName, &st) == 0)
                         {
                             final_creation_time = (uint32_t)st.st_mtime;
                         }
+#endif
                         else
                         {
                             fprintf(stderr, "couldn't stat() input file %s, defaulting to 0\n", audioFileName);
@@ -1283,6 +1372,9 @@ int main(int argc, char *argv[])
             fprintf(stderr, "mp4_finish() failed: output file may be incomplete\n");
         mp4_close();
 
+        for (int i = 0; i < num_allocated; i++)
+            free(allocated_tags[i]);
+
         free(version_string);
 
         if (verbose >= 2)
@@ -1313,6 +1405,18 @@ int main(int argc, char *argv[])
         free(aacFileName);
     if (chanmap)
         free(chanmap);
+
+#ifdef _WIN32
+    if (allocated_argv)
+    {
+        for (int i = 0; i < argc; i++)
+        {
+            if (allocated_argv[i])
+                free(allocated_argv[i]);
+        }
+        free(allocated_argv);
+    }
+#endif
 
     return 0;
 }

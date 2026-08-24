@@ -26,6 +26,7 @@
 #endif
 
 #include "mp4write.h"
+#include "charset.h"
 
 #if defined(__has_builtin)
 #if __has_builtin(__builtin_bswap32) && __has_builtin(__builtin_bswap16)
@@ -348,8 +349,13 @@ int mp4_open(const char *path, bool overwrite) {
     reset_write_state(); /* in case of a retry after a failed previous mp4_open() */
     g_mem_error = 0;
 
+#ifdef _WIN32
+    if (!overwrite && win32_access_utf8(path, 0) == 0) return 1;
+    g_mp4.fout = win32_fopen_utf8(path, "wb");
+#else
     if (!overwrite && access(path, 0) == 0) return 1;
     g_mp4.fout = fopen(path, "wb");
+#endif
     if (!g_mp4.fout) return 1;
     setvbuf(g_mp4.fout, NULL, _IOFBF, MP4_IO_BUFSIZE);
 

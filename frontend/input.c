@@ -27,6 +27,7 @@
 #endif
 
 #include "input.h"
+#include "charset.h"
 
 #define SWAP32(x) (((x & 0xff) << 24) | ((x & 0xff00) << 8) \
 	| ((x & 0xff0000) >> 8) | ((x & 0xff000000) >> 24))
@@ -174,10 +175,18 @@ pcmfile_t *wav_open_read(const char *name, bool rawinput)
     wave_f = stdin;
     dostdin = 1;
   }
-  else if (!(wave_f = fopen(name, "rb")))
+  else
   {
-    perror(name);
-    return NULL;
+#ifdef _WIN32
+    wave_f = win32_fopen_utf8(name, "rb");
+#else
+    wave_f = fopen(name, "rb");
+#endif
+    if (!wave_f)
+    {
+      perror(name);
+      return NULL;
+    }
   }
 
   if (!rawinput) // header input
