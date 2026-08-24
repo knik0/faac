@@ -151,7 +151,7 @@ static DWORD WINAPI EncodeFile(LPVOID pParam)
         faac_params_init(&params, sizeof(params));
         params.sample_rate  = sampleRate;
         params.num_channels = numChannels;
-        params.input_format = FAAC_INPUT_32BIT;   /* wav_read_int24 -> 24-in-32 int */
+        params.input_format = FAAC_INPUT_FLOAT;   /* wav_read_float32 -> scaled float */
         {
             HWND hOT = GetDlgItem(hWnd, IDC_OBJECTTYPE);
             LRESULT sel  = SendMessage(hOT, CB_GETCURSEL, 0, 0);
@@ -206,12 +206,12 @@ static DWORD WINAPI EncodeFile(LPVOID pParam)
 
                 unsigned int bytesInput = 0;
                 DWORD numberOfBytesWritten = 0;
-                int *pcmbuf;
+                float *pcmbuf;
                 unsigned char *bitbuf;
                 char HeaderText[50];
                 char Percentage[5];
 
-                pcmbuf = (int*)LocalAlloc(0, inputSamples*sizeof(int));
+                pcmbuf = (float*)LocalAlloc(0, inputSamples*sizeof(float));
                 bitbuf = (unsigned char*)LocalAlloc(0, maxOutputBytes*sizeof(unsigned char));
 
                 SendDlgItemMessage(hWnd, IDC_PROGRESS, PBM_SETRANGE, 0, MAKELPARAM(0, 1024));
@@ -222,7 +222,7 @@ static DWORD WINAPI EncodeFile(LPVOID pParam)
                     int bytesWritten;
                     UINT timeElapsed, timeEncoded;
 
-                    bytesInput = wav_read_int24(infile, pcmbuf, inputSamples, NULL) * sizeof(int);
+                    bytesInput = wav_read_float32(infile, pcmbuf, inputSamples, NULL) * sizeof(float);
 
                     SendDlgItemMessage (hWnd, IDC_PROGRESS, PBM_SETPOS, (unsigned long)((float)totalBytesRead * 1024.0f / (infile->samples*sizeof(int)*numChannels)), 0);
 
@@ -264,7 +264,7 @@ static DWORD WINAPI EncodeFile(LPVOID pParam)
                         uint32_t nbytes = 0;
                         faac_status st = faac_encoder_encode(hEncoder,
                             pcmbuf,
-                            (uint32_t)(bytesInput/sizeof(int)),
+                            (uint32_t)(bytesInput/sizeof(float)),
                             bitbuf,
                             (uint32_t)maxOutputBytes,
                             &nbytes);

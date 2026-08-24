@@ -10,11 +10,16 @@ project('faac', 'c',
 
 add_global_arguments('-DHAVE_CONFIG_H', language: 'c')
 
+cc = meson.get_compiler('c')
+if cc.get_argument_syntax() == 'msvc'
+    # _s variants buy nothing here and aren't portable; suppress instead.
+    add_global_arguments('-D_CRT_SECURE_NO_WARNINGS', language: 'c')
+endif
+
 config_h = configuration_data()
 config_h.set_quoted('PACKAGE', meson.project_name())
 config_h.set_quoted('PACKAGE_VERSION', meson.project_version())
 
-cc = meson.get_compiler('c')
 foreach h: ['getopt.h', 'immintrin.h']
     config_h.set('HAVE_' + h.underscorify().to_upper(), cc.has_header(h))
 endforeach

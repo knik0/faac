@@ -667,8 +667,11 @@ int mp4_finish(void) {
     long mp4a = start_atom("mp4a");
     put_u8(0); put_u8(0); put_u8(0); put_u8(0); put_u8(0); put_u8(0);
     put_u16(1); put_u32(0); put_u32(0);
-    put_u16(g_mp4.channels); put_u16(g_mp4.bits);
-    put_u16(0); put_u16(0); put_u16(g_mp4.samplerate); put_u16(0);
+    put_u16((uint16_t)g_mp4.channels); put_u16((uint16_t)g_mp4.bits);
+    /* Field is 16-bit; the real rate lives in mdhd and the decoder config. */
+    put_u16(0); put_u16(0);
+    put_u16((uint16_t)(g_mp4.samplerate > UINT16_MAX ? UINT16_MAX : g_mp4.samplerate));
+    put_u16(0);
 
     long esds = start_atom("esds");
     put_u32(0);
@@ -681,7 +684,7 @@ int mp4_finish(void) {
     put_u8(MP4_OBJECT_TYPE_AUDIO_ISO_14496_3); put_u8(MP4_STREAM_TYPE_AUDIO);
     put_u8((uint8_t)(MP4_DECODER_BUFFER_SIZE >> 16));
     put_u8((uint8_t)(MP4_DECODER_BUFFER_SIZE >> 8));
-    put_u8((uint8_t)MP4_DECODER_BUFFER_SIZE);
+    put_u8((uint8_t)(MP4_DECODER_BUFFER_SIZE & 0xff));
     put_u32(g_mp4.bitrate.max); put_u32(g_mp4.bitrate.avg);
     put_descriptor(5, g_mp4.asc.size);
     put_data(g_mp4.asc.data, g_mp4.asc.size);

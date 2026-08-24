@@ -251,11 +251,17 @@ pcmfile_t *wav_open_read(const char *name, bool rawinput)
   memset(sndf, 0, sizeof(*sndf));
   sndf->f = wave_f;
 
-  if (UINT16(wave.Format.wFormatTag) == WAVE_FORMAT_FLOAT) {
-    sndf->isfloat = true;
-  } else {
-    sndf->isfloat = (wave.SubFormat[0] == WAVE_FORMAT_FLOAT);
+  /* rawinput never populates `wave` (no header to parse), and raw mode has
+     no float flag of its own -- isfloat stays false, its memset() default. */
+  if (!rawinput)
+  {
+    if (UINT16(wave.Format.wFormatTag) == WAVE_FORMAT_FLOAT) {
+      sndf->isfloat = true;
+    } else {
+      sndf->isfloat = (wave.SubFormat[0] == WAVE_FORMAT_FLOAT);
+    }
   }
+
   if (rawinput)
   {
     sndf->bigendian = true;
@@ -475,87 +481,9 @@ size_t wav_read_float32(pcmfile_t *sndf, float *buf, size_t num, int *map)
   }
 
   if (map)
-    chan_remap((int32_t *)buf, sndf->channels, cnt / sndf->channels, map);
+    chan_remap((int32_t *)buf, sndf->channels, (int)(cnt / sndf->channels), map);
 
   return cnt;
-}
-
-size_t wav_read_int24(pcmfile_t *sndf, int32_t *buf, size_t num, int *map)
-{
-  int size;
-  int i;
-  uint8_t *bufi;
-
-  if ((sndf->samplebytes > 4) || (sndf->samplebytes < 1))
-    return 0;
-
-  bufi = (uint8_t *)buf + sizeof(*buf) * num - sndf->samplebytes * (num - 1) - sizeof(*buf);
-
-  size = fread(bufi, sndf->samplebytes, num, sndf->f);
-
-  // convert to 24 bit
-  // fix endianness
-  switch (sndf->samplebytes) {
-  case 1:
-    /* this is endian clean */
-    for (i = 0; i < size; i++)
-      buf[i] = (bufi[i] - 128) * 65536;
-    break;
-
-  case 2:
-    {
-      int swap = sndf->swap;
-      int16_t *in = (int16_t *)bufi;
-      if (swap)
-      {
-        for (i = 0; i < size; i++)
-          buf[i] = ((uint32_t)SWAP16(in[i])) << 8;
-      }
-      else
-      {
-        for (i = 0; i < size; i++)
-          buf[i] = ((int32_t)in[i]) << 8;
-      }
-    }
-    break;
-
-  case 3:
-    if (!sndf->bigendian)
-    {
-      for (i = 0; i < size; i++)
-      {
-	int s = bufi[3 * i] | (bufi[3 * i + 1] << 8) | (bufi[3 * i + 2] << 16);
-	if (s & 0x800000) s |= 0xff000000;
-	buf[i] = s;
-      }
-    }
-    else // big endian input
-    {
-      for (i = 0; i < size; i++)
-      {
-	int s = (bufi[3 * i] << 16) | (bufi[3 * i + 1] << 8) | bufi[3 * i + 2];
-	if (s & 0x800000) s |= 0xff000000;
-	buf[i] = s;
-      }
-    }
-    break;
-
-  case 4:
-    {
-      int swap = sndf->swap;
-      if (swap)
-      {
-        for (i = 0; i < size; i++)
-          buf[i] = SWAP32(buf[i]);
-      }
-    }
-    break;
-  }
-
-  if (map)
-    chan_remap(buf, sndf->channels, size / sndf->channels, map);
-
-  return size;
 }
 
 int wav_close(pcmfile_t *sndf)
