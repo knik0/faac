@@ -70,7 +70,7 @@ void SbrAnalyze(SignalAnalysis *sa, float *fullPtrs[], int nch, int numSamples, 
         }
         sa->ch[ch].lastVal = val_in;
 
-        sa->ch[ch].transientStrength = smax * (float)sampled / (ssum + SBR_ENERGY_FLOOR);
+        sa->ch[ch].transientStrength = smax * (float)num_slots / (ssum + SBR_ENERGY_FLOOR);
         sa->ch[ch].transientSlot = smax_idx;
 
         /* Evaluate relative energy jumps to inform block switching. */
