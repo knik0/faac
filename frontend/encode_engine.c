@@ -707,6 +707,13 @@ int run_encoding_session_ext(const encode_options_t *opts,
 
     if (opts->container_mp4 && mp4_is_open)
     {
+        uint32_t priming = info.encoder_delay;
+        uint64_t total_output_samples = (uint64_t)current_frame * priming;
+        uint64_t padding = 0;
+        if (total_output_samples > (uint64_t)priming + current_input_samples)
+            padding = total_output_samples - (uint64_t)priming - current_input_samples;
+        mp4_set_gapless(priming, (uint32_t)padding, current_input_samples);
+
         if (!finalize_mp4(hEncoder, opts, log_cb, user_data))
         {
             ret = 1;

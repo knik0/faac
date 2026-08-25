@@ -46,6 +46,7 @@ void mp4_set_compilation(bool flag);
 void mp4_set_track(uint16_t num, uint16_t total);
 void mp4_set_disc(uint16_t num, uint16_t total);
 void mp4_set_cover(const uint8_t *data, uint32_t size);
+void mp4_set_gapless(uint32_t priming, uint32_t padding, uint64_t original_samples);
 int mp4_add_custom_tag(const char *name, const char *value);
 int mp4_write_frame(const uint8_t *data, uint32_t size, uint32_t samples);
 int mp4_finish(void);
