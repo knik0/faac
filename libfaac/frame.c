@@ -618,94 +618,105 @@ int faacEncEncode(faacEncHandle hpEncoder,
      * buffered we just return 0 without touching any per-frame state, so the
      * encoder behaves identically regardless of the caller's chunk size. */
     unsigned int frameSamplesPerCh = faacFrameSamples(hEncoder);
-    int flushing = (samplesInput == 0);
-    int realPerCh;          /* real (non-padded) input samples/ch in this frame */
+    int flushing = (samplesInput == 0 || inputBuffer == NULL);
 
-    if (samplesInput > 0)
+    if (samplesInput > 0 && inputBuffer != NULL)
+    {
         if (appendInputFifo(hEncoder, inputBuffer, samplesInput) < 0)
             return -1;
-
-    if (hEncoder->inputFifoFill >= frameSamplesPerCh)
-        realPerCh = (int)frameSamplesPerCh;           /* full frame ready */
-    else if (flushing && hEncoder->inputFifoFill > 0)
-        realPerCh = (int)hEncoder->inputFifoFill;     /* final partial frame */
-    else if (flushing)
-        realPerCh = 0;                                /* drain core lookahead */
-    else
-        return 0;                                     /* accumulating */
-
-    /* Increase frame number */
-    hEncoder->frameNum++;
-
-    /* A pure (FIFO-empty) flush frame pushes silence to drain the core's
-     * algorithmic delay; a final partial frame still carries real samples and is
-     * counted like a data frame, matching the pre-FIFO behaviour. */
-    if (realPerCh == 0)
-        hEncoder->flushFrame++;
-
-    /* After LOOKAHEAD_DEPTH + 1 flush frames all samples have been encoded,
-       return 0 bytes written */
-    if (hEncoder->flushFrame > (LOOKAHEAD_DEPTH + 1))
-        return 0;
-
-    /* HE-AAC: run SBR + downsample first; the core then encodes heHalfRate.
-     * Flush frames (realPerCh == 0) included -- the SBR payload runs
-     * SBR_FRAME_FIFO-1 frames behind, so the pipeline has to keep ticking
-     * through the drain or the tail access units re-emit stale envelopes. */
-    float *heHalfRate[MAX_CHANNELS] = {0};
-    if (hEncoder->config.aacObjectType == HE_V1 && SbrContextIsPresent(hEncoder->sbrContext))
-        doHEAACFrame(hEncoder, (unsigned int)realPerCh, heHalfRate);
-
-    /* Update current sample buffers */
-    for (channel = 0; channel < numChannels; channel++)
-	{
-		float *tmp;
-		tmp = hEncoder->audioFIFO[channel][FIFO_PAST];
-		hEncoder->audioFIFO[channel][FIFO_PAST]  = hEncoder->audioFIFO[channel][FIFO_CURR];
-		hEncoder->audioFIFO[channel][FIFO_CURR]  = hEncoder->audioFIFO[channel][FIFO_AHEAD1];
-		hEncoder->audioFIFO[channel][FIFO_AHEAD1] = hEncoder->audioFIFO[channel][FIFO_AHEAD2];
-		hEncoder->audioFIFO[channel][FIFO_AHEAD2] = tmp;
-
-        if (realPerCh == 0)
-        {
-            /* start flushing*/
-            memset(hEncoder->audioFIFO[channel][FIFO_AHEAD2], 0, FRAME_LEN * sizeof(float));
-        }
-        else if (hEncoder->config.aacObjectType == HE_V1 && heHalfRate[channel])
-        {
-            /* core feeds on the SBR-downsampled signal, not the raw input */
-            memcpy(hEncoder->audioFIFO[channel][FIFO_AHEAD2], heHalfRate[channel], FRAME_LEN * sizeof(float));
-        }
-        else
-        {
-            /* LC: take one frame from the FIFO front (already float),
-             * silence-padding a short final frame. */
-            unsigned int spc = ((unsigned int)realPerCh < FRAME_LEN) ? (unsigned int)realPerCh : FRAME_LEN;
-            memcpy(hEncoder->audioFIFO[channel][FIFO_AHEAD2], hEncoder->inputFifo[channel], spc * sizeof(float));
-            if (spc < FRAME_LEN)
-                memset(hEncoder->audioFIFO[channel][FIFO_AHEAD2] + spc, 0, (FRAME_LEN - spc) * sizeof(float));
-		}
-
-		/* LFE's block_type is always forced to ONLY_LONG_WINDOW in PsyCalculate,
-		 * so the transient analysis below would be discarded -- skip it. */
-		if (!hEncoder->isLfeChannel[channel])
-		{
-            /* Shared detector replacement on HE: skip half-rate PsyBufferUpdate. */
-            if (hEncoder->config.aacObjectType != HE_V1 || !SbrContextIsAnalysisValid(hEncoder->sbrContext))
-            {
-                PsyBufferUpdate(&hEncoder->gpsyInfo, &hEncoder->psyInfo[channel],
-                    hEncoder->audioFIFO[channel][FIFO_AHEAD1],
-                    hEncoder->audioFIFO[channel][FIFO_AHEAD2]);
-            }
-		}
     }
 
-    /* Drop the consumed frame from the FIFO front (both the LC copy and the
-     * HE doHEAACFrame read the leading frameSamplesPerCh samples). */
-    if (realPerCh > 0)
-        consumeInputFifo(hEncoder, frameSamplesPerCh);
+    /* A 0-byte return is ambiguous during end-of-stream flushing. While flushing,
+     * absorb no-output pipeline priming ticks internally until an encoded frame
+     * is produced or core lookahead delay is fully drained. */
+    do {
+        int realPerCh;          /* real (non-padded) input samples/ch in this frame */
+        if (hEncoder->inputFifoFill >= frameSamplesPerCh)
+            realPerCh = (int)frameSamplesPerCh;           /* full frame ready */
+        else if (flushing && hEncoder->inputFifoFill > 0)
+            realPerCh = (int)hEncoder->inputFifoFill;     /* final partial frame */
+        else if (flushing)
+            realPerCh = 0;                                /* drain core lookahead */
+        else
+            return 0;                                     /* accumulating */
 
-    if (hEncoder->frameNum <= LOOKAHEAD_DEPTH) /* Still filling up the buffers */
+        /* Increase frame number */
+        hEncoder->frameNum++;
+
+        /* A pure (FIFO-empty) flush frame pushes silence to drain the core's
+         * algorithmic delay; a final partial frame still carries real samples and is
+         * counted like a data frame, matching the pre-FIFO behaviour. */
+        if (realPerCh == 0)
+            hEncoder->flushFrame++;
+
+        /* SBR's coded-payload ring (frameFIFO) trails the core FIFO by one
+         * extra tick, so HE-AAC needs one more flush tick than LC to drain. */
+        unsigned int flushBudget = (hEncoder->config.aacObjectType == HE_V1) ?
+            SBR_FRAME_FIFO : (LOOKAHEAD_DEPTH + 1);
+        if (hEncoder->flushFrame > flushBudget)
+            return 0;
+
+        /* HE-AAC: run SBR + downsample first; the core then encodes heHalfRate.
+         * Flush frames (realPerCh == 0) included -- the SBR payload runs
+         * SBR_FRAME_FIFO-1 frames behind, so the pipeline has to keep ticking
+         * through the drain or the tail access units re-emit stale envelopes. */
+        float *heHalfRate[MAX_CHANNELS] = {0};
+        if (hEncoder->config.aacObjectType == HE_V1 && SbrContextIsPresent(hEncoder->sbrContext))
+            doHEAACFrame(hEncoder, (unsigned int)realPerCh, heHalfRate);
+
+        /* Update current sample buffers */
+        for (channel = 0; channel < numChannels; channel++)
+        {
+            float *tmp = hEncoder->audioFIFO[channel][FIFO_PAST];
+            hEncoder->audioFIFO[channel][FIFO_PAST]   = hEncoder->audioFIFO[channel][FIFO_CURR];
+            hEncoder->audioFIFO[channel][FIFO_CURR]   = hEncoder->audioFIFO[channel][FIFO_AHEAD1];
+            hEncoder->audioFIFO[channel][FIFO_AHEAD1]  = hEncoder->audioFIFO[channel][FIFO_AHEAD2];
+            hEncoder->audioFIFO[channel][FIFO_AHEAD2] = tmp;
+
+            if (realPerCh == 0)
+            {
+                /* start flushing*/
+                memset(hEncoder->audioFIFO[channel][FIFO_AHEAD2], 0, FRAME_LEN * sizeof(float));
+            }
+            else if (hEncoder->config.aacObjectType == HE_V1 && heHalfRate[channel])
+            {
+                /* core feeds on the SBR-downsampled signal, not the raw input */
+                memcpy(hEncoder->audioFIFO[channel][FIFO_AHEAD2], heHalfRate[channel], FRAME_LEN * sizeof(float));
+            }
+            else
+            {
+                /* LC: take one frame from the FIFO front (already float),
+                 * silence-padding a short final frame. */
+                unsigned int spc = ((unsigned int)realPerCh < FRAME_LEN) ? (unsigned int)realPerCh : FRAME_LEN;
+                memcpy(hEncoder->audioFIFO[channel][FIFO_AHEAD2], hEncoder->inputFifo[channel], spc * sizeof(float));
+                if (spc < FRAME_LEN)
+                    memset(hEncoder->audioFIFO[channel][FIFO_AHEAD2] + spc, 0, (FRAME_LEN - spc) * sizeof(float));
+            }
+
+            /* LFE's block_type is always forced to ONLY_LONG_WINDOW in PsyCalculate,
+             * so the transient analysis below would be discarded -- skip it. */
+            if (!hEncoder->isLfeChannel[channel])
+            {
+                /* Shared detector replacement on HE: skip half-rate PsyBufferUpdate. */
+                if (hEncoder->config.aacObjectType != HE_V1 || !SbrContextIsAnalysisValid(hEncoder->sbrContext))
+                {
+                    PsyBufferUpdate(&hEncoder->gpsyInfo, &hEncoder->psyInfo[channel],
+                        hEncoder->audioFIFO[channel][FIFO_AHEAD1],
+                        hEncoder->audioFIFO[channel][FIFO_AHEAD2]);
+                }
+            }
+        }
+
+        /* Drop the consumed frame from the FIFO front (both the LC copy and the
+         * HE doHEAACFrame read the leading frameSamplesPerCh samples). */
+        if (realPerCh > 0)
+            consumeInputFifo(hEncoder, frameSamplesPerCh);
+
+        if (hEncoder->frameNum > LOOKAHEAD_DEPTH)
+            break;
+    } while (flushing);
+
+    if (!flushing && hEncoder->frameNum <= LOOKAHEAD_DEPTH) /* Still filling up the buffers */
         return 0;
 
     /* Psychoacoustics */
