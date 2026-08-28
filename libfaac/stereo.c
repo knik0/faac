@@ -21,16 +21,19 @@
 #include "util.h"
 #include "faac_internal.h"
 
-/* Intensity stereo applies only at and above this frequency; below it the ear
- * localizes from waveform detail, so panning the band would be audible. */
-#define IS_START_FREQ_HZ 5500
-/* Upper bound on the crossover, as a fraction of the sample rate (0.35*Fs =
- * 0.7*Nyquist), so the band stays well inside the coded spectrum. */
+/* Intensity stereo crossover scales with core bandwidth (3.5-7 kHz) to save low-band phase bits at low rates. */
+#define IS_BW_RATIO              0.35f
+#define IS_START_FREQ_MIN        3500
+#define IS_START_FREQ_MAX        7000
+/* Upper bound on crossover (0.35*Fs) so IS stays well inside coded spectrum. */
 #define IS_FREQ_CAP_NUM  7
 #define IS_FREQ_CAP_DEN  20
 /* Pan, in SF_STEP_ENRG steps, beyond which the quieter channel is inaudible
  * and is dropped to HCB_ZERO rather than intensity-coded. */
 #define IS_PAN_LIMIT     30
+
+/* Core bandwidth ceiling (16 kHz / <=48 kbps/ch) below which short-block M/S is disabled to prevent pre-echo. */
+#define MS_SHORT_BW_CEILING      16000
 
 /* Accumulate channel energies and cross-correlation for a scale factor band.
  * Using three independent accumulators maximizes instruction-level parallelism
@@ -39,7 +42,7 @@ static inline void calculate_energies(const float * restrict sl0, const float * 
                                int start, int len, int wstart, int wend,
                                float * restrict el_out, float * restrict er_out, float * restrict elr_out)
 {
-    float el = 0, er = 0, elr = 0;
+    float el = 0.0f, er = 0.0f, elr = 0.0f;
     int win, i;
 
     for (win = wstart; win < wend; win++) {
@@ -62,9 +65,10 @@ static inline void calculate_energies(const float * restrict sl0, const float * 
 static inline void apply_mute(float * restrict s0, int start, int len, int wstart, int wend)
 {
     int win;
+    size_t bytes = (size_t)len * sizeof(float);
     for (win = wstart; win < wend; win++) {
         float * restrict s = s0 + win * BLOCK_LEN_SHORT + start;
-        memset(s, 0, len * sizeof(float));
+        memset(s, 0, bytes);
     }
 }
 
@@ -75,23 +79,23 @@ static inline void apply_ms(float * restrict sl0, float * restrict sr0,
                             int start, int len, int wstart, int wend, int in_phase)
 {
     int win, i;
+    size_t bytes = (size_t)len * sizeof(float);
+
     if (in_phase) {
         for (win = wstart; win < wend; win++) {
             float * restrict sl = sl0 + win * BLOCK_LEN_SHORT + start;
             float * restrict sr = sr0 + win * BLOCK_LEN_SHORT + start;
-            for (i = 0; i < len; i++) {
+            for (i = 0; i < len; i++)
                 sl[i] = 0.5f * (sl[i] + sr[i]);
-                sr[i] = 0.0f;
-            }
+            memset(sr, 0, bytes);
         }
     } else {
         for (win = wstart; win < wend; win++) {
             float * restrict sl = sl0 + win * BLOCK_LEN_SHORT + start;
             float * restrict sr = sr0 + win * BLOCK_LEN_SHORT + start;
-            for (i = 0; i < len; i++) {
+            for (i = 0; i < len; i++)
                 sr[i] = 0.5f * (sl[i] - sr[i]);
-                sl[i] = 0.0f;
-            }
+            memset(sl, 0, bytes);
         }
     }
 }
@@ -225,7 +229,7 @@ static inline int process_cpe(CoderInfo * restrict cl, CoderInfo * restrict cr,
 }
 
 void AACstereo(CoderInfo *coder, AACElement *elements, int numElements, float *s[MAX_CHANNELS],
-               float quality, int mode, int sampleRate)
+               float quality, int mode, int sampleRate, unsigned int bandWidth)
 {
     float inv_quality = 1.0f / quality;
     float thrmid = 1.0f, isthr = 1.0f, thrside = 0.0f;
@@ -262,6 +266,14 @@ void AACstereo(CoderInfo *coder, AACElement *elements, int numElements, float *s
     float inv_isthr = 1.0f / (isthr * isthr);
     float thrside_sq = thrside * thrside;
 
+    /* Scale IS crossover with bandwidth (0.35 * bw, 3.5-7 kHz) to save phase bits. */
+    int cap = (sampleRate * IS_FREQ_CAP_NUM) / IS_FREQ_CAP_DEN;
+    int max_freq = min(IS_START_FREQ_MAX, cap);
+    int ifreq = (max_freq < IS_START_FREQ_MIN) ? max_freq : clamp_int((int)((float)bandWidth * IS_BW_RATIO), IS_START_FREQ_MIN, max_freq);
+
+    int target_offset_long  = (ifreq * (2 * BLOCK_LEN_LONG)  + sampleRate - 1) / sampleRate;
+    int target_offset_short = (ifreq * (2 * BLOCK_LEN_SHORT) + sampleRate - 1) / sampleRate;
+
     for (int e = 0; e < numElements; e++) {
         AACElement *elem = &elements[e];
         if (elem->type != ID_CPE) continue;
@@ -283,16 +295,17 @@ void AACstereo(CoderInfo *coder, AACElement *elements, int numElements, float *s
         }
         if (!ok) continue;
 
+        /* Disable short-window M/S at <=16 kHz core bandwidth (<=48 kbps/ch) to prevent pre-echo. */
+        int cur_mode = (coder[lch].block_type == ONLY_SHORT_WINDOW && bandWidth <= MS_SHORT_BW_CEILING && mode == JOINT_MIXED) ? JOINT_IS : mode;
+
         elem->common_window  = true;
-        elem->msInfo.is_present = (mode == JOINT_MS);
+        elem->msInfo.is_present = (cur_mode == JOINT_MS);
 
         int start = 0, sfcnt = 0, is_start_sfb = coder[lch].sfbn, msused = 0;
-        if (mode == JOINT_MIXED) {
-            int mlen  = (coder[lch].block_type == ONLY_SHORT_WINDOW) ? 2*BLOCK_LEN_SHORT : 2*BLOCK_LEN_LONG;
-            int ifreq = IS_START_FREQ_HZ, cap = (sampleRate * IS_FREQ_CAP_NUM) / IS_FREQ_CAP_DEN;
-            if (ifreq > cap) ifreq = cap;
+        if (cur_mode == JOINT_MIXED) {
+            int target_offset = (coder[lch].block_type == ONLY_SHORT_WINDOW) ? target_offset_short : target_offset_long;
             for (int sfb = 0; sfb < coder[lch].sfbn; sfb++) {
-                if ((coder[lch].sfb_offset[sfb] * sampleRate) / mlen >= ifreq) {
+                if (coder[lch].sfb_offset[sfb] >= target_offset) {
                     is_start_sfb = sfb; break;
                 }
             }
@@ -302,9 +315,9 @@ void AACstereo(CoderInfo *coder, AACElement *elements, int numElements, float *s
             int end = start + coder[lch].groups.len[g];
             msused |= process_cpe(coder+lch, coder+rch, elem, s[lch], s[rch],
                                   &sfcnt, start, end, thrmid, inv_isthr, thrside_sq,
-                                  is_start_sfb, mode);
+                                  is_start_sfb, cur_mode);
             start = end;
         }
-        if (mode == JOINT_MIXED && msused) elem->msInfo.is_present = true;
+        if (cur_mode == JOINT_MIXED && msused) elem->msInfo.is_present = true;
     }
 }

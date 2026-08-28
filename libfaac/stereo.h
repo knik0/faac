@@ -29,7 +29,7 @@ void AACstereo(CoderInfo *coder,
                float *s[MAX_CHANNELS],
                float quality,
                int mode,
-               int sampleRate
-              );
+               int sampleRate,
+               unsigned int bandWidth);
 
 #endif
