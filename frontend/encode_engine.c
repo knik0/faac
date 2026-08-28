@@ -32,6 +32,7 @@
 #include <fcntl.h>
 #else
 #include <sys/time.h>
+#include <unistd.h>
 #endif
 
 #include "encode_engine.h"
@@ -45,6 +46,8 @@ void init_encode_options(encode_options_t *opts)
         return;
 
     memset(opts, 0, sizeof(*opts));
+    opts->container_mp4 = true;
+    opts->stream_format = FAAC_STREAM_ADTS;
     opts->mpeg_version = FAAC_MPEG4;
     opts->object_type = FAAC_OBJ_AUTO;
     opts->joint_mode = FAAC_JOINT_MIXED;
@@ -570,8 +573,12 @@ int run_encoding_session_ext(const encode_options_t *opts,
         else
         {
 #ifdef _WIN32
+            if (!opts->overwrite && win32_access_utf8(opts->output_filename, 0) == 0)
+                FAIL("Output file %s already exists\n", opts->output_filename);
             outfile = win32_fopen_utf8(opts->output_filename, "wb");
 #else
+            if (!opts->overwrite && access(opts->output_filename, 0) == 0)
+                FAIL("Output file %s already exists\n", opts->output_filename);
             outfile = fopen(opts->output_filename, "wb");
 #endif
             if (!outfile)
@@ -616,7 +623,6 @@ int run_encoding_session_ext(const encode_options_t *opts,
     uint32_t current_frame = 0;
     uint64_t total_bytes_written = 0;
     uint64_t current_input_samples = 0;
-    uint64_t encoded_samples = 0;
     uint16_t max_frame_bytes = 0;
     int samples_read = 0;
 
@@ -694,8 +700,6 @@ int run_encoding_session_ext(const encode_options_t *opts,
                 if (!write_output_bytes(outfile, bitbuf, (size_t)bytes_written))
                     FAIL("Output write failed\n");
             }
-
-            encoded_samples += frame_size;
         }
 
         if (progress_cb)

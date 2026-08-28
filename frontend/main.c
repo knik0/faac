@@ -123,9 +123,9 @@ static help_t help_qual[] = {
 
 static help_t help_io[] = {
     {"-o <filename>\tSet output file to X (only for one input file)\n",
-    "\t\tonly for one input file; you can use *.aac, *.mp4, *.m4a or\n"
-    "\t\t*.m4b as file extension, and the file format will be set\n"
-    "\t\tautomatically to ADTS or MP4).\n"},
+    "\t\tFormat is auto-detected from extension (.aac/.adts -> ADTS, .m4a/.mp4/.m4b -> MP4; default: MP4).\n"},
+    {"-a\t\tUse ADTS stream output format.\n",
+    "\t\tGenerate ADTS transport stream output.\n"},
     {"-\t\tUse stdin/stdout\n",
     "\t\tIf you simply use a hyphen/minus sign instead\n"
     "\t\tof a filename, FAAC can encode directly from stdin,\n"
@@ -162,7 +162,6 @@ static help_t help_io[] = {
 };
 
 static help_t help_mp4[] = {
-    {"-w\tWrap AAC data in MP4 container (default for *.mp4, *.m4a and *.m4b)\n", NULL},
     {"--tag <tagname,tagvalue> Add named tag (iTunes '----')\n", NULL},
     {"--artist <name>\tSet artist name\n", NULL},
     {"--artistsort <name>\tSet artist sort order\n", NULL},
@@ -453,6 +452,7 @@ int main(int argc, char *argv[])
 
     char *aacFileName = NULL;
     bool aacFileNameGiven = false;
+    bool stream_flag_given = false;
     bool has_custom_tags = false;
     const char *dieMessage = NULL;
     int ret = 0;
@@ -543,7 +543,7 @@ int main(int argc, char *argv[])
             {"mpeg-version", 1, 0, MPEGVERS_FLAG},
             {"object-type", 1, 0, OBJTYPE_FLAG},
             {"license", 0, 0, 'L'},
-            {"createmp4", 0, 0, 'w'},
+            {"adts", 0, 0, 'a'},
             {"artist", 1, 0, ARTIST_FLAG},
             {"artistsort", 1, 0, ARTIST_SORT_FLAG},
             {"title", 1, 0, TITLE_FLAG},
@@ -572,7 +572,7 @@ int main(int argc, char *argv[])
         };
 
         int option_index = 0;
-        int c = getopt_long(argc, argv, "Hhb:m:o:rnc:q:PR:B:C:I:Xwv:L",
+        int c = getopt_long(argc, argv, "Hhb:m:o:rnc:q:PR:B:C:I:Xv:La",
                             long_options, &option_index);
 
         if (c == -1)
@@ -594,12 +594,19 @@ int main(int argc, char *argv[])
         case 'X':
             opts.raw_endian = false;
             break;
+        case 'a':
+            opts.container_mp4 = false;
+            opts.stream_format = FAAC_STREAM_ADTS;
+            stream_flag_given = true;
+            break;
         case 'o':
             aacFileName = strdup(optarg);
             aacFileNameGiven = true;
             break;
         case 'r':
+            opts.container_mp4 = false;
             opts.stream_format = FAAC_STREAM_RAW;
+            stream_flag_given = true;
             break;
         case 'c':
             opts.bandwidth = atoi(optarg);
@@ -635,9 +642,6 @@ int main(int argc, char *argv[])
         case 'C':
             opts.raw_channels = (uint16_t)atoi(optarg);
             opts.raw_pcm_input = true;
-            break;
-        case 'w':
-            opts.container_mp4 = true;
             break;
         case ARTIST_FLAG:
             opts.metadata.artist = optarg;
@@ -841,9 +845,10 @@ int main(int argc, char *argv[])
     {
         aacFileName = get_output_filename(opts.input_filename, opts.container_mp4);
     }
-    else if (is_mp4_filename(aacFileName))
+    else if (!stream_flag_given)
     {
-        opts.container_mp4 = true;
+        opts.container_mp4 = detect_container_mp4(aacFileName);
+        opts.stream_format = opts.container_mp4 ? FAAC_STREAM_RAW : FAAC_STREAM_ADTS;
     }
 
     if (opts.container_mp4)
