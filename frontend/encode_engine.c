@@ -226,6 +226,26 @@ static void log_msgf(log_message_callback_t log_cb, void *user_data,
     log_cb(level, msg, user_data);
 }
 
+/* Output-domain sample counts -> the rate mp4_set_format() declared
+   (HE-AAC's container is core rate, half output rate). One conversion,
+   used everywhere, so every container-domain number stays consistent. */
+typedef struct { uint32_t div; uint64_t rounded_pos; } rate_conv_t;
+
+static uint32_t rc_scalar(rate_conv_t rc, uint64_t v)
+{
+    return (uint32_t)((v + rc.div / 2) / rc.div);
+}
+
+/* Per-frame durations must be derived from the running position, not
+   rounded individually, or rounding drift accumulates across frames. */
+static uint32_t rc_advance(rate_conv_t *rc, uint64_t new_pos)
+{
+    uint64_t rounded = rc_scalar(*rc, new_pos);
+    uint32_t delta = (uint32_t)(rounded - rc->rounded_pos);
+    rc->rounded_pos = rounded;
+    return delta;
+}
+
 static bool finalize_mp4(faac_encoder *hEncoder, const encode_options_t *opts,
                           log_message_callback_t log_cb, void *user_data)
 {
@@ -509,6 +529,10 @@ int run_encoding_session_ext(const encode_options_t *opts,
     unsigned long max_output_bytes = info.max_output_bytes;
     uint16_t frame_size = (uint16_t)(samples_per_frame / num_channels);
 
+    /* Implicit SBR signaling expects the container declared at the core
+       (pre-SBR) rate, half the reconstructed output rate. */
+    rate_conv_t rc = { .div = (info.object_type == FAAC_OBJ_HE_AAC_V1) ? 2 : 1 };
+
     pcmbuf = malloc(samples_per_frame * sizeof(float));
     bitbuf = malloc(max_output_bytes * sizeof(unsigned char));
 
@@ -532,7 +556,7 @@ int run_encoding_session_ext(const encode_options_t *opts,
         if (mp4_open(opts->output_filename, opts->overwrite) != 0)
             FAIL("Couldn't create MP4 output file %s\n", opts->output_filename);
         mp4_is_open = true;
-        mp4_set_format(sample_rate, num_channels, infile->samplebytes * 8);
+        mp4_set_format(rc_scalar(rc, sample_rate), num_channels, infile->samplebytes * 8);
     }
     else if (opts->output_filename)
     {
@@ -659,13 +683,10 @@ int run_encoding_session_ext(const encode_options_t *opts,
 
         if (bytes_written > 0)
         {
-            uint64_t frame_samples = current_input_samples - encoded_samples;
-            if (frame_samples > frame_size)
-                frame_samples = frame_size;
-
             if (opts->container_mp4)
             {
-                if (mp4_write_frame(bitbuf, (uint32_t)bytes_written, (uint32_t)frame_samples) != 0)
+                uint32_t frame_dur = rc_advance(&rc, (uint64_t)current_frame * frame_size);
+                if (mp4_write_frame(bitbuf, (uint32_t)bytes_written, frame_dur) != 0)
                     FAIL("mp4_write_frame() failed\n");
             }
             else
@@ -674,7 +695,7 @@ int run_encoding_session_ext(const encode_options_t *opts,
                     FAIL("Output write failed\n");
             }
 
-            encoded_samples += frame_samples;
+            encoded_samples += frame_size;
         }
 
         if (progress_cb)
@@ -708,11 +729,13 @@ int run_encoding_session_ext(const encode_options_t *opts,
     if (opts->container_mp4 && mp4_is_open)
     {
         uint32_t priming = info.encoder_delay;
-        uint64_t total_output_samples = (uint64_t)current_frame * priming;
+        uint64_t total_output_samples = (uint64_t)current_frame * frame_size;
         uint64_t padding = 0;
         if (total_output_samples > (uint64_t)priming + current_input_samples)
             padding = total_output_samples - (uint64_t)priming - current_input_samples;
-        mp4_set_gapless(priming, (uint32_t)padding, current_input_samples);
+
+        mp4_set_gapless(rc_scalar(rc, priming), rc_scalar(rc, padding),
+                         rc_scalar(rc, current_input_samples));
 
         if (!finalize_mp4(hEncoder, opts, log_cb, user_data))
         {

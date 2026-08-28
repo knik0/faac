@@ -26,7 +26,9 @@
 #endif
 
 #include "mp4write.h"
+#ifdef _WIN32
 #include "charset.h"
+#endif
 
 #if defined(__has_builtin)
 #if __has_builtin(__builtin_bswap32) && __has_builtin(__builtin_bswap16)
@@ -104,6 +106,16 @@ static struct {
         uint32_t ents;
         uint32_t bufsize;
     } frame;
+
+    /* stts run-length table: (sample_count, sample_delta) pairs. Frames
+       don't all share one duration -- a short trailing/flush-drain frame
+       is common -- so this can't be collapsed to a single entry the way
+       frame.data (byte sizes, for stsz) is. */
+    struct {
+        struct { uint32_t count; uint32_t delta; } *data;
+        uint32_t ents;
+        uint32_t bufsize;
+    } durs;
 
     struct {
         const uint8_t *data;
@@ -342,6 +354,10 @@ static void reset_write_state(void) {
     g_mp4.frame.data = NULL;
     g_mp4.frame.ents = 0;
     g_mp4.frame.bufsize = 0;
+    free(g_mp4.durs.data);
+    g_mp4.durs.data = NULL;
+    g_mp4.durs.ents = 0;
+    g_mp4.durs.bufsize = 0;
     g_mp4.framesamples = 0;
     g_mp4.samples = 0;
     g_mp4.buffersize = 0;
@@ -499,6 +515,21 @@ int mp4_write_frame(const uint8_t *data, uint32_t size, uint32_t samples) {
     g_mp4.frame.data[g_mp4.frame.ents++] = size;
     if (g_mp4.buffersize < (uint16_t)size)
         g_mp4.buffersize = (uint16_t)size;
+
+    if (g_mp4.durs.ents > 0 && g_mp4.durs.data[g_mp4.durs.ents - 1].delta == samples) {
+        g_mp4.durs.data[g_mp4.durs.ents - 1].count++;
+    } else {
+        if (g_mp4.durs.ents >= g_mp4.durs.bufsize) {
+            uint32_t new_cap = g_mp4.durs.bufsize ? g_mp4.durs.bufsize * 2 : 16;
+            void *tmp = realloc(g_mp4.durs.data, (size_t)new_cap * sizeof(*g_mp4.durs.data));
+            if (!tmp) return -1;
+            g_mp4.durs.data = tmp;
+            g_mp4.durs.bufsize = new_cap;
+        }
+        g_mp4.durs.data[g_mp4.durs.ents].count = 1;
+        g_mp4.durs.data[g_mp4.durs.ents].delta = samples;
+        g_mp4.durs.ents++;
+    }
     return 0;
 }
 
@@ -652,6 +683,22 @@ int mp4_finish(void) {
     put_u32(0); put_u32(0);
     end_atom(tkhd);
 
+    if (g_mp4.gapless.present && g_mp4.gapless.priming > 0) {
+        long edts = start_atom("edts");
+        long elst = start_atom("elst");
+        uint32_t elst_flags = use64_time ? (1U << 24) : 0;
+        put_u32(elst_flags);
+        put_u32(1); /* entry_count = 1 */
+        /* segment_duration: edit duration in movie timescale units */
+        put_time(g_mp4.gapless.original_samples, use64_time);
+        /* media_time: media start time in track timescale units (priming samples delay) */
+        put_time(g_mp4.gapless.priming, use64_time);
+        /* media_rate_integer (16-bit 1 = 0x0001) + media_rate_fraction (16-bit 0) */
+        put_u16(1); put_u16(0);
+        end_atom(elst);
+        end_atom(edts);
+    }
+
     uint16_t packed_lang = pack_language(g_mp4.language);
     long mdia = start_atom("mdia");
     long mdhd = start_atom("mdhd");
@@ -713,8 +760,11 @@ int mp4_finish(void) {
     end_atom(stsd);
 
     long stts = start_atom("stts");
-    put_u32(0); put_u32(1);
-    put_u32(g_mp4.frame.ents); put_u32(g_mp4.framesamples);
+    put_u32(0); put_u32(g_mp4.durs.ents);
+    for (uint32_t i = 0; i < g_mp4.durs.ents; i++) {
+        put_u32(g_mp4.durs.data[i].count);
+        put_u32(g_mp4.durs.data[i].delta);
+    }
     end_atom(stts);
 
     long stsc = start_atom("stsc");
