@@ -94,7 +94,7 @@ static inline int clamp_sf_diff(int diff)
 /* Forward declaration for CoderInfo */
 struct CoderInfo;
 
-int huffbook(struct CoderInfo *coder, int *qs, int len);
+int huffbook(struct CoderInfo *coder, const int *qs, int len, int maxq);
 int writebooks(struct CoderInfo *coder, BitStream *stream, int writeFlag);
 int writesf(struct CoderInfo *coder, BitStream *bitStream, int writeFlag);
 
