@@ -21,13 +21,13 @@
 #include <stdint.h>
 
 typedef struct {
-    const uint16_t len;
-    const uint16_t data;
+    uint16_t len;
+    uint16_t data;
 } hcode16_t;
 
 typedef struct {
-    const uint32_t len  : 8;    /* lengths <= 19        */
-    const uint32_t data : 24;   /* codes are <= 19 bits */
+    uint32_t len  : 8;    /* lengths <= 19        */
+    uint32_t data : 24;   /* codes are <= 19 bits */
 } hcode32_t;
 
 extern hcode16_t book01[81];

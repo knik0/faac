@@ -24,8 +24,8 @@
  * ISO/IEC 13818-7/14496-3's TNS tool tables (indexed by sampleRateIdx). Not
  * an original heuristic: this is the spec's fixed table. */
 static const struct {
-    unsigned char min;
-    unsigned char max;
+    uint8_t min;
+    uint8_t max;
 } tns_sfb_range[12] = {
     {11, 31}, {12, 31}, {15, 34}, {16, 40}, {17, 42}, {20, 51},
     {25, 46}, {26, 46}, {24, 42}, {28, 42}, {30, 42}, {31, 39}
