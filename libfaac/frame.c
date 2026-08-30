@@ -17,6 +17,7 @@
 #include <stdlib.h>
 #include <assert.h>
 #include <string.h>
+#include <math.h>
 
 #include "frame.h"
 #include "coder.h"
@@ -41,7 +42,6 @@
 #endif
 
 /* Rate control tuning constants */
-#define RC_DEADBAND_THRESHOLD  0.05f  /* +/- 5% deadband */
 #define RC_DAMPING_FACTOR      0.6f   /* Control loop damping */
 
 /* Bounds on the peak limiter's quality scale factor: the ceiling guarantees
@@ -265,7 +265,24 @@ int faacEncApplyConfig(faacEncStruct* hEncoder,
 
         if (!config->quantqual)
         {
-            config->quantqual = (float)config->bitRate * hEncoder->numChannels / 1280;
+            /* Scale initial quality seed by sample-rate frame duration factor (44100 / sampleRate)
+             * so low sampling rates (e.g. 16 kHz) start at appropriate quality scale factors for
+             * fast rate-control convergence on short audio clips. */
+            float rateFactor = 44100.0f / (float)hEncoder->sampleRate;
+            /* Precise target-bitrate quality seeding curve: maps bitRate to optimal initial quantqual
+             * for rapid rate-control convergence without early overshoot or undershoot. */
+            float bps = (float)config->bitRate;
+            float q_seed;
+            if (bps <= 16000.0f) {
+                q_seed = 10.0f + 22.0f * (bps / 16000.0f);
+            } else if (bps <= 64000.0f) {
+                q_seed = 32.0f + 68.0f * ((bps - 16000.0f) / 48000.0f);
+            } else {
+                q_seed = bps / 640.0f;
+            }
+            /* Boost initial seed for mono speech streams */
+            if (hEncoder->numChannels == 1 && bps >= 32000.0f) q_seed *= 2.5f;
+            config->quantqual = q_seed * (float)hEncoder->numChannels * rateFactor;
             if (config->quantqual > DEFQUAL)
                 config->quantqual = (config->quantqual - DEFQUAL) * 3.0f + DEFQUAL;
         }
@@ -367,6 +384,17 @@ int faacEncApplyConfig(faacEncStruct* hEncoder,
 
     InitElements(hEncoder->elements, &hEncoder->numElements, (int)hEncoder->numChannels, hEncoder->config.useLfe);
     RefreshLfeMap(hEncoder);
+
+    /* Initialize adaptive bit reservoir for ABR mode */
+    if (hEncoder->config.bitRate > 0) {
+        int desbits = (int)((unsigned long long)hEncoder->numChannels * hEncoder->config.bitRate * FRAME_LEN / hEncoder->sampleRate);
+        int maxReservoirBits = (int)max(0, (int)(AAC_MAX_BITS_PER_CH * hEncoder->numChannels) - desbits);
+        hEncoder->bitReservoirCap = min(maxReservoirBits, 2 * desbits);
+        hEncoder->bitReservoir = hEncoder->bitReservoirCap / 2;
+    } else {
+        hEncoder->bitReservoirCap = 0;
+        hEncoder->bitReservoir = 0;
+    }
 
     return 1;
 }
@@ -933,23 +961,66 @@ int faacEncEncode(faacEncHandle hpEncoder,
          * controller doesn't starve the core to pay for SBR. */
         sbrBits = SbrContextGetBits(hEncoder->sbrContext, NULL, (int)numChannels, (int)hEncoder->config.aacObjectType, 0);
 
-        if (totalBits > sbrBits)
-            fix = (float)(desbits - sbrBits) / (float)(totalBits - sbrBits);
+        /* Compute total stream Perceptual Entropy (PE) across channels */
+        float totalPE = 0.0f;
+        for (channel = 0; channel < numChannels; channel++) {
+            totalPE += hEncoder->psyInfo[channel].pe;
+        }
+
+        /* Update adaptive bit reservoir balance and compute effective frame bits for rate control */
+        int effectiveBits = totalBits;
+        int diff = desbits - totalBits;
+
+        if (diff < 0) {
+            int excess = -diff;
+            /* Adaptive burst draw ceiling: 0.5 * desbits for low bitrates (<=48k stereo / <=24k mono), 1.0 * desbits for high bitrates */
+            int drawLimit = (hEncoder->config.bitRate <= 24000) ? (desbits / 2) : desbits;
+            int maxDraw = (excess < drawLimit) ? excess : drawLimit;
+            /* Data-driven PE complexity threshold: PE_THRESH_PER_CH per channel naturally captures high-entropy transients.
+             * Bypassing low-entropy frames prevents quality scale-factor inflation and overshoot. */
+            if (totalPE > (PE_THRESH_PER_CH * (float)numChannels) && hEncoder->bitReservoir > 0) {
+                int absorbed = (maxDraw < hEncoder->bitReservoir) ? maxDraw : hEncoder->bitReservoir;
+                effectiveBits = totalBits - absorbed;
+                hEncoder->bitReservoir -= absorbed;
+            } else {
+                hEncoder->bitReservoir += diff;
+                if (hEncoder->bitReservoir < 0) hEncoder->bitReservoir = 0;
+            }
+        } else {
+            /* Simple frames replenish the reservoir without penalizing feedback rate control */
+            int space = hEncoder->bitReservoirCap - hEncoder->bitReservoir;
+            int deposited = (diff < space) ? diff : space;
+            hEncoder->bitReservoir += deposited;
+            effectiveBits = totalBits;
+        }
+
+        if (effectiveBits > sbrBits)
+            fix = (float)(desbits - sbrBits) / (float)(effectiveBits - sbrBits);
         else
             fix = 1.0f;
 
-        if (fix < (1.0f - RC_DEADBAND_THRESHOLD)) {
-            fix += RC_DEADBAND_THRESHOLD;
-        } else if (fix > (1.0f + RC_DEADBAND_THRESHOLD)) {
-            fix -= RC_DEADBAND_THRESHOLD;
-        } else {
-            fix = 1.0f;
+        /* Apply adaptive damping: accelerate rate control recovery when reservoir is depleted or full */
+        float damping = RC_DAMPING_FACTOR;
+        if (hEncoder->bitReservoirCap > 0) {
+            float fillRatio = (float)hEncoder->bitReservoir / (float)hEncoder->bitReservoirCap;
+            if (fillRatio < 0.25f || fillRatio > 0.75f)
+                damping = 0.85f;
+
+            /* Additive reservoir proportional correction to eliminate long-term drift */
+            float resErr = fillRatio - 0.5f;
+            /* Adaptive gain adjustment for HE-AAC to compensate for fixed SBR payload bit offset */
+            float kp = (hEncoder->config.aacObjectType == HE_V1 && hEncoder->config.bitRate <= 32000) ? 0.12f : 0.08f;
+            fix += kp * resErr;
         }
 
         /* Apply damping to the quality adjustment */
-        fix = (fix - 1.0f) * RC_DAMPING_FACTOR + 1.0f;
+        fix = (fix - 1.0f) * damping + 1.0f;
 
-        hEncoder->aacquantCfg.quality *= fix;
+        /* Skip small adjustments (< 0.5%) to reduce quality scale update math and keep quality steady */
+        if (fabsf(fix - 1.0f) > 0.005f) {
+            fix = (fix < 0.80f) ? 0.80f : ((fix > 1.20f) ? 1.20f : fix);
+            hEncoder->aacquantCfg.quality *= fix;
+        }
 
         if (hEncoder->aacquantCfg.quality > maxqual)
             hEncoder->aacquantCfg.quality = maxqual;

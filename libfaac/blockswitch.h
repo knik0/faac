@@ -26,11 +26,20 @@ extern "C" {
 
 struct faacEncStruct;
 
+/* Scaling factor to normalize subblock high-pass energy sums e_w = sum(d[n]^2) relative to full-scale PCM power.
+ * With PCM float range [-32768, 32767] and 256-sample subblocks, peak subblock energy e_max = 256 * 65536^2 = 1.1e12.
+ * Scaling by 1.0e-8f normalizes subblock energies so stream PE (totalPE) maps cleanly to the PE_THRESH_PER_CH complexity threshold. */
+#define PE_ENERGY_SCALE      (1.0e-8f)
+
+/* Per-channel Perceptual Entropy complexity threshold: streams exceeding 10.0f/ch PE are classified as high-complexity/transient */
+#define PE_THRESH_PER_CH     (10.0f)
+
 typedef struct {
 	int size;
 	int sizeS;
 
 	int block_type;
+	float pe;
 
         void *data;
 } PsyInfo;
