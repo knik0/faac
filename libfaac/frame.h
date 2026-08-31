@@ -27,10 +27,6 @@
 #define FIFO_AHEAD1     2
 #define FIFO_AHEAD2     3
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
-
 #include "faac_internal.h"
 
 #ifdef __cplusplus

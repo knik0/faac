@@ -8,8 +8,6 @@ project('faac', 'c',
         'b_lto=true'
     ])
 
-add_global_arguments('-DHAVE_CONFIG_H', language: 'c')
-
 cc = meson.get_compiler('c')
 if cc.get_argument_syntax() == 'msvc'
     # _s variants buy nothing here and aren't portable; suppress instead.
@@ -46,6 +44,13 @@ configure_file(
     output: 'config.h',
     configuration: config_h
 )
+
+# Force config.h into every TU instead of relying on each file's own include.
+if cc.get_argument_syntax() == 'msvc'
+    add_project_arguments('/FI' + meson.current_build_dir() / 'config.h', language: 'c')
+else
+    add_project_arguments('-include', meson.current_build_dir() / 'config.h', language: 'c')
+endif
 
 
 subdir('docs')

@@ -16,10 +16,6 @@
 #ifndef SBR_H
 #define SBR_H
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
-
 #include "coder.h"
 #include "fft.h"
 #include "sbr_analysis.h"

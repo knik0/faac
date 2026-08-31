@@ -16,10 +16,6 @@
  * Lesser General Public License for more details.
  */
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
-
 #ifdef _WIN32
 #include <windows.h>
 #else
@@ -307,7 +303,6 @@ static void help(int mode)
         break;
     }
 }
-
 
 static bool cli_progress_callback(const progress_info_t *info, void *user_data)
 {
