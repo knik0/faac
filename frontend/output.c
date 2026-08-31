@@ -60,6 +60,20 @@ char *get_output_filename(const char *input_filename, bool container_mp4)
     return aac_file_name;
 }
 
+bool is_adts_filename(const char *filename)
+{
+    if (!filename)
+        return false;
+
+    const char *ext = find_extension(filename);
+    if (ext)
+    {
+        if (!strcasecmp(ext, ".aac") || !strcasecmp(ext, ".adts"))
+            return true;
+    }
+    return false;
+}
+
 bool is_mp4_filename(const char *filename)
 {
     if (!filename)
@@ -72,6 +86,20 @@ bool is_mp4_filename(const char *filename)
             return true;
     }
     return false;
+}
+
+bool detect_container_mp4(const char *filename)
+{
+    if (!filename)
+        return true;
+
+    if (!strcmp(filename, "-") || is_adts_filename(filename))
+        return false;
+
+    if (is_mp4_filename(filename))
+        return true;
+
+    return true;
 }
 
 bool check_image_header(const char *buf)

@@ -49,7 +49,6 @@ Input/output options
 .TP
 .BR --help-mp4
 MP4 specific options
-Quality-related options
 .TP
 .BR --help-advanced
 Advanced options, only for testing purposes
@@ -109,10 +108,11 @@ The actual frequency is adjusted to maximize upper spectral band usage.
 .SH INPUT/OUTPUT OPTIONS
 .TP
 .BR -o\ <\fIfilename\fP>
-Set output file to X (only for one input file)
-only for one input file; you can use *.aac, *.mp4, *.m4a or
-*.m4b as file extension, and the file format will be set
-automatically to ADTS or MP4).
+Set output file to X (only for one input file). Format is auto-detected from
+extension (.aac/.adts -> ADTS, .m4a/.mp4/.m4b -> MP4; default: MP4).
+.TP
+.BR -a
+Use ADTS stream output format. Generate ADTS transport stream output.
 .TP
 .BR -
 Use stdin/stdout.
@@ -168,10 +168,6 @@ Ignore wav length from header (useful with files over 4 GB)
 .BR --overwrite
 Overwrite existing output file
 .SH MP4 SPECIFIC OPTIONS
-.TP
-.BR -w
-Wrap AAC data in MP4 container. (default for *.mp4, *.m4a and
-*.m4b)
 .TP
 .BR --tag\ <\fItagname,tagvalue\fP>
 Add named tag (iTunes '----')

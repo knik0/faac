@@ -27,8 +27,14 @@ extern "C" {
 /* Generate default output filename based on input filename and container type */
 char *get_output_filename(const char *input_filename, bool container_mp4);
 
-/* Check if filename extension suggests MP4 container format */
+/* Check if filename extension suggests ADTS stream format (.aac, .adts) */
+bool is_adts_filename(const char *filename);
+
+/* Check if filename extension suggests MP4 container format (.m4a, .mp4, .m4b) */
 bool is_mp4_filename(const char *filename);
+
+/* Auto-detect whether output file should use MP4 container format based on filename */
+bool detect_container_mp4(const char *filename);
 
 /* Check image header magic bytes (PNG, JPEG, GIF), used to validate
    --cover-art data before it's embedded as an MP4 covr atom. */
