@@ -588,7 +588,7 @@ int run_encoding_session_ext(const encode_options_t *opts,
 
     uint64_t total_input_samples = (infile->samples > 0) ? (uint64_t)infile->samples : 0;
     uint64_t tf_calc = (total_input_samples > 0 && frame_size > 0) ?
-        (((total_input_samples + frame_size - 1) / frame_size) + 1) : 0;
+        ((total_input_samples + info.encoder_delay + frame_size - 1) / frame_size) : 0;
     uint32_t total_frames = (tf_calc > UINT32_MAX) ? UINT32_MAX : (uint32_t)tf_calc;
 
     if (session_start_cb)
