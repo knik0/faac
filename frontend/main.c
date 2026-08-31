@@ -424,20 +424,29 @@ static void cli_summary_callback(const encode_summary_t *summary, void *user_dat
     if (!opts || opts->verbose < 2)
         return;
 
-    fprintf(stderr, "\n");
-    fprintf(stderr, "%u frames\n", summary->frame_count);
-    fprintf(stderr, "%" PRIu64 " output samples\n", summary->sample_count);
+    fprintf(stderr, "\n--- Encode Summary ---\n");
+    fprintf(stderr, " Frames & Samples    : Frames = %u | Samples = %" PRIu64 "\n",
+            summary->frame_count, summary->sample_count);
     if (summary->is_mp4)
     {
-        fprintf(stderr, "max bitrate: %u\n", summary->max_bitrate);
-        fprintf(stderr, "avg bitrate: %u\n", summary->avg_bitrate);
-        fprintf(stderr, "max frame size: %u\n", summary->max_frame_size);
+        fprintf(stderr, " Bitrate & Frame Size: Avg = %u | Max = %u | Max Frame Size = %u\n",
+                summary->avg_bitrate, summary->max_bitrate, summary->max_frame_size);
     }
     else
     {
-        fprintf(stderr, "avg bitrate: %u kbps\n", summary->avg_bitrate);
-        fprintf(stderr, "max frame size: %u bytes\n", summary->max_frame_size);
+        fprintf(stderr, " Bitrate & Frame Size: Avg = %u kbps | Max Frame Size = %u bytes\n",
+                summary->avg_bitrate, summary->max_frame_size);
     }
+
+    long input_size = get_file_size(opts->input_filename);
+    long output_size = get_file_size(opts->output_filename);
+    if (input_size > 0 && output_size > 0)
+    {
+        fprintf(stderr, " File Size           : Input = %.2f MB | Output = %.2f MB | Ratio = %.1f:1\n",
+                input_size / (1024.0 * 1024.0), output_size / (1024.0 * 1024.0),
+                (double)input_size / (double)output_size);
+    }
+    fprintf(stderr, "----------------------\n");
 }
 
 int main(int argc, char *argv[])

@@ -26,6 +26,7 @@
 #include "bitstream.h"
 #include "sbr_internal.h"
 #include "faac_internal.h"
+#include "stats.h"
 
 /* SBR master frequency band table (ISO/IEC 14496-3:2005 §4.6.18.3.2). kx/k2 are
  * spec-mandatory: the decoder reconstructs them from the sample rate alone, so
@@ -513,6 +514,17 @@ void SbrEncode(SBRInfo *sbr, float *timeDomain[MAX_CHANNELS], int numChannels, i
 
     sbr_adopt_envelope_grid(sbr, sa, fd);
     sbr_quantize_envelopes(sbr, nch, sa->sampled, sa, fd);
+
+#ifdef FAAC_STATS
+    g_faacStats.sbrFrames++;
+    if (fd->frameClass != SBR_FRAME_CLASS_FIXFIX) {
+        g_faacStats.sbrTransientFrames++;
+    }
+    for (int ch = 0; ch < nch; ch++) {
+        g_faacStats.sbrInvfSum += fd->ch[ch].invfMode;
+        g_faacStats.sbrInvfCount++;
+    }
+#endif
 }
 
 /* SBR bitstream writer. Emits the SBR fill element payload into the bitstream.

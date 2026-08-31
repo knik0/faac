@@ -383,6 +383,10 @@ void TnsEncode(TnsInfo* tnsInfo, int numBands, enum WINDOW_TYPE blockType, int* 
                        &tnsInfo->windowData.tnsFilter[0]))
         return;
 
+#ifdef FAAC_STATS
+    g_faacStats.longBlocksTNS++;
+#endif
+
     /* Declared from b_start to the top of the spectrum rather than to b_stop,
      * over-declaring the region. */
     tnsInfo->windowData.tnsFilter[0].length = tnsInfo->tnsNumSwbLong - b_start;

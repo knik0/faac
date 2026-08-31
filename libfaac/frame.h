@@ -39,6 +39,7 @@ extern "C" {
 #include "fft.h"
 #include "quantize.h"
 #include "sbr.h"
+#include "stats.h"
 
 typedef struct faacEncStruct {
     /* number of channels in AAC file */

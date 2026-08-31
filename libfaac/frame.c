@@ -399,11 +399,19 @@ int faacEncApplyConfig(faacEncStruct* hEncoder,
     return 1;
 }
 
+#ifdef FAAC_STATS
+faacEncStats g_faacStats;
+#endif
+
 faacEncHandle faacEncOpen(unsigned long sampleRate,
                                   unsigned int numChannels,
                                   unsigned long *inputSamples,
                                   unsigned long *maxOutputBytes)
 {
+#ifdef FAAC_STATS
+    memset(&g_faacStats, 0, sizeof(faacEncStats));
+    g_faacStats.minReservoirRatio = 100.0f;
+#endif
     unsigned int channel;
     faacEncStruct* hEncoder;
 
@@ -564,6 +572,71 @@ int faacEncClose(faacEncHandle hpEncoder)
     unsigned int channel;
 
     if (!hEncoder) return 0;
+
+#ifdef FAAC_STATS
+    if (g_faacStats.totalFrames > 0)
+    {
+        double qavg = g_faacStats.totalQuality / g_faacStats.totalFrames;
+        double tr = 100.0 * g_faacStats.transientFrames / g_faacStats.totalFrames;
+        double tns = g_faacStats.longBlocks > 0 ? 100.0 * g_faacStats.longBlocksTNS / g_faacStats.longBlocks : 0.0;
+        double ms = g_faacStats.totalBands > 0 ? 100.0 * g_faacStats.msBands / g_faacStats.totalBands : 0.0;
+        double is = g_faacStats.totalBands > 0 ? 100.0 * g_faacStats.isBands / g_faacStats.totalBands : 0.0;
+        double pns = g_faacStats.totalBands > 0 ? 100.0 * g_faacStats.pnsBands / g_faacStats.totalBands : 0.0;
+        double att_avg = g_faacStats.attackCount > 0 ? g_faacStats.totalAttack / g_faacStats.attackCount : 0.0;
+        float att_max = g_faacStats.maxAttack;
+
+        fprintf(stderr, "\n--- Encoder Diagnostics ---\n");
+        fprintf(stderr, " Quality             : Qavg    = %6.2f\n", qavg);
+
+        if (g_faacStats.sbrFrames > 0)
+        {
+            double sbr_tr = 100.0 * g_faacStats.sbrTransientFrames / g_faacStats.sbrFrames;
+            fprintf(stderr, " Transients & Grid   : Core Tr = %5.1f%% (%u/%u) | SBR Grid = %5.1f%% Var | Attack = %.1fx avg, %.1fx max\n",
+                    tr, g_faacStats.transientFrames, g_faacStats.totalFrames, sbr_tr, att_avg, att_max);
+        }
+        else
+        {
+            fprintf(stderr, " Transients & Grid   : Core Tr = %5.1f%% (%u/%u) | Attack = %.1fx avg, %.1fx max\n",
+                    tr, g_faacStats.transientFrames, g_faacStats.totalFrames, att_avg, att_max);
+        }
+
+        double peak_retry_pct = 100.0 * g_faacStats.peakRetryFrames / g_faacStats.totalFrames;
+
+        if (g_faacStats.sbrFrames > 0)
+        {
+            double sbr_invf = g_faacStats.sbrInvfCount > 0 ? (double)g_faacStats.sbrInvfSum / g_faacStats.sbrInvfCount : 0.0;
+            fprintf(stderr, " Tool Allocation     : M/S     = %5.1f%% | I/S = %5.1f%% | PNS = %5.1f%% | TNS = %5.1f%% | INVF = %.2f\n",
+                    ms, is, pns, tns, sbr_invf);
+        }
+        else
+        {
+            fprintf(stderr, " Tool Allocation     : M/S     = %5.1f%% | I/S = %5.1f%% | PNS = %5.1f%% | TNS = %5.1f%%\n",
+                    ms, is, pns, tns);
+        }
+        if (g_faacStats.reservoirFrames > 0 || g_faacStats.peakRetryFrames > 0)
+        {
+            if (g_faacStats.reservoirFrames > 0 && g_faacStats.peakRetryFrames > 0)
+            {
+                double res_fill = g_faacStats.totalReservoirRatio / g_faacStats.reservoirFrames;
+                fprintf(stderr, " Rate Control & Cap  : Reservoir Fill = %5.1f%% (min %5.1f%%, max %5.1f%%) | Peak Limit Retries = %5.1f%% (%u/%u)\n",
+                        res_fill, g_faacStats.minReservoirRatio, g_faacStats.maxReservoirRatio,
+                        peak_retry_pct, g_faacStats.peakRetryFrames, g_faacStats.totalFrames);
+            }
+            else if (g_faacStats.reservoirFrames > 0)
+            {
+                double res_fill = g_faacStats.totalReservoirRatio / g_faacStats.reservoirFrames;
+                fprintf(stderr, " Rate Control & Cap  : Reservoir Fill = %5.1f%% (min %5.1f%%, max %5.1f%%)\n",
+                        res_fill, g_faacStats.minReservoirRatio, g_faacStats.maxReservoirRatio);
+            }
+            else
+            {
+                fprintf(stderr, " Rate Control & Cap  : Peak Limit Retries = %5.1f%% (%u/%u)\n",
+                        peak_retry_pct, g_faacStats.peakRetryFrames, g_faacStats.totalFrames);
+            }
+        }
+        fprintf(stderr, "---------------------------\n");
+    }
+#endif
 
     PsyEnd(hEncoder->psyInfo, hEncoder->numChannels);
     FilterBankEnd(hEncoder);
@@ -754,6 +827,14 @@ int faacEncEncode(faacEncHandle hpEncoder,
 
     BlockSwitch(hEncoder, coderInfo, hEncoder->psyInfo, numChannels);
 
+#ifdef FAAC_STATS
+    g_faacStats.totalFrames++;
+    if (coderInfo[0].block_type == ONLY_SHORT_WINDOW || coderInfo[0].block_type == LONG_SHORT_WINDOW)
+    {
+        g_faacStats.transientFrames++;
+    }
+#endif
+
     /* force block type */
     if (shortctl == SHORTCTL_NOSHORT)
     {
@@ -809,6 +890,19 @@ int faacEncEncode(faacEncHandle hpEncoder,
     for (channel = 0; channel < numChannels; channel++) {
         if (!hEncoder->isLfeChannel[channel] && useTns) {
             float attack = PsyGetAttack(&hEncoder->psyInfo[channel]);
+
+#ifdef FAAC_STATS
+            if (attack > 0.0f && isfinite(attack)) {
+                g_faacStats.totalAttack += attack;
+                if (attack > g_faacStats.maxAttack) {
+                    g_faacStats.maxAttack = attack;
+                }
+                g_faacStats.attackCount++;
+            }
+            if (coderInfo[channel].block_type != ONLY_SHORT_WINDOW) {
+                g_faacStats.longBlocks++;
+            }
+#endif
 
             /* No envelope available (HE-AAC skips PsyBufferUpdate) means no
                basis to reject on, so admit and let the LPC gates decide. */
@@ -948,6 +1042,14 @@ int faacEncEncode(faacEncHandle hpEncoder,
      * the rate controller below never runs to claw the quality back. */
     hEncoder->aacquantCfg.quality = baseQuality;
 
+#ifdef FAAC_STATS
+    if (attempt > 0)
+    {
+        g_faacStats.peakRetryFrames++;
+    }
+    g_faacStats.totalQuality += hEncoder->aacquantCfg.quality;
+#endif
+
     /* Adjust quality to get correct average bitrate */
     if (hEncoder->config.bitRate)
     {
@@ -1005,6 +1107,16 @@ int faacEncEncode(faacEncHandle hpEncoder,
             float fillRatio = (float)hEncoder->bitReservoir / (float)hEncoder->bitReservoirCap;
             if (fillRatio < 0.25f || fillRatio > 0.75f)
                 damping = 0.85f;
+
+#ifdef FAAC_STATS
+            {
+                float fillPct = fillRatio * 100.0f;
+                g_faacStats.totalReservoirRatio += fillPct;
+                if (fillPct < g_faacStats.minReservoirRatio) g_faacStats.minReservoirRatio = fillPct;
+                if (fillPct > g_faacStats.maxReservoirRatio) g_faacStats.maxReservoirRatio = fillPct;
+                g_faacStats.reservoirFrames++;
+            }
+#endif
 
             /* Additive reservoir proportional correction to eliminate long-term drift */
             float resErr = fillRatio - 0.5f;

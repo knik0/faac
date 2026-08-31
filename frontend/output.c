@@ -23,6 +23,7 @@
 
 #ifdef _WIN32
 #define strcasecmp _stricmp
+#include "charset.h"
 #else
 #include <strings.h>
 #endif
@@ -116,4 +117,23 @@ bool check_image_header(const char *buf)
         return true;               /* GIF */
 
     return false;
+}
+
+long get_file_size(const char *filename)
+{
+    if (!filename || !strcmp(filename, "-"))
+        return -1;
+
+#ifdef _WIN32
+    FILE *f = win32_fopen_utf8(filename, "rb");
+#else
+    FILE *f = fopen(filename, "rb");
+#endif
+    if (!f)
+        return -1;
+
+    fseek(f, 0, SEEK_END);
+    long size = ftell(f);
+    fclose(f);
+    return size;
 }

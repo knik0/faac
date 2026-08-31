@@ -40,6 +40,10 @@ bool detect_container_mp4(const char *filename);
    --cover-art data before it's embedded as an MP4 covr atom. */
 bool check_image_header(const char *buf);
 
+/* Byte size of a regular file, or -1 if it can't be determined (missing,
+   or "-" for stdin/stdout, which has no meaningful size). */
+long get_file_size(const char *filename);
+
 #ifdef __cplusplus
 }
 #endif

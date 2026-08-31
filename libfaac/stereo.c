@@ -20,6 +20,7 @@
 #include "huff2.h"
 #include "util.h"
 #include "faac_internal.h"
+#include "stats.h"
 
 /* Intensity stereo crossover scales with core bandwidth (3.5-7 kHz) to save low-band phase bits at low rates. */
 #define IS_BW_RATIO              0.35f
@@ -188,6 +189,9 @@ static inline int process_cpe(CoderInfo * restrict cl, CoderInfo * restrict cr,
                 cl->sf[*sfcnt]   = sf;
                 cr->sf[*sfcnt]   = -pan;
                 cr->book[*sfcnt] = hcb;
+#ifdef FAAC_STATS
+                g_faacStats.isBands += 2;
+#endif
                 float dom = (hcb == HCB_INTENSITY) ? es : ed;
                 apply_is(sl0, sr0, start, len, wstart, wend, hcb == HCB_INTENSITY, sqrtf(etot / dom));
                 if (mode != JOINT_IS) element->msInfo.ms_used[*sfcnt] = 0;
@@ -213,6 +217,9 @@ static inline int process_cpe(CoderInfo * restrict cl, CoderInfo * restrict cr,
             }
             if (ms) {
                 msused = 1;
+#ifdef FAAC_STATS
+                g_faacStats.msBands += 2;
+#endif
             } else {
                 /* Sparsity check: if one channel completely masks the other. */
                 if (el <= er * thrside_sq) {

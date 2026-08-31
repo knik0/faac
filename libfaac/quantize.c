@@ -21,6 +21,7 @@
 #include "quantize.h"
 #include "huff2.h"
 #include "cpu_compute.h"
+#include "stats.h"
 
 typedef int (*QuantizeFunc)(const float * __restrict xr, int * __restrict xi, int n, float sfacfix);
 
@@ -262,6 +263,10 @@ static void assign_band_codebooks(CoderInfo * __restrict ci, const float * __res
     {
         int band = ci->bandcnt;
 
+#ifdef FAAC_STATS
+        g_faacStats.totalBands++;
+#endif
+
         if (ci->book[band] != HCB_NONE)
         {
             ci->bandcnt++;
@@ -289,6 +294,9 @@ static void assign_band_codebooks(CoderInfo * __restrict ci, const float * __res
         if (target[sb] < pns_threshold)
         {
             ci->book[band] = HCB_PNS;
+#ifdef FAAC_STATS
+            g_faacStats.pnsBands++;
+#endif
             ci->sf[band] += lrintf(sf_enrg_avg);
             ci->bandcnt++;
             continue;
