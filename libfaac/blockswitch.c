@@ -152,13 +152,33 @@ void PsyEnd(PsyInfo * psyInfo, unsigned int numChannels)
 }
 
 /* Do psychoacoustical analysis */
+/* Fast energy-based Perceptual Entropy approximation: sum subblock high-pass energies
+   pre-computed in PsyBufferUpdate(), scaling by PE_ENERGY_SCALE to match PE complexity threshold. */
+static void PsyCalcPE(PsyInfo * psyInfo)
+{
+  psydata_t *psydata = (psydata_t *)psyInfo->data;
+  if (!psydata) { psyInfo->pe = 0.0f; return; }
+  float pe = (float)psydata->eng[ENG_WIN_CUR + 0] + (float)psydata->eng[ENG_WIN_CUR + 1] +
+             (float)psydata->eng[ENG_WIN_CUR + 2] + (float)psydata->eng[ENG_WIN_CUR + 3] +
+             (float)psydata->eng[ENG_WIN_CUR + 4] + (float)psydata->eng[ENG_WIN_CUR + 5] +
+             (float)psydata->eng[ENG_WIN_CUR + 6] + (float)psydata->eng[ENG_WIN_CUR + 7];
+  psyInfo->pe = pe * PE_ENERGY_SCALE;
+}
+
+static void PsyAnalyzeChannel(PsyInfo * psyInfo)
+{
+  PsyCheckShort(psyInfo);
+  PsyCalcPE(psyInfo);
+}
+
+/* Do psychoacoustical analysis */
 void PsyCalculate(AACElement * elements, int numElements, PsyInfo * psyInfo,
 			 unsigned int numChannels
 			)
 {
   if (elements == NULL) {
       for (unsigned int channel = 0; channel < numChannels; channel++)
-          PsyCheckShort(&psyInfo[channel]);
+          PsyAnalyzeChannel(&psyInfo[channel]);
       return;
   }
 
@@ -167,14 +187,15 @@ void PsyCalculate(AACElement * elements, int numElements, PsyInfo * psyInfo,
       AACElement *elem = &elements[e];
       switch (elem->type) {
           case ID_SCE:
-              PsyCheckShort(&psyInfo[elem->channels[0]]);
+              PsyAnalyzeChannel(&psyInfo[elem->channels[0]]);
               break;
           case ID_CPE:
-              PsyCheckShort(&psyInfo[elem->channels[0]]);
-              PsyCheckShort(&psyInfo[elem->channels[1]]);
+              PsyAnalyzeChannel(&psyInfo[elem->channels[0]]);
+              PsyAnalyzeChannel(&psyInfo[elem->channels[1]]);
               break;
           case ID_LFE:
               psyInfo[elem->channels[0]].block_type = ONLY_LONG_WINDOW;
+              psyInfo[elem->channels[0]].pe = 0.0f;
               break;
           default:
               break;
