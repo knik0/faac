@@ -38,7 +38,7 @@ typedef struct {
 #define F_HUFF_ENV_3_0DB_NSYMS   63
 
 extern const sbrfloat qmf_c[640];
-extern const signed char sbr_offset[6][16];
+extern const int8_t sbr_offset[6][16];
 extern const SBRHuffEntry f_huff_env_1_5dB[F_HUFF_ENV_1_5DB_NSYMS];
 extern const SBRHuffEntry f_huff_env_3_0dB[F_HUFF_ENV_3_0DB_NSYMS];
 

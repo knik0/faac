@@ -79,32 +79,16 @@ static void FillKbdWindow(float *win, int halfLen, double alpha)
     }
     scale = 1.0 / (weightedTotal + 1.0);
 
-    for (i = 0; i <= quarterLen; i++) {
-        running += shapeTerm[i];
+    for (i = 0; i < halfLen; i++) {
+        int idx = (i <= quarterLen) ? i : (halfLen - i);
+        running += shapeTerm[idx];
         win[i] = (float)sqrt(running * scale);
     }
-    /* Past the midpoint, reuse the mirrored term instead of recomputing it. */
-    for (; i < halfLen; i++) {
-        running += shapeTerm[halfLen - i];
-        win[i] = (float)sqrt(running * scale);
-    }
-}
-
-typedef struct {
-    float *sine;
-    float *kbd;
-} WindowPair;
-
-static void BuildWindowPair(WindowPair *wp, int halfLen, double kbdAlpha)
-{
-    FillSineWindow(wp->sine, halfLen);
-    FillKbdWindow(wp->kbd, halfLen, kbdAlpha);
 }
 
 void FilterBankInit(faacEncStruct* hEncoder)
 {
     unsigned int channel;
-    WindowPair longPair, shortPair;
 
     for (channel = 0; channel < hEncoder->numChannels; channel++) {
         hEncoder->freqBuff[channel] = (float*)AllocMemory(2*FRAME_LEN*sizeof(float));
@@ -120,13 +104,10 @@ void FilterBankInit(faacEncStruct* hEncoder)
         !hEncoder->kbd_window_long || !hEncoder->kbd_window_short)
         return;
 
-    longPair.sine = hEncoder->sin_window_long;
-    longPair.kbd = hEncoder->kbd_window_long;
-    shortPair.sine = hEncoder->sin_window_short;
-    shortPair.kbd = hEncoder->kbd_window_short;
-
-    BuildWindowPair(&longPair, BLOCK_LEN_LONG, 4.0);
-    BuildWindowPair(&shortPair, BLOCK_LEN_SHORT, 6.0);
+    FillSineWindow(hEncoder->sin_window_long, BLOCK_LEN_LONG);
+    FillKbdWindow(hEncoder->kbd_window_long, BLOCK_LEN_LONG, 4.0);
+    FillSineWindow(hEncoder->sin_window_short, BLOCK_LEN_SHORT);
+    FillKbdWindow(hEncoder->kbd_window_short, BLOCK_LEN_SHORT, 6.0);
 
     hEncoder->gpsyInfo.sharedWorkBuffLong = (float*)AllocMemory(2*BLOCK_LEN_LONG*sizeof(float));
 }
