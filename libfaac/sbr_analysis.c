@@ -19,10 +19,6 @@
 #include "util.h"
 #include <string.h>
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
-
 /* Multi-pass signal analysis: transient detection, temporal grid selection,
  * and subband energy accumulation. hot keeps it vectorized under LTO despite
  * only being reached through the cold dispatcher; SbrQmfAnalysis is inlined

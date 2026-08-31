@@ -13,10 +13,6 @@
  * Lesser General Public License for more details.
  */
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -307,7 +303,6 @@ pcmfile_t *wav_open_read(const char *name, bool rawinput)
 
   return sndf;
 }
-
 
 int *mk_chan_map(uint16_t channels, uint16_t center, uint16_t lf)
 {

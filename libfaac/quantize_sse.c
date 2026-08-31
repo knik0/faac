@@ -13,10 +13,6 @@
  * Lesser General Public License for more details.
  */
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
-
 #include <immintrin.h>
 #include <math.h>
 #include "quantize.h"

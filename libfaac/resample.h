@@ -20,10 +20,6 @@
 #ifndef RESAMPLE_H
 #define RESAMPLE_H
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
-
 #include "coder.h"
 
 #ifdef __cplusplus
