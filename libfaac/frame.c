@@ -600,6 +600,14 @@ int faacEncClose(faacEncHandle hpEncoder)
                     tr, g_faacStats.transientFrames, g_faacStats.totalFrames, att_avg, att_max);
         }
 
+        if (g_faacStats.shortChannels > 0)
+        {
+            double grp_avg = (double)g_faacStats.shortGroupSum / g_faacStats.shortChannels;
+            double split = 100.0 * g_faacStats.shortSplitChannels / g_faacStats.shortChannels;
+            fprintf(stderr, " Short Grouping      : Groups  = %5.2f avg/ch | Split = %5.1f%% of %u short ch\n",
+                    grp_avg, split, g_faacStats.shortChannels);
+        }
+
         double peak_retry_pct = 100.0 * g_faacStats.peakRetryFrames / g_faacStats.totalFrames;
 
         if (g_faacStats.sbrFrames > 0)
@@ -870,7 +878,6 @@ int faacEncEncode(faacEncHandle hpEncoder,
                 offset += hEncoder->srInfo->cb_width_short[sb];
             }
             coderInfo[channel].sfb_offset[sb] = offset;
-            BlocGroup(hEncoder->freqBuff[channel], coderInfo + channel, &hEncoder->aacquantCfg);
         } else {
             coderInfo[channel].sfbn = hEncoder->aacquantCfg.max_cbl;
 
@@ -883,6 +890,48 @@ int faacEncEncode(faacEncHandle hpEncoder,
                 offset += hEncoder->srInfo->cb_width_long[sb];
             }
             coderInfo[channel].sfb_offset[sb] = offset;
+        }
+    }
+
+    /* Funnelled through one call site so BlocGroup stays a single inlined copy. */
+    for (int e = 0; e < hEncoder->numElements; e++)
+    {
+        AACElement *el = &hEncoder->elements[e];
+        int l = el->channels[0];
+        int r = (el->type == ID_CPE) ? el->channels[1] : -1;
+        CoderInfo *a = NULL, *b = NULL;
+        float *xa = NULL, *xb = NULL;
+
+        if (coderInfo[l].block_type == ONLY_SHORT_WINDOW)
+        {
+            a = &coderInfo[l];
+            xa = hEncoder->freqBuff[l];
+            if (r >= 0 && coderInfo[r].block_type == ONLY_SHORT_WINDOW)
+            {
+                b = &coderInfo[r];
+                xb = hEncoder->freqBuff[r];
+            }
+        }
+        else if (r >= 0 && coderInfo[r].block_type == ONLY_SHORT_WINDOW)
+        {
+            a = &coderInfo[r];
+            xa = hEncoder->freqBuff[r];
+        }
+
+        if (a)
+        {
+            BlocGroup(a, xa, b, xb, &hEncoder->aacquantCfg);
+#ifdef FAAC_STATS
+            /* Everything downstream scales with groups.n * sfbn, so this one
+             * number covers both the throughput and the bitrate axis. */
+            {
+                unsigned int nch = b ? 2 : 1;
+                g_faacStats.shortChannels += nch;
+                g_faacStats.shortGroupSum += (unsigned long)a->groups.n * nch;
+                if (a->groups.n > 1)
+                    g_faacStats.shortSplitChannels += nch;
+            }
+#endif
         }
     }
 
