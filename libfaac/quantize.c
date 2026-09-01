@@ -14,6 +14,7 @@
  */
 
 #include <limits.h>
+#include <assert.h>
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -116,36 +117,61 @@ static float gain_with_overflow_clamp(int *sfac, float band_peak)
 typedef struct
 {
     float sum;      /* energy summed across group windows */
-    float peak_amp; /* sqrt of the largest single-coefficient energy seen */
+    float peak_energy; /* mean of the per-window peak energies */
 } BandEnergy;
 
-static void measure_band_energy(const CoderInfo * __restrict ci, const float * __restrict xr0,
-                                 int gnum, BandEnergy * __restrict out)
+static float measure_band_energy(const CoderInfo * __restrict ci, const float * __restrict xr0,
+                                  int gnum, int cutoff, BandEnergy * __restrict out)
 {
     int gsize = ci->groups.len[gnum];
+    float group_total = 0.0f;
     int sfb;
 
     for (sfb = 0; sfb < ci->sfbn; sfb++)
     {
-        int lo = ci->sfb_offset[sfb], hi = ci->sfb_offset[sfb + 1];
-        int len = hi - lo;
+        int lo = ci->sfb_offset[sfb];
+        int len = ci->sfb_offset[sfb + 1] - lo;
         float sum = 0.0f, peak = 0.0f;
         int w;
+
+        /* Above the coded cutoff a short block is zero, so both the sum and the
+         * peak there are exactly 0.0f. */
+        if (lo >= cutoff)
+        {
+            out[sfb].sum = 0.0f;
+            out[sfb].peak_energy = 0.0f;
+            continue;
+        }
 
         for (w = 0; w < gsize; w++)
         {
             const float * __restrict line = xr0 + w * BLOCK_LEN_SHORT + lo;
+            float wpeak = 0.0f;
             int k;
-            for (k = 0; k < len; k++)
+            for (k = 0; k < len; k += 4)
             {
-                float e = line[k] * line[k];
-                sum += e;
-                if (e > peak) peak = e;
+                float a = line[k], b = line[k + 1], c = line[k + 2], d = line[k + 3];
+                float ea = a * a, eb = b * b, ec = c * c, ed = d * d;
+
+                sum += ea; if (ea > wpeak) wpeak = ea;
+                sum += eb; if (eb > wpeak) wpeak = eb;
+                sum += ec; if (ec > wpeak) wpeak = ec;
+                sum += ed; if (ed > wpeak) wpeak = ed;
             }
+
+            /* Mean of the per-window peaks rather than the group maximum: a
+             * maximum over more windows is systematically larger, which would
+             * tie the tonal term to the grouping decision instead of the signal. */
+            peak += wpeak;
         }
+        peak /= (float)gsize;
+
         out[sfb].sum = sum;
-        out[sfb].peak_amp = sqrtf(peak);
+        out[sfb].peak_energy = peak;
+        group_total += sum;
     }
+
+    return group_total;
 }
 
 static float loudness(float energy_ratio)
@@ -160,16 +186,12 @@ static float treble_rolloff(int lo, int hi, float inv_block_len)
 }
 
 static void derive_masking_targets(CoderInfo * __restrict ci, int gnum, float quality,
-                                    const BandEnergy * __restrict be,
-                                    float * __restrict target_out, float * __restrict avg_out)
+                                    const BandEnergy * __restrict be, float group_total,
+                                    float * __restrict target_out)
 {
     int gsize = ci->groups.len[gnum];
     int total_len = ci->sfb_offset[ci->sfbn];
-    float group_total = 0.0f;
     int sfb;
-
-    for (sfb = 0; sfb < ci->sfbn; sfb++)
-        group_total += be[sfb].sum;
 
     // whole group below the silence gate: force every band to a zero target
     if (group_total < (SILENCE_RMS * SILENCE_RMS) * (float)(gsize * total_len))
@@ -177,7 +199,6 @@ static void derive_masking_targets(CoderInfo * __restrict ci, int gnum, float qu
         for (sfb = 0; sfb < ci->sfbn; sfb++)
         {
             target_out[sfb] = 0.0f;
-            avg_out[sfb] = 0.0f;
         }
         return;
     }
@@ -189,22 +210,25 @@ static void derive_masking_targets(CoderInfo * __restrict ci, int gnum, float qu
     {
         int lo = ci->sfb_offset[sfb], hi = ci->sfb_offset[sfb + 1];
         float avg = be[sfb].sum;
-        float peak = be[sfb].peak_amp * be[sfb].peak_amp;
+        float peak = be[sfb].peak_energy;
         float ref = (group_total * inv_block_len) * (hi - lo);
+        /* avg and ref are both group totals, so their ratio is independent of
+         * group size. peak is a single window's energy, so it needs a
+         * single-window reference; otherwise the tonal term decays as 1/gsize. */
+        float ref_win = ref / (float)gsize;
         float target;
 
         // floor before pow(): formula is monotonic, so this floors the output too
         if (avg < ref * AVG_ENERGY_FLOOR_FRAC) avg = ref * AVG_ENERGY_FLOOR_FRAC;
-        if (peak < ref * PEAK_ENERGY_FLOOR_FRAC) peak = ref * PEAK_ENERGY_FLOOR_FRAC;
+        if (peak < ref_win * PEAK_ENERGY_FLOOR_FRAC) peak = ref_win * PEAK_ENERGY_FLOOR_FRAC;
 
         target = AVG_ENERGY_WEIGHT * loudness(avg / ref)
-               + (1.0f - AVG_ENERGY_WEIGHT) * PEAK_ENERGY_WEIGHT * loudness(peak / ref);
+               + (1.0f - AVG_ENERGY_WEIGHT) * PEAK_ENERGY_WEIGHT * loudness(peak / ref_win);
         if (ci->block_type == ONLY_SHORT_WINDOW)
             target *= SHORT_BLOCK_TIGHTEN;
         target *= treble_rolloff(lo, hi, inv_block_len);
 
         target_out[sfb] = target * quality;
-        avg_out[sfb] = be[sfb].sum;
     }
 }
 
@@ -251,8 +275,8 @@ static float resolve_band_gain(int sfac, int sf_bias, float band_peak, int last_
 }
 
 static void assign_band_codebooks(CoderInfo * __restrict ci, const float * __restrict xr0,
-                                   const float * __restrict target, const float * __restrict bandenrg,
-                                   const float * __restrict bandpeak, int gnum, int pnslevel,
+                                   const float * __restrict target,
+                                   const BandEnergy * __restrict be, int gnum, int pnslevel,
                                    int * __restrict p_last_abs)
 {
     int gsize = ci->groups.len[gnum];
@@ -275,7 +299,7 @@ static void assign_band_codebooks(CoderInfo * __restrict ci, const float * __res
 
         int lo = ci->sfb_offset[sb], hi = ci->sfb_offset[sb + 1];
         int width = hi - lo;
-        float avg_per_window = bandenrg[sb] / (float)gsize;
+        float avg_per_window = be[sb].sum / (float)gsize;
         float rms = sqrtf(avg_per_window / width);
 
         if (rms < SILENCE_RMS || target[sb] == 0.0f)
@@ -314,7 +338,7 @@ static void assign_band_codebooks(CoderInfo * __restrict ci, const float * __res
         else
         {
             int sf_abs;
-            float gain = resolve_band_gain(sfac, sf_bias, bandpeak[sb], *p_last_abs, &sf_rel, &sf_abs);
+            float gain = resolve_band_gain(sfac, sf_bias, sqrtf(be[sb].peak_energy), *p_last_abs, &sf_rel, &sf_abs);
             int xi[FRAME_LEN];
             int win, maxq = 0;
 
@@ -341,24 +365,35 @@ void ResetCoderSections(CoderInfo *coder)
     }
 }
 
+/* The band scans here and in stereo.c step four coefficients with no remainder,
+ * which holds only because every band width in srInfo[] is a multiple of four.
+ * That is a property of the tables, so verify the one actually selected. */
+static void assert_band_widths_align(const CoderInfo * __restrict ci)
+{
+    int sfb;
+
+    for (sfb = 0; sfb < ci->sfbn; sfb++)
+        assert((ci->sfb_offset[sfb + 1] - ci->sfb_offset[sfb]) % 4 == 0);
+}
+
 int BlocQuant(CoderInfo * __restrict coder, float * __restrict xr, AACQuantCfg *aacquantCfg)
 {
-    float target[MAX_SCFAC_BANDS], bandenrg[MAX_SCFAC_BANDS];
+    float target[MAX_SCFAC_BANDS];
     BandEnergy be[NSFB_LONG];
-    float bandpeak[MAX_SCFAC_BANDS];
     int i, lastsf = SF_CHAIN_UNSET;
     float *gxr = xr;
+    int cutoff = (coder->block_type == ONLY_SHORT_WINDOW)
+               ? aacquantCfg->max_l / 8 : coder->sfb_offset[coder->sfbn];
+
+    assert_band_widths_align(coder);
 
     coder->bandcnt = coder->datacnt = 0;
     for (i = 0; i < coder->groups.n; i++)
     {
-        int sfb;
+        float group_total = measure_band_energy(coder, gxr, i, cutoff, be);
 
-        measure_band_energy(coder, gxr, i, be);
-        for (sfb = 0; sfb < coder->sfbn; sfb++)
-            bandpeak[sfb] = be[sfb].peak_amp;
-        derive_masking_targets(coder, i, (float)aacquantCfg->quality / DEFQUAL, be, target, bandenrg);
-        assign_band_codebooks(coder, gxr, target, bandenrg, bandpeak, i, aacquantCfg->pnslevel, &lastsf);
+        derive_masking_targets(coder, i, (float)aacquantCfg->quality / DEFQUAL, be, group_total, target);
+        assign_band_codebooks(coder, gxr, target, be, i, aacquantCfg->pnslevel, &lastsf);
         gxr += coder->groups.len[i] * BLOCK_LEN_SHORT;
     }
 
@@ -417,6 +452,7 @@ void CalcBW(unsigned *bw, int rate, SR_INFO *sr, AACQuantCfg *aacquantCfg)
 #define GROUP_MIN_SFB     2    // bands below this are too coarse/DC-heavy to inform grouping
 #define GROUP_ONSET_RATIO 3.0f  // running max/min energy ratio that counts as a transient
 
+/* Accumulates, so a CPE can sum both channels into one energy vector. */
 static void window_band_energy(const CoderInfo * __restrict ci, const float * __restrict w,
                                 int from_sfb, int to_sfb, float * __restrict e_out)
 {
@@ -425,20 +461,30 @@ static void window_band_energy(const CoderInfo * __restrict ci, const float * __
     {
         float e = 0.0f;
         int k;
-        for (k = ci->sfb_offset[sfb]; k < ci->sfb_offset[sfb + 1]; k++)
-            e += w[k] * w[k];
-        e_out[sfb] = e;
+        const float * __restrict line = w + ci->sfb_offset[sfb];
+        int len = ci->sfb_offset[sfb + 1] - ci->sfb_offset[sfb];
+
+        for (k = 0; k < len; k += 4)
+        {
+            float a = line[k], b = line[k + 1], c = line[k + 2], d = line[k + 3];
+
+            e += a * a;
+            e += b * b;
+            e += c * c;
+            e += d * d;
+        }
+        e_out[sfb] += e;
     }
 }
 
-void BlocGroup(float *xr, CoderInfo *coderInfo, AACQuantCfg *cfg)
+/* Splits the 8 short windows into groups at detected onsets. For a CPE
+ * (ci_r != NULL) both channels' band energies are summed so the pair shares one
+ * grouping, which the bitstream requires anyway. Long blocks never reach here. */
+void BlocGroup(CoderInfo *coderInfo, float *xr, CoderInfo *ci_r, float *xr_r, AACQuantCfg *cfg)
 {
-    if (coderInfo->block_type != ONLY_SHORT_WINDOW)
-    {
-        coderInfo->groups.n = 1;
-        coderInfo->groups.len[0] = 1;
-        return;
-    }
+    CoderInfo *ci[2];
+    float *xrs[2];
+    int nch = ci_r ? 2 : 1;
 
     int maxsfb = cfg->max_cbs;
     int cutoff = cfg->max_l / 8;
@@ -448,17 +494,27 @@ void BlocGroup(float *xr, CoderInfo *coderInfo, AACQuantCfg *cfg)
     float band_e[NSFB_SHORT], run_min[NSFB_SHORT], run_max[NSFB_SHORT];
     int win, group_start = 0;
 
+    ci[0] = coderInfo; ci[1] = ci_r;
+    xrs[0] = xr;       xrs[1] = xr_r;
+
     coderInfo->groups.n = 0;
 
     for (win = 0; win < MAX_SHORT_WINDOWS; win++)
     {
-        float *w = xr + win * BLOCK_LEN_SHORT;
-        int k, sfb;
+        int k, sfb, c;
 
-        for (k = cutoff; k < coderInfo->sfb_offset[maxsfb]; k++)
-            w[k] = 0.0f;
+        for (sfb = GROUP_MIN_SFB; sfb < maxsfb; sfb++)
+            band_e[sfb] = 0.0f;
 
-        window_band_energy(coderInfo, w, GROUP_MIN_SFB, maxsfb, band_e);
+        for (c = 0; c < nch; c++)
+        {
+            float *w = xrs[c] + win * BLOCK_LEN_SHORT;
+
+            for (k = cutoff; k < ci[c]->sfb_offset[maxsfb]; k++)
+                w[k] = 0.0f;
+
+            window_band_energy(ci[c], w, GROUP_MIN_SFB, maxsfb, band_e);
+        }
 
         if (win == group_start)
         {
@@ -484,4 +540,7 @@ void BlocGroup(float *xr, CoderInfo *coderInfo, AACQuantCfg *cfg)
         }
     }
     coderInfo->groups.len[coderInfo->groups.n++] = MAX_SHORT_WINDOWS - group_start;
+
+    if (ci_r)
+        ci_r->groups = coderInfo->groups;
 }

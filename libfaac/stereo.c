@@ -33,9 +33,6 @@
  * and is dropped to HCB_ZERO rather than intensity-coded. */
 #define IS_PAN_LIMIT     30
 
-/* Core bandwidth ceiling (16 kHz / <=48 kbps/ch) below which short-block M/S is disabled to prevent pre-echo. */
-#define MS_SHORT_BW_CEILING      16000
-
 /* Accumulate channel energies and cross-correlation for a scale factor band.
  * Using three independent accumulators maximizes instruction-level parallelism
  * by avoiding read-after-write dependencies on the FPU pipeline. */
@@ -49,12 +46,16 @@ static inline void calculate_energies(const float * restrict sl0, const float * 
     for (win = wstart; win < wend; win++) {
         const float * restrict sl = sl0 + win * BLOCK_LEN_SHORT + start;
         const float * restrict sr = sr0 + win * BLOCK_LEN_SHORT + start;
-        for (i = 0; i < len; i++) {
-            float l = sl[i];
-            float r = sr[i];
-            el  += l * l;
-            er  += r * r;
-            elr += l * r;
+        /* Four at a time; band widths are all multiples of four. */
+        for (i = 0; i < len; i += 4) {
+            float l0 = sl[i],     r0 = sr[i];
+            float l1 = sl[i + 1], r1 = sr[i + 1];
+            float l2 = sl[i + 2], r2 = sr[i + 2];
+            float l3 = sl[i + 3], r3 = sr[i + 3];
+
+            el  += l0 * l0; el  += l1 * l1; el  += l2 * l2; el  += l3 * l3;
+            er  += r0 * r0; er  += r1 * r1; er  += r2 * r2; er  += r3 * r3;
+            elr += l0 * r0; elr += l1 * r1; elr += l2 * r2; elr += l3 * r3;
         }
     }
     *el_out = el;
@@ -302,8 +303,10 @@ void AACstereo(CoderInfo *coder, AACElement *elements, int numElements, float *s
         }
         if (!ok) continue;
 
-        /* Disable short-window M/S at <=16 kHz core bandwidth (<=48 kbps/ch) to prevent pre-echo. */
-        int cur_mode = (coder[lch].block_type == ONLY_SHORT_WINDOW && bandWidth <= MS_SHORT_BW_CEILING && mode == JOINT_MIXED) ? JOINT_IS : mode;
+        /* Grouped short windows share one scalefactor set, so M/S spreads the
+         * side channel's quantization noise across the group and ahead of the
+         * attack. Intensity stereo's per-band gain leaves the envelope intact. */
+        int cur_mode = (coder[lch].block_type == ONLY_SHORT_WINDOW && mode == JOINT_MIXED) ? JOINT_IS : mode;
 
         elem->common_window  = true;
         elem->msInfo.is_present = (cur_mode == JOINT_MS);
