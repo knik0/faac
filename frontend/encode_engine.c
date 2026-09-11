@@ -506,6 +506,12 @@ int run_encoding_session_ext(const encode_options_t *opts,
 
     if (opts->max_bit_rate > 0)
         params.max_bit_rate = opts->max_bit_rate;
+    if (opts->cbr)
+    {
+        if (opts->bit_rate == 0)
+            FAIL("--cbr needs a bitrate (-b)\n");
+        params.rate_control = FAAC_RC_CBR;
+    }
 
     if (log_cb)
     {
@@ -564,6 +570,7 @@ int run_encoding_session_ext(const encode_options_t *opts,
             FAIL("Couldn't create MP4 output file %s\n", opts->output_filename);
         mp4_is_open = true;
         mp4_set_format(rc_scalar(rc, sample_rate), num_channels, infile->samplebytes * 8);
+        mp4_set_constant_rate(opts->cbr);
     }
     else if (opts->output_filename)
     {
@@ -615,6 +622,7 @@ int run_encoding_session_ext(const encode_options_t *opts,
             .bandwidth = info.bandwidth,
             .quant_quality = (uint16_t)info.quant_quality,
             .bit_rate = info.bit_rate,
+            .rate_control = info.rate_control,
 
             .remapping_channels = (chanmap != NULL),
             .center_channel = opts->center_channel,

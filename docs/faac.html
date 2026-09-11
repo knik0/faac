@@ -99,9 +99,15 @@ Usage
 setting -q 100 -c 16000 if you know what you're doing and/or want to
 experiment with other cutoff frequencies at a given quality setting.
 <br><br>
-The ABR setting with -a is an approximate average bitrate that does not use 
-a bit reservoir, i.e -a 64 and -q 100 at 44.1 kHz will result in exactly 
-the same output file.<br>
+The ABR setting with -b is an average: frames are bounded only by the
+ISO/IEC 14496-3 ceiling of 6144 bits per channel, so a transient may take
+several times the mean and silence stays small. Add --cbr to hold the same
+bitrate as a constant-rate stream: a bit reservoir keeps every frame inside
+the decoder's input buffer, stuffs the frames that would leave it to overflow,
+and declares the fullness (ADTS) or the buffer size and maxBitrate ==
+avgBitrate (MP4). CBR lands on its rate exactly and is what a constant-rate
+channel or a matched-bitrate comparison needs; on a file or a packet network
+its stuffing is bytes for nothing.<br>
 <br>
 The following list should give some orientation for useful -q and -c settings,
 based on FAAC v1.17. The resulting VBR bitrates are referring to an average

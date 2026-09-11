@@ -97,6 +97,19 @@ stereo input file with 16 bit and 44.1 kHz sample rate
 Set average bitrate (ABR) to approximately <bitrate> kbps.
 max. ~500 (stereo)
 .TP
+.B \-\-cbr
+Hold the
+.B -b
+bitrate as a constant bitrate (CBR). A bit reservoir models the decoder's
+input buffer (6144 bits per channel): every frame fits what the buffer holds,
+a frame that would leave it to overflow is stuffed up to it, and the stream
+lands on its rate exactly. ADTS output declares the buffer fullness in every
+header; MP4 output declares the buffer size and maxBitrate equal to
+avgBitrate. Meant for constant-rate channels and matched-bitrate comparisons:
+on a file or a packet network the stuffing is bytes for nothing, and a
+transient may take only what the buffer holds where ABR lets it take several
+times the mean.
+.TP
 .BR \-\-cap\-rate\ <\fIbitrate\fP>
 Cap any single frame at <bitrate> kbps, for packet-oriented transports that drop
 an oversized frame rather than splitting it. Must be at least the

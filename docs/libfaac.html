@@ -128,6 +128,26 @@ For an HE-AAC encoder the SBR core runs at half the input rate and codes a
 output rate. Buffer sizing and rate reporting therefore stay correct without
 the caller knowing any SBR internals.
 
+<a name="api-rate">
+<h5>Rate control modes</h5>
+<i>faac_params.rate_control</i> selects how a rate is held. <i>FAAC_RC_AUTO</i>,
+the default, keeps the legacy meaning of the two rate fields: a <i>bit_rate</i>
+is ABR, none is VBR. <i>FAAC_RC_ABR</i> holds <i>bit_rate</i> as an average:
+frames are bounded only by the ISO/IEC 14496-3 ceiling of 6144 bits per channel,
+a transient may take several times the mean, and silence stays small.
+<i>FAAC_RC_CBR</i> holds it as a constant-rate stream: a bit reservoir models the
+decoder's input buffer, every frame fits <i>mean + fill</i>, a frame that would
+leave the buffer to overflow is stuffed up to it, and the rate lands exactly.
+ADTS output carries the fill in every header's <i>buffer_fullness</i> (ABR and
+VBR write the 0x7FF sentinel); MP4 output declares <i>bufferSizeDB</i> = 768
+bytes per channel and <i>maxBitrate</i> == <i>avgBitrate</i>. CBR is for
+constant-rate channels and matched-bitrate comparisons; on a file or a packet
+network its stuffing is bytes for nothing, and a transient may take only what
+the buffer holds. <i>FAAC_RC_VBR</i> or <i>FAAC_RC_ABR</i>/<i>FAAC_RC_CBR</i>
+with, respectively, a <i>bit_rate</i> set or unset is rejected by
+<i>faac_encoder_open()</i> with <i>FAAC_ERR_INVALID_ARGUMENT</i>.
+<i>faac_encoder_info.rate_control</i> reports the resolved mode.
+<br><br>
 <a name="api-peak">
 <h5>Capping the peak frame size</h5>
 Packet-oriented transports often cannot fragment a frame: one that overruns the

@@ -41,8 +41,12 @@
    frame-to-frame swing, short enough to follow a real change in content. */
 #define RC_SBR_EWMA_SHIFT      4
 
+/* Opening fill of the reservoir, as a fraction of capacity: full lets a stream
+   end that many bits over budget, empty caps the first frame at the mean. */
+#define RC_RESERVOIR_START     0.5f
+
 void RateControlReset(RateControl *rc, unsigned int numChannels,
-                      unsigned long bitRate, unsigned long sampleRate)
+                      unsigned long bitRate, unsigned long sampleRate, int cbr)
 {
     rc->frameBudget = numChannels * (bitRate * FRAME_LEN) / sampleRate;
 
@@ -52,15 +56,88 @@ void RateControlReset(RateControl *rc, unsigned int numChannels,
     /* Negative means "no frame seen yet"; the first frame seeds the average
        rather than dragging it up from zero over the whole time constant. */
     rc->sbrBitsAcc = -1;
+
+    /* The reservoir is the decoder buffer (AAC_MAX_BITS_PER_CH per channel)
+       refilled at the mean rate. ABR/VBR leave resMean 0: no cap, no floor,
+       buffer_fullness stays 0x7FF. */
+    rc->resMean = 0;
+    rc->resCap = 0;
+    rc->resFill = 0;
+    if (cbr)
+    {
+        rc->resMean = rc->frameBudget;
+        rc->resCap = (int)numChannels * AAC_MAX_BITS_PER_CH - rc->resMean;
+        if (rc->resCap < 0)
+            rc->resCap = 0;
+        rc->resFill = (int)(rc->resCap * RC_RESERVOIR_START);
+    }
+    rc->resMinBits = 0;
+    rc->stuffedBits = 0;
+    rc->sbrBits = 0;
+    rc->prevWant = 0;
 }
 
-float RateControlUpdate(RateControl *rc, int payloadBits, int sbrBits,
+int RateControlReservoirAfter(const RateControl *rc, int payloadBits)
+{
+    /* Below zero the decoder stalls (only a frame that cannot shrink even at
+       MINQUAL gets here); above capacity the fill saturates. */
+    int fill = rc->resFill + rc->resMean - payloadBits;
+    if (fill < 0)
+        fill = 0;
+    else if (fill > rc->resCap)
+        fill = rc->resCap;
+    return fill;
+}
+
+int RateControlFrameCap(RateControl *rc)
+{
+    int avail;
+
+    if (!rc->resMean)
+        return 0;
+
+    /* A frame may spend mean + fill; one that would overflow the buffer is
+       stuffed up to the floor. The floor stays two bytes under the cap: fill
+       is byte-granular, and at zero capacity the two would meet. */
+    avail = rc->resMean + rc->resFill;
+    rc->resMinBits = rc->resMean + rc->resFill - rc->resCap;
+    if (rc->resMinBits > avail - 16)
+        rc->resMinBits = avail - 16;
+    if (rc->resMinBits < 0)
+        rc->resMinBits = 0;
+    return avail;
+}
+
+float RateControlUpdate(RateControl *rc, int payloadBits,
                         float quality, float maxqual)
 {
     int desbits = rc->frameBudget;
-    int totalBits = payloadBits;
+    int sbrBits = rc->sbrBits;
+    /* The reservoir is charged every bit sent; the controller only the bits
+       the coder chose, or a stuffed frame reads as on budget and quality
+       never rises to replace the stuffing with signal. */
+    int sentBits = payloadBits;
+    int totalBits = payloadBits - rc->stuffedBits;
+    int reservoir = (rc->resMean > 0);
     int sbrCharge;
     float fix;
+
+    if (reservoir)
+    {
+#ifdef FAAC_STATS
+        if (rc->resFill + rc->resMean - sentBits < 0)
+            g_faacStats.resUnderflowFrames++;
+        g_faacStats.resFrames++;
+        g_faacStats.resTotalBits += sentBits;
+        g_faacStats.resStuffBits += rc->stuffedBits;
+        if (rc->resCap > 0)
+        {
+            float pct = 100.0f * (float)rc->resFill / (float)rc->resCap;
+            if (pct < g_faacStats.minResFill) g_faacStats.minResFill = pct;
+        }
+#endif
+        rc->resFill = RateControlReservoirAfter(rc, sentBits);
+    }
 
     /* SBR payload is not fixed overhead: at 48 kHz it runs 135-255 bits against
        a 2048-bit budget. Charging the frame's own `sbrBits` makes the
@@ -98,10 +175,34 @@ float RateControlUpdate(RateControl *rc, int payloadBits, int sbrBits,
        worked off in one lurch. */
     lend = rc->balance / RC_BALANCE_AMORT;
 
-    if (coreBits > 0)
-        fix = (float)(coreTarget + lend) / (float)coreBits;
-    else
-        fix = 1.0f;
+    int floored = 0;
+    int capped = 0;
+    {
+        int aim = coreTarget + lend;
+        /* Aim inside the next frame's [floor, cap]: a frame stuffed to the
+           floor spends those bits anyway, so they may as well be signal; a
+           frame aimed under the cap fits without a retry. */
+        if (reservoir)
+        {
+            /* resFill is post-frame: the next frame's window, net of SBR. */
+            int coreFloor = rc->resMean + rc->resFill - rc->resCap - sbrCharge;
+            int coreCap = rc->resMean + rc->resFill - sbrCharge;
+            if (aim < coreFloor)
+            {
+                aim = coreFloor;
+                floored = 1;
+            }
+            if (aim > coreCap)
+                aim = coreCap;
+            /* A frame this size will not fit the next cap: correct down
+               whole now rather than bust and retry. */
+            capped = (coreBits > coreCap);
+        }
+        if (coreBits > 0)
+            fix = (float)aim / (float)coreBits;
+        else
+            fix = 1.0f;
+    }
 
     /* Stiffer damping when the account is far off centre. Removing this
        and the deadband below costs 16 kHz speech MOS under ABR. */
@@ -119,11 +220,31 @@ float RateControlUpdate(RateControl *rc, int payloadBits, int sbrBits,
     }
 #endif
 
-    fix = (fix - 1.0f) * damping + 1.0f;
+    /* A frame stuffed to the floor pays those bits anyway, so the rise to
+       it is undamped; the cap catches a real overshoot. */
+    if (floored)
+    {
+        if (fix > 1.5f) fix = 1.5f;
+    }
+    else if (capped)
+    {
+        if (fix < 0.5f) fix = 0.5f;
+    }
+    else
+        fix = (fix - 1.0f) * damping + 1.0f;
+
+    /* Hold quality across stuffed frames that do not answer to it (a pause
+       cannot reach the floor at any quality); raising it winds the
+       controller up and the first frame after the pause busts the cap. */
+    if (fix > 1.0f && rc->stuffedBits > 0 && rc->prevWant > 0
+        && coreBits <= rc->prevWant + rc->prevWant / 50)
+        fix = 1.0f;
+    rc->prevWant = (rc->stuffedBits > 0) ? coreBits : 0;
 
     /* Skip small adjustments (< 0.5%) to keep quality steady */
     if (fabsf(fix - 1.0f) > 0.005f) {
-        fix = (fix < 0.80f) ? 0.80f : ((fix > 1.20f) ? 1.20f : fix);
+        if (!floored && !capped)
+            fix = (fix < 0.80f) ? 0.80f : ((fix > 1.20f) ? 1.20f : fix);
         quality *= fix;
     }
 
@@ -153,6 +274,7 @@ float RateControlUpdate(RateControl *rc, int payloadBits, int sbrBits,
 void RateControlStatsInit(void)
 {
     g_faacStats.minBalanceRatio = 100.0f;
+    g_faacStats.minResFill = 100.0f;
 }
 
 void RateControlStatsPrint(FILE *out)
@@ -164,6 +286,15 @@ void RateControlStatsPrint(FILE *out)
                 g_faacStats.minBalanceRatio, g_faacStats.maxBalanceRatio,
                 100.0 * g_faacStats.peakRetryFrames / g_faacStats.totalFrames,
                 g_faacStats.peakRetryFrames, g_faacStats.totalFrames);
+    }
+    if (g_faacStats.resFrames > 0)
+    {
+        fprintf(out, " Bit Reservoir (CBR) : Fill min = %5.1f%% | Bound Retries = %5.1f%% (%u/%u) | Underflows = %u | Stuffing = %5.2f%% of stream\n",
+                g_faacStats.minResFill,
+                100.0 * g_faacStats.resBoundRetryFrames / g_faacStats.resFrames,
+                g_faacStats.resBoundRetryFrames, g_faacStats.resFrames,
+                g_faacStats.resUnderflowFrames,
+                g_faacStats.resTotalBits > 0 ? 100.0 * g_faacStats.resStuffBits / g_faacStats.resTotalBits : 0.0);
     }
     if (g_faacStats.balanceFrames > 0)
     {

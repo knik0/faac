@@ -49,6 +49,15 @@ typedef struct faacEncStats {
 
     unsigned int peakRetryFrames;
 
+    /* Bit reservoir (CBR). An underflow means the declared fullness is false;
+       stuffing bits are the mode's cost. */
+    float minResFill;
+    unsigned int resFrames;
+    unsigned int resBoundRetryFrames;
+    unsigned int resUnderflowFrames;
+    double resStuffBits;
+    double resTotalBits;
+
     double totalBalanceRatio;
     float minBalanceRatio;
     float maxBalanceRatio;

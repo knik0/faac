@@ -23,30 +23,47 @@ extern "C" {
 #endif /* __cplusplus */
 
 /* Rate control: steers the quantizer's masking-target multiplier toward a
- * target bitrate.
+ * target bitrate, and in CBR models the decoder buffer as a bit reservoir.
  *
- * This is NOT an AAC bit reservoir. Nothing here moves a bit between frames
- * and every raw_data_block is self-contained; the ADTS buffer_fullness field
- * stays the 0x7FF sentinel. The ACCOUNT (balance) is a clamped integral of the
- * per-frame bit error: underspend banks, overspend owes, nothing is forgiven,
- * and `lend` is the share of the balance offered to a frame. The actuator is
- * quality, not bits. */
+ * Two integrators, each with a reason. The ACCOUNT (balance) is a clamped
+ * integral of the per-frame bit error, in every rate mode: underspend banks,
+ * overspend owes, `lend` is the share of the balance offered to a frame. The
+ * RESERVOIR (res*) is the AAC decoder buffer, CBR only: a hard per-frame bound
+ * on what may be sent, refilled at the mean rate. `lend` reads the account,
+ * not the reservoir fill: steering from the fill measured worse. */
 typedef struct {
     int frameBudget;   /* bits per frame at the target rate; 0 = VBR */
 
     int balance;       /* signed: banked bits positive, owed bits negative */
     int sbrBitsAcc;    /* EWMA of the SBR payload, scaled by 1<<RC_SBR_EWMA_SHIFT */
+
+    /* Bit reservoir, AAC_MAX_BITS_PER_CH per channel. resMean == 0 outside
+       CBR switches cap, floor and header declaration off together. */
+    int resMean;       /* bits arriving per frame */
+    int resCap;        /* capacity: 6144 * channels - resMean */
+    int resFill;       /* fill after the last frame, [0, resCap] */
+    int resMinBits;    /* floor BuildFrame stuffs this frame up to; 0 = none */
+    int stuffedBits;   /* what BuildFrame stuffed into the last frame */
+    int sbrBits;       /* SBR payload BuildFrame wrote into the last frame */
+    int prevWant;      /* previous frame's core bits if it was stuffed, else 0 */
 } RateControl;
 
-/* Opens the account square at zero for the resolved rate. */
+/* Opens the account and, for CBR, sizes the reservoir from the resolved rate. */
 void RateControlReset(RateControl *rc, unsigned int numChannels,
-                      unsigned long bitRate, unsigned long sampleRate);
+                      unsigned long bitRate, unsigned long sampleRate, int cbr);
 
-/* Settles a coded frame of payloadBits (no ADTS header), of which sbrBits were
-   SBR payload, against the account and returns the quality for the next frame.
-   SBR's share is charged separately so the controller does not starve the core
-   to pay for it. */
-float RateControlUpdate(RateControl *rc, int payloadBits, int sbrBits,
+/* Fill after a raw_data_block of payloadBits (no ADTS header). Used by both the
+   ADTS header and the controller so the two cannot disagree. */
+int RateControlReservoirAfter(const RateControl *rc, int payloadBits);
+
+/* CBR: the most the next frame may send (mean + fill) and, as a side effect,
+   the floor BuildFrame stuffs it up to. 0 when there is no reservoir. */
+int RateControlFrameCap(RateControl *rc);
+
+/* Settles a coded frame of payloadBits against the account and reservoir and
+   returns the quality for the next frame. SBR's share is charged separately
+   so the controller does not starve the core to pay for it. */
+float RateControlUpdate(RateControl *rc, int payloadBits,
                         float quality, float maxqual);
 
 #ifdef FAAC_STATS
