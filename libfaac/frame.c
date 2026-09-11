@@ -985,15 +985,18 @@ int faacEncEncode(faacEncHandle hpEncoder,
     float baseQuality = hEncoder->aacquantCfg.quality;
     int sfbnSnap[MAX_CHANNELS];
     int attempt;
+    /* Every cap below is on the raw_data_block; the ADTS header is transport. */
+    int hdrBytes = (hEncoder->config.outputFormat == 1) ? ADTS_HEADER_SIZE : 0;
+    int payloadBits = 0;
 
     /* ISO/IEC 14496-3 standard frame limit: 6144 bits per channel */
     peakBits = (unsigned long long)numChannels * AAC_MAX_BITS_PER_CH;
 
     /* If output format is ADTS (outputFormat == 1), respect the 13-bit ADTS
-     * container frame length limit (ADTS_MAX_FRAME_SIZE = 8191 bytes = 65528 bits). */
+     * container frame length limit (ADTS_MAX_FRAME_SIZE = 8191 bytes), less the header. */
     if (hEncoder->config.outputFormat == 1)
     {
-        unsigned long long adtsPeakBits = (unsigned long long)ADTS_MAX_FRAME_SIZE * 8;
+        unsigned long long adtsPeakBits = (unsigned long long)(ADTS_MAX_FRAME_SIZE - ADTS_HEADER_SIZE) * 8;
         if (adtsPeakBits < peakBits)
             peakBits = adtsPeakBits;
     }
@@ -1050,8 +1053,9 @@ int faacEncEncode(faacEncHandle hpEncoder,
 
         /* Close the bitstream and return the number of bytes written */
         frameBytes = CloseBitStream(bitStream);
+        payloadBits = (frameBytes - hdrBytes) * 8;
 
-        if (!peakBits || (unsigned long long)frameBytes * 8 <= peakBits
+        if (!peakBits || (unsigned long long)payloadBits <= peakBits
             || hEncoder->aacquantCfg.quality <= MINQUAL)
             break;
 
@@ -1061,7 +1065,7 @@ int faacEncEncode(faacEncHandle hpEncoder,
          * sane retry budget. Frame bits grow sub-linearly with quality, so
          * scaling by the bit ratio undershoots the budget and converges in a
          * pass or two. */
-        float scale = (float)peakBits / (float)((unsigned long long)frameBytes * 8);
+        float scale = (float)peakBits / (float)payloadBits;
         if (scale > PEAK_BACKOFF_CEILING) scale = PEAK_BACKOFF_CEILING;
         if (scale < PEAK_BACKOFF_FLOOR)   scale = PEAK_BACKOFF_FLOOR;
         hEncoder->aacquantCfg.quality *= scale;
@@ -1095,7 +1099,7 @@ int faacEncEncode(faacEncHandle hpEncoder,
     {
         int desbits = numChannels * (hEncoder->config.bitRate * FRAME_LEN)
             / hEncoder->sampleRate;
-        int totalBits = frameBytes * 8;
+        int totalBits = payloadBits;
         int sbrBits = 0;
         float fix;
 
