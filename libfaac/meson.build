@@ -34,6 +34,8 @@ common_src = [
     'huffdata.h',
     'quantize.c',
     'quantize.h',
+    'ratecontrol.c',
+    'ratecontrol.h',
     'sbr.c',
     'sbr.h',
     'sbr_internal.h',
