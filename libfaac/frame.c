@@ -689,7 +689,8 @@ __attribute__((cold, noinline))
 static void doHEAACFrame(faacEncStruct *hEncoder, unsigned int realPerCh,
                          float *heHalfRate[MAX_CHANNELS])
 {
-    SbrContextProcessFrame(hEncoder->sbrContext, hEncoder->numChannels, (int)realPerCh, hEncoder->inputFifo, heHalfRate);
+    SbrContextProcessFrame(hEncoder->sbrContext, hEncoder->numChannels, (int)realPerCh,
+                           (int)hEncoder->flushFrame, hEncoder->inputFifo, heHalfRate);
 }
 
 /* Admission gate: TNS shapes noise along the temporal envelope, so a window
@@ -731,6 +732,11 @@ int faacEncEncode(faacEncHandle hpEncoder,
     unsigned int frameSamplesPerCh = faacFrameSamples(hEncoder);
     int flushing = (samplesInput == 0 || inputBuffer == NULL);
 
+    /* SBR's coded-payload ring (frameFIFO) trails the core FIFO by one
+     * extra tick, so HE-AAC needs one more flush tick than LC to drain. */
+    unsigned int flushBudget = (hEncoder->config.aacObjectType == HE_V1) ?
+        SBR_FRAME_FIFO : (LOOKAHEAD_DEPTH + 1);
+
     if (samplesInput > 0 && inputBuffer != NULL)
     {
         if (appendInputFifo(hEncoder, inputBuffer, samplesInput) < 0)
@@ -760,10 +766,6 @@ int faacEncEncode(faacEncHandle hpEncoder,
         if (realPerCh == 0)
             hEncoder->flushFrame++;
 
-        /* SBR's coded-payload ring (frameFIFO) trails the core FIFO by one
-         * extra tick, so HE-AAC needs one more flush tick than LC to drain. */
-        unsigned int flushBudget = (hEncoder->config.aacObjectType == HE_V1) ?
-            SBR_FRAME_FIFO : (LOOKAHEAD_DEPTH + 1);
         if (hEncoder->flushFrame > flushBudget)
             return 0;
 
@@ -784,15 +786,15 @@ int faacEncEncode(faacEncHandle hpEncoder,
             hEncoder->audioFIFO[channel][FIFO_AHEAD1]  = hEncoder->audioFIFO[channel][FIFO_AHEAD2];
             hEncoder->audioFIFO[channel][FIFO_AHEAD2] = tmp;
 
-            if (realPerCh == 0)
+            if (hEncoder->config.aacObjectType == HE_V1 && heHalfRate[channel])
+            {
+                /* ahead of the flush case: this carries the resampler's tail */
+                memcpy(hEncoder->audioFIFO[channel][FIFO_AHEAD2], heHalfRate[channel], FRAME_LEN * sizeof(float));
+            }
+            else if (realPerCh == 0)
             {
                 /* start flushing*/
                 memset(hEncoder->audioFIFO[channel][FIFO_AHEAD2], 0, FRAME_LEN * sizeof(float));
-            }
-            else if (hEncoder->config.aacObjectType == HE_V1 && heHalfRate[channel])
-            {
-                /* core feeds on the SBR-downsampled signal, not the raw input */
-                memcpy(hEncoder->audioFIFO[channel][FIFO_AHEAD2], heHalfRate[channel], FRAME_LEN * sizeof(float));
             }
             else
             {

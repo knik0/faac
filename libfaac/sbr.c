@@ -289,7 +289,7 @@ void SbrContextUpdateConfig(SBRContext *sCtx, int channels, unsigned long bitrat
         SbrUpdate(sCtx->sbrInfo, bitrate);
 }
 
-void SbrContextProcessFrame(SBRContext *sCtx, int numChannels, int realPerCh, float *inputFifo[MAX_CHANNELS], float *heHalfRate[MAX_CHANNELS])
+void SbrContextProcessFrame(SBRContext *sCtx, int numChannels, int realPerCh, int flushTick, float *inputFifo[MAX_CHANNELS], float *heHalfRate[MAX_CHANNELS])
 {
     unsigned int channel;
     Resampler *rs = sCtx->resampler;
@@ -300,23 +300,22 @@ void SbrContextProcessFrame(SBRContext *sCtx, int numChannels, int realPerCh, fl
     sCtx->frameHead = (sCtx->frameHead + 1) % SBR_FRAME_FIFO;
     SbrFrameData *fd = &sCtx->frameFIFO[sCtx->frameHead];
 
-    /* Flush frames are silence, whose analysis result is known up front: no
-     * transient, one FIXFIX envelope, floored levels, default noise floors.
-     * Skip straight to it -- the core signal is substituted with silence in
-     * frame.c anyway -- but keep the delay lines advancing so the payloads
-     * still in flight drain out. */
-    if (realPerCh == 0) {
-        sbr_frame_silence(fd);
+    /* Tick 1 still has real signal in the QMF overlap and the decimation FIR;
+     * by tick 2 both are zero, so the rest of the drain is known silence. */
+    if (realPerCh == 0 && flushTick > 1) {
         for (channel = 0; channel < (unsigned int)numChannels; channel++) {
+            memset(rs->halfRate[channel], 0, FRAME_LEN * sizeof(float));
+            heHalfRate[channel] = rs->halfRate[channel];
             sCtx->signalAnalysis.ch[channel].transientStrength = 0.0f;
             sCtx->signalAnalysis.ch[channel].wantShort = 0;
-            heHalfRate[channel] = rs->halfRate[channel];
         }
+        sbr_frame_silence(fd);
     } else {
         for (channel = 0; channel < (unsigned int)numChannels; channel++) {
             float *fullRate = rs->fullRate[channel];
             fullPtrs[channel] = fullRate;
-            memcpy(fullRate, inputFifo[channel], realPerCh * sizeof(float));
+            if (realPerCh)
+                memcpy(fullRate, inputFifo[channel], realPerCh * sizeof(float));
             /* Final partial frame: silence-pad the unfilled full-rate tail to
              * prevent the resampler from consuming stale data. */
             if (realPerCh < 2 * FRAME_LEN)
@@ -334,9 +333,9 @@ void SbrContextProcessFrame(SBRContext *sCtx, int numChannels, int realPerCh, fl
         Resample(rs, 2 * FRAME_LEN);
     }
 
-    /* Update the transient FIFO. Shift down by one and push the newest
-     * decision at SBR_DETECT_FIFO-1; index 0 stays aligned with the core
-     * frame being coded (LOOKAHEAD_DEPTH frames behind this analysis). */
+    /* Update the transient FIFO. Shift down by one and push
+     * the newest decision at SBR_DETECT_FIFO-1; index 0 stays aligned with the
+     * core frame being coded (LOOKAHEAD_DEPTH frames behind this analysis). */
     for (channel = 0; channel < (unsigned int)numChannels; channel++) {
         memmove(&sCtx->transientStrengthFIFO[channel][0], &sCtx->transientStrengthFIFO[channel][1], (SBR_DETECT_FIFO - 1) * sizeof(float));
         sCtx->transientStrengthFIFO[channel][SBR_DETECT_FIFO - 1] = sCtx->signalAnalysis.ch[channel].transientStrength;
