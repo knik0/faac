@@ -113,7 +113,6 @@ static int build_freq_table(SBRInfo *sbr)
     for (int b = 1; b <= n_low; b++)
         sbr->bandEdgesLow[b] = edges[2 * b - odd];
 
-    sbr->numNoiseBands = 1;
     return n_master;
 }
 
@@ -195,11 +194,6 @@ static void sbr_frame_silence(SbrFrameData *fd)
     fd->tEnv[1]      = SBR_NUM_TIME_SLOTS;
     fd->bsPointer    = 0;
     fd->freqRes      = 1;
-    for (int ch = 0; ch < SBR_MAX_CODED_CHANNELS; ch++) {
-        fd->ch[ch].invfMode = 3;
-        for (int ne = 0; ne < SBR_MAX_NOISE_ENVELOPES; ne++)
-            fd->ch[ch].noiseData[ne][0] = SBR_NOISE_LEVEL_DEFAULT;
-    }
 }
 
 SBRContext *SbrContextInit(int channels)
@@ -299,6 +293,7 @@ void SbrContextProcessFrame(SBRContext *sCtx, int numChannels, int realPerCh, in
      * emits the oldest slot, which is the payload for this frame's core audio. */
     sCtx->frameHead = (sCtx->frameHead + 1) % SBR_FRAME_FIFO;
     SbrFrameData *fd = &sCtx->frameFIFO[sCtx->frameHead];
+    sCtx->sbrInfo->headerDecided = 0;
 
     /* Tick 1 still has real signal in the QMF overlap and the decimation FIR;
      * by tick 2 both are zero, so the rest of the drain is known silence. */
@@ -471,9 +466,6 @@ static void sbr_quantize_envelopes(const SBRInfo *sbr, int nch,
     for (int ch = 0; ch < nch; ch++) {
         /* Read-only alias; the quantizer never writes back through it. */
         const float (* restrict bandE)[SBR_QMF_BANDS_64] = sa->bandE[ch];
-        int noise_level = SBR_NOISE_LEVEL_DEFAULT;
-        fd->ch[ch].invfMode = 3;
-
         int dlav = fd->eff_amp_res ? SBR_ENV_DELTA_LIMIT_HIRES : SBR_ENV_DELTA_LIMIT_LORES;
         for (int e = 0; e < n_env; e++) {
             int prevLevel = -1;
@@ -500,29 +492,12 @@ static void sbr_quantize_envelopes(const SBRInfo *sbr, int nch,
                 }
             }
         }
-        int n_q = n_env > 1 ? 2 : 1;
-        for (int ne = 0; ne < n_q; ne++) {
-            int prevNoise = -1;
-            for (int nb_idx = 0; nb_idx < sbr->numNoiseBands; nb_idx++) {
-                if (prevNoise < 0) {
-                    fd->ch[ch].noiseData[ne][nb_idx] = noise_level;
-                    prevNoise = noise_level;
-                } else {
-                    int delta = clamp_int(noise_level - prevNoise, -15, 15);
-                    fd->ch[ch].noiseData[ne][nb_idx] = delta; prevNoise += delta;
-                }
-            }
-        }
     }
 }
 
 void SbrEncode(SBRInfo *sbr, float *timeDomain[MAX_CHANNELS], int numChannels, int numSamples, struct SignalAnalysis *sa, SbrFrameData *fd)
 {
     int nch = clamp_int(numChannels, 1, SBR_MAX_CODED_CHANNELS);
-
-    /* New frame: freeze the header-send decision now, before SbrWrite's write
-     * pass (later, in the bitstream stage) mutates headerSent/frameCount. */
-    sbr->sendHeaderThisFrame = (!sbr->headerSent || (sbr->frameCount % SBR_HEADER_PERIOD == 0));
 
     for (int ch = 0; ch < nch; ch++)
         memcpy(sbr->ch[ch].qmfOvl64, timeDomain[ch] + numSamples - SBR_QMF_OVL_LEN_64, SBR_QMF_OVL_LEN_64 * sizeof(float));
@@ -536,7 +511,7 @@ void SbrEncode(SBRInfo *sbr, float *timeDomain[MAX_CHANNELS], int numChannels, i
         g_faacStats.sbrTransientFrames++;
     }
     for (int ch = 0; ch < nch; ch++) {
-        g_faacStats.sbrInvfSum += fd->ch[ch].invfMode;
+        g_faacStats.sbrInvfSum += SBR_INVF_MODE;
         g_faacStats.sbrInvfCount++;
     }
 #endif

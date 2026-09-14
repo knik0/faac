@@ -27,7 +27,7 @@ typedef struct SBRChannel {
 
 /* One frame's coded SBR payload: every field SbrWrite reads that varies per
  * frame. What it reads that is constant for the stream (bs_* header fields,
- * numBands, numNoiseBands) stays in SBRInfo.
+ * numBands) stays in SBRInfo.
  *
  * Sole home for these values: SbrEncode quantizes into a SBRContext.frameFIFO
  * slot and SbrWrite reads an older one, so the delay costs a ring index. Caching
@@ -39,17 +39,16 @@ typedef struct SbrFrameData {
     int tEnv[SBR_MAX_ENVELOPES + 1];
     int bsPointer;
     int freqRes; /* 1 = high-res band table, 0 = low-res (half the bands) */
+    /* The noise floor and inverse-filter mode are stream constants
+     * (SBR_NOISE_LEVEL_DEFAULT, SBR_INVF_MODE), so only the envelope is carried. */
     struct {
-        int envData  [SBR_MAX_ENVELOPES][SBR_MAX_BANDS];
-        int noiseData[SBR_MAX_NOISE_ENVELOPES][SBR_MAX_NOISE_BANDS];
-        int invfMode;
+        int envData[SBR_MAX_ENVELOPES][SBR_MAX_BANDS];
     } ch[SBR_MAX_CODED_CHANNELS];
 } SbrFrameData;
 
 struct SBRInfo {
     int sbrPresent;
-    int headerSent;
-    int frameCount;
+    int frameCount;        /* access units so far; the header repeats every SBR_HEADER_PERIOD */
     int numChannels;
     int sampleRate;        /* full output rate; the dual-rate core runs at sampleRate/2 */
 
@@ -61,7 +60,6 @@ struct SBRInfo {
     int bandEdges[SBR_MAX_BANDS + 1];
     int numBandsLow; /* low-res band count: every other high-res edge */
     int bandEdgesLow[SBR_MAX_BANDS + 1];
-    int numNoiseBands;
 
     /* --- bitstream header fields --- */
     int bs_amp_res;
@@ -72,11 +70,11 @@ struct SBRInfo {
     int bs_alter_scale;
 
     /* --- per-frame state --- */
-    /* Whether SbrWrite should (re)send the sbr_header this frame. Frozen once
-     * per frame (in SbrEncode) rather than recomputed in SbrWrite, since
-     * headerSent/frameCount only advance on SbrWrite's real write pass, and
-     * SbrWrite is called multiple times per frame (BuildFrame's count and
-     * write passes, plus frame.c's rate-control bit-accounting call). */
+    /* The header decision is made once per access unit, on the first write
+     * request after analysis: the writer runs again on every CBR retry and
+     * for rate control's bit accounting, and only access units that are
+     * actually written count toward the header period. */
+    int headerDecided;
     int sendHeaderThisFrame;
 
     /* --- per-channel state --- */
@@ -134,6 +132,6 @@ void SbrQmfAnalysis(SBRInfo *sbr, const float * restrict ovl_pos, float * restri
 /* Quantizes this frame's payload directly into *fd (a delay-line slot). */
 void SbrEncode(SBRInfo *sbr, float *timeDomain[MAX_CHANNELS], int numChannels, int numSamples, struct SignalAnalysis *sa, SbrFrameData *fd);
 /* Emits the payload in *fd, which is a delayed slot, not the newest one. */
-int SbrWrite(SBRInfo *sbr, const SbrFrameData *fd, struct BitStream *bs, int id_aac, int writeFlag);
+int SbrWrite(const SBRInfo *sbr, const SbrFrameData *fd, struct BitStream *bs, int id_aac, int writeFlag);
 
 #endif

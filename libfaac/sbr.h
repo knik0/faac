@@ -63,10 +63,6 @@ struct BitStream;
 #define SBR_QMF_OVL_LEN_64   576
 #define SBR_MAX_BANDS        64
 #define SBR_MAX_ENVELOPES     2
-#define SBR_MAX_NOISE_ENVELOPES 2
-/* numNoiseBands is always 1 (build_freq_table); size to what's coded, not
- * the spec's nominal ceiling. */
-#define SBR_MAX_NOISE_BANDS   1
 #define SBR_HEADER_PERIOD    30
 
 /* Envelope time-slot resolution the decoder uses for an AAC-LC core frame
@@ -84,8 +80,11 @@ struct BitStream;
 #define SBR_ENERGY_FLOOR                (1e-15f)
 /* log2(0) guard in envelope quantization: -200 dBFS^2, below all SBR quantizer ranges. */
 #define SBR_LOG_ENERGY_FLOOR            (1e-20f)
-/* Default noise floor level (ISO 14496-3 §4.6.18.6.4). */
+/* Noise floor level, written for the single noise band of every noise
+ * envelope (ISO 14496-3 §4.6.18.6.4). */
 #define SBR_NOISE_LEVEL_DEFAULT         4
+/* Inverse filtering mode, written for every channel (ISO 14496-3 §4.6.18.6.4). */
+#define SBR_INVF_MODE                   3
 /* 6 = log2(64): normalises 64-band QMF energy to per-band level. ISO 14496-3 §4.6.18.6.3. */
 #define SBR_ENV_LEVEL_LOG2_OFFSET       (6.0f)
 /* Rate-dependent resolution thresholds. */
