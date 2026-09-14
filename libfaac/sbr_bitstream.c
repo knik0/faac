@@ -180,11 +180,9 @@ int SbrWrite(const SBRInfo *sbr, const SbrFrameData *fd, BitStream *bs, int id_a
     /* The fill_element's cnt field must precede the payload in the bitstream,
      * so its size is needed before anything is written. Re-deriving it with a
      * dry (write=false) pass is cheap -- a few hundred fixed-width/Huffman
-     * fields, not a hot loop -- so there's no need to cache the emitted bits
-     * across a frame's several SbrWrite calls (BuildFrame's count and write
-     * passes, plus frame.c's rate-control bit-accounting call): every call
-     * just re-derives them from sbr's already-quantized envelope/noise data,
-     * the same way channels.c's WriteElement/WriteICS do for the rest of the
+     * fields, not a hot loop -- so BuildFrame's count and write passes each
+     * just re-derive it from sbr's already-quantized envelope/noise data, the
+     * same way channels.c's WriteElement/WriteICS do for the rest of the
      * frame. */
     int payloadBits = emit_sbr_payload(sbr, fd, NULL, id_aac, sendHeader, false);
     int fillBytes = (payloadBits + 7) / 8;

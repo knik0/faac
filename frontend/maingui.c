@@ -60,7 +60,8 @@ typedef struct {
 
 enum RateMode {
     RATEMODE_VBR = 0,
-    RATEMODE_ABR = 1
+    RATEMODE_ABR = 1,
+    RATEMODE_CBR = 2   /* ABR's bitrate, held by the bit reservoir (--cbr) */
 };
 
 static progress_info_t g_gui_progress;
@@ -327,7 +328,8 @@ static DWORD WINAPI EncodeFile(LPVOID pParam)
 
     {
         LRESULT mode = GetComboData(hWnd, IDC_RATEMODE, RATEMODE_VBR);
-        parse_quality_or_bitrate(szTemp, mode == RATEMODE_ABR, &opts);
+        parse_quality_or_bitrate(szTemp, mode != RATEMODE_VBR, &opts);
+        opts.cbr = (mode == RATEMODE_CBR);
     }
 
     GetDlgItemText(hWnd, IDC_PNS, szTemp, sizeof(szTemp));
@@ -535,6 +537,8 @@ static INT_PTR CALLBACK DialogProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lP
             SendMessage(hRM, CB_SETITEMDATA, idx, (LPARAM)RATEMODE_VBR);
             idx = SendMessage(hRM, CB_ADDSTRING, 0, (LPARAM)(LPCTSTR)"ABR (Bitrate)");
             SendMessage(hRM, CB_SETITEMDATA, idx, (LPARAM)RATEMODE_ABR);
+            idx = SendMessage(hRM, CB_ADDSTRING, 0, (LPARAM)(LPCTSTR)"CBR (Bitrate)");
+            SendMessage(hRM, CB_SETITEMDATA, idx, (LPARAM)RATEMODE_CBR);
             SendMessage(hRM, CB_SETCURSEL, 0, 0);
         }
 

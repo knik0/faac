@@ -84,6 +84,7 @@ typedef struct {
     uint16_t quant_quality;
     uint32_t bit_rate; /* total bitrate in bps (whole stream) */
     uint32_t max_bit_rate; /* bps whole stream cap */
+    bool cbr; /* --cbr: bit reservoir, stuffed, declared; needs bit_rate */
     uint32_t bandwidth; /* cutoff frequency in Hz */
 
     bool ignore_wav_length;
@@ -141,6 +142,7 @@ typedef struct {
     uint32_t bandwidth;
     uint16_t quant_quality;
     uint32_t bit_rate; /* bps per channel */
+    enum faac_rate_control rate_control; /* resolved: VBR, ABR or CBR */
 
     bool remapping_channels;
     uint16_t center_channel;

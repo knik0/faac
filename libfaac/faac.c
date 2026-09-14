@@ -38,6 +38,9 @@
 _Static_assert(sizeof(enum faac_status)        == 4, "faac_status must be 32-bit");
 _Static_assert(sizeof(enum faac_object_type)   == 4, "faac_object_type must be 32-bit");
 _Static_assert(sizeof(enum faac_mpeg_version)  == 4, "faac_mpeg_version must be 32-bit");
+_Static_assert(sizeof(enum faac_rate_control)  == 4, "faac_rate_control must be 32-bit");
+_Static_assert((int)FAAC_RC_AUTO == RATE_AUTO && (int)FAAC_RC_VBR == RATE_VBR
+            && (int)FAAC_RC_ABR == RATE_ABR && (int)FAAC_RC_CBR == RATE_CBR, "rate control drift");
 _Static_assert(sizeof(enum faac_joint_mode)    == 4, "faac_joint_mode must be 32-bit");
 _Static_assert(sizeof(enum faac_shortctl_mode) == 4, "faac_shortctl_mode must be 32-bit");
 _Static_assert(sizeof(enum faac_stream_format) == 4, "faac_stream_format must be 32-bit");
@@ -119,6 +122,7 @@ FAACAPI faac_status faac_params_init(faac_params *p, uint32_t caller_size)
     tmp.bandwidth     = 0;              /* derive from bit_rate */
     tmp.quant_quality = 0;              /* derive from bit_rate */
     tmp.max_bit_rate  = 0;              /* no per-frame peak cap */
+    tmp.rate_control  = FAAC_RC_AUTO;   /* ABR when bit_rate is set, else VBR */
     tmp.output_format = FAAC_STREAM_ADTS;
     tmp.input_format  = FAAC_INPUT_16BIT;
     tmp.short_control = FAAC_SHORTCTL_NORMAL;
@@ -193,6 +197,13 @@ static faac_status validate_params(const faac_params *p)
      * sets no minimum and the encoder's own floor already ends the descent. */
     if (p->bit_rate && (p->bit_rate > MaxBitrate(p->sample_rate)))
         return FAAC_ERR_INVALID_ARGUMENT;
+    switch (p->rate_control) {
+    case FAAC_RC_AUTO: break;
+    case FAAC_RC_VBR:  if (p->bit_rate)  return FAAC_ERR_INVALID_ARGUMENT; break;
+    case FAAC_RC_ABR:
+    case FAAC_RC_CBR:  if (!p->bit_rate) return FAAC_ERR_INVALID_ARGUMENT; break;
+    default:           return FAAC_ERR_INVALID_ARGUMENT;
+    }
     if (p->max_bit_rate) {
         /* Bounded because it is converted into a per-frame bit budget; an
          * absurd value is a caller error, not a request for an unlimited
@@ -256,6 +267,7 @@ FAACAPI faac_status faac_encoder_open(const faac_params *p, faac_encoder **out)
     cfg->shortctl      = (int)p->short_control;
     cfg->pnslevel      = p->pns_level;
     cfg->maxBitRate    = p->max_bit_rate;
+    cfg->rateControl   = (unsigned int)p->rate_control;
     if (p->channel_map) {
         uint32_t i;
         for (i = 0; i < p->num_channels; i++)
@@ -323,6 +335,7 @@ FAACAPI faac_status faac_encoder_get_info(faac_encoder *enc, faac_encoder_info *
     info.pns_level        = (int32_t)h->config.pnslevel;
     info.max_bit_rate     = (uint32_t)h->config.maxBitRate;
     info.encoder_delay    = faacEncoderDelay(h);
+    info.rate_control     = (enum faac_rate_control)h->config.rateControl;
 
     /* Write at most the caller's struct_size so a newer library cannot overrun
      * an older, smaller faac_encoder_info; report the byte count actually set. */

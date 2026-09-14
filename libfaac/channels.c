@@ -283,11 +283,27 @@ static int BuildFrame(struct faacEncStruct *hEncoder, CoderInfo *coder, AACEleme
     for (int i = 0; i < nElems; i++) bits += WriteElement(bs, &elems[i], coder, write);
     int f = (bits < (8 - LEN_SE_ID)) ? (8 - LEN_SE_ID - bits) : 0;
     f += 6;
+
+    /* Stuff to the reservoir floor; only SBR and the end marker still follow. */
+    hEncoder->rc.stuffedBits = 0;
+    if (hEncoder->rc.resMinBits > 0) {
+        int sbrBits = SbrContextGetBits(hEncoder->sbrContext, NULL,
+                                        (int)hEncoder->numChannels, (int)hEncoder->config.aacObjectType, 0);
+        int hdr = (hEncoder->config.outputFormat == 1) ? ADTS_HEADER_SIZE * 8 : 0;
+        int need = hEncoder->rc.resMinBits - (bits - hdr + f + sbrBits + LEN_SE_ID);
+        if (need > 0) {
+            /* Fill is byte-granular and rounds down; never land under the floor. */
+            need += 7;
+            f += need;
+            hEncoder->rc.stuffedBits = need;
+        }
+    }
     bits += (f - WriteAACFillBits(bs, f, write));
 
     /* HE-AAC: SBR payload rides in a fill element (EXT_SBR_DATA) */
-    bits += SbrContextGetBits(hEncoder->sbrContext, write ? bs : NULL,
-                               (int)hEncoder->numChannels, (int)hEncoder->config.aacObjectType, write);
+    hEncoder->rc.sbrBits = SbrContextGetBits(hEncoder->sbrContext, write ? bs : NULL,
+                                             (int)hEncoder->numChannels, (int)hEncoder->config.aacObjectType, write);
+    bits += hEncoder->rc.sbrBits;
 
     if (write) PutBit(bs, ID_END, LEN_SE_ID);
     bits += LEN_SE_ID;
@@ -296,19 +312,23 @@ static int BuildFrame(struct faacEncStruct *hEncoder, CoderInfo *coder, AACEleme
     return bits + pad;
 }
 
-/* ADTS carries a frame length that is only known once the frame is written.
- * Patching the 7 fixed-layout header bytes afterwards keeps BuildFrame to a
- * single pass. Must reproduce WriteADTSHeader byte for byte. */
+/* Frame length and buffer_fullness are known only once the frame is written;
+ * patching the 7 fixed-layout bytes keeps BuildFrame to one pass. Must match
+ * WriteADTSHeader apart from those two fields. buffer_fullness is the reservoir
+ * after this frame in 32-bit words (ISO/IEC 13818-7 6.2.2); 0x7FF = none. */
 static void PatchADTSHeader(struct faacEncStruct *hEncoder, BitStream *bs, int frameBytes)
 {
     if (hEncoder->config.outputFormat == 1 && bs->data) {
+        int fullness = 0x7FF;
+        if (hEncoder->rc.resMean)
+            fullness = RateControlReservoirAfter(&hEncoder->rc, (frameBytes - ADTS_HEADER_SIZE) * 8) >> 5;
         bs->data[0] = 0xFF;
         bs->data[1] = 0xF0 | (hEncoder->config.mpegVersion << 3) | 1;
         bs->data[2] = ((LOW - 1) << 6) | (hEncoder->sampleRateIdx << 2) | (hEncoder->numChannels >> 2);
         bs->data[3] = ((hEncoder->numChannels & 3) << 6) | (frameBytes >> 11);
         bs->data[4] = (frameBytes >> 3) & 0xFF;
-        bs->data[5] = ((frameBytes & 7) << 5) | 0x1F;
-        bs->data[6] = 0xFC;
+        bs->data[5] = ((frameBytes & 7) << 5) | (fullness >> 6);
+        bs->data[6] = (fullness & 0x3F) << 2;
     }
 }
 

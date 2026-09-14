@@ -80,6 +80,7 @@ enum flags
     OPT_PNS,
     OBJTYPE_FLAG,
     CAP_RATE_FLAG,
+    CBR_FLAG,
     OPT_TNS_DISABLE,
     OPT_OVERWRITE,
     OPT_COMPILATION,
@@ -105,6 +106,12 @@ static help_t help_qual[] = {
     {"-b <bitrate>\tSet average bitrate to x kbps. (ABR)\n",
     "\t\tSet average bitrate (ABR) to approximately <bitrate> kbps.\n"
     "\t\tmax. ~500 (stereo)\n"},
+    {"--cbr\t\tHold -b as a constant bitrate. (CBR)\n",
+    "\t\tA bit reservoir keeps every frame inside the decoder's input\n"
+    "\t\tbuffer and stuffs the ones that would leave it to overflow, so the\n"
+    "\t\trate lands exactly; ADTS declares the buffer fullness, MP4 the\n"
+    "\t\tbuffer size. For constant-rate channels and matched-rate tests;\n"
+    "\t\ton a file or a packet network the stuffing is bytes for nothing.\n"},
     {"-c <freq>\tSet the bandwidth in Hz.\n",
     "\t\tThe actual frequency is adjusted to maximize upper spectral band\n"
     "\t\tusage.\n"},
@@ -363,7 +370,9 @@ static void cli_session_start_callback(const encode_session_info_t *info, void *
     if (info->bit_rate)
     {
         fprintf(stderr, "Initial quantization quality: %u\n", info->quant_quality);
-        fprintf(stderr, "Average bitrate: %u kbps/channel\n", (info->bit_rate + 500) / 1000);
+        fprintf(stderr, "%s bitrate: %u kbps/channel\n",
+                info->rate_control == FAAC_RC_CBR ? "Constant" : "Average",
+                (info->bit_rate + 500) / 1000);
     }
     else
     {
@@ -569,6 +578,7 @@ int main(int argc, char *argv[])
             {"lang", 1, 0, LANG_FLAG},
             {"language", 1, 0, LANG_FLAG},
             {"cap-rate", 1, 0, CAP_RATE_FLAG},
+            {"cbr", 0, 0, CBR_FLAG},
             {0, 0, 0, 0}
         };
 
@@ -799,6 +809,9 @@ int main(int argc, char *argv[])
             break;
         case LANG_FLAG:
             opts.metadata.language = optarg;
+            break;
+        case CBR_FLAG:
+            opts.cbr = true;
             break;
         case CAP_RATE_FLAG:
             opts.max_bit_rate = atoi(optarg) * 1000;

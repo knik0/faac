@@ -259,6 +259,11 @@ int faacEncApplyConfig(faacEncStruct* hEncoder,
     if (config->bitRate > MaxBitrate(hEncoder->sampleRate))
         config->bitRate = MaxBitrate(hEncoder->sampleRate);
 
+    /* AUTO keeps the legacy meaning of the two rate fields. */
+    if (config->rateControl == RATE_AUTO)
+        config->rateControl = config->bitRate ? RATE_ABR : RATE_VBR;
+    hEncoder->config.rateControl = config->rateControl;
+
     /* Re-init TNS for new profile */
     TnsInit(hEncoder);
 
@@ -391,7 +396,7 @@ int faacEncApplyConfig(faacEncStruct* hEncoder,
     RefreshLfeMap(hEncoder);
 
     RateControlReset(&hEncoder->rc, hEncoder->numChannels, hEncoder->config.bitRate,
-                     hEncoder->sampleRate);
+                     hEncoder->sampleRate, hEncoder->config.rateControl == RATE_CBR);
 
     return 1;
 }
@@ -957,6 +962,9 @@ int faacEncEncode(faacEncHandle hpEncoder,
     /* Every cap below is on the raw_data_block; the ADTS header is transport. */
     int hdrBytes = (hEncoder->config.outputFormat == 1) ? ADTS_HEADER_SIZE : 0;
     int payloadBits = 0;
+#ifdef FAAC_STATS
+    int resBound = 0;
+#endif
 
     /* ISO/IEC 14496-3 standard frame limit: 6144 bits per channel */
     peakBits = (unsigned long long)numChannels * AAC_MAX_BITS_PER_CH;
@@ -979,6 +987,19 @@ int faacEncEncode(faacEncHandle hpEncoder,
             * FRAME_LEN / hEncoder->sampleRate;
         if (userPeakBits < peakBits)
             peakBits = userPeakBits;
+    }
+
+    /* CBR bit reservoir: one more term in the min() of caps, enforced by the
+       same retry loop, so a frame that fits costs nothing. */
+    {
+        int resAvail = RateControlFrameCap(&hEncoder->rc);
+        if (resAvail && (unsigned long long)resAvail < peakBits)
+        {
+            peakBits = resAvail;
+#ifdef FAAC_STATS
+            resBound = 1;
+#endif
+        }
     }
 
     for (channel = 0; channel < numChannels; channel++) {
@@ -1059,20 +1080,15 @@ int faacEncEncode(faacEncHandle hpEncoder,
     if (attempt > 0)
     {
         g_faacStats.peakRetryFrames++;
+        if (resBound) g_faacStats.resBoundRetryFrames++;
     }
     g_faacStats.totalQuality += hEncoder->aacquantCfg.quality;
 #endif
 
     /* Adjust quality to get correct average bitrate */
     if (hEncoder->config.bitRate)
-    {
-        /* SBR's payload is charged separately so the controller does not
-           starve the core to pay for it. */
-        int sbrBits = SbrContextGetBits(hEncoder->sbrContext, NULL, (int)numChannels,
-                                        (int)hEncoder->config.aacObjectType, 0);
-        hEncoder->aacquantCfg.quality = RateControlUpdate(&hEncoder->rc, payloadBits, sbrBits,
+        hEncoder->aacquantCfg.quality = RateControlUpdate(&hEncoder->rc, payloadBits,
                                                           hEncoder->aacquantCfg.quality, maxqual);
-    }
 
     return frameBytes;
 }
