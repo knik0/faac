@@ -114,7 +114,7 @@ FAACAPI faac_status faac_params_init(faac_params *p, uint32_t caller_size)
     tmp.object_type   = FAAC_OBJ_LOW;
     tmp.joint_mode    = FAAC_JOINT_MIXED;
     tmp.use_lfe       = false;
-    tmp.use_tns       = false;
+    tmp.use_tns       = true;
     tmp.bit_rate      = 64000;          /* per channel; 0 would defer to quant_quality */
     tmp.bandwidth     = 0;              /* derive from bit_rate */
     tmp.quant_quality = 0;              /* derive from bit_rate */

@@ -32,10 +32,9 @@ extern "C" {
 /* Latch the per-channel band limits from the sample rate's TNS tool table. */
 void TnsInit(faacEncStruct* hEncoder);
 
-/* Analyse one channel and, if it pays off, whiten `spec` in place. */
-void TnsEncode(TnsInfo* tnsInfo, int numBands,
-               enum WINDOW_TYPE blockType, int* sfbOffsetTable,
-               float* spec);
+/* Analyse one channel and, if it pays off, whiten `spec` in place.
+ * Long blocks only -- the caller must not pass an ONLY_SHORT_WINDOW channel. */
+void TnsEncode(CoderInfo *coderInfo, float *spec);
 
 #ifdef __cplusplus
 }

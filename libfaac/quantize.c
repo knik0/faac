@@ -431,17 +431,29 @@ int BlocQuant(CoderInfo * __restrict coder, float * __restrict xr, AACQuantCfg *
     return 1;
 }
 
-void CalcBW(unsigned *bw, int rate, SR_INFO *sr, AACQuantCfg *aacquantCfg)
+/* sfbOffsetShort/Long are filled as a side effect of the same bandwidth walk
+ * that picks max_cbs/max_cbl -- a prefix sum over the same table, to the same
+ * bound, so there's nothing left for a caller to redo afterward. Only
+ * [0, max_cbs] and [0, max_cbl] are written; callers never index sfb_offset
+ * past their own sfbn, which is exactly max_cbs/max_cbl. */
+void CalcBW(unsigned *bw, int rate, SR_INFO *sr, AACQuantCfg *aacquantCfg,
+            int *sfbOffsetShort, int *sfbOffsetLong)
 {
     int i, l = 0, max = *bw * (BLOCK_LEN_SHORT << 1) / rate;
-    for (i = 0; i < sr->num_cb_short && l < max; i++)
+    for (i = 0; i < sr->num_cb_short && l < max; i++) {
+        sfbOffsetShort[i] = l;
         l += sr->cb_width_short[i];
+    }
+    sfbOffsetShort[i] = l;
     aacquantCfg->max_cbs = i;
     if (aacquantCfg->pnslevel) *bw = (float)l * rate / (BLOCK_LEN_SHORT << 1);
 
     l = 0, max = *bw * (BLOCK_LEN_LONG << 1) / rate;
-    for (i = 0; i < sr->num_cb_long && l < max; i++)
+    for (i = 0; i < sr->num_cb_long && l < max; i++) {
+        sfbOffsetLong[i] = l;
         l += sr->cb_width_long[i];
+    }
+    sfbOffsetLong[i] = l;
     aacquantCfg->max_cbl = i;
     aacquantCfg->max_l = l;
     *bw = (float)l * rate / (BLOCK_LEN_LONG << 1);

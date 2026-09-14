@@ -568,7 +568,7 @@ static INT_PTR CALLBACK DialogProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lP
             SendMessage(hSC, CB_SETCURSEL, 0, 0);
         }
 
-        CheckDlgButton(hWnd, IDC_USETNS, FALSE);
+        CheckDlgButton(hWnd, IDC_USETNS, TRUE); /* library default, libfaac/frame.c */
         ApplyRateModeUI(hWnd, RATEMODE_VBR);
         SetDlgItemText(hWnd, IDC_PNS, "4"); /* library default, libfaac/faac.c */
         SetDlgItemText(hWnd, IDC_BANDWIDTH, "0");

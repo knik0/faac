@@ -57,6 +57,9 @@ typedef struct faacEncStruct {
 
     /* Scalefactorband data */
     SR_INFO *srInfo;
+    /* Prefix sums of srInfo's cb_width tables, built once per config. */
+    int sfbOffsetLong[NSFB_LONG + 1];
+    int sfbOffsetShort[NSFB_SHORT + 1];
 
     /* sample buffers: FIFO_PAST (MDCT overlap), FIFO_CURR, FIFO_AHEAD1, FIFO_AHEAD2 */
     float *audioFIFO[MAX_CHANNELS][4];

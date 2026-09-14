@@ -83,6 +83,10 @@ Perceptual Noise Substitution level, 0 to 10;
 .B 0
 disables PNS.
 .TP
+.BR --no-tns
+Disable Temporal Noise Shaping, which reduces pre-echo on transients. On by
+default.
+.TP
 .BR -q\ <\fIquality\fP>
 Set encoding quality. Set default variable bitrate (VBR) quality level in percent.
 max. 5000, min. 10.
@@ -206,12 +210,6 @@ Supported image formats are GIF, JPEG, and PNG.
 .BR --comment\ <\fIstring\fP>
 Set comment
 .SH ADVANCED OPTIONS, ONLY FOR TESTING PURPOSES
-.TP
-.BR --tns
-Enable coding of TNS, temporal noise shaping.
-.TP
-.BR --no-tns
-Disable coding of TNS, temporal noise shaping.
 .TP
 .BR --mpeg-vers\ \fIX\fP
 Force AAC MPEG version, X can be 2 or 4

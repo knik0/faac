@@ -372,7 +372,9 @@ int faacEncApplyConfig(faacEncStruct* hEncoder,
     CalcBW(&hEncoder->config.bandWidth,
               hEncoder->sampleRate,
               hEncoder->srInfo,
-              &hEncoder->aacquantCfg);
+              &hEncoder->aacquantCfg,
+              hEncoder->sfbOffsetShort,
+              hEncoder->sfbOffsetLong);
 
     // reset psymodel
     PsyEnd(hEncoder->psyInfo, hEncoder->numChannels);
@@ -440,7 +442,7 @@ faacEncHandle faacEncOpen(unsigned long sampleRate,
     hEncoder->config.jointmode = JOINT_MIXED;
     hEncoder->config.pnslevel = 4;
     hEncoder->config.useLfe = 1;
-    hEncoder->config.useTns = 0;
+    hEncoder->config.useTns = 1;
     hEncoder->config.bitRate = 64000;
     hEncoder->config.bandWidth = CalcBandwidth(hEncoder->config.bitRate, sampleRate);
     hEncoder->config.quantqual = 0;
@@ -710,8 +712,7 @@ int faacEncEncode(faacEncHandle hpEncoder,
 {
     faacEncStruct* hEncoder = (faacEncStruct*)hpEncoder;
     unsigned int channel;
-    int sb, frameBytes;
-    unsigned int offset;
+    int frameBytes;
     BitStream *bitStream;
 
     CoderInfo *coderInfo = hEncoder->coderInfo;
@@ -872,25 +873,13 @@ int faacEncEncode(faacEncHandle hpEncoder,
     for (channel = 0; channel < numChannels; channel++) {
         if (coderInfo[channel].block_type == ONLY_SHORT_WINDOW) {
             coderInfo[channel].sfbn = hEncoder->aacquantCfg.max_cbs;
-
-            offset = 0;
-            for (sb = 0; sb < coderInfo[channel].sfbn; sb++) {
-                coderInfo[channel].sfb_offset[sb] = offset;
-                offset += hEncoder->srInfo->cb_width_short[sb];
-            }
-            coderInfo[channel].sfb_offset[sb] = offset;
+            coderInfo[channel].sfb_offset = hEncoder->sfbOffsetShort;
         } else {
             coderInfo[channel].sfbn = hEncoder->aacquantCfg.max_cbl;
+            coderInfo[channel].sfb_offset = hEncoder->sfbOffsetLong;
 
             coderInfo[channel].groups.n = 1;
             coderInfo[channel].groups.len[0] = 1;
-
-            offset = 0;
-            for (sb = 0; sb < coderInfo[channel].sfbn; sb++) {
-                coderInfo[channel].sfb_offset[sb] = offset;
-                offset += hEncoder->srInfo->cb_width_long[sb];
-            }
-            coderInfo[channel].sfb_offset[sb] = offset;
         }
     }
 
@@ -938,7 +927,7 @@ int faacEncEncode(faacEncHandle hpEncoder,
 
     /* Perform TNS analysis and filtering */
     for (channel = 0; channel < numChannels; channel++) {
-        if (!hEncoder->isLfeChannel[channel] && useTns) {
+        if (!hEncoder->isLfeChannel[channel] && useTns && coderInfo[channel].block_type != ONLY_SHORT_WINDOW) {
             float attack = PsyGetAttack(&hEncoder->psyInfo[channel]);
 
 #ifdef FAAC_STATS
@@ -949,9 +938,7 @@ int faacEncEncode(faacEncHandle hpEncoder,
                 }
                 g_faacStats.attackCount++;
             }
-            if (coderInfo[channel].block_type != ONLY_SHORT_WINDOW) {
-                g_faacStats.longBlocks++;
-            }
+            g_faacStats.longBlocks++;
 #endif
 
             /* No envelope available (HE-AAC skips PsyBufferUpdate) means no
@@ -960,13 +947,10 @@ int faacEncEncode(faacEncHandle hpEncoder,
                 coderInfo[channel].tnsInfo.tnsDataPresent = 0;
                 continue;
             }
-            TnsEncode(&(coderInfo[channel].tnsInfo),
-                      coderInfo[channel].sfbn,
-                      coderInfo[channel].block_type,
-                      coderInfo[channel].sfb_offset,
-                      hEncoder->freqBuff[channel]);
+
+            TnsEncode(&coderInfo[channel], hEncoder->freqBuff[channel]);
         } else {
-            coderInfo[channel].tnsInfo.tnsDataPresent = 0;      /* TNS not used for LFE */
+            coderInfo[channel].tnsInfo.tnsDataPresent = 0;      /* TNS not used for LFE or short blocks */
         }
     }
 

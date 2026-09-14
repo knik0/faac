@@ -39,14 +39,16 @@ enum WINDOW_TYPE {
     SHORT_LONG_WINDOW
 };
 
-#define TNS_MAX_ORDER 12
+/* Array bounds, sized to what this encoder actually emits rather than to what
+ * the spec permits: one filter per long window at a fixed order (tns.c's
+ * TNS_LPC_ORDER), never the spec's 4 filters at order 20. Both are checked
+ * against the bitstream field widths by _Static_asserts in channels.c, which
+ * this header can't include without a cycle. */
+#define TNS_MAX_ORDER 8
+#define TNS_MAX_FILTERS 1
 #define DEF_TNS_COEFF_THRESH 0.1f
 #define DEF_TNS_COEFF_RES 4
 #define DEF_TNS_RES_OFFSET 3
-/* Bound on TnsWindowData.tnsFilter[]. Must stay in sync with the bitstream
- * field width LEN_TNS_NFILTL (channels.h) -- checked by a _Static_assert in
- * channels.c, since this header can't include channels.h without a cycle. */
-#define TNS_MAX_FILTERS 4
 
 typedef struct {
     int order;                           /* Filter order */
@@ -82,7 +84,10 @@ typedef struct CoderInfo {
     int book[MAX_SCFAC_BANDS];
     int bandcnt;
     int sfbn;
-    int sfb_offset[NSFB_LONG + 1];
+    /* Points at the encoder's prebuilt long or short table (frame.c); the
+     * contents depend only on the sample rate and the coded bandwidth, so
+     * there is one of each per encoder rather than one per channel. */
+    const int *sfb_offset;
 
     struct {
         int n;

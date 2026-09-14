@@ -80,7 +80,6 @@ enum flags
     OPT_PNS,
     OBJTYPE_FLAG,
     CAP_RATE_FLAG,
-    OPT_TNS_ENABLE,
     OPT_TNS_DISABLE,
     OPT_OVERWRITE,
     OPT_COMPILATION,
@@ -182,8 +181,7 @@ static help_t help_mp4[] = {
 };
 
 static help_t help_advanced[] = {
-    {"--tns  \tEnable coding of TNS, temporal noise shaping.\n", NULL},
-    {"--no-tns\tDisable coding of TNS, temporal noise shaping.\n", NULL},
+    {"--no-tns\tDisable coding of TNS, temporal noise shaping (default: on).\n", NULL},
     {"--joint 0\tDisable joint stereo coding.\n", NULL},
     {"--joint 1\tUse Mid/Side coding.\n", NULL},
     {"--joint 2\tUse Intensity Stereo coding.\n", NULL},
@@ -542,7 +540,6 @@ int main(int argc, char *argv[])
             {"pcmsamplebits", 1, 0, 'B'},
             {"pcmchannels", 1, 0, 'C'},
             {"shortctl", 1, 0, SHORTCTL_FLAG},
-            {"tns", 0, 0, OPT_TNS_ENABLE},
             {"no-tns", 0, 0, OPT_TNS_DISABLE},
             {"mpeg-version", 1, 0, MPEGVERS_FLAG},
             {"object-type", 1, 0, OBJTYPE_FLAG},
@@ -584,7 +581,6 @@ int main(int argc, char *argv[])
 
         switch (c)
         {
-        case OPT_TNS_ENABLE: opts.use_tns = true; break;
         case OPT_TNS_DISABLE: opts.use_tns = false; break;
         case OPT_OVERWRITE: opts.overwrite = true; break;
         case OPT_COMPILATION: opts.metadata.compilation = true; break;

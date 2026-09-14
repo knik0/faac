@@ -53,7 +53,7 @@ void init_encode_options(encode_options_t *opts)
     opts->joint_mode = FAAC_JOINT_MIXED;
     opts->stream_format = FAAC_STREAM_ADTS;
     opts->shortctl = FAAC_SHORTCTL_NORMAL;
-    opts->use_tns = false;
+    opts->use_tns = true;
     opts->use_lfe = -1;
     opts->pns_level = -1;
     opts->quant_quality = 0;
