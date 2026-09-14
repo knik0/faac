@@ -26,8 +26,9 @@
 typedef float psyfloat;
 
 /* The high-pass energy timeline is held as one contiguous array of per-sub-block
-   energies rather than separate prev/curr/next arrays, so PsyCheckShort's +-2
-   sub-block lookahead is a single sliding index instead of three-way stitching.
+   energies rather than separate prev/curr/next arrays, so the +-2 sub-block
+   lookahead around the current frame is a single sliding index instead of
+   three-way stitching.
    It holds three 2-frame energy windows back to back: PREV, CUR and the one
    lookahead window NEXT. (Energy windows are 2 frames wide, which is why a single
    "next" window consumes the two-frames-ahead sample slot in the input FIFO.) */
@@ -39,6 +40,10 @@ typedef float psyfloat;
 typedef struct
 {
   psyfloat eng[3 * SUBBLOCKS_PER_FRAME];
+  /* Bit i set: the energy step into sub-block i is a transient. Judged once,
+     when the sub-block's energy is produced, so the per-frame decision is a
+     mask test rather than a re-walk of the timeline. */
+  unsigned attack;
 }
 psydata_t;
 
@@ -49,32 +54,25 @@ psydata_t;
  * transient. */
 #define PSY_TD_THRESH (0.5f)
 
+static int PsyIsAttack(float lasteng, float eng)
+{
+  float toteng = (eng < lasteng) ? eng : lasteng;
+  float volchg = fabsf(eng - lasteng);
+
+  /* IEEE divide handles silence: 0/0 is NaN (no attack), x/0 is inf (attack). */
+  return volchg / toteng > PSY_TD_THRESH;
+}
+
+/* Attack anywhere in the frame or its immediate temporal context, sub-blocks
+   [cur-2, cur+9], wants a short block. */
 static void PsyCheckShort(PsyInfo * psyInfo)
 {
   enum {PREVS = 2, NEXTS = 2};
-  psydata_t *psydata = (psydata_t *)psyInfo->data;
-  int win;
-  float lasteng = (float)psydata->eng[ENG_WIN_CUR - PREVS]; /* start at PREVS before current */
+  const psydata_t *psydata = (const psydata_t *)psyInfo->data;
+  unsigned span = (1u << (PREVS + SUBBLOCKS_PER_FRAME + NEXTS - 1)) - 1;
 
-  psyInfo->block_type = ONLY_LONG_WINDOW;
-
-  /* Search for transients across the current frame and its immediate temporal context.
-     The search range is [curr-2, curr+9]. */
-  for (win = 1; win < PREVS + SUBBLOCKS_PER_FRAME + NEXTS; win++)
-  {
-      float eng = (float)psydata->eng[ENG_WIN_CUR - PREVS + win];
-
-      float toteng = (eng < lasteng) ? eng : lasteng;
-      float volchg = fabsf(eng - lasteng);
-
-      /* Relative energy jump indicates a transient. IEEE divide handles silence cases. */
-      if (volchg / toteng > PSY_TD_THRESH)
-      {
-          psyInfo->block_type = ONLY_SHORT_WINDOW;
-          break;
-      }
-      lasteng = eng;
-  }
+  psyInfo->block_type = (psydata->attack >> (ENG_WIN_CUR - PREVS + 1)) & span
+                        ? ONLY_SHORT_WINDOW : ONLY_LONG_WINDOW;
 }
 
 void PsyInit(GlobalPsyInfo * gpsyInfo, PsyInfo * psyInfo, unsigned int numChannels,
@@ -172,34 +170,18 @@ static void PsyAnalyzeChannel(PsyInfo * psyInfo)
 }
 
 /* Do psychoacoustical analysis */
-void PsyCalculate(AACElement * elements, int numElements, PsyInfo * psyInfo,
-			 unsigned int numChannels
-			)
+void PsyCalculate(PsyInfo * psyInfo, const bool * isLfeChannel,
+			 unsigned int numChannels)
 {
-  if (elements == NULL) {
-      for (unsigned int channel = 0; channel < numChannels; channel++)
-          PsyAnalyzeChannel(&psyInfo[channel]);
-      return;
-  }
-
-  for (int e = 0; e < numElements; e++)
+  for (unsigned int channel = 0; channel < numChannels; channel++)
   {
-      AACElement *elem = &elements[e];
-      switch (elem->type) {
-          case ID_SCE:
-              PsyAnalyzeChannel(&psyInfo[elem->channels[0]]);
-              break;
-          case ID_CPE:
-              PsyAnalyzeChannel(&psyInfo[elem->channels[0]]);
-              PsyAnalyzeChannel(&psyInfo[elem->channels[1]]);
-              break;
-          case ID_LFE:
-              psyInfo[elem->channels[0]].block_type = ONLY_LONG_WINDOW;
-              psyInfo[elem->channels[0]].pe = 0.0f;
-              break;
-          default:
-              break;
+      if (isLfeChannel[channel])
+      {
+          psyInfo[channel].block_type = ONLY_LONG_WINDOW;
+          psyInfo[channel].pe = 0.0f;
       }
+      else
+          PsyAnalyzeChannel(&psyInfo[channel]);
   }
 }
 
@@ -215,6 +197,7 @@ void PsyBufferUpdate(GlobalPsyInfo * gpsyInfo, PsyInfo * psyInfo,
      the NEXT region for the freshly-computed lookahead window below. */
   memmove(psydata->eng, psydata->eng + SUBBLOCKS_PER_FRAME,
           2 * SUBBLOCKS_PER_FRAME * sizeof(psyfloat));
+  psydata->attack >>= SUBBLOCKS_PER_FRAME;
 
   /* Assembly of the newest 2048-sample window for energy analysis */
   memcpy(transBuff, p_lookahead1, BLOCK_LEN_LONG * sizeof(float));
@@ -234,6 +217,8 @@ void PsyBufferUpdate(GlobalPsyInfo * gpsyInfo, PsyInfo * psyInfo,
       e += d * d;
     }
     psydata->eng[ENG_WIN_NEXT + win] = (psyfloat)e;
+    if (PsyIsAttack((float)psydata->eng[ENG_WIN_NEXT + win - 1], e))
+      psydata->attack |= 1u << (ENG_WIN_NEXT + win);
   }
 }
 

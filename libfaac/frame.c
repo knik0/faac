@@ -839,7 +839,7 @@ int faacEncEncode(faacEncHandle hpEncoder,
     /* Psychoacoustics */
     /* Shared detector replacement on HE: skip half-rate PsyCalculate. */
     if (hEncoder->config.aacObjectType != HE_V1 || !SbrContextIsAnalysisValid(hEncoder->sbrContext))
-        PsyCalculate(hEncoder->elements, hEncoder->numElements, hEncoder->psyInfo, numChannels);
+        PsyCalculate(hEncoder->psyInfo, hEncoder->isLfeChannel, numChannels);
 
     BlockSwitch(hEncoder, coderInfo, hEncoder->psyInfo, numChannels);
 

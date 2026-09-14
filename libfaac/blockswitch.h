@@ -55,7 +55,7 @@ void PsyInit (GlobalPsyInfo *gpsyInfo, PsyInfo *psyInfo,
 		unsigned int numChannels, unsigned int sampleRate);
 void PsyEnd (PsyInfo *psyInfo, unsigned int numChannels);
 float PsyGetAttack (PsyInfo *psyInfo);
-void PsyCalculate (AACElement *elements, int numElements, PsyInfo *psyInfo,
+void PsyCalculate (PsyInfo *psyInfo, const bool *isLfeChannel,
 		unsigned int numChannels);
 void PsyBufferUpdate (GlobalPsyInfo * gpsyInfo, PsyInfo * psyInfo,
 		float * restrict p_lookahead1,
