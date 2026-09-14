@@ -25,6 +25,7 @@ typedef enum SbrFrameClass {
 } SbrFrameClass;
 
 #include "coder.h"
+#include "channels.h"
 #include "fft.h"
 #include "sbr_analysis.h"
 
@@ -47,11 +48,6 @@ typedef enum SbrFrameClass {
    *after* the coded one, so a transient gets a start window now and a short
    window next, whereas envelopes must land on the coded frame itself. */
 #define SBR_FRAME_FIFO (LOOKAHEAD_DEPTH + 2)
-
-/* What THIS encoder's SBR covers, not a format limit: MPEG-4 carries
-   sbr_extension_data() in a fill element after each SCE and CPE, so HE-AAC v1
-   5.1 is legal. Lifting this means one payload per element, none for the LFE. */
-#define SBR_MAX_CODED_CHANNELS 2
 
 #ifdef __cplusplus
 extern "C" {
@@ -114,7 +110,7 @@ void SbrContextEnd(SBRContext *sbrCtx);
 int SbrContextGetASC(SBRContext *sbrCtx, int coreSRIdx, int channels, unsigned char** ppBuffer, unsigned long* pSize);
 unsigned int SbrContextGetXOverBandwidth(SBRContext *sbrCtx);
 void SbrContextUpdateConfig(SBRContext *sCtx, int channels, unsigned long bitrate, FFT_Tables *fft_tables);
-void SbrContextProcessFrame(SBRContext *sCtx, int numChannels, int realPerCh, int flushTick, float *inputFifo[MAX_CHANNELS], float *heHalfRate[MAX_CHANNELS]);
+void SbrContextProcessFrame(SBRContext *sCtx, int numChannels, const bool *isLfe, int realPerCh, int flushTick, float *inputFifo[MAX_CHANNELS], float *heHalfRate[MAX_CHANNELS]);
 int SbrContextIsPresent(SBRContext *sCtx);
 void SbrContextRestoreRate(SBRContext *sCtx, unsigned long *sampleRate, unsigned int *sampleRateIdx, SR_INFO **srInfo);
 unsigned long SbrContextGetFullRate(SBRContext *sCtx, unsigned long defaultRate);
@@ -122,7 +118,8 @@ void SbrContextResolveRate(SBRContext *sCtx, unsigned long *sampleRate, unsigned
 int SbrContextIsAnalysisValid(SBRContext *sCtx);
 int SbrContextGetWantShort(SBRContext *sCtx, int channel, int index);
 
-int SbrContextGetBits(SBRContext *sCtx, struct BitStream *bs, int channels, int aacObjectType, int writeFlag);
+/* The EXT_SBR_DATA fill element following one SCE/CPE; none after an LFE. */
+int SbrContextGetBits(SBRContext *sCtx, struct BitStream *bs, const AACElement *elem, int aacObjectType, int writeFlag);
 
 #ifdef __cplusplus
 }

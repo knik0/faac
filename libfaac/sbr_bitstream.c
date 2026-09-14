@@ -135,7 +135,7 @@ static int write_sbr_noise(const SbrFrameData *fd, BitStream *bs, bool write)
     return n_q * 5;
 }
 
-static int write_sbr_data(const SBRInfo *sbr, const SbrFrameData *fd, BitStream *bs, int id_aac, bool write)
+static int write_sbr_data(const SBRInfo *sbr, const SbrFrameData *fd, BitStream *bs, int id_aac, int ch0, bool write)
 {
     int nch = (id_aac == ID_CPE) ? 2 : 1;
     int flags_len = (id_aac == ID_CPE) ? 3 : 2;
@@ -151,7 +151,7 @@ static int write_sbr_data(const SBRInfo *sbr, const SbrFrameData *fd, BitStream 
     for (int ch = 0; ch < nch; ch++)
         bits += write_sbr_invf(bs, write);
     for (int ch = 0; ch < nch; ch++)
-        bits += write_sbr_envelope(sbr, fd, bs, ch, write);
+        bits += write_sbr_envelope(sbr, fd, bs, ch0 + ch, write);
     for (int ch = 0; ch < nch; ch++)
         bits += write_sbr_noise(fd, bs, write);
 
@@ -162,16 +162,16 @@ static int write_sbr_data(const SBRInfo *sbr, const SbrFrameData *fd, BitStream 
 
 /* Emit the full extension_payload body for EXT_SBR_DATA: the 4-bit extension
  * type, the 1-bit header flag, the optional header, and the channel data. */
-static int emit_sbr_payload(const SBRInfo *sbr, const SbrFrameData *fd, BitStream *bs, int id_aac, int sendHeader, bool write)
+static int emit_sbr_payload(const SBRInfo *sbr, const SbrFrameData *fd, BitStream *bs, int id_aac, int ch0, int sendHeader, bool write)
 {
     int bits = 5;
     if (write) PutBit(bs, (SBR_EXT_TYPE_SBR << 1) | (sendHeader & 1), 5);
     if (sendHeader) bits += write_sbr_header(sbr, bs, write);
-    bits += write_sbr_data(sbr, fd, bs, id_aac, write);
+    bits += write_sbr_data(sbr, fd, bs, id_aac, ch0, write);
     return bits;
 }
 
-int SbrWrite(const SBRInfo *sbr, const SbrFrameData *fd, BitStream *bs, int id_aac, int writeFlag)
+static int SbrWrite(const SBRInfo *sbr, const SbrFrameData *fd, BitStream *bs, int id_aac, int ch0, int writeFlag)
 {
     if (!sbr || !sbr->sbrPresent) return 0;
 
@@ -184,7 +184,7 @@ int SbrWrite(const SBRInfo *sbr, const SbrFrameData *fd, BitStream *bs, int id_a
      * just re-derive it from sbr's already-quantized envelope/noise data, the
      * same way channels.c's WriteElement/WriteICS do for the rest of the
      * frame. */
-    int payloadBits = emit_sbr_payload(sbr, fd, NULL, id_aac, sendHeader, false);
+    int payloadBits = emit_sbr_payload(sbr, fd, NULL, id_aac, ch0, sendHeader, false);
     int fillBytes = (payloadBits + 7) / 8;
     int padBits = fillBytes * 8 - payloadBits;
 
@@ -207,7 +207,7 @@ int SbrWrite(const SBRInfo *sbr, const SbrFrameData *fd, BitStream *bs, int id_a
             PutBit(bs, fillBytes - 14, 8);
             totalBits = 15;
         }
-        emit_sbr_payload(sbr, fd, bs, id_aac, sendHeader, true);
+        emit_sbr_payload(sbr, fd, bs, id_aac, ch0, sendHeader, true);
         if (padBits > 0) PutBit(bs, 0, padBits);
     } else {
         totalBits = (fillBytes < 15) ? 7 : 15;
@@ -215,11 +215,11 @@ int SbrWrite(const SBRInfo *sbr, const SbrFrameData *fd, BitStream *bs, int id_a
     return totalBits + payloadBits + padBits;
 }
 
-int SbrContextGetBits(SBRContext *sCtx, BitStream *bs, int channels, int aacObjectType, int writeFlag)
+int SbrContextGetBits(SBRContext *sCtx, BitStream *bs, const AACElement *elem, int aacObjectType, int writeFlag)
 {
-    if (aacObjectType == HE_V1 && sCtx) {
+    if (aacObjectType == HE_V1 && sCtx && elem->type != ID_LFE) {
         if (sCtx->sbrInfo) {
-            int id_aac = (channels > 1) ? ID_CPE : ID_SCE;
+            int id_aac = (elem->type == ID_CPE) ? ID_CPE : ID_SCE;
             /* One step past the newest slot is the oldest: the payload whose
              * audio this access unit's core carries. See SBR_FRAME_FIFO. */
             const SbrFrameData *fd = &sCtx->frameFIFO[(sCtx->frameHead + 1) % SBR_FRAME_FIFO];
@@ -228,7 +228,7 @@ int SbrContextGetBits(SBRContext *sCtx, BitStream *bs, int channels, int aacObje
                 sbr->sendHeaderThisFrame = (sbr->frameCount++ % SBR_HEADER_PERIOD == 0);
                 sbr->headerDecided = 1;
             }
-            return SbrWrite(sbr, fd, bs, id_aac, writeFlag);
+            return SbrWrite(sbr, fd, bs, id_aac, elem->channels[0], writeFlag);
         }
     }
     return 0;
