@@ -36,9 +36,15 @@
  * lands, the more spectrum SBR is rescuing. 8000 is HE-AAC's design floor and
  * the lowest rate measured. */
 #define HE_MIN_BITRATE_PER_CH 8000
-#define HE_MAX_BITRATE_PER_CH 48000  /* above ceiling LC wins: SBR costs up to 1 MOS on transients */
-/* quantqual == totalBitrate/1280 (see faacEncApplyConfig); derived to stay in sync with HE_MAX_BITRATE_PER_CH. */
-#define HE_VBR_QUANTQUAL_MAX  (2 * HE_MAX_BITRATE_PER_CH / 1280)
+/* Crossover measured on the refitted LC curve: HE leads by 0.070 MOS at 24000
+ * per channel and trails by 0.011 at 28000. A wider LC core moves this down --
+ * refit the curve and this constant has to be re-measured with it. */
+#define HE_MAX_BITRATE_PER_CH 26000
+/* Frozen, not derived: quantqual doesn't map onto a bitrate ceiling cleanly
+ * (the two are off by 2-4.5x across the range), so this is set by measurement.
+ * Deriving it from HE_MAX_BITRATE_PER_CH instead would flip -q 42+ to LC for
+ * 13.1% more bits. */
+#define HE_VBR_QUANTQUAL_MAX  75
 
 #if (defined WIN32 || defined _WIN32 || defined WIN64 || defined _WIN64) && !defined(PACKAGE_VERSION)
 #include "win32_ver.h"
@@ -70,28 +76,26 @@ static unsigned int CalcBandwidth(unsigned long bitRate, unsigned long sampleRat
 
     if (!bitRate) return nyquist;
 
-    if (bitRate <= 16000) {
-        /* Segment 1: Telephony (4kHz to 6kHz) */
-        bw = 4000 + (bitRate / 8);
+    /* Anchors land on long-block band edges, so CalcBW()'s snap is a no-op and
+     * these constants are the cutoff you actually get. Divisors are powers of
+     * two. LC in effect: HE reaches here too, but faacEncApplyConfig then
+     * overwrites bandWidth with the SBR crossover, which the core must meet. */
+    if (bitRate <= 12000) {
+        /* Unmeasured below here; ramp rather than extend the plateau down.
+         * bitRate is unsigned, so guard the subtraction. */
+        bw = (bitRate > 8000) ? 9250 + ((bitRate - 8000) * 5 / 4) : 9250;
     }
     else if (bitRate <= 32000) {
-        /* Segment 2: Low-tier (6kHz to 11kHz)
-         */
-        bw = 6000 + ((bitRate - 16000) * 5 / 16);
+        /* Flat by measurement: the optimum does not move across this range. */
+        bw = 14250;
     }
-    else if (bitRate <= 64000) {
-        /* Segment 3: Mid-tier expansion (11kHz to 18.5kHz)
-         */
-        bw = 11000 + ((bitRate - 32000) * 15 / 64);
-    }
-    else if (bitRate <= 128000) {
-        /* Segment 4: High-fidelity catch-up (18.5kHz to 20kHz) */
-        bw = 18500 + ((bitRate - 64000) * 3 / 128);
+    else if (bitRate <= 48000) {
+        bw = 14250 + ((bitRate - 32000) * 9 / 32);
     }
     else {
-        /* Segment 5: Transparency plateau (20kHz+) */
-        bw = 20000 + ((bitRate - 128000) / 16);
-        if (bw > 20000) bw = 20000;
+        /* Widening past this loses at every reachable rate -- the band above
+         * holds ~0.006% of programme energy and sits at the edge of hearing. */
+        bw = 18750;
     }
 
     /* Safety clamp to Shannon-Nyquist limit */

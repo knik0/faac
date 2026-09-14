@@ -446,7 +446,10 @@ void CalcBW(unsigned *bw, int rate, SR_INFO *sr, AACQuantCfg *aacquantCfg,
     }
     sfbOffsetShort[i] = l;
     aacquantCfg->max_cbs = i;
-    if (aacquantCfg->pnslevel) *bw = (float)l * rate / (BLOCK_LEN_SHORT << 1);
+
+    /* Snap on the long grid only. Both loops round up, so also snapping to the
+     * 14-band short grid compounds two round-ups and leaves the cutoff far
+     * coarser than the long grid can express. */
 
     l = 0, max = *bw * (BLOCK_LEN_LONG << 1) / rate;
     for (i = 0; i < sr->num_cb_long && l < max; i++) {
