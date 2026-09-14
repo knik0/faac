@@ -40,6 +40,7 @@ extern "C" {
 #include "quantize.h"
 #include "sbr.h"
 #include "stats.h"
+#include "ratecontrol.h"
 
 typedef struct faacEncStruct {
     /* number of channels in AAC file */
@@ -113,9 +114,7 @@ typedef struct faacEncStruct {
      * [0] and sf[] at [MAX_SCFAC_BANDS]. */
     int *peakSnap[MAX_CHANNELS];
 
-    /* Adaptive bit reservoir state */
-    int bitReservoir;       /* current bit reservoir level in bits */
-    int bitReservoirCap;    /* max bit reservoir capacity in bits */
+    RateControl rc;
 } faacEncStruct;
 
 /* Configuration worker behind faac_encoder_open(): validates the config,

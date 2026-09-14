@@ -150,38 +150,15 @@ void PsyEnd(PsyInfo * psyInfo, unsigned int numChannels)
 }
 
 /* Do psychoacoustical analysis */
-/* Fast energy-based Perceptual Entropy approximation: sum subblock high-pass energies
-   pre-computed in PsyBufferUpdate(), scaling by PE_ENERGY_SCALE to match PE complexity threshold. */
-static void PsyCalcPE(PsyInfo * psyInfo)
-{
-  psydata_t *psydata = (psydata_t *)psyInfo->data;
-  if (!psydata) { psyInfo->pe = 0.0f; return; }
-  float pe = (float)psydata->eng[ENG_WIN_CUR + 0] + (float)psydata->eng[ENG_WIN_CUR + 1] +
-             (float)psydata->eng[ENG_WIN_CUR + 2] + (float)psydata->eng[ENG_WIN_CUR + 3] +
-             (float)psydata->eng[ENG_WIN_CUR + 4] + (float)psydata->eng[ENG_WIN_CUR + 5] +
-             (float)psydata->eng[ENG_WIN_CUR + 6] + (float)psydata->eng[ENG_WIN_CUR + 7];
-  psyInfo->pe = pe * PE_ENERGY_SCALE;
-}
-
-static void PsyAnalyzeChannel(PsyInfo * psyInfo)
-{
-  PsyCheckShort(psyInfo);
-  PsyCalcPE(psyInfo);
-}
-
-/* Do psychoacoustical analysis */
 void PsyCalculate(PsyInfo * psyInfo, const bool * isLfeChannel,
 			 unsigned int numChannels)
 {
   for (unsigned int channel = 0; channel < numChannels; channel++)
   {
       if (isLfeChannel[channel])
-      {
           psyInfo[channel].block_type = ONLY_LONG_WINDOW;
-          psyInfo[channel].pe = 0.0f;
-      }
       else
-          PsyAnalyzeChannel(&psyInfo[channel]);
+          PsyCheckShort(&psyInfo[channel]);
   }
 }
 
