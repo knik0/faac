@@ -87,9 +87,9 @@ static int write_sbr_dtdf(const SbrFrameData *fd, BitStream *bs, bool write)
     return len;
 }
 
-static int write_sbr_invf(const SbrFrameData *fd, BitStream *bs, int ch, bool write)
+static int write_sbr_invf(BitStream *bs, bool write)
 {
-    if (write) PutBit(bs, fd->ch[ch].invfMode, 2);
+    if (write) PutBit(bs, SBR_INVF_MODE, 2);
     return 2;
 }
 
@@ -125,12 +125,12 @@ static int write_sbr_envelope(const SBRInfo *sbr, const SbrFrameData *fd, BitStr
     return bits;
 }
 
-static int write_sbr_noise(const SbrFrameData *fd, BitStream *bs, int ch, bool write)
+static int write_sbr_noise(const SbrFrameData *fd, BitStream *bs, bool write)
 {
     int n_q = fd->numEnvelopes > 1 ? 2 : 1;
     if (write) {
         for (int ne = 0; ne < n_q; ne++)
-            PutBit(bs, clamp_int(fd->ch[ch].noiseData[ne][0], 0, 30), 5);
+            PutBit(bs, SBR_NOISE_LEVEL_DEFAULT, 5);
     }
     return n_q * 5;
 }
@@ -149,11 +149,11 @@ static int write_sbr_data(const SBRInfo *sbr, const SbrFrameData *fd, BitStream 
     for (int ch = 0; ch < nch; ch++)
         bits += write_sbr_dtdf(fd, bs, write);
     for (int ch = 0; ch < nch; ch++)
-        bits += write_sbr_invf(fd, bs, ch, write);
+        bits += write_sbr_invf(bs, write);
     for (int ch = 0; ch < nch; ch++)
         bits += write_sbr_envelope(sbr, fd, bs, ch, write);
     for (int ch = 0; ch < nch; ch++)
-        bits += write_sbr_noise(fd, bs, ch, write);
+        bits += write_sbr_noise(fd, bs, write);
 
     if (write) PutBit(bs, 0, flags_len); /* add_harmonic / extended data flags */
 
@@ -162,7 +162,7 @@ static int write_sbr_data(const SBRInfo *sbr, const SbrFrameData *fd, BitStream 
 
 /* Emit the full extension_payload body for EXT_SBR_DATA: the 4-bit extension
  * type, the 1-bit header flag, the optional header, and the channel data. */
-static int emit_sbr_payload(SBRInfo *sbr, const SbrFrameData *fd, BitStream *bs, int id_aac, int sendHeader, bool write)
+static int emit_sbr_payload(const SBRInfo *sbr, const SbrFrameData *fd, BitStream *bs, int id_aac, int sendHeader, bool write)
 {
     int bits = 5;
     if (write) PutBit(bs, (SBR_EXT_TYPE_SBR << 1) | (sendHeader & 1), 5);
@@ -171,7 +171,7 @@ static int emit_sbr_payload(SBRInfo *sbr, const SbrFrameData *fd, BitStream *bs,
     return bits;
 }
 
-int SbrWrite(SBRInfo *sbr, const SbrFrameData *fd, BitStream *bs, int id_aac, int writeFlag)
+int SbrWrite(const SBRInfo *sbr, const SbrFrameData *fd, BitStream *bs, int id_aac, int writeFlag)
 {
     if (!sbr || !sbr->sbrPresent) return 0;
 
@@ -211,8 +211,6 @@ int SbrWrite(SBRInfo *sbr, const SbrFrameData *fd, BitStream *bs, int id_aac, in
         }
         emit_sbr_payload(sbr, fd, bs, id_aac, sendHeader, true);
         if (padBits > 0) PutBit(bs, 0, padBits);
-        sbr->headerSent = 1;
-        sbr->frameCount++;
     } else {
         totalBits = (fillBytes < 15) ? 7 : 15;
     }
@@ -227,7 +225,12 @@ int SbrContextGetBits(SBRContext *sCtx, BitStream *bs, int channels, int aacObje
             /* One step past the newest slot is the oldest: the payload whose
              * audio this access unit's core carries. See SBR_FRAME_FIFO. */
             const SbrFrameData *fd = &sCtx->frameFIFO[(sCtx->frameHead + 1) % SBR_FRAME_FIFO];
-            return SbrWrite(sCtx->sbrInfo, fd, bs, id_aac, writeFlag);
+            SBRInfo *sbr = sCtx->sbrInfo;
+            if (!sbr->headerDecided) {
+                sbr->sendHeaderThisFrame = (sbr->frameCount++ % SBR_HEADER_PERIOD == 0);
+                sbr->headerDecided = 1;
+            }
+            return SbrWrite(sbr, fd, bs, id_aac, writeFlag);
         }
     }
     return 0;
