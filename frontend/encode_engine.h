@@ -115,8 +115,8 @@ void init_encode_options(encode_options_t *opts);
    the GUI's rate edit box) into opts->quant_quality/opts->bit_rate,
    falling back to DEFAULT_QUANT_QUALITY/DEFAULT_ABR_KBPS on invalid/empty
    input rather than silently producing 0. is_bitrate_mode selects which
-   field is being set and whether the value is in kbps (bitrate) or a raw
-   quality percentage. */
+   field is being set and whether the value is in kbps (bitrate) or a
+   quantizer quality. */
 void parse_quality_or_bitrate(const char *text, bool is_bitrate_mode,
                                encode_options_t *opts);
 
