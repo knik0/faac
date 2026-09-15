@@ -71,7 +71,7 @@ BEGIN
                     WS_EX_STATICEDGE
     COMBOBOX        IDC_JOINTMODE,14,130,71,60,CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
     LTEXT           "Stereo Mode",IDC_STATIC,14,121,56,8
-    LTEXT           "Quantizer\nquality", IDC_QUALITYLABEL, 98, 73, 37, 18
+    LTEXT           "Bitrate\n(kbps)", IDC_QUALITYLABEL, 98, 73, 37, 18
     EDITTEXT        IDC_QUALITY, 138, 76, 30, 12, ES_AUTOHSCROLL
     CONTROL         "", IDC_STATIC, "static", SS_SUNKEN, 98, 94, 70, 30
     CONTROL         "Set bandwidth", IDC_BWCTL, "Button", BS_AUTOCHECKBOX

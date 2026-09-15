@@ -327,7 +327,7 @@ static DWORD WINAPI EncodeFile(LPVOID pParam)
     GetDlgItemText(hWnd, IDC_QUALITY, szTemp, sizeof(szTemp));
 
     {
-        LRESULT mode = GetComboData(hWnd, IDC_RATEMODE, RATEMODE_VBR);
+        LRESULT mode = GetComboData(hWnd, IDC_RATEMODE, RATEMODE_ABR);
         parse_quality_or_bitrate(szTemp, mode != RATEMODE_VBR, &opts);
         opts.cbr = (mode == RATEMODE_CBR);
     }
@@ -533,10 +533,10 @@ static INT_PTR CALLBACK DialogProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lP
         {
             HWND hRM = GetDlgItem(hWnd, IDC_RATEMODE);
             LRESULT idx;
-            idx = SendMessage(hRM, CB_ADDSTRING, 0, (LPARAM)(LPCTSTR)"VBR (Quality)");
-            SendMessage(hRM, CB_SETITEMDATA, idx, (LPARAM)RATEMODE_VBR);
             idx = SendMessage(hRM, CB_ADDSTRING, 0, (LPARAM)(LPCTSTR)"ABR (Bitrate)");
             SendMessage(hRM, CB_SETITEMDATA, idx, (LPARAM)RATEMODE_ABR);
+            idx = SendMessage(hRM, CB_ADDSTRING, 0, (LPARAM)(LPCTSTR)"VBR (Quality 1-5000)");
+            SendMessage(hRM, CB_SETITEMDATA, idx, (LPARAM)RATEMODE_VBR);
             idx = SendMessage(hRM, CB_ADDSTRING, 0, (LPARAM)(LPCTSTR)"CBR (Bitrate)");
             SendMessage(hRM, CB_SETITEMDATA, idx, (LPARAM)RATEMODE_CBR);
             SendMessage(hRM, CB_SETCURSEL, 0, 0);
@@ -573,7 +573,7 @@ static INT_PTR CALLBACK DialogProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lP
         }
 
         CheckDlgButton(hWnd, IDC_USETNS, TRUE); /* library default, libfaac/frame.c */
-        ApplyRateModeUI(hWnd, RATEMODE_VBR);
+        ApplyRateModeUI(hWnd, RATEMODE_ABR);
         SetDlgItemText(hWnd, IDC_PNS, "4"); /* library default, libfaac/faac.c */
         SetDlgItemText(hWnd, IDC_BANDWIDTH, "0");
 
@@ -588,14 +588,17 @@ static INT_PTR CALLBACK DialogProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lP
             SendMessage(hwndTip, TTM_SETMAXTIPWIDTH, 0, 300); /* enables \n line breaks */
 
             AddTip(hWnd, IDC_QUALITY,
-                "Percent (VBR) or kbps/channel (ABR), depending on Rate Mode.");
+                "Total kbps (ABR, CBR) or quality 1-5000 (VBR), depending on\n"
+                "Rate Mode.");
             AddTip(hWnd, IDC_BWCTL,
-                "Cap the encoded bandwidth to a specific frequency instead of\n"
-                "letting the encoder choose it automatically.");
+                "Cut the audio off above a frequency of your choice instead of\n"
+                "letting the encoder pick one from the bitrate. HE-AAC sets\n"
+                "its own.");
             AddTip(hWnd, IDC_BANDWIDTH, "Cutoff frequency in Hz.");
             AddTip(hWnd, IDC_RATEMODE,
-                "VBR (Quality) targets a quality level; ABR (Bitrate) targets\n"
-                "an average bitrate.");
+                "ABR targets an average bitrate (default). VBR holds a quality\n"
+                "and lets the bitrate follow the material. CBR holds the\n"
+                "bitrate exactly.");
             AddTip(hWnd, IDC_OBJECTTYPE,
                 "Auto picks LC or HE-AAC v1 based on bitrate; force one to\n"
                 "override that choice.");
@@ -717,7 +720,7 @@ static INT_PTR CALLBACK DialogProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lP
         case IDC_RATEMODE:
             if (HIWORD(wParam) == CBN_SELCHANGE)
             {
-                LRESULT mode = GetComboData(hWnd, IDC_RATEMODE, RATEMODE_VBR);
+                LRESULT mode = GetComboData(hWnd, IDC_RATEMODE, RATEMODE_ABR);
                 ApplyRateModeUI(hWnd, (int)mode);
             }
             break;
