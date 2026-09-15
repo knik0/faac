@@ -1,8 +1,80 @@
 (unreleased)
 
+	[ Robert Kausch ]
+	* build: honor an explicit b_lto=false; drop __stdcall on x86 Windows
+
 	[ Nils Schimmelmann ]
-	* Build the lookup tables shared between encoder handles once per
-	  process, so independent handles can be opened concurrently
+	* Bump the ABI to 2: faac_params_init() takes the caller's struct size
+	* HE-AAC auto range 8-22 kbps per channel at 48 kHz (was 12-28), VBR up
+	  to -q 75 (was 60); HE-AAC v1 for multichannel layouts up to 8 channels,
+	  with one SBR fill element per SCE/CPE instead of one per frame
+	* Rate control: signed bit account for ABR; a real bit reservoir for CBR
+	  behind `--cbr`
+	* Refit the ABR bandwidth curve from a sweep: a wider core at 24-56 kbps
+	  stereo and every cutoff on the band grid reachable, where a double
+	  snap had left seven
+	* VBR codes at the top of the bandwidth curve (18750 Hz) instead of the
+	  full band; `-q` and `-b` are exclusive; `-q` documented as a constant
+	  quantizer quality, 1..5000, without bitrate anchors that drift
+	* SBR: reconstruction toward 20 kHz; noise floor -18 dB; log-spaced band
+	  table by rate; bs_stop_freq signals a k2 decoders actually accept
+	* Stereo: joint-stereo policy by rate; intensity on long windows below
+	  40 kbps per channel, L/R on short windows below the crossover from 80;
+	  short-window grouping and masking targets reworked; the sparsity mute
+	  that zeroed a quiet unjoined channel's bands is gone
+	* TNS on by default; frames screened before LPC analysis
+	* Block switching: the HE core runs its own transient detector instead
+	  of following SBR's, and both cores judge a sub-block's attack against
+	  a running level instead of only its neighbour, so dense stationary
+	  material stops defaulting to short windows; HE/LC crossover moved to
+	  22 kbps per channel to match
+	* Quantizer: short blocks take the same loudness target as long ones
+	  instead of 0.45x coarser, so transient frames stop losing bands to
+	  PNS; kernels take band widths in quads and vectorize fully, and
+	  grouping band energy is summed in four lanes
+	* HUFF2: a band keeps the previous section's codebook when its own
+	  header would cost more than the extra codeword bits
+	* Enforce the ISO/IEC 14496-3 per-channel frame ceiling and bitrate
+	  limits; map channel counts to the standard AudioSpecificConfig/ADTS
+	  channel configurations and reject non-standard counts
+	* PNS and the MPEG version are now resolved by the encoder instead of
+	  the caller: `faac_params` drops `pns_level` for a `use_pns` flag,
+	  `faac_encoder_info` reports the resolved `mpeg_version`, and an
+	  explicit MPEG-2 request silently upgrades to MPEG-4 for HE-AAC;
+	  `faac` takes `--no-pns` in place of `--pns <0..10>`
+	* frontend: MP4 output by default with detection from the extension;
+	  24-bit packed PCM input; 64-bit mdat and duration; track language;
+	  UTF-8 and wide-character paths on CLI and Win32 GUI; iTunes gapless
+	  metadata (iTunSMPB); shared encoding engine and MP4 output in the GUI;
+	  GUI opens on ABR at 128 kbps; optional end-of-encode diagnostics;
+	  a PCM WAV could be read as float from an uninitialised header field;
+	  endian conversion utilities unified, fixing a WORDS_BIGENDIAN check
+	  that only worked because the macro happened to be undefined rather
+	  than 0; help text and the man page corrected throughout
+	* mp4write: container timing, HE-AAC sample rate declaration and gapless
+	  fixes; GUI PCM clipping fix
+	* HE-AAC: pad the pipeline delay to an even multiple of the core frame,
+	  so gapless-aware decoders trim the right sample count at both ends
+	* SBR: parameter resolution in VBR, tail drained on flush, psPresentFlag
+	  for mono, less per-frame work in the writer
+	* Pipeline draining during flush on short streams
+	* Fix a 64 kHz short-window scalefactor band width table that summed
+	  to 124 spectral lines instead of 128
+	* Build the lookup tables and FFT twiddle factors shared between
+	  encoder handles once per process instead of per open, so independent
+	  handles can be opened concurrently without racing each other's tables
+	* fft: replace the bit-reversed DIF kernel and its reorder pass with a
+	  self-sorting Stockham kernel that lands in natural order directly
+	* filtbank/channels: inline the window dispatch and simplify grouping
+	  bit accounting for vectorization
+	* Drop the never-selected KBD window from the filter bank
+	* Drop dead count mode from bitstream writer
+	* build: force-include config.h instead of per-file guards; drop the
+	  cold/noinline hints on the HE-AAC frame path so PGO and -Os/-O3
+	  make the call instead of a fixed attribute
+	* frontend: show the git commit hash in `-h`, the GUI, verbose logging,
+	  and the MP4 tag; `-h` reports the runtime libfaac version, not the
+	  compile-time one
 
 2.1 (Aug 18, 2026)
 
