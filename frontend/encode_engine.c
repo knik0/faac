@@ -131,6 +131,9 @@ void parse_quality_or_bitrate(const char *text, bool is_bitrate_mode,
     }
     else
     {
+        /* The library clamps to its range; keep the cast from wrapping first. */
+        if (val > UINT16_MAX)
+            val = UINT16_MAX;
         opts->quant_quality = (val > 0) ? (uint16_t)val : DEFAULT_QUANT_QUALITY;
         opts->bit_rate = 0;
     }
