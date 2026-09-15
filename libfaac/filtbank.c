@@ -13,7 +13,6 @@
  * Lesser General Public License for more details.
  */
 
-#include <float.h>
 #include <math.h>
 #include <stdbool.h>
 #include <string.h>
@@ -24,31 +23,8 @@
 #include "fft.h"
 #include "util.h"
 
-/* Sine and Kaiser-Bessel-Derived windows, ISO/IEC 13818-7 Annex 4.6.4.
- * KBD argument uses the product form i*(halfLen-i) (a difference-of-
- * squares factoring of the spec's (2i/halfLen-1)^2 shape term) so the
- * Bessel argument is one multiply instead of a subtract-then-square.
- * These tables are built once at encoder init, so the series and
- * normalization run in double (rounding to float only when stored into
- * win[]) for a correctly-rounded table at zero runtime cost. */
-
-static double BesselI0(double x)
-{
-    const double tolerance = DBL_EPSILON;
-    double halfX = x * 0.5;
-    double term = 1.0;
-    double series = 1.0;
-    int k = 1;
-
-    do {
-        double ratio = halfX / (double)k;
-        term *= ratio * ratio;
-        series += term;
-        k++;
-    } while (term > tolerance * series);
-
-    return series;
-}
+/* Sine window, ISO/IEC 13818-7 4.6.4. Built once at encoder init in double,
+ * rounded to float when stored. */
 
 static void FillSineWindow(float *win, int halfLen)
 {
@@ -56,34 +32,6 @@ static void FillSineWindow(float *win, int halfLen)
 
     for (i = 0; i < halfLen; i++)
         win[i] = (float)sin((M_PI_DOUBLE / (2 * halfLen)) * (i + 0.5));
-}
-
-static void FillKbdWindow(float *win, int halfLen, double alpha)
-{
-    const double omega = alpha * M_PI_DOUBLE / (double)halfLen;
-    const double alpha2 = 4.0 * omega * omega;
-    const int quarterLen = halfLen / 2;
-    double shapeTerm[BLOCK_LEN_LONG / 2 + 1];
-    double weightedTotal = 0.0;
-    double running = 0.0;
-    double scale;
-    int i;
-
-    /* Symmetric around quarterLen, so interior terms count twice below. */
-    for (i = 0; i <= quarterLen; i++) {
-        double symmetric = (double)i * (double)(halfLen - i) * alpha2;
-        int isInterior = (i > 0) && (i < quarterLen);
-
-        shapeTerm[i] = BesselI0(sqrt(symmetric));
-        weightedTotal += shapeTerm[i] * (isInterior ? 2 : 1);
-    }
-    scale = 1.0 / (weightedTotal + 1.0);
-
-    for (i = 0; i < halfLen; i++) {
-        int idx = (i <= quarterLen) ? i : (halfLen - i);
-        running += shapeTerm[idx];
-        win[i] = (float)sqrt(running * scale);
-    }
 }
 
 void FilterBankInit(faacEncStruct* hEncoder)
@@ -97,17 +45,12 @@ void FilterBankInit(faacEncStruct* hEncoder)
 
     hEncoder->sin_window_long = (float*)AllocMemory(BLOCK_LEN_LONG*sizeof(float));
     hEncoder->sin_window_short = (float*)AllocMemory(BLOCK_LEN_SHORT*sizeof(float));
-    hEncoder->kbd_window_long = (float*)AllocMemory(BLOCK_LEN_LONG*sizeof(float));
-    hEncoder->kbd_window_short = (float*)AllocMemory(BLOCK_LEN_SHORT*sizeof(float));
 
-    if (!hEncoder->sin_window_long || !hEncoder->sin_window_short ||
-        !hEncoder->kbd_window_long || !hEncoder->kbd_window_short)
+    if (!hEncoder->sin_window_long || !hEncoder->sin_window_short)
         return;
 
     FillSineWindow(hEncoder->sin_window_long, BLOCK_LEN_LONG);
-    FillKbdWindow(hEncoder->kbd_window_long, BLOCK_LEN_LONG, 4.0);
     FillSineWindow(hEncoder->sin_window_short, BLOCK_LEN_SHORT);
-    FillKbdWindow(hEncoder->kbd_window_short, BLOCK_LEN_SHORT, 6.0);
 
     hEncoder->gpsyInfo.sharedWorkBuffLong = (float*)AllocMemory(2*BLOCK_LEN_LONG*sizeof(float));
 }
@@ -122,8 +65,6 @@ void FilterBankEnd(faacEncStruct* hEncoder)
 
     if (hEncoder->sin_window_long) FreeMemory(hEncoder->sin_window_long);
     if (hEncoder->sin_window_short) FreeMemory(hEncoder->sin_window_short);
-    if (hEncoder->kbd_window_long) FreeMemory(hEncoder->kbd_window_long);
-    if (hEncoder->kbd_window_short) FreeMemory(hEncoder->kbd_window_short);
 
     if (hEncoder->gpsyInfo.sharedWorkBuffLong) FreeMemory(hEncoder->gpsyInfo.sharedWorkBuffLong);
 }
@@ -161,13 +102,6 @@ static void ZeroFlat(float *dst, int len)
     SetMemory(dst, 0, len * sizeof(float));
 }
 
-static const float *SelectWindow(faacEncStruct *hEncoder, int shape, bool isLong)
-{
-    if (shape == KBD_WINDOW)
-        return isLong ? hEncoder->kbd_window_long : hEncoder->kbd_window_short;
-    return isLong ? hEncoder->sin_window_long : hEncoder->sin_window_short;
-}
-
 void FilterBank(faacEncStruct* hEncoder,
                 CoderInfo *coderInfo,
                 float * restrict p_prev_data,
@@ -176,7 +110,6 @@ void FilterBank(faacEncStruct* hEncoder,
 {
     float * restrict overlapBuf = hEncoder->gpsyInfo.sharedWorkBuffLong;
     int block_type = coderInfo->block_type;
-    const float *leftWin, *rightWin;
     int k;
 
     /* Assemble the 2048-sample overlap window from the previous and
@@ -184,14 +117,12 @@ void FilterBank(faacEncStruct* hEncoder,
     memcpy(overlapBuf, p_prev_data, BLOCK_LEN_LONG*sizeof(float));
     memcpy(overlapBuf+BLOCK_LEN_LONG, p_in_data, BLOCK_LEN_LONG*sizeof(float));
 
-    /* isLong is a literal per case below, not carried in from before the
-       switch, so SelectWindow's dispatch folds to a single compare. */
     switch (block_type) {
     case ONLY_LONG_WINDOW: {
         WindowSeg left  = { p_out_mdct, overlapBuf,
-                             SelectWindow(hEncoder, coderInfo->prev_window_shape, true), BLOCK_LEN_LONG, false };
+                             hEncoder->sin_window_long, BLOCK_LEN_LONG, false };
         WindowSeg right = { p_out_mdct+BLOCK_LEN_LONG, overlapBuf+BLOCK_LEN_LONG,
-                             SelectWindow(hEncoder, coderInfo->window_shape, true), BLOCK_LEN_LONG, true };
+                             hEncoder->sin_window_long, BLOCK_LEN_LONG, true };
 
         ApplyWindowSeg(&left);
         ApplyWindowSeg(&right);
@@ -201,9 +132,9 @@ void FilterBank(faacEncStruct* hEncoder,
 
     case LONG_SHORT_WINDOW: {
         WindowSeg left  = { p_out_mdct, overlapBuf,
-                             SelectWindow(hEncoder, coderInfo->prev_window_shape, true), BLOCK_LEN_LONG, false };
+                             hEncoder->sin_window_long, BLOCK_LEN_LONG, false };
         WindowSeg right = { p_out_mdct+BLOCK_LEN_LONG+NFLAT_LS, overlapBuf+BLOCK_LEN_LONG+NFLAT_LS,
-                             SelectWindow(hEncoder, coderInfo->window_shape, false), BLOCK_LEN_SHORT, true };
+                             hEncoder->sin_window_short, BLOCK_LEN_SHORT, true };
 
         ApplyWindowSeg(&left);
         CopyFlat(p_out_mdct+BLOCK_LEN_LONG, overlapBuf+BLOCK_LEN_LONG, NFLAT_LS);
@@ -215,9 +146,9 @@ void FilterBank(faacEncStruct* hEncoder,
 
     case SHORT_LONG_WINDOW: {
         WindowSeg left  = { p_out_mdct+NFLAT_LS, overlapBuf+NFLAT_LS,
-                             SelectWindow(hEncoder, coderInfo->prev_window_shape, false), BLOCK_LEN_SHORT, false };
+                             hEncoder->sin_window_short, BLOCK_LEN_SHORT, false };
         WindowSeg right = { p_out_mdct+BLOCK_LEN_LONG, overlapBuf+BLOCK_LEN_LONG,
-                             SelectWindow(hEncoder, coderInfo->window_shape, true), BLOCK_LEN_LONG, true };
+                             hEncoder->sin_window_long, BLOCK_LEN_LONG, true };
 
         ZeroFlat(p_out_mdct, NFLAT_LS);
         ApplyWindowSeg(&left);
@@ -228,15 +159,13 @@ void FilterBank(faacEncStruct* hEncoder,
     }
 
     case ONLY_SHORT_WINDOW: {
+        const float *win = hEncoder->sin_window_short;
         float *src = overlapBuf + NFLAT_LS;
         float *dst = p_out_mdct;
 
-        leftWin  = SelectWindow(hEncoder, coderInfo->prev_window_shape, false);
-        rightWin = SelectWindow(hEncoder, coderInfo->window_shape, false);
-
         for (k = 0; k < MAX_SHORT_WINDOWS; k++) {
-            WindowSeg left  = { dst, src, leftWin, BLOCK_LEN_SHORT, false };
-            WindowSeg right = { dst+BLOCK_LEN_SHORT, src+BLOCK_LEN_SHORT, rightWin, BLOCK_LEN_SHORT, true };
+            WindowSeg left  = { dst, src, win, BLOCK_LEN_SHORT, false };
+            WindowSeg right = { dst+BLOCK_LEN_SHORT, src+BLOCK_LEN_SHORT, win, BLOCK_LEN_SHORT, true };
 
             ApplyWindowSeg(&left);
             ApplyWindowSeg(&right);
@@ -244,7 +173,6 @@ void FilterBank(faacEncStruct* hEncoder,
 
             dst += BLOCK_LEN_SHORT;
             src += BLOCK_LEN_SHORT;
-            leftWin = rightWin;
         }
         break;
     }
