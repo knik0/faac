@@ -283,7 +283,7 @@ void SbrContextUpdateConfig(SBRContext *sCtx, int channels, unsigned long bitrat
         SbrUpdate(sCtx->sbrInfo, bitrate);
 }
 
-void SbrContextProcessFrame(SBRContext *sCtx, int numChannels, int realPerCh, int flushTick, float *inputFifo[MAX_CHANNELS], float *heHalfRate[MAX_CHANNELS])
+void SbrContextProcessFrame(SBRContext *sCtx, int numChannels, const bool *isLfe, int realPerCh, int flushTick, float *inputFifo[MAX_CHANNELS], float *heHalfRate[MAX_CHANNELS])
 {
     unsigned int channel;
     Resampler *rs = sCtx->resampler;
@@ -322,8 +322,8 @@ void SbrContextProcessFrame(SBRContext *sCtx, int numChannels, int realPerCh, in
          * claims SBR_NUM_TIME_SLOTS, so normalising a short frame over fewer slots
          * would inflate its levels, and the QMF-overlap save below reads the last
          * SBR_QMF_OVL_LEN_64 samples -- behind the buffer for a short frame. */
-        SbrAnalyze(&sCtx->signalAnalysis, fullPtrs, numChannels, 2 * FRAME_LEN, sCtx->sbrInfo);
-        SbrEncode(sCtx->sbrInfo, fullPtrs, numChannels, 2 * FRAME_LEN, &sCtx->signalAnalysis, fd);
+        SbrAnalyze(&sCtx->signalAnalysis, fullPtrs, numChannels, isLfe, 2 * FRAME_LEN, sCtx->sbrInfo);
+        SbrEncode(sCtx->sbrInfo, fullPtrs, numChannels, isLfe, 2 * FRAME_LEN, &sCtx->signalAnalysis, fd);
         /* Dual-rate decimation: produces the halved-rate core signal. */
         Resample(rs, 2 * FRAME_LEN);
     }
@@ -455,7 +455,7 @@ static void sbr_adopt_envelope_grid(const SBRInfo *sbr, const struct SignalAnaly
     fd->freqRes = sbr->bs_freq_res;
 }
 
-static void sbr_quantize_envelopes(const SBRInfo *sbr, int nch,
+static void sbr_quantize_envelopes(const SBRInfo *sbr, int nch, const bool *isLfe,
                                    const struct SignalAnalysis *sa, SbrFrameData *fd)
 {
     int n_env = fd->numEnvelopes;
@@ -464,6 +464,7 @@ static void sbr_quantize_envelopes(const SBRInfo *sbr, int nch,
     const int *edges = sbr_env_edges(sbr, fd);
 
     for (int ch = 0; ch < nch; ch++) {
+        if (isLfe[ch]) continue;
         /* Read-only alias; the quantizer never writes back through it. */
         const float (* restrict bandE)[SBR_QMF_BANDS_64] = sa->bandE[ch];
         int dlav = fd->eff_amp_res ? SBR_ENV_DELTA_LIMIT_HIRES : SBR_ENV_DELTA_LIMIT_LORES;
@@ -495,22 +496,22 @@ static void sbr_quantize_envelopes(const SBRInfo *sbr, int nch,
     }
 }
 
-void SbrEncode(SBRInfo *sbr, float *timeDomain[MAX_CHANNELS], int numChannels, int numSamples, struct SignalAnalysis *sa, SbrFrameData *fd)
+void SbrEncode(SBRInfo *sbr, float *timeDomain[MAX_CHANNELS], int numChannels, const bool *isLfe, int numSamples, struct SignalAnalysis *sa, SbrFrameData *fd)
 {
-    int nch = clamp_int(numChannels, 1, SBR_MAX_CODED_CHANNELS);
-
-    for (int ch = 0; ch < nch; ch++)
-        memcpy(sbr->ch[ch].qmfOvl64, timeDomain[ch] + numSamples - SBR_QMF_OVL_LEN_64, SBR_QMF_OVL_LEN_64 * sizeof(float));
+    for (int ch = 0; ch < numChannels; ch++)
+        if (!isLfe[ch])
+            memcpy(sbr->ch[ch].qmfOvl64, timeDomain[ch] + numSamples - SBR_QMF_OVL_LEN_64, SBR_QMF_OVL_LEN_64 * sizeof(float));
 
     sbr_adopt_envelope_grid(sbr, sa, fd);
-    sbr_quantize_envelopes(sbr, nch, sa, fd);
+    sbr_quantize_envelopes(sbr, numChannels, isLfe, sa, fd);
 
 #ifdef FAAC_STATS
     g_faacStats.sbrFrames++;
     if (fd->frameClass != SBR_FRAME_CLASS_FIXFIX) {
         g_faacStats.sbrTransientFrames++;
     }
-    for (int ch = 0; ch < nch; ch++) {
+    for (int ch = 0; ch < numChannels; ch++) {
+        if (isLfe[ch]) continue;
         g_faacStats.sbrInvfSum += SBR_INVF_MODE;
         g_faacStats.sbrInvfCount++;
     }

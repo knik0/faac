@@ -30,7 +30,7 @@ static inline int sbr_env_of_slot(int numEnvelopes, const int *envStart, int slo
 
 /* Multi-pass signal analysis: transient detection, temporal grid selection,
  * and subband energy accumulation. */
-void SbrAnalyze(SignalAnalysis *sa, float *fullPtrs[], int nch, int numSamples, struct SBRInfo *sbr)
+void SbrAnalyze(SignalAnalysis *sa, float *fullPtrs[], int nch, const bool *isLfe, int numSamples, struct SBRInfo *sbr)
 {
     int num_slots = numSamples / SBR_QMF_BANDS_64;
     int sampled = (num_slots - 1) / FAAC_SBR_DECIMATION + 1;
@@ -94,10 +94,12 @@ void SbrAnalyze(SignalAnalysis *sa, float *fullPtrs[], int nch, int numSamples, 
     }
 
     /* Choose the temporal grid based on the strongest transient. Synchronizes
-     * envelope borders across all channels to maintain spatial imaging. */
+     * envelope borders across all channels to maintain spatial imaging. The
+     * LFE carries no SBR, so it gets no vote. */
     float frameStrength = 0.0f;
     int frameSlot = 0;
     for (int ch = 0; ch < nch; ch++) {
+        if (isLfe[ch]) continue;
         if (sa->ch[ch].transientStrength > frameStrength) {
             frameStrength = sa->ch[ch].transientStrength;
             frameSlot = sa->ch[ch].transientSlot;
@@ -139,16 +141,14 @@ void SbrAnalyze(SignalAnalysis *sa, float *fullPtrs[], int nch, int numSamples, 
         if (sa->envSampled[e] < 1) sa->envSampled[e] = 1;
 
     /* Pass 2: subband analysis, accumulating QMF band energy per envelope.
-     * Only [kx, k2) feeds the quantizer, so skip bands below kx; only the SBR
-     * element's own channels are quantized, so a 5.1 core doesn't pay for
-     * four channels of QMF analysis whose result is dropped. */
-    int kx = sbr ? sbr->kx : 0;
-    int kEnd = sbr ? sbr->k2 : SBR_QMF_BANDS_64;
-    int nch_coded = (nch < SBR_MAX_CODED_CHANNELS) ? nch : SBR_MAX_CODED_CHANNELS;
-    for (int ch = 0; ch < nch_coded; ch++) {
-        memset(sa->bandE[ch], 0, sizeof(sa->bandE[ch]));
+     * Only [kx, k2) feeds the quantizer, so skip bands below kx. */
+    if (sbr) {
+        int kx = sbr->kx;
+        int kEnd = sbr->k2;
+        for (int ch = 0; ch < nch; ch++) {
+            if (isLfe[ch]) continue;
+            memset(sa->bandE[ch], 0, sizeof(sa->bandE[ch]));
 
-        if (sbr) {
             memcpy(workspace, sbr->ch[ch].qmfOvl64, SBR_QMF_OVL_LEN_64 * sizeof(float));
             memcpy(workspace + SBR_QMF_OVL_LEN_64, fullPtrs[ch], numSamples * sizeof(float));
 
