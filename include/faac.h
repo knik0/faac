@@ -175,8 +175,9 @@ typedef struct faac_params {
     uint8_t                 reserved[2];   /* explicit pad; must remain 0              */
 
     uint32_t                bit_rate;      /* target bits/sec PER CHANNEL; 0 = use quant_quality */
-    uint32_t                bandwidth;     /* cutoff in Hz; 0 = derive from bit_rate             */
-    uint32_t                quant_quality; /* quantizer quality; 0 = derive from bit_rate        */
+    uint32_t                bandwidth;     /* cutoff in Hz; 0 = from bit_rate, the curve's top in VBR */
+    uint32_t                quant_quality; /* quantizer quality 1..5000; 0 = derive from bit_rate.
+                                            * With bit_rate it only seeds the rate loop.          */
 
     enum faac_stream_format output_format;
     enum faac_input_format  input_format;
