@@ -81,8 +81,11 @@ struct BitStream;
 /* log2(0) guard in envelope quantization: -200 dBFS^2, below all SBR quantizer ranges. */
 #define SBR_LOG_ENERGY_FLOOR            (1e-20f)
 /* Noise floor level, written for the single noise band of every noise
- * envelope (ISO 14496-3 §4.6.18.6.4). */
-#define SBR_NOISE_LEVEL_DEFAULT         4
+ * envelope (ISO 14496-3 §4.6.18.6.4). The decoder adds noise at
+ * 2^(6 - level) relative to the patched signal; quality keeps rising with
+ * the level until the fill is effectively off, so this keeps a floor at
+ * little cost. */
+#define SBR_NOISE_LEVEL_DEFAULT         12
 /* Inverse filtering mode, written for every channel (ISO 14496-3 §4.6.18.6.4). */
 #define SBR_INVF_MODE                   3
 /* 6 = log2(64): normalises 64-band QMF energy to per-band level. ISO 14496-3 §4.6.18.6.3. */
