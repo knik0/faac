@@ -32,6 +32,42 @@
 /* Pan, in SF_STEP_ENRG steps, beyond which the quieter channel is inaudible
  * and is dropped to HCB_ZERO rather than intensity-coded. */
 #define IS_PAN_LIMIT     30
+/* Below this rate (bps per channel) a long window takes intensity stereo
+ * like a short one: M/S would pay a mask plus a side channel's scalefactors
+ * and sections for spectrum that quantizes to almost nothing. Gated on the
+ * configured rate like PSY_SHORT_ONLY_BITRATE; the running quality gates
+ * fewer frames and gains less. */
+#define IS_ONLY_BITRATE  40000
+/* From this rate (bps per channel) a short window keeps L/R below the
+ * intensity crossover like a long one; below it the bits that full-band
+ * intensity stereo saves still buy more quality than the image they cost. */
+#define IS_SHORT_CROSSOVER_BITRATE  80000
+
+void StereoConfigure(StereoConfig *cfg, JointMode mode, int sampleRate, unsigned int bandWidth,
+                     unsigned long bitRatePerCh, const int *sfbOffset[2], const int sfbn[2])
+{
+    /* Grouped short windows share one scalefactor set, so M/S spreads the
+     * side channel's quantization noise across the group and ahead of the
+     * attack; in mixed mode they never take M/S (see process_cpe). Below
+     * IS_ONLY_BITRATE both window types intensity-code every band. */
+    int starved = bitRatePerCh && bitRatePerCh < IS_ONLY_BITRATE;
+    cfg->mode     = mode;
+    cfg->modes[0] = (mode == JOINT_MIXED && starved) ? JOINT_IS : mode;
+    cfg->modes[1] = (mode == JOINT_MIXED && (starved || bitRatePerCh < IS_SHORT_CROSSOVER_BITRATE)) ? JOINT_IS : mode;
+
+    /* Scale IS crossover with bandwidth (0.35 * bw, 3.5-7 kHz) to save phase bits. */
+    int cap = (sampleRate * IS_FREQ_CAP_NUM) / IS_FREQ_CAP_DEN;
+    int max_freq = min(IS_START_FREQ_MAX, cap);
+    int ifreq = (max_freq < IS_START_FREQ_MIN) ? max_freq : clamp_int((int)((float)bandWidth * IS_BW_RATIO), IS_START_FREQ_MIN, max_freq);
+
+    /* First band at or above the crossover in each window type's sfb table. */
+    for (int w = 0; w < 2; w++) {
+        int offset = (ifreq * 2 * (w ? BLOCK_LEN_SHORT : BLOCK_LEN_LONG) + sampleRate - 1) / sampleRate;
+        int sfb = 0;
+        while (sfb < sfbn[w] && sfbOffset[w][sfb] < offset) sfb++;
+        cfg->isStart[w] = sfb;
+    }
+}
 
 /* Accumulate channel energies and cross-correlation for a scale factor band.
  * Using three independent accumulators maximizes instruction-level parallelism
@@ -135,7 +171,7 @@ static inline int process_cpe(CoderInfo * restrict cl, CoderInfo * restrict cr,
                                float * restrict sl0, float * restrict sr0,
                                int * restrict sfcnt, int wstart, int wend,
                                float thrmid, float inv_isthr, float thrside_sq,
-                               int is_start_sfb, int mode)
+                               int is_start_sfb, JointMode mode, int allow_ms)
 {
     int sfb, sfmin = (cl->block_type == ONLY_SHORT_WINDOW) ? 1 : 8, msused = 0;
     const int * restrict sfb_offset = cl->sfb_offset;
@@ -207,7 +243,7 @@ static inline int process_cpe(CoderInfo * restrict cl, CoderInfo * restrict cr,
             /* M/S fires when min(L,R) * thrmid ≥ dominant component: the weaker channel
              * contributes enough to justify the transform overhead. 0.25 accounts for halving. */
             float em = 0.25f * es, side = 0.25f * ed;
-            if (min(el, er) * thrmid >= max(em, side)) {
+            if (allow_ms && min(el, er) * thrmid >= max(em, side)) {
                 if (em * thrmid * 2.0f >= etot) {
                     ms = 1;
                     apply_ms(sl0, sr0, start, len, wstart, wend, 1);
@@ -237,12 +273,12 @@ static inline int process_cpe(CoderInfo * restrict cl, CoderInfo * restrict cr,
 }
 
 void AACstereo(CoderInfo *coder, AACElement *elements, int numElements, float *s[MAX_CHANNELS],
-               float quality, int mode, int sampleRate, unsigned int bandWidth)
+               float quality, const StereoConfig *cfg)
 {
     float inv_quality = 1.0f / quality;
     float thrmid = 1.0f, isthr = 1.0f, thrside = 0.0f;
 
-    switch (mode) {
+    switch (cfg->mode) {
         case JOINT_MIXED:
             thrmid = (0.09f * 0.85f) * inv_quality;
             if (thrmid > 0.25f) thrmid = 0.25f;
@@ -274,14 +310,6 @@ void AACstereo(CoderInfo *coder, AACElement *elements, int numElements, float *s
     float inv_isthr = 1.0f / (isthr * isthr);
     float thrside_sq = thrside * thrside;
 
-    /* Scale IS crossover with bandwidth (0.35 * bw, 3.5-7 kHz) to save phase bits. */
-    int cap = (sampleRate * IS_FREQ_CAP_NUM) / IS_FREQ_CAP_DEN;
-    int max_freq = min(IS_START_FREQ_MAX, cap);
-    int ifreq = (max_freq < IS_START_FREQ_MIN) ? max_freq : clamp_int((int)((float)bandWidth * IS_BW_RATIO), IS_START_FREQ_MIN, max_freq);
-
-    int target_offset_long  = (ifreq * (2 * BLOCK_LEN_LONG)  + sampleRate - 1) / sampleRate;
-    int target_offset_short = (ifreq * (2 * BLOCK_LEN_SHORT) + sampleRate - 1) / sampleRate;
-
     for (int e = 0; e < numElements; e++) {
         AACElement *elem = &elements[e];
         if (elem->type != ID_CPE) continue;
@@ -303,29 +331,24 @@ void AACstereo(CoderInfo *coder, AACElement *elements, int numElements, float *s
         }
         if (!ok) continue;
 
-        /* Grouped short windows share one scalefactor set, so M/S spreads the
-         * side channel's quantization noise across the group and ahead of the
-         * attack. Intensity stereo's per-band gain leaves the envelope intact. */
-        int cur_mode = (coder[lch].block_type == ONLY_SHORT_WINDOW && mode == JOINT_MIXED) ? JOINT_IS : mode;
+        int shortwin = coder[lch].block_type == ONLY_SHORT_WINDOW;
+        JointMode cur_mode = cfg->modes[shortwin];
 
         elem->common_window  = true;
         elem->msInfo.is_present = (cur_mode == JOINT_MS);
 
-        int start = 0, sfcnt = 0, is_start_sfb = coder[lch].sfbn, msused = 0;
-        if (cur_mode == JOINT_MIXED) {
-            int target_offset = (coder[lch].block_type == ONLY_SHORT_WINDOW) ? target_offset_short : target_offset_long;
-            for (int sfb = 0; sfb < coder[lch].sfbn; sfb++) {
-                if (coder[lch].sfb_offset[sfb] >= target_offset) {
-                    is_start_sfb = sfb; break;
-                }
-            }
-        }
+        int start = 0, sfcnt = 0, msused = 0;
+        int is_start_sfb = cfg->isStart[shortwin];
+        if (is_start_sfb > coder[lch].sfbn) is_start_sfb = coder[lch].sfbn;
 
+        /* Mixed mode never M/S-codes a short window: the shared scalefactor
+         * set would spread the side channel's noise ahead of the attack. */
+        int allow_ms = !(shortwin && cfg->mode == JOINT_MIXED);
         for (int g = 0; g < coder[lch].groups.n; g++) {
             int end = start + coder[lch].groups.len[g];
             msused |= process_cpe(coder+lch, coder+rch, elem, s[lch], s[rch],
                                   &sfcnt, start, end, thrmid, inv_isthr, thrside_sq,
-                                  is_start_sfb, cur_mode);
+                                  is_start_sfb, cur_mode, allow_ms);
             start = end;
         }
         if (cur_mode == JOINT_MIXED && msused) elem->msInfo.is_present = true;

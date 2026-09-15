@@ -17,15 +17,25 @@
 #define STEREO_H
 
 #include "channels.h"
+#include "faac_internal.h"
 #include "util.h"
+
+/* Joint-stereo policy resolved once per configuration: the mode each window
+ * type runs in and, for JOINT_MIXED, the first intensity-coded band. */
+typedef struct {
+    JointMode mode;
+    JointMode modes[2];   /* indexed by window type: 0 long, 1 short */
+    int isStart[2];
+} StereoConfig;
+
+void StereoConfigure(StereoConfig *cfg, JointMode mode, int sampleRate, unsigned int bandWidth,
+                     unsigned long bitRatePerCh, const int *sfbOffset[2], const int sfbn[2]);
 
 void AACstereo(CoderInfo *coder,
                AACElement *elements,
                int numElements,
                float *s[MAX_CHANNELS],
                float quality,
-               int mode,
-               int sampleRate,
-               unsigned int bandWidth);
+               const StereoConfig *cfg);
 
 #endif

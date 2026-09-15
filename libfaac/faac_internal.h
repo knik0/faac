@@ -48,7 +48,7 @@ enum stream_format { RAW_STREAM = 0, ADTS_STREAM = 1 };
 /* Mirrors enum faac_rate_control; faac.c asserts the values agree. */
 enum rate_control_mode { RATE_AUTO = 0, RATE_VBR, RATE_ABR, RATE_CBR };
 
-enum { JOINT_NONE = 0, JOINT_MS, JOINT_IS, JOINT_MIXED };
+typedef enum { JOINT_NONE = 0, JOINT_MS, JOINT_IS, JOINT_MIXED } JointMode;
 
 typedef struct faacEncConfiguration
 {
