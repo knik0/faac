@@ -54,6 +54,21 @@ MP4 specific options
 Advanced options, only for testing purposes
 
 .SH QUALITY-RELATED OPTIONS
+.B Rate control:
+.B -q
+holds a quality and lets the bitrate follow the material (VBR);
+.B -b
+holds an average over the file (ABR, the default at 128 kbps);
+.B -b --cbr
+holds it in every frame (CBR).
+.B --cap-rate
+bounds any single frame in any mode, so
+.B -q --cap-rate
+is capped VBR: constant quality, no frame above the cap.
+.B -q
+and
+.B -b
+are exclusive.
 .TP
 .BR --object-type\ <\fItype\fP>
 Force the AAC object type:
@@ -88,10 +103,16 @@ Disable Temporal Noise Shaping, which reduces pre-echo on transients. On by
 default.
 .TP
 .BR -q\ <\fIquality\fP>
-Set encoding quality. Set default variable bitrate (VBR) quality level in percent.
-max. 5000, min. 10.
-default: 100, averages at approx. 120 kbps VBR for a normal
-stereo input file with 16 bit and 44.1 kHz sample rate
+Constant quality, 1..5000, default 100 (VBR). Higher is better and costs
+more bits. With
+.B --object-type auto
+a quality up to 75 uses HE-AAC v1. On 44.1/48 kHz stereo music,
+.B -q 50
+lands at 22-33 kbps (HE-AAC),
+.B -q 100
+at 55-110 (median 75),
+.B -q 200
+at 80-175 (median 125).
 .TP
 .BR -b\ <\fIbitrate\fP>
 Set average bitrate (ABR) to approximately <bitrate> kbps.
@@ -112,16 +133,20 @@ times the mean.
 .TP
 .BR \-\-cap\-rate\ <\fIbitrate\fP>
 Cap any single frame at <bitrate> kbps, for packet-oriented transports that drop
-an oversized frame rather than splitting it. Must be at least the
+an oversized frame rather than splitting it, and for bounding VBR. Must be at
+least the
 .B -b
 bitrate. A ceiling, not a second average: frames that already fit are left
-alone, so the stream stays ABR. Best-effort \(em a frame cannot shrink below the
+alone, so the stream stays ABR or VBR. Best-effort \(em a frame cannot shrink below the
 cost of its own side info, so a low enough cap is still exceeded on a few
 percent of frames.
 .TP
 .BR -c\ <\fIfreq\fP>
-Set the bandwidth in Hz.
-The actual frequency is adjusted to maximize upper spectral band usage.
+Cut the audio off above <freq> Hz. Left out, the encoder chooses the cutoff
+from the bitrate, between 14 and 19 kHz on most stereo settings; VBR codes up
+to 19 kHz. It is printed at the start of the encode. Set it as high as half
+the sample rate to keep everything; the bitrate rises with it. HE-AAC sets its
+own cutoff and ignores this. The actual frequency is adjusted to a band edge.
 .SH INPUT/OUTPUT OPTIONS
 .TP
 .BR -o\ <\fIfilename\fP>

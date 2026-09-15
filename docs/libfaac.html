@@ -148,6 +148,12 @@ with, respectively, a <i>bit_rate</i> set or unset is rejected by
 <i>faac_encoder_open()</i> with <i>FAAC_ERR_INVALID_ARGUMENT</i>.
 <i>faac_encoder_info.rate_control</i> reports the resolved mode.
 <br><br>
+In ABR and CBR the cutoff follows <i>bit_rate</i>; in VBR it is the top of
+that curve, 18750 Hz. A non-zero <i>bandwidth</i> overrides either. A non-zero <i>quant_quality</i> given
+together with a <i>bit_rate</i> is not rejected: it is the rate loop's starting
+quality, and the loop moves on from it. <i>faac_encoder_info.bandwidth</i>
+reports the cutoff in use.
+<br><br>
 <a name="api-peak">
 <h5>Capping the peak frame size</h5>
 Packet-oriented transports often cannot fragment a frame: one that overruns the
