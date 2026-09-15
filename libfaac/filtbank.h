@@ -24,11 +24,6 @@ extern "C" {
 
 #define NFLAT_LS 448
 
-
-
-#define SINE_WINDOW 0
-#define KBD_WINDOW  1
-
 void			FilterBankInit		( faacEncStruct* hEncoder );
 
 void			FilterBankEnd		( faacEncStruct* hEncoder );
