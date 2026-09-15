@@ -43,6 +43,7 @@ static int compute_kx(int sampleRate, int bs_start_freq)
 }
 
 static int cmp_int16(const void *a, const void *b) { return (int)(*(const short *)a) - (int)(*(const short *)b); }
+static int cmp_int(const void *a, const void *b) { return *(const int *)a - *(const int *)b; }
 
 /* SBR stop frequency (k2). Bark-scale distribution maximizes bit efficiency. */
 static int compute_k2(int sampleRate, int kx, int bs_stop_freq)
@@ -86,20 +87,29 @@ static int pick_stop_freq(int sampleRate, int kx, int targetHz)
     return SBR_STOP_FREQ_MAX;
 }
 
-/* Distribute QMF bands into SBR master bands using uniform dk-spacing.
- * Residual bands are merged into the first/last pairs to maintain a
- * monotonic frequency grid. */
+/* Master table (ISO 14496-3 §4.6.18.3.2.1). bs_freq_scale 0: uniform
+ * dk-spacing, residual bands merged into the first/last pairs. 1/2/3:
+ * log-spaced with 12/10/8 bands per octave, widths of a geometric series
+ * rounded and sorted so the narrow bands sit at the bottom. Only the
+ * one-region case exists here: at bs_start_freq 15 kx is at least 30 at
+ * every sample rate and k2 at most 64, so k2/kx never reaches the 2.2449
+ * split. */
 static int build_freq_table(SBRInfo *sbr)
 {
-    int kx = sbr->kx, k2 = sbr->k2, dk = sbr->dk;
-    int n_master = clamp_int(((k2 - kx + (dk & 2)) >> dk) << 1, 1, SBR_MAX_BANDS);
+    int kx = sbr->kx, k2 = sbr->k2;
     int *edges = sbr->bandEdges;
-    for (int k = 1; k <= n_master; k++) edges[k] = dk;
-    int k2diff = (k2 - kx) - n_master * dk;
-    if (k2diff < 0) {
-        edges[1]--;
-        if (k2diff < -1) edges[2]--;
-    } else if (k2diff > 0) edges[n_master]++;
+    int n_master;
+
+    int prev = kx;
+    int bands_per_octave = 14 - 2 * sbr->bs_freq_scale; /* 12, 10, 8 for bs_freq_scale 1, 2, 3 */
+    n_master = 2 * (int)(bands_per_octave * log2f((float)k2 / (float)kx) / 2.0f + 0.5f);
+    n_master = clamp_int(n_master, 1, SBR_MAX_BANDS);
+    for (int k = 0; k < n_master; k++) {
+        int edge = (int)(kx * powf((float)k2 / (float)kx, (float)(k + 1) / (float)n_master) + 0.5f);
+        edges[1 + k] = edge - prev;
+        prev = edge;
+    }
+    qsort(edges + 1, n_master, sizeof(int), cmp_int);
     edges[0] = kx;
     for (int k = 1; k <= n_master; k++) edges[k] += edges[k - 1];
     sbr->numBands = n_master;
@@ -153,15 +163,12 @@ void SbrUpdate(SBRInfo *sbr, unsigned long bitRate)
     /* Target crossover near the core ceiling (~11.6 kHz) maximizes MOS.
      * Higher-order parametric reconstruction below 10 kHz is audible and
      * generally inferior to the bit-starved LC core. */
-    if (rate_per_ch <= SBR_COARSE_TABLE_BITRATE_BPS) {
-        sbr->bs_start_freq = 15;
-        sbr->bs_alter_scale = 1;
-        sbr->dk = 2;
-    } else {
-        sbr->bs_start_freq = 15;
-        sbr->bs_alter_scale = 0;
-        sbr->dk = 1;
-    }
+    sbr->bs_start_freq = 15;
+    /* Log-spaced envelope bands, fewer per octave while bits are scarce:
+     * what they save, rate control hands to the core. */
+    sbr->bs_freq_scale = (rate_per_ch >= SBR_FREQ_SCALE_FINE_BPS) ? 1
+                       : (rate_per_ch >= SBR_FREQ_SCALE_COARSE_BPS) ? 3 : 2;
+    sbr->bs_alter_scale = 0; /* only warps a two-region table; see build_freq_table */
     sbr->bs_freq_res = 1; /* HIGH resolution */
     sbr->bs_xover_band = 0; /* every master band is an SBR band; no low-res split */
     sbr->kx = compute_kx(sampleRate, sbr->bs_start_freq);

@@ -92,7 +92,11 @@ struct BitStream;
 #define SBR_ENV_LEVEL_LOG2_OFFSET       (6.0f)
 /* Rate-dependent resolution thresholds. */
 #define SBR_AMP_RES_BITRATE_BPS         20000u
-#define SBR_COARSE_TABLE_BITRATE_BPS    32000u
+/* Master table density, bands per octave 12/10/8 for bs_freq_scale 1/2/3:
+ * the coarsest table wins from 12 kbps/ch up to the fine table's rate, but
+ * below that it costs speech-like clips more than it saves. */
+#define SBR_FREQ_SCALE_FINE_BPS         24000u
+#define SBR_FREQ_SCALE_COARSE_BPS       12000u
 /* Stop-frequency search bounds (bs_stop_freq). 13 is the largest worth
  * searching: it already pins k2 to its 64-band ceiling at every supported
  * rate, so higher indices would just signal more range for the same band. */

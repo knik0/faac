@@ -55,7 +55,6 @@ struct SBRInfo {
     /* --- frequency band configuration (set at init, constant per stream) --- */
     int kx;
     int k2;
-    int dk;                /* master frequency table step (1 or 2 QMF bands) */
     int numBands;
     int bandEdges[SBR_MAX_BANDS + 1];
     int numBandsLow; /* low-res band count: every other high-res edge */
@@ -68,6 +67,7 @@ struct SBRInfo {
     int bs_stop_freq;
     int bs_xover_band;
     int bs_alter_scale;
+    int bs_freq_scale;     /* 1..3: log-spaced master table, 12/10/8 bands per octave */
 
     /* --- per-frame state --- */
     /* The header decision is made once per access unit, on the first write
