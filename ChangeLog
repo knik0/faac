@@ -1,3 +1,41 @@
+(unreleased)
+
+	[ Robert Kausch ]
+	* build: honor an explicit b_lto=false; drop __stdcall on x86 Windows
+
+	[ Nils Schimmelmann ]
+	* Bump the ABI to 2: faac_params_init() takes the caller's struct size
+	* HE-AAC auto range 8-32 kbps per channel at 48 kHz (was 12-28), VBR up
+	  to -q 75 (was 60); HE-AAC v1 for multichannel layouts up to 8 channels
+	* Rate control: signed bit account for ABR; a real bit reservoir for CBR
+	  behind `--cbr`
+	* Refit the ABR bandwidth curve from a sweep: a wider core at 24-56 kbps
+	  stereo and every cutoff on the band grid reachable, where a double
+	  snap had left seven
+	* VBR codes at the top of the bandwidth curve (18750 Hz) instead of the
+	  full band; `-q` and `-b` are exclusive; `-q` documented as 1..5000
+	* SBR: reconstruction toward 20 kHz; noise floor -18 dB; log-spaced band
+	  table by rate
+	* Stereo: joint-stereo policy by rate; intensity on long windows below
+	  40 kbps per channel, L/R on short windows below the crossover from 80;
+	  short-window grouping and masking targets reworked
+	* TNS on by default; frames screened before LPC analysis
+	* Block switching: judge each sub-block's attack once, in the time domain
+	* Enforce the ISO/IEC 14496-3 per-channel frame ceiling and bitrate limits
+	* frontend: MP4 output by default with detection from the extension;
+	  24-bit packed PCM input; 64-bit mdat and duration; track language;
+	  UTF-8 and wide-character paths on CLI and Win32 GUI; iTunes gapless
+	  metadata (iTunSMPB); shared encoding engine and MP4 output in the GUI;
+	  GUI opens on ABR at 128 kbps; optional end-of-encode diagnostics
+	* mp4write: container timing, HE-AAC sample rate declaration and gapless
+	  fixes; GUI PCM clipping fix
+	* SBR: parameter resolution in VBR, tail drained on flush, psPresentFlag
+	  for mono, less per-frame work in the writer
+	* Pipeline draining during flush on short streams
+	* HUFF2/quantize: scale-factor and codebook processing optimized
+	* Drop the never-selected KBD window from the filter bank
+	* build: force-include config.h instead of per-file guards
+
 2.1 (Aug 18, 2026)
 
 	[ Nils Schimmelmann ]
