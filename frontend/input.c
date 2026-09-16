@@ -154,7 +154,7 @@ pcmfile_t *wav_open_read(const char *name, bool rawinput)
   FILE *wave_f;
   riff_t riff;
   riffsub_t riffsub = {0};
-  struct WAVEFORMATEXTENSIBLE wave;
+  struct WAVEFORMATEXTENSIBLE wave = {0};
   char *riffl = "RIFF";
   char *wavel = "WAVE";
   char *fmtl = "fmt ";
