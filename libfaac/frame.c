@@ -37,10 +37,13 @@
  * lands, the more spectrum SBR is rescuing. 8000 is HE-AAC's design floor and
  * the lowest rate measured. */
 #define HE_MIN_BITRATE_PER_CH 8000
-/* Crossover measured on the refitted LC curve: HE leads by 0.070 MOS at 24000
- * per channel and trails by 0.011 at 28000. A wider LC core moves this down --
- * refit the curve and this constant has to be re-measured with it. */
-#define HE_MAX_BITRATE_PER_CH 26000
+/* Crossover measured against the LC curve at 48 kHz: HE still leads at
+ * 32000 per channel and ties at 48000, with no rung measured between. At
+ * 44.1 kHz it already ties at 32000, so the ceiling reaches this value
+ * only at HE_MAX_SAMPLE_RATE. Either side moving (a wider LC core, a
+ * better SBR) re-opens this constant. */
+#define HE_MAX_BITRATE_PER_CH 32000
+#define HE_MAX_SAMPLE_RATE    48000
 /* Frozen, not derived: quantqual doesn't map onto a bitrate ceiling cleanly
  * (the two are off by 2-4.5x across the range), so this is set by measurement.
  * Deriving it from HE_MAX_BITRATE_PER_CH instead would flip -q 42+ to LC for
@@ -210,14 +213,14 @@ int faacEncApplyConfig(faacEncStruct* hEncoder,
         unsigned long rate_per_ch = config->bitRate;
         int rate_ok;
         if (rate_per_ch > 0) {
-            /* Below 44.1 kHz, SBR has less core bandwidth to extend from, so the
+            /* Below 48 kHz, SBR has less core bandwidth to extend from, so the
              * ceiling ramps down toward 20000 bps/ch at the HE_MIN_SAMPLE_RATE floor. */
             unsigned int max_he_rate = 0;
-            if (hEncoder->sampleRate >= 44100) {
+            if (hEncoder->sampleRate >= HE_MAX_SAMPLE_RATE) {
                 max_he_rate = HE_MAX_BITRATE_PER_CH;
             } else if (hEncoder->sampleRate >= HE_MIN_SAMPLE_RATE) {
-                max_he_rate = 20000 + (unsigned int)((hEncoder->sampleRate - 32000) *
-                              (HE_MAX_BITRATE_PER_CH - 20000) / (44100 - 32000));
+                max_he_rate = 20000 + (unsigned int)((hEncoder->sampleRate - HE_MIN_SAMPLE_RATE) *
+                              (HE_MAX_BITRATE_PER_CH - 20000) / (HE_MAX_SAMPLE_RATE - HE_MIN_SAMPLE_RATE));
             }
             rate_ok = (rate_per_ch >= HE_MIN_BITRATE_PER_CH && rate_per_ch <= max_he_rate);
         } else {
