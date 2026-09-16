@@ -34,7 +34,7 @@ static int write_sbr_header(const SBRInfo *sbr, BitStream *bs, bool write)
         PutBit(bs, 0,                   2); /* bs_reserved */
         PutBit(bs, 1,                   1); /* bs_header_extra_1 = 1 */
         PutBit(bs, 0,                   1); /* bs_header_extra_2 = 0 */
-        PutBit(bs, 0,                   2); /* bs_freq_scale = 0 */
+        PutBit(bs, sbr->bs_freq_scale,  2);
         PutBit(bs, sbr->bs_alter_scale, 1);
         PutBit(bs, 0,                   2); /* bs_noise_bands = 0 */
     }
