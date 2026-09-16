@@ -126,7 +126,7 @@ int SbrContextIsAnalysisValid(SBRContext *sCtx);
 int SbrContextGetWantShort(SBRContext *sCtx, int channel, int index);
 
 /* The EXT_SBR_DATA fill element following one SCE/CPE; none after an LFE. */
-int SbrContextGetBits(SBRContext *sCtx, struct BitStream *bs, const AACElement *elem, int aacObjectType, int writeFlag);
+int SbrContextGetBits(SBRContext *sCtx, struct BitStream *bs, const AACElement *elem, int aacObjectType);
 
 #ifdef __cplusplus
 }
