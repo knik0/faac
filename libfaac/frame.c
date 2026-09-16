@@ -377,6 +377,13 @@ int faacEncApplyConfig(faacEncStruct* hEncoder,
               hEncoder->sfbOffsetShort,
               hEncoder->sfbOffsetLong);
 
+    {
+        const int *sfbOffset[2] = { hEncoder->sfbOffsetLong, hEncoder->sfbOffsetShort };
+        const int  sfbn[2]      = { hEncoder->aacquantCfg.max_cbl, hEncoder->aacquantCfg.max_cbs };
+        StereoConfigure(&hEncoder->stereoCfg, (JointMode)hEncoder->config.jointmode, hEncoder->sampleRate,
+                        hEncoder->config.bandWidth, hEncoder->config.bitRate, sfbOffset, sfbn);
+    }
+
     // reset psymodel
     PsyEnd(hEncoder->psyInfo, hEncoder->numChannels);
     PsyInit(&hEncoder->gpsyInfo, hEncoder->psyInfo, hEncoder->numChannels,
@@ -691,7 +698,6 @@ int faacEncEncode(faacEncHandle hpEncoder,
     CoderInfo *coderInfo = hEncoder->coderInfo;
     unsigned int numChannels = hEncoder->numChannels;
     unsigned int useTns = hEncoder->config.useTns;
-    unsigned int jointmode = hEncoder->config.jointmode;
     unsigned int shortctl = hEncoder->config.shortctl;
     int maxqual = hEncoder->config.outputFormat ? MAXQUALADTS : MAXQUAL;
 
@@ -942,8 +948,7 @@ int faacEncEncode(faacEncHandle hpEncoder,
         ResetCoderSections(&coderInfo[channel]);
 
     AACstereo(coderInfo, hEncoder->elements, hEncoder->numElements, hEncoder->freqBuff,
-              (float)hEncoder->aacquantCfg.quality/DEFQUAL, jointmode, hEncoder->sampleRate,
-              hEncoder->config.bandWidth);
+              (float)hEncoder->aacquantCfg.quality/DEFQUAL, &hEncoder->stereoCfg);
 
     /* AACstereo has already consumed freqBuff in place and BlocQuant
      * accumulates into sf[] while reading book[], so a retry can re-run
