@@ -280,17 +280,24 @@ static int BuildFrame(struct faacEncStruct *hEncoder, CoderInfo *coder, AACEleme
 {
     int bits = 0;
     if (hEncoder->config.outputFormat == 1) bits += WriteADTSHeader(hEncoder, bs, write);
-    for (int i = 0; i < nElems; i++) bits += WriteElement(bs, &elems[i], coder, write);
+    /* SBR follows each SCE/CPE in a fill element; rate control charges only
+     * the core, so its total is kept aside. */
+    int sbrBits = 0;
+    for (int i = 0; i < nElems; i++) {
+        bits += WriteElement(bs, &elems[i], coder, write);
+        sbrBits += SbrContextGetBits(hEncoder->sbrContext, write ? bs : NULL,
+                                     &elems[i], (int)hEncoder->config.aacObjectType, write);
+    }
+    hEncoder->rc.sbrBits = sbrBits;
+    bits += sbrBits;
     int f = (bits < (8 - LEN_SE_ID)) ? (8 - LEN_SE_ID - bits) : 0;
     f += 6;
 
-    /* Stuff to the reservoir floor; only SBR and the end marker still follow. */
+    /* Stuff to the reservoir floor; only the end marker still follows. */
     hEncoder->rc.stuffedBits = 0;
     if (hEncoder->rc.resMinBits > 0) {
-        int sbrBits = SbrContextGetBits(hEncoder->sbrContext, NULL,
-                                        (int)hEncoder->numChannels, (int)hEncoder->config.aacObjectType, 0);
         int hdr = (hEncoder->config.outputFormat == 1) ? ADTS_HEADER_SIZE * 8 : 0;
-        int need = hEncoder->rc.resMinBits - (bits - hdr + f + sbrBits + LEN_SE_ID);
+        int need = hEncoder->rc.resMinBits - (bits - hdr + f + LEN_SE_ID);
         if (need > 0) {
             /* Fill is byte-granular and rounds down; never land under the floor. */
             need += 7;
@@ -299,11 +306,6 @@ static int BuildFrame(struct faacEncStruct *hEncoder, CoderInfo *coder, AACEleme
         }
     }
     bits += (f - WriteAACFillBits(bs, f, write));
-
-    /* HE-AAC: SBR payload rides in a fill element (EXT_SBR_DATA) */
-    hEncoder->rc.sbrBits = SbrContextGetBits(hEncoder->sbrContext, write ? bs : NULL,
-                                             (int)hEncoder->numChannels, (int)hEncoder->config.aacObjectType, write);
-    bits += hEncoder->rc.sbrBits;
 
     if (write) PutBit(bs, ID_END, LEN_SE_ID);
     bits += LEN_SE_ID;
