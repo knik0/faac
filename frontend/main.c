@@ -263,11 +263,13 @@ static void help0(help_t *h, int l)
     printf("\n\n");
 }
 
-static void help(int mode)
+static void help(int mode, const char *lib_version)
 {
     int cnt;
     static const char *name = "faac";
 
+    char ver_buf[128];
+    printf("FAAC %s\n", faac_version_string(ver_buf, sizeof(ver_buf), lib_version ? lib_version : PACKAGE_VERSION));
     printf(usage, name);
     switch (mode)
     {
@@ -526,7 +528,7 @@ int main(int argc, char *argv[])
 
     if (argc < 2)
     {
-        help('?');
+        help('?', libinfo.version);
         ret = 1;
         goto cleanup;
     }
@@ -825,12 +827,12 @@ int main(int argc, char *argv[])
         case HELP_ADVANCED:
         case 'H':
         case 'h':
-            help(c);
+            help(c, libinfo.version);
             ret = 1;
             goto cleanup;
         case '?':
         default:
-            help('?');
+            help('?', libinfo.version);
             ret = 1;
             goto cleanup;
         }
@@ -888,7 +890,8 @@ int main(int argc, char *argv[])
 
     if (opts.verbose > 0 && libinfo.version)
     {
-        fprintf(stderr, "Freeware Advanced Audio Coder\nFAAC %s\n\n", libinfo.version);
+        char ver_buf[128];
+        fprintf(stderr, "Freeware Advanced Audio Coder\nFAAC %s\n\n", faac_version_string(ver_buf, sizeof(ver_buf), libinfo.version));
     }
 
     opts.output_filename = aacFileName;
