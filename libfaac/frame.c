@@ -47,8 +47,14 @@
 /* Frozen, not derived: quantqual doesn't map onto a bitrate ceiling cleanly
  * (the two are off by 2-4.5x across the range), so this is set by measurement.
  * Deriving it from HE_MAX_BITRATE_PER_CH instead would flip -q 42+ to LC for
- * 13.1% more bits. */
+ * 13.1% more bits. Re-measure it with a -q sweep whenever the ABR crossover
+ * moves. */
 #define HE_VBR_QUANTQUAL_MAX  75
+
+/* Top of the bandwidth curve: widening past it loses at every reachable rate,
+ * the band above holds ~0.006% of programme energy and sits at the edge of
+ * hearing. VBR, having no rate, codes at the top. */
+#define BANDWIDTH_CEILING     18750
 
 #if (defined WIN32 || defined _WIN32 || defined WIN64 || defined _WIN64) && !defined(PACKAGE_VERSION)
 #include "win32_ver.h"
@@ -70,13 +76,8 @@ static char *libCopyright =
   " Copyright (C) 2005-2026, Fabian Greffrath\n"
   " Copyright (C) 2026, Nils Schimmelmann\n";
 
-static unsigned int CalcBandwidth(unsigned long bitRate, unsigned long sampleRate)
+static unsigned int CalcBandwidth(unsigned long bitRate)
 {
-    const unsigned int nyquist = sampleRate / 2;
-    unsigned int bw;
-
-    if (!bitRate) return nyquist;
-
     /* Anchors land on long-block band edges, so CalcBW()'s snap is a no-op and
      * these constants are the cutoff you actually get. Divisors are powers of
      * two. LC in effect: HE reaches here too, but faacEncApplyConfig then
@@ -84,23 +85,15 @@ static unsigned int CalcBandwidth(unsigned long bitRate, unsigned long sampleRat
     if (bitRate <= 12000) {
         /* Unmeasured below here; ramp rather than extend the plateau down.
          * bitRate is unsigned, so guard the subtraction. */
-        bw = (bitRate > 8000) ? 9250 + ((bitRate - 8000) * 5 / 4) : 9250;
+        return (bitRate > 8000) ? 9250 + ((bitRate - 8000) * 5 / 4) : 9250;
     }
-    else if (bitRate <= 32000) {
+    if (bitRate <= 32000) {
         /* Flat by measurement: the optimum does not move across this range. */
-        bw = 14250;
+        return 14250;
     }
-    else if (bitRate <= 48000) {
-        bw = 14250 + ((bitRate - 32000) * 9 / 32);
-    }
-    else {
-        /* Widening past this loses at every reachable rate -- the band above
-         * holds ~0.006% of programme energy and sits at the edge of hearing. */
-        bw = 18750;
-    }
-
-    /* Safety clamp to Shannon-Nyquist limit */
-    return (bw > nyquist) ? nyquist : bw;
+    if (bitRate <= 48000)
+        return 14250 + ((bitRate - 32000) * 9 / 32);
+    return BANDWIDTH_CEILING;
 }
 
 /* Element-to-channel mapping is fixed for the session once InitElements has
@@ -266,7 +259,7 @@ int faacEncApplyConfig(faacEncStruct* hEncoder,
 
     if (config->bitRate && !config->bandWidth)
     {
-        config->bandWidth = CalcBandwidth(config->bitRate, hEncoder->sampleRate);
+        config->bandWidth = CalcBandwidth(config->bitRate);
 
         if (!config->quantqual)
         {
@@ -298,10 +291,9 @@ int faacEncApplyConfig(faacEncStruct* hEncoder,
 
     hEncoder->config.bitRate = config->bitRate;
 
+    /* Only VBR reaches here without a bandwidth: ABR derived its own above. */
     if (!config->bandWidth)
-    {
-        config->bandWidth = CalcBandwidth(config->bitRate, hEncoder->sampleRate);
-    }
+        config->bandWidth = BANDWIDTH_CEILING;
 
     hEncoder->config.bandWidth = config->bandWidth;
 
@@ -435,32 +427,9 @@ faacEncHandle faacEncOpen(unsigned long sampleRate,
     hEncoder->sampleRate = sampleRate;
     hEncoder->sampleRateIdx = GetSRIndex(sampleRate);
 
-    /* Initialize variables to default values */
-    hEncoder->frameNum = 0;
-    hEncoder->flushFrame = 0;
-
-    /* Default configuration */
-    hEncoder->config.mpegVersion = MPEG4;
-    hEncoder->config.aacObjectType = LOW;
-    hEncoder->config.jointmode = JOINT_MIXED;
-    hEncoder->config.pnslevel = 4;
-    hEncoder->config.useLfe = 1;
-    hEncoder->config.useTns = 1;
-    hEncoder->config.bitRate = 64000;
-    hEncoder->config.bandWidth = CalcBandwidth(hEncoder->config.bitRate, sampleRate);
-    hEncoder->config.quantqual = 0;
-    hEncoder->config.shortctl = SHORTCTL_NORMAL;
-
-	/* default channel map is straight-through */
+    /* Identity map; faac_encoder_open() sets every other config field. */
 	for( channel = 0; channel < MAX_CHANNELS; channel++ )
 		hEncoder->config.channel_map[channel] = channel;
-
-    hEncoder->config.outputFormat = ADTS_STREAM;
-
-    /*
-        be compatible with software which assumes 24bit in 32bit PCM
-    */
-    hEncoder->config.inputFormat = INPUT_32BIT;
 
     /* find correct sampling rate depending parameters */
     hEncoder->srInfo = &srInfo[hEncoder->sampleRateIdx];
