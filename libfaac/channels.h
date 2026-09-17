@@ -102,7 +102,7 @@ typedef struct {
 
 int InitElements(AACElement * __restrict elements, int *numElements, int numChannels, bool useLfe);
 
-int WriteElement(BitStream *bs, AACElement *elem, CoderInfo *coder, bool writeFlag);
+int WriteElement(BitStream *bs, AACElement *elem, CoderInfo *coder);
 
 int WriteBitstream(struct faacEncStruct* hEncoder,
                    CoderInfo *coderInfo,

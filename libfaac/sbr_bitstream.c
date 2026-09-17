@@ -171,7 +171,7 @@ static int emit_sbr_payload(const SBRInfo *sbr, const SbrFrameData *fd, BitStrea
     return bits;
 }
 
-static int SbrWrite(const SBRInfo *sbr, const SbrFrameData *fd, BitStream *bs, int id_aac, int ch0, int writeFlag)
+static int SbrWrite(const SBRInfo *sbr, const SbrFrameData *fd, BitStream *bs, int id_aac, int ch0)
 {
     if (!sbr || !sbr->sbrPresent) return 0;
 
@@ -180,10 +180,8 @@ static int SbrWrite(const SBRInfo *sbr, const SbrFrameData *fd, BitStream *bs, i
     /* The fill_element's cnt field must precede the payload in the bitstream,
      * so its size is needed before anything is written. Re-deriving it with a
      * dry (write=false) pass is cheap -- a few hundred fixed-width/Huffman
-     * fields, not a hot loop -- so BuildFrame's count and write passes each
-     * just re-derive it from sbr's already-quantized envelope/noise data, the
-     * same way channels.c's WriteElement/WriteICS do for the rest of the
-     * frame. */
+     * fields, not a hot loop -- re-deriving it from sbr's already-quantized
+     * envelope/noise data. */
     int payloadBits = emit_sbr_payload(sbr, fd, NULL, id_aac, ch0, sendHeader, false);
     int fillBytes = (payloadBits + 7) / 8;
     int padBits = fillBytes * 8 - payloadBits;
@@ -194,28 +192,25 @@ static int SbrWrite(const SBRInfo *sbr, const SbrFrameData *fd, BitStream *bs, i
     assert(fillBytes <= 14 + 255);
 
     int totalBits;
-    if (writeFlag) {
-        /* fill_element(): id, then 4-bit count with optional 8-bit escape.
-         * The decoder reconstructs cnt = 15 + esc_count - 1, hence
-         * esc_count = N - 14. */
-        PutBit(bs, ID_FIL, 3);
-        if (fillBytes < 15) {
-            PutBit(bs, fillBytes, 4);
-            totalBits = 7;
-        } else {
-            PutBit(bs, 15, 4);
-            PutBit(bs, fillBytes - 14, 8);
-            totalBits = 15;
-        }
-        emit_sbr_payload(sbr, fd, bs, id_aac, ch0, sendHeader, true);
-        if (padBits > 0) PutBit(bs, 0, padBits);
+    /* fill_element(): id, then 4-bit count with optional 8-bit escape.
+     * The decoder reconstructs cnt = 15 + esc_count - 1, hence
+     * esc_count = N - 14. */
+    PutBit(bs, ID_FIL, 3);
+    if (fillBytes < 15) {
+        PutBit(bs, fillBytes, 4);
+        totalBits = 7;
     } else {
-        totalBits = (fillBytes < 15) ? 7 : 15;
+        PutBit(bs, 15, 4);
+        PutBit(bs, fillBytes - 14, 8);
+        totalBits = 15;
     }
+    emit_sbr_payload(sbr, fd, bs, id_aac, ch0, sendHeader, true);
+    if (padBits > 0) PutBit(bs, 0, padBits);
+
     return totalBits + payloadBits + padBits;
 }
 
-int SbrContextGetBits(SBRContext *sCtx, BitStream *bs, const AACElement *elem, int aacObjectType, int writeFlag)
+int SbrContextGetBits(SBRContext *sCtx, BitStream *bs, const AACElement *elem, int aacObjectType)
 {
     if (aacObjectType == HE_V1 && sCtx && elem->type != ID_LFE) {
         if (sCtx->sbrInfo) {
@@ -228,7 +223,7 @@ int SbrContextGetBits(SBRContext *sCtx, BitStream *bs, const AACElement *elem, i
                 sbr->sendHeaderThisFrame = (sbr->frameCount++ % SBR_HEADER_PERIOD == 0);
                 sbr->headerDecided = 1;
             }
-            return SbrWrite(sbr, fd, bs, id_aac, elem->channels[0], writeFlag);
+            return SbrWrite(sbr, fd, bs, id_aac, elem->channels[0]);
         }
     }
     return 0;
