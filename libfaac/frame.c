@@ -468,8 +468,6 @@ faacEncHandle faacEncOpen(unsigned long sampleRate,
     for (channel = 0; channel < numChannels; channel++)
 	{
         int buf;
-        hEncoder->coderInfo[channel].prev_window_shape = SINE_WINDOW;
-        hEncoder->coderInfo[channel].window_shape = SINE_WINDOW;
         hEncoder->coderInfo[channel].block_type = ONLY_LONG_WINDOW;
         hEncoder->coderInfo[channel].groups.n = 1;
         hEncoder->coderInfo[channel].groups.len[0] = 1;

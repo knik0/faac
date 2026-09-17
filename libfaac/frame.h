@@ -69,8 +69,6 @@ typedef struct faacEncStruct {
     /* Filterbank buffers */
     float *sin_window_long;
     float *sin_window_short;
-    float *kbd_window_long;
-    float *kbd_window_short;
     float *freqBuff[MAX_CHANNELS];
 
     /* Channel and Coder data for all channels */

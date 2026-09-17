@@ -89,7 +89,7 @@ static int WriteICSInfo(BitStream *bs, CoderInfo *coder, bool writeFlag)
     if (writeFlag) {
         PutBit(bs, 0, LEN_ICS_RESERV);
         PutBit(bs, coder->block_type, LEN_WIN_SEQ);
-        PutBit(bs, coder->window_shape, LEN_WIN_SH);
+        PutBit(bs, 0, LEN_WIN_SH); /* window_shape: sine */
     }
     int bits = LEN_ICS_RESERV + LEN_WIN_SEQ + LEN_WIN_SH;
 
