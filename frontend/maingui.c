@@ -19,6 +19,7 @@
 #include <commctrl.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <inttypes.h>
@@ -516,8 +517,9 @@ static INT_PTR CALLBACK DialogProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lP
             faac_library_info libinfo = { .struct_size = sizeof(libinfo) };
             if (faac_get_library_info(&libinfo) == FAAC_OK)
             {
-                char txt[128];
-                snprintf(txt, sizeof(txt), "libfaac version %s", libinfo.version ? libinfo.version : "?");
+                char txt[128], ver_buf[128];
+                snprintf(txt, sizeof(txt), "libfaac version %s",
+                         faac_version_string(ver_buf, sizeof(ver_buf), libinfo.version ? libinfo.version : "?"));
                 SetDlgItemText(hWnd, IDC_COMPILEDATE, txt);
             }
             else
