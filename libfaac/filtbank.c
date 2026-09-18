@@ -69,35 +69,37 @@ void FilterBankEnd(faacEncStruct* hEncoder)
     if (hEncoder->gpsyInfo.sharedWorkBuffLong) FreeMemory(hEncoder->gpsyInfo.sharedWorkBuffLong);
 }
 
-/* Four ICS window sequences, ISO/IEC 13818-7 4.3.2.4. */
+/* Four ICS window sequences, ISO/IEC 13818-7 4.3.2.4.
+ * Applying sine windowing directly in vectorizable loops without indirect struct dispatch. */
 
-typedef struct {
-    float *dst;
-    const float *src;
-    const float *win;
-    int len;
-    bool reverse;
-} WindowSeg;
-
-static void ApplyWindowSeg(const WindowSeg *seg)
+static inline void ApplyWindowDirect(float * restrict dst,
+                                     const float * restrict src,
+                                     const float * restrict win,
+                                     int len)
 {
     int i;
-
-    if (seg->reverse) {
-        for (i = 0; i < seg->len; i++)
-            seg->dst[i] = seg->src[i] * seg->win[seg->len - 1 - i];
-    } else {
-        for (i = 0; i < seg->len; i++)
-            seg->dst[i] = seg->src[i] * seg->win[i];
+    for (i = 0; i < len; i++) {
+        dst[i] = src[i] * win[i];
     }
 }
 
-static void CopyFlat(float *dst, const float *src, int len)
+static inline void ApplyWindowReverse(float * restrict dst,
+                                      const float * restrict src,
+                                      const float * restrict win,
+                                      int len)
+{
+    int i;
+    for (i = 0; i < len; i++) {
+        dst[i] = src[i] * win[len - 1 - i];
+    }
+}
+
+static inline void CopyFlat(float * restrict dst, const float * restrict src, int len)
 {
     memcpy(dst, src, len * sizeof(float));
 }
 
-static void ZeroFlat(float *dst, int len)
+static inline void ZeroFlat(float * restrict dst, int len)
 {
     SetMemory(dst, 0, len * sizeof(float));
 }
@@ -119,56 +121,38 @@ void FilterBank(faacEncStruct* hEncoder,
 
     switch (block_type) {
     case ONLY_LONG_WINDOW: {
-        WindowSeg left  = { p_out_mdct, overlapBuf,
-                             hEncoder->sin_window_long, BLOCK_LEN_LONG, false };
-        WindowSeg right = { p_out_mdct+BLOCK_LEN_LONG, overlapBuf+BLOCK_LEN_LONG,
-                             hEncoder->sin_window_long, BLOCK_LEN_LONG, true };
-
-        ApplyWindowSeg(&left);
-        ApplyWindowSeg(&right);
+        ApplyWindowDirect(p_out_mdct, overlapBuf, hEncoder->sin_window_long, BLOCK_LEN_LONG);
+        ApplyWindowReverse(p_out_mdct+BLOCK_LEN_LONG, overlapBuf+BLOCK_LEN_LONG, hEncoder->sin_window_long, BLOCK_LEN_LONG);
         MDCT(&hEncoder->fft_tables, p_out_mdct, 2*BLOCK_LEN_LONG, hEncoder->gpsyInfo.sharedWorkBuffLong);
         break;
     }
 
     case LONG_SHORT_WINDOW: {
-        WindowSeg left  = { p_out_mdct, overlapBuf,
-                             hEncoder->sin_window_long, BLOCK_LEN_LONG, false };
-        WindowSeg right = { p_out_mdct+BLOCK_LEN_LONG+NFLAT_LS, overlapBuf+BLOCK_LEN_LONG+NFLAT_LS,
-                             hEncoder->sin_window_short, BLOCK_LEN_SHORT, true };
-
-        ApplyWindowSeg(&left);
+        ApplyWindowDirect(p_out_mdct, overlapBuf, hEncoder->sin_window_long, BLOCK_LEN_LONG);
         CopyFlat(p_out_mdct+BLOCK_LEN_LONG, overlapBuf+BLOCK_LEN_LONG, NFLAT_LS);
-        ApplyWindowSeg(&right);
+        ApplyWindowReverse(p_out_mdct+BLOCK_LEN_LONG+NFLAT_LS, overlapBuf+BLOCK_LEN_LONG+NFLAT_LS, hEncoder->sin_window_short, BLOCK_LEN_SHORT);
         ZeroFlat(p_out_mdct+BLOCK_LEN_LONG+NFLAT_LS+BLOCK_LEN_SHORT, NFLAT_LS);
         MDCT(&hEncoder->fft_tables, p_out_mdct, 2*BLOCK_LEN_LONG, hEncoder->gpsyInfo.sharedWorkBuffLong);
         break;
     }
 
     case SHORT_LONG_WINDOW: {
-        WindowSeg left  = { p_out_mdct+NFLAT_LS, overlapBuf+NFLAT_LS,
-                             hEncoder->sin_window_short, BLOCK_LEN_SHORT, false };
-        WindowSeg right = { p_out_mdct+BLOCK_LEN_LONG, overlapBuf+BLOCK_LEN_LONG,
-                             hEncoder->sin_window_long, BLOCK_LEN_LONG, true };
-
         ZeroFlat(p_out_mdct, NFLAT_LS);
-        ApplyWindowSeg(&left);
+        ApplyWindowDirect(p_out_mdct+NFLAT_LS, overlapBuf+NFLAT_LS, hEncoder->sin_window_short, BLOCK_LEN_SHORT);
         CopyFlat(p_out_mdct+NFLAT_LS+BLOCK_LEN_SHORT, overlapBuf+NFLAT_LS+BLOCK_LEN_SHORT, NFLAT_LS);
-        ApplyWindowSeg(&right);
+        ApplyWindowReverse(p_out_mdct+BLOCK_LEN_LONG, overlapBuf+BLOCK_LEN_LONG, hEncoder->sin_window_long, BLOCK_LEN_LONG);
         MDCT(&hEncoder->fft_tables, p_out_mdct, 2*BLOCK_LEN_LONG, hEncoder->gpsyInfo.sharedWorkBuffLong);
         break;
     }
 
     case ONLY_SHORT_WINDOW: {
-        const float *win = hEncoder->sin_window_short;
-        float *src = overlapBuf + NFLAT_LS;
-        float *dst = p_out_mdct;
+        const float * restrict win = hEncoder->sin_window_short;
+        float * restrict src = overlapBuf + NFLAT_LS;
+        float * restrict dst = p_out_mdct;
 
         for (k = 0; k < MAX_SHORT_WINDOWS; k++) {
-            WindowSeg left  = { dst, src, win, BLOCK_LEN_SHORT, false };
-            WindowSeg right = { dst+BLOCK_LEN_SHORT, src+BLOCK_LEN_SHORT, win, BLOCK_LEN_SHORT, true };
-
-            ApplyWindowSeg(&left);
-            ApplyWindowSeg(&right);
+            ApplyWindowDirect(dst, src, win, BLOCK_LEN_SHORT);
+            ApplyWindowReverse(dst+BLOCK_LEN_SHORT, src+BLOCK_LEN_SHORT, win, BLOCK_LEN_SHORT);
             MDCT(&hEncoder->fft_tables, dst, 2*BLOCK_LEN_SHORT, hEncoder->gpsyInfo.sharedWorkBuffLong);
 
             dst += BLOCK_LEN_SHORT;

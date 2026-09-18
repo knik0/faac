@@ -311,4 +311,3 @@ void fft(FFT_Tables *fft_tables, float *xr, float *xi, int logm)
     radix4_dif_proc(xr, xi, logm, fft_tables->costbl[logm], fft_tables->negsintbl[logm]);
     bit_reverse(xr, xi, logm, fft_tables->reordertbl[logm]);
 }
-

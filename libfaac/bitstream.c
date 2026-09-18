@@ -95,12 +95,3 @@ int PutBit(BitStream *bs, uint32_t data, int numBits)
 
     return 0;
 }
-
-int ByteAlign(BitStream *bs)
-{
-    int bits = (8 - (int)(bs->currentBit & 7)) & 7;
-    if (bits > 0) {
-        PutBit(bs, 0, bits);
-    }
-    return bits;
-}

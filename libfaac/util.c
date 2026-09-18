@@ -66,4 +66,3 @@ int CountLeadingZeros(unsigned int x)
     return n;
 #endif
 }
-

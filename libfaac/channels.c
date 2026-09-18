@@ -95,13 +95,16 @@ static int WriteICSInfo(BitStream *bs, CoderInfo *coder)
         PutBit(bs, coder->sfbn, LEN_MAX_SFBS);
 
         int grouping_bits = 0;
-        int tmp[MAX_SHORT_WINDOWS], index = 0;
-        for (int i = 0; i < coder->groups.n; i++)
-            for (int j = 0; j < coder->groups.len[i]; j++)
-                tmp[index++] = i;
-        for (int i = 1; i < MAX_SHORT_WINDOWS; i++) {
-            grouping_bits <<= 1;
-            if (tmp[i] == tmp[i-1]) grouping_bits++;
+        /* Construct the 7 scale factor window grouping bits directly from group lengths.
+         * A bit is 1 if adjacent sub-windows belong to the same group, 0 if a new group starts. */
+        for (int i = 0; i < coder->groups.n; i++) {
+            int len = coder->groups.len[i];
+            if (len > 1) {
+                grouping_bits = (grouping_bits << (len - 1)) | ((1 << (len - 1)) - 1);
+            }
+            if (i < coder->groups.n - 1) {
+                grouping_bits <<= 1;
+            }
         }
         PutBit(bs, grouping_bits, MAX_SHORT_WINDOWS - 1);
         bits += LEN_MAX_SFBS + (MAX_SHORT_WINDOWS - 1);
