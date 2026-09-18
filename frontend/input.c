@@ -24,21 +24,11 @@
 
 #include "input.h"
 #include "charset.h"
-
-#define SWAP32(x) (((x & 0xff) << 24) | ((x & 0xff00) << 8) \
-	| ((x & 0xff0000) >> 8) | ((x & 0xff000000) >> 24))
-#define SWAP16(x) (((x & 0xff) << 8) | ((x & 0xff00) >> 8))
+#include "endian.h"
 
 #define PCM_16BIT_FLOAT_SCALE 32768.0f
 #define PCM_32BIT_FLOAT_SCALE 65536.0f
 
-#ifdef WORDS_BIGENDIAN
-# define UINT32(x) SWAP32(x)
-# define UINT16(x) SWAP16(x)
-#else
-# define UINT32(x) (x)
-# define UINT16(x) (x)
-#endif
 
 typedef struct
 {
@@ -97,9 +87,17 @@ __attribute__((packed))
 #pragma pack(pop)
 #endif
 
-static unsigned char waveformat_pcm_guid[16] =
+static const unsigned char waveformat_pcm_guid[16] =
 {
   WAVE_FORMAT_PCM,0,0,0,
+  0x00, 0x00,
+  0x10, 0x00,
+  0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71
+};
+
+static const unsigned char waveformat_float_guid[16] =
+{
+  WAVE_FORMAT_FLOAT,0,0,0,
   0x00, 0x00,
   0x10, 0x00,
   0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71
@@ -127,7 +125,7 @@ static void seekcur(FILE *f, int ofs)
     }
 }
 
-static int seekchunk(FILE *f, riffsub_t *riffsub, char *name)
+static int seekchunk(FILE *f, riffsub_t *riffsub, const char *name)
 {
  int skipped;
 
@@ -136,7 +134,7 @@ static int seekchunk(FILE *f, riffsub_t *riffsub, char *name)
    if (fread(riffsub, 1, sizeof(*riffsub), f) != sizeof(*riffsub))
      return 0;
 
-   riffsub->len = UINT32(riffsub->len);
+   riffsub->len = le32toh(riffsub->len);
    if (riffsub->len & 1)
      riffsub->len++;
 
@@ -155,10 +153,6 @@ pcmfile_t *wav_open_read(const char *name, bool rawinput)
   riff_t riff;
   riffsub_t riffsub = {0};
   struct WAVEFORMATEXTENSIBLE wave = {0};
-  char *riffl = "RIFF";
-  char *wavel = "WAVE";
-  char *fmtl = "fmt ";
-  char *datal = "data";
   int fmtsize;
   pcmfile_t *sndf;
   int dostdin = 0;
@@ -189,15 +183,15 @@ pcmfile_t *wav_open_read(const char *name, bool rawinput)
   {
     if (fread(&riff, 1, sizeof(riff), wave_f) != sizeof(riff))
       return NULL;
-    if (memcmp(&(riff.label), riffl, 4))
+    if (memcmp(&(riff.label), "RIFF", 4))
       return NULL;
-    if (memcmp(&(riff.chunk_type), wavel, 4))
-      return NULL;
-
-    if (!seekchunk(wave_f, &riffsub, fmtl))
+    if (memcmp(&(riff.chunk_type), "WAVE", 4))
       return NULL;
 
-    if (memcmp(&(riffsub.label), fmtl, 4))
+    if (!seekchunk(wave_f, &riffsub, "fmt "))
+      return NULL;
+
+    if (memcmp(&(riffsub.label), "fmt ", 4))
         return NULL;
     memset(&wave, 0, sizeof(wave));
 
@@ -211,23 +205,21 @@ pcmfile_t *wav_open_read(const char *name, bool rawinput)
 
     seekcur(wave_f, riffsub.len - fmtsize);
 
-    if (!seekchunk(wave_f, &riffsub, datal))
+    if (!seekchunk(wave_f, &riffsub, "data"))
       return NULL;
 
-    if (UINT16(wave.Format.wFormatTag) != WAVE_FORMAT_PCM && UINT16(wave.Format.wFormatTag) != WAVE_FORMAT_FLOAT)
+    uint16_t tag = le16toh(wave.Format.wFormatTag);
+    if (tag != WAVE_FORMAT_PCM && tag != WAVE_FORMAT_FLOAT)
     {
-      if (UINT16(wave.Format.wFormatTag) == WAVE_FORMAT_EXTENSIBLE)
+      if (tag == WAVE_FORMAT_EXTENSIBLE)
       {
-        if (UINT16(wave.Format.cbSize) < 22) // struct too small
+        if (le16toh(wave.Format.cbSize) < 22) // struct too small
           return NULL;
-        if (memcmp(wave.SubFormat, waveformat_pcm_guid, 16))
+        if (memcmp(wave.SubFormat, waveformat_pcm_guid, 16) != 0 &&
+            memcmp(wave.SubFormat, waveformat_float_guid, 16) != 0)
         {
-          waveformat_pcm_guid[0] = WAVE_FORMAT_FLOAT;
-          if (memcmp(wave.SubFormat, waveformat_pcm_guid, 16))
-          {          
-            unsuperr(name);
-            return NULL;
-          }
+          unsuperr(name);
+          return NULL;
         }
       }
       else
@@ -251,7 +243,7 @@ pcmfile_t *wav_open_read(const char *name, bool rawinput)
      no float flag of its own -- isfloat stays false, its memset() default. */
   if (!rawinput)
   {
-    if (UINT16(wave.Format.wFormatTag) == WAVE_FORMAT_FLOAT) {
+    if (le16toh(wave.Format.wFormatTag) == WAVE_FORMAT_FLOAT) {
       sndf->isfloat = true;
     } else {
       sndf->isfloat = (wave.SubFormat[0] == WAVE_FORMAT_FLOAT);
@@ -278,9 +270,9 @@ pcmfile_t *wav_open_read(const char *name, bool rawinput)
   else
   {
     sndf->bigendian = false;
-    sndf->channels = UINT16(wave.Format.nChannels);
-    sndf->samplebytes = (uint8_t)(UINT16(wave.Format.wBitsPerSample) / 8);
-    sndf->samplerate = UINT32(wave.Format.nSamplesPerSec);
+    sndf->channels = le16toh(wave.Format.nChannels);
+    sndf->samplebytes = (uint8_t)(le16toh(wave.Format.wBitsPerSample) / 8);
+    sndf->samplerate = le32toh(wave.Format.nSamplesPerSec);
 
     /* channel/sample-width bounds guard against a corrupt header (e.g. a
        bogus huge channel count) driving an oversized allocation downstream */
@@ -294,12 +286,6 @@ pcmfile_t *wav_open_read(const char *name, bool rawinput)
 
     sndf->samples = (int64_t)riffsub.len / ((int64_t)sndf->samplebytes * sndf->channels);
   }
-
-#ifdef WORDS_BIGENDIAN
-  sndf->swap = !sndf->bigendian;
-#else
-  sndf->swap = sndf->bigendian;
-#endif
 
   return sndf;
 }
@@ -414,60 +400,25 @@ size_t wav_read_float32(pcmfile_t *sndf, float *buf, size_t num, int *map)
       case 2:
           {
               const int16_t *in = (const int16_t *)bufi;
-              if (sndf->swap)
-              {
-                  for (size_t i = 0; i < cnt; i++)
-                  {
-                      int16_t val = (int16_t)SWAP16(in[i]);
-                      buf[i] = (float)val;
-                  }
-              }
-              else
-              {
-                  for (size_t i = 0; i < cnt; i++)
-                  {
-                      buf[i] = (float)in[i];
-                  }
-              }
+              bool be = sndf->bigendian;
+              for (size_t i = 0; i < cnt; i++)
+                  buf[i] = (float)read_pcm16(&in[i], be);
           }
           break;
       case 3:
           {
-              uint8_t *in = (uint8_t*)bufi;
-              if (!sndf->bigendian)
-              {
-                  for (size_t i = 0; i < cnt; i++)
-                  {
-                      int s = in[3*i] | (in[3*i+1] << 8) | (in[3*i+2] << 16);
-                      if (s & 0x800000) s |= 0xff000000;
-                      buf[i] = (float)s / 256.0f;
-                  }
-              }
-              else
-              {
-                  for (size_t i = 0; i < cnt; i++)
-                  {
-                      int s = (in[3*i] << 16) | (in[3*i+1] << 8) | in[3*i+2];
-                      if (s & 0x800000) s |= 0xff000000;
-                      buf[i] = (float)s / 256.0f;
-                  }
-              }
+              const uint8_t *in = (const uint8_t *)bufi;
+              bool be = sndf->bigendian;
+              for (size_t i = 0; i < cnt; i++)
+                  buf[i] = (float)read_pcm24(&in[3*i], be) / 256.0f;
           }
-        break;
+          break;
       case 4:
           {
-              int32_t *in = (int32_t*)bufi;
-              int swap = sndf->swap;
-              if (swap)
-              {
-                  for (size_t i = 0; i < cnt; i++)
-                      buf[i] = (float)SWAP32(in[i]) / PCM_32BIT_FLOAT_SCALE;
-              }
-              else
-              {
-                  for (size_t i = 0; i < cnt; i++)
-                      buf[i] = (float)in[i] / PCM_32BIT_FLOAT_SCALE;
-              }
+              const int32_t *in = (const int32_t *)bufi;
+              bool be = sndf->bigendian;
+              for (size_t i = 0; i < cnt; i++)
+                  buf[i] = (float)read_pcm32(&in[i], be) / PCM_32BIT_FLOAT_SCALE;
           }
           break;
       default:
