@@ -24,6 +24,7 @@ Contents
   <li><a href="#api-callseq">Calling sequence</a>
   <li><a href="#api-errors">Error handling</a>
   <li><a href="#api-funcref">Function reference</a>
+  <li><a href="#api-rate">Rate control modes</a>
   <li><a href="#api-peak">Capping the peak frame size</a>
  </menu>
  <li><a href="#porting">Porting from the legacy faacEnc* API</a>
@@ -44,10 +45,10 @@ provided for usage in C/C++ programs:<br><br>
 
 <b>faac.h</b>: the <b>faac_*</b> API &mdash; function prototypes and types.<br><br>
 
-The encoder core resides in a statically linkable library called
-
-libfaac.lib <i>(Microsoft Window</i>s) or libfaac.a <i>(UNI</i>X). There
-are various example programs that show how to use the library.<br><br>
+The encoder is the shared library <b>libfaac</b> (libfaac.so.<i>N</i>,
+libfaac.dylib or libfaac.dll; the build also produces the static archive). The
+<b>faac</b> command-line encoder in <i>frontend/</i> is the reference
+user of the API.<br><br>
 
 <a name="api">
 <h4>API (faac.h)</h4>
@@ -63,9 +64,11 @@ platforms.
 <a name="api-callseq">
 <h5>Calling sequence</h5>
 <menu>
-<li>Zero-initialize a <i>faac_params</i> with <i>faac_params_init()</i>. This is
- mandatory &mdash; it stamps <i>struct_size</i> and clears padding, which is how
- the struct stays compatible as it grows in future releases.
+<li>Zero-initialize a <i>faac_params</i> with
+ <i>faac_params_init(&amp;p, sizeof p)</i>. This is mandatory &mdash; it
+ stamps <i>struct_size</i> and clears padding, which is how the struct stays
+ compatible as it grows in future releases; the size argument keeps a newer
+ library from writing past an older caller's struct.
 <li>Set the fields you care about (at minimum <i>sample_rate</i> and
  <i>num_channels</i>), then call <i>faac_encoder_open()</i>.
 <li>Fill a <i>faac_encoder_info</i> with <i>faac_encoder_get_info()</i> (set its
@@ -99,7 +102,7 @@ object type this build does not implement, or a request with no ASC),
 /* library-global facts: compiled channel ceiling, version/copyright */
 faac_status faac_get_library_info(faac_library_info *out);
 
-faac_status faac_params_init(faac_params *p);
+faac_status faac_params_init(faac_params *p, uint32_t caller_size);  /* sizeof(*p) */
 faac_status faac_encoder_open(const faac_params *p, faac_encoder **out);
 faac_status faac_encoder_close(faac_encoder **enc);   /* sets *enc = NULL */
 
