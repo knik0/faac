@@ -29,29 +29,7 @@
 #ifdef _WIN32
 #include "charset.h"
 #endif
-
-#if defined(__has_builtin)
-#if __has_builtin(__builtin_bswap32) && __has_builtin(__builtin_bswap16)
-#define MP4_HAVE_BSWAP_BUILTINS 1
-#endif
-#elif defined(__GNUC__)
-#define MP4_HAVE_BSWAP_BUILTINS 1
-#endif
-
-#if defined(MP4_HAVE_BSWAP_BUILTINS)
-#define BSWAP32 __builtin_bswap32
-#define BSWAP16 __builtin_bswap16
-#elif defined(_MSC_VER)
-#define BSWAP32 _byteswap_ulong
-#define BSWAP16 _byteswap_ushort
-#else
-static inline uint32_t BSWAP32(uint32_t x) {
-    return (x >> 24) | ((x >> 8) & 0xff00) | ((x << 8) & 0xff0000) | (x << 24);
-}
-static inline uint16_t BSWAP16(uint16_t x) {
-    return (uint16_t)((x >> 8) | (x << 8));
-}
-#endif
+#include "endian.h"
 
 enum {
     MP4_EPOCH_OFFSET = 2082844800, /* seconds from 1904-01-01 to 1970-01-01 */
@@ -213,9 +191,7 @@ static inline void mem_write(const void *data, size_t size) {
 
 
 static inline void put_u32(uint32_t val) {
-#ifndef WORDS_BIGENDIAN
-    val = BSWAP32(val);
-#endif
+    val = htobe32(val);
     if (g_membuf && g_mempos + 4 <= g_memcap) {
         memcpy(g_membuf + g_mempos, &val, 4);
         g_mempos += 4;
@@ -225,9 +201,7 @@ static inline void put_u32(uint32_t val) {
 }
 
 static inline void put_u16(uint16_t val) {
-#ifndef WORDS_BIGENDIAN
-    val = BSWAP16(val);
-#endif
+    val = htobe16(val);
     if (g_membuf && g_mempos + 2 <= g_memcap) {
         memcpy(g_membuf + g_mempos, &val, 2);
         g_mempos += 2;
@@ -237,22 +211,7 @@ static inline void put_u16(uint16_t val) {
 }
 
 static inline void put_u64(uint64_t val) {
-#ifndef WORDS_BIGENDIAN
-#if defined(MP4_HAVE_BSWAP_BUILTINS)
-    val = __builtin_bswap64(val);
-#elif defined(_MSC_VER)
-    val = _byteswap_uint64(val);
-#else
-    val = ((val >> 56) & 0x00000000000000FFULL) |
-          ((val >> 40) & 0x000000000000FF00ULL) |
-          ((val >> 24) & 0x0000000000FF0000ULL) |
-          ((val >> 8)  & 0x00000000FF000000ULL) |
-          ((val << 8)  & 0x000000FF00000000ULL) |
-          ((val << 24) & 0x0000FF0000000000ULL) |
-          ((val << 40) & 0x00FF000000000000ULL) |
-          ((val << 56) & 0xFF00000000000000ULL);
-#endif
-#endif
+    val = htobe64(val);
     if (g_membuf && g_mempos + 8 <= g_memcap) {
         memcpy(g_membuf + g_mempos, &val, 8);
         g_mempos += 8;
@@ -284,10 +243,7 @@ static inline long start_atom(const char *name) {
 
 static inline void end_atom(long pos) {
     if (g_membuf) {
-        uint32_t size = (uint32_t)(g_mempos - pos);
-#ifndef WORDS_BIGENDIAN
-        size = BSWAP32(size);
-#endif
+        uint32_t size = htobe32((uint32_t)(g_mempos - pos));
         memcpy(g_membuf + pos, &size, 4);
     } else if (g_mp4.fout) {
         long curr = ftell(g_mp4.fout);
@@ -561,24 +517,15 @@ static void put_tag_u8(const char *name, uint8_t val) {
 }
 
 static void put_tag_genre(uint16_t genre) {
-#ifndef WORDS_BIGENDIAN
-    uint16_t val = BSWAP16(genre);
-#else
-    uint16_t val = genre;
-#endif
+    uint16_t val = htobe16(genre);
     put_itunes_data_box("gnre", ITUNES_DATA_BINARY, &val, 2);
 }
 
 static void put_tag_index(const char *name, uint16_t num, uint16_t total) {
     uint16_t buf[4] = {
         0,
-#ifndef WORDS_BIGENDIAN
-        BSWAP16(num),
-        BSWAP16(total),
-#else
-        num,
-        total,
-#endif
+        htobe16(num),
+        htobe16(total),
         0
     };
     put_itunes_data_box(name, ITUNES_DATA_BINARY, buf, sizeof(buf));
@@ -790,11 +737,11 @@ int mp4_finish(void) {
         if (!grow_membuf(stsz_size))
             return 1;
         uint8_t *p = g_membuf + g_mempos;
-#ifdef WORDS_BIGENDIAN
+#if WORDS_BIGENDIAN
         memcpy(p, g_mp4.frame.data, stsz_size);
 #else
         for (uint32_t i = 0; i < g_mp4.frame.ents; i++) {
-            uint32_t val = BSWAP32(g_mp4.frame.data[i]);
+            uint32_t val = htobe32(g_mp4.frame.data[i]);
             memcpy(p + i * 4, &val, 4);
         }
 #endif
