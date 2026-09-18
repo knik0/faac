@@ -26,6 +26,7 @@
 #include "bitstream.h"
 #include "sbr_internal.h"
 #include "faac_internal.h"
+#include "channels.h"
 #include "stats.h"
 
 /* SBR master frequency band table (ISO/IEC 14496-3:2005 §4.6.18.3.2). kx/k2 are
@@ -255,7 +256,7 @@ int SbrContextGetASC(SBRContext *sbrCtx, int coreSRIdx, int channels, unsigned c
     AccumBegin(&a, &bs);
     AccumPutBits(&a, LOW,       5); /* core object type */
     AccumPutBits(&a, coreSRIdx, 4); /* core rate (Fs/2, dual-rate) */
-    AccumPutBits(&a, channels,  4);
+    AccumPutBits(&a, GetChannelConfig(channels), 4);
     AccumPutBits(&a, 0,         3); /* frameLengthFlag, dependsOnCoreCoder, extensionFlag */
     AccumPutBits(&a, 0x2b7,    11); /* syncExtensionType */
     AccumPutBits(&a, HE_V1,     5); /* extObjectType = SBR */
