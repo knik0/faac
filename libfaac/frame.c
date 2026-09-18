@@ -145,7 +145,7 @@ int faacEncGetDecoderSpecificInfo(faacEncHandle hpEncoder,unsigned char** ppBuff
         InitBitStream(&bs, *ppBuffer, 2); /* zeroes the buffer, so the 3 trailing pad bits need no write */
         PutBit(&bs, hEncoder->config.aacObjectType, 5);
         PutBit(&bs, hEncoder->sampleRateIdx,        4);
-        PutBit(&bs, hEncoder->numChannels,          4);
+        PutBit(&bs, GetChannelConfig((int)hEncoder->numChannels), 4);
         return 0;
     } else {
         return -3;
@@ -413,7 +413,7 @@ faacEncHandle faacEncOpen(unsigned long sampleRate,
     unsigned int channel;
     faacEncStruct* hEncoder;
 
-    if (numChannels < 1 || numChannels > MAX_CHANNELS)
+    if (GetChannelConfig((int)numChannels) == 0)
 	return NULL;
 
     *inputSamples = FRAME_LEN*numChannels;

@@ -100,6 +100,15 @@ typedef struct {
     MSInfo msInfo;
 } AACElement;
 
+/**
+ * Maps channel count to ISO/IEC 14496-3 Table 1.19 channelConfiguration value.
+ * Returns 1..6 for 1..6 channels, 7 for 8 channels (7.1 surround), or 0 if unsupported.
+ */
+static inline int GetChannelConfig(int numChannels)
+{
+    return (numChannels >= 1 && numChannels <= 6) ? numChannels : (numChannels == 8 ? 7 : 0);
+}
+
 int InitElements(AACElement * __restrict elements, int *numElements, int numChannels, bool useLfe);
 
 int WriteElement(BitStream *bs, AACElement *elem, CoderInfo *coder);

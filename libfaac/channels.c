@@ -221,6 +221,7 @@ int WriteElement(BitStream *bs, AACElement *elem, CoderInfo *coder)
 
 static int WriteADTSHeader(struct faacEncStruct *hEncoder, BitStream *bs)
 {
+    int channelConfig = GetChannelConfig((int)hEncoder->numChannels);
     PutBit(bs, 0xFFF,                        LEN_ADTS_SYNC);
     PutBit(bs, hEncoder->config.mpegVersion, LEN_ADTS_ID);
     PutBit(bs, 0,                            LEN_ADTS_LAYER);
@@ -229,7 +230,7 @@ static int WriteADTSHeader(struct faacEncStruct *hEncoder, BitStream *bs)
     PutBit(bs, LOW - 1,                      LEN_ADTS_PROFILE);
     PutBit(bs, hEncoder->sampleRateIdx,       LEN_ADTS_FREQ);
     PutBit(bs, 0,                            LEN_ADTS_PRIV);
-    PutBit(bs, hEncoder->numChannels,        LEN_ADTS_CH_CFG);
+    PutBit(bs, channelConfig,                LEN_ADTS_CH_CFG);
     PutBit(bs, 0,                            LEN_ADTS_ORIG + LEN_ADTS_HOME);
     PutBit(bs, 0,                            LEN_ADTS_COPY_ID + LEN_ADTS_COPY_ST);
     PutBit(bs, hEncoder->usedBytes,          LEN_ADTS_FRAME);
@@ -305,12 +306,13 @@ static void PatchADTSHeader(struct faacEncStruct *hEncoder, BitStream *bs, int f
 {
     if (hEncoder->config.outputFormat == 1 && bs->data) {
         int fullness = 0x7FF;
+        int channelConfig = GetChannelConfig((int)hEncoder->numChannels);
         if (hEncoder->rc.resMean)
             fullness = RateControlReservoirAfter(&hEncoder->rc, (frameBytes - ADTS_HEADER_SIZE) * 8) >> 5;
         bs->data[0] = 0xFF;
         bs->data[1] = 0xF0 | (hEncoder->config.mpegVersion << 3) | 1;
-        bs->data[2] = ((LOW - 1) << 6) | (hEncoder->sampleRateIdx << 2) | (hEncoder->numChannels >> 2);
-        bs->data[3] = ((hEncoder->numChannels & 3) << 6) | (frameBytes >> 11);
+        bs->data[2] = ((LOW - 1) << 6) | (hEncoder->sampleRateIdx << 2) | (channelConfig >> 2);
+        bs->data[3] = ((channelConfig & 3) << 6) | (frameBytes >> 11);
         bs->data[4] = (frameBytes >> 3) & 0xFF;
         bs->data[5] = ((frameBytes & 7) << 5) | (fullness >> 6);
         bs->data[6] = (fullness & 0x3F) << 2;

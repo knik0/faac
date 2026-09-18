@@ -175,7 +175,7 @@ static faac_status validate_params(const faac_params *p)
     }
     if (p->sample_rate == 0)
         return FAAC_ERR_INVALID_ARGUMENT;
-    if (p->num_channels < 1 || p->num_channels > (uint32_t)MAX_CHANNELS)
+    if (GetChannelConfig((int)p->num_channels) == 0)
         return FAAC_ERR_INVALID_ARGUMENT;
     if (p->pns_level < 0 || p->pns_level > 10)
         return FAAC_ERR_INVALID_ARGUMENT;
