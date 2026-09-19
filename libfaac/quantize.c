@@ -468,6 +468,23 @@ void CalcBW(unsigned *bw, int rate, SR_INFO *sr, AACQuantCfg *aacquantCfg,
 #define GROUP_MIN_SFB     2    // bands below this are too coarse/DC-heavy to inform grouping
 #define GROUP_ONSET_RATIO 3.0f  // running max/min energy ratio that counts as a transient
 
+/* Four independent lanes: strict FP forbids reordering one float accumulator,
+ * so a single-sum loop can never vectorize. n4 is the width in quads. */
+static inline float band_energy_sum(const float * __restrict line, int n4)
+{
+    float s0 = 0.0f, s1 = 0.0f, s2 = 0.0f, s3 = 0.0f;
+    int k;
+
+    for (k = 0; k < 4 * n4; k += 4)
+    {
+        s0 += line[k] * line[k];
+        s1 += line[k + 1] * line[k + 1];
+        s2 += line[k + 2] * line[k + 2];
+        s3 += line[k + 3] * line[k + 3];
+    }
+    return (s0 + s1) + (s2 + s3);
+}
+
 /* Accumulates, so a CPE can sum both channels into one energy vector. */
 static void window_band_energy(const CoderInfo * __restrict ci, const float * __restrict w,
                                 int from_sfb, int to_sfb, float * __restrict e_out)
@@ -475,21 +492,8 @@ static void window_band_energy(const CoderInfo * __restrict ci, const float * __
     int sfb;
     for (sfb = from_sfb; sfb < to_sfb; sfb++)
     {
-        float e = 0.0f;
-        int k;
-        const float * __restrict line = w + ci->sfb_offset[sfb];
-        int len = ci->sfb_offset[sfb + 1] - ci->sfb_offset[sfb];
-
-        for (k = 0; k < len; k += 4)
-        {
-            float a = line[k], b = line[k + 1], c = line[k + 2], d = line[k + 3];
-
-            e += a * a;
-            e += b * b;
-            e += c * c;
-            e += d * d;
-        }
-        e_out[sfb] += e;
+        int lo = ci->sfb_offset[sfb];
+        e_out[sfb] += band_energy_sum(w + lo, (ci->sfb_offset[sfb + 1] - lo) >> 2);
     }
 }
 
