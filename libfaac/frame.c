@@ -324,7 +324,7 @@ int faacEncApplyConfig(faacEncStruct* hEncoder,
     if (hEncoder->config.aacObjectType == HE_V1) {
         SBRContext *sCtx = hEncoder->sbrContext;
         unsigned long sbr_bitrate = hEncoder->config.bitRate ? (hEncoder->config.bitRate * hEncoder->numChannels) : ((unsigned long)hEncoder->config.quantqual * 1280);
-        SbrContextUpdateConfig(sCtx, hEncoder->numChannels, sbr_bitrate, &hEncoder->fft_tables);
+        SbrContextUpdateConfig(sCtx, hEncoder->numChannels, sbr_bitrate);
         /* kx * Fs / (2*64): each QMF band is Fs/(2*SBR_QMF_BANDS_64) Hz wide.
          * Matching core bandwidth to the SBR crossover avoids a gap or overlap. */
         hEncoder->config.bandWidth = SbrContextGetXOverBandwidth(sCtx);
@@ -408,6 +408,7 @@ static faac_once_t shared_tables_once = FAAC_ONCE_INIT;
 
 static void InitSharedTables(void)
 {
+    fft_init();
     FilterBankTablesInit();
     QuantizeInit();
 }
@@ -468,8 +469,6 @@ faacEncHandle faacEncOpen(unsigned long sampleRate,
     /* Initialize coder functions */
     InitElements(hEncoder->elements, &hEncoder->numElements, (int)hEncoder->numChannels, (bool)hEncoder->config.useLfe);
     RefreshLfeMap(hEncoder);
-
-	fft_initialize( &hEncoder->fft_tables );
 
 	PsyInit(&hEncoder->gpsyInfo, hEncoder->psyInfo, hEncoder->numChannels,
         hEncoder->sampleRate);
@@ -611,7 +610,6 @@ int faacEncClose(faacEncHandle hpEncoder)
 
     PsyEnd(hEncoder->psyInfo, hEncoder->numChannels);
     FilterBankEnd(hEncoder);
-    fft_terminate(&hEncoder->fft_tables);
 
     for (channel = 0; channel < hEncoder->numChannels; channel++)
 	{
