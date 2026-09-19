@@ -24,24 +24,28 @@
 #include "cpu_compute.h"
 #include "stats.h"
 
-typedef int (*QuantizeFunc)(const float * __restrict xr, int * __restrict xi, int n, float sfacfix);
+typedef int (*QuantizeFunc)(const float * __restrict xr, int * __restrict xi, int n4, float sfacfix);
 
 #if defined(HAVE_SSE2)
-extern int quantize_sse2(const float * __restrict xr, int * __restrict xi, int n, float sfacfix);
+extern int quantize_sse2(const float * __restrict xr, int * __restrict xi, int n4, float sfacfix);
 #endif
 
-static int quantize_scalar(const float * __restrict xr, int * __restrict xi, int n, float sfacfix)
+/* Written so the loop auto-vectorizes: fabsf() makes the sqrtf() argument
+ * provably non-negative (no errno path), the sign is re-applied as a
+ * two's-complement mask, and the width is a known multiple of four. */
+static int quantize_scalar(const float * __restrict xr, int * __restrict xi, int n4, float sfacfix)
 {
-    const float magic = MAGIC_NUMBER;
     int i, maxq = 0;
-    for (i = 0; i < n; i++)
+    for (i = 0; i < 4 * n4; i++)
     {
         float val = xr[i];
-        float tmp = fabsf(val) * sfacfix;
+        float tmp = fabsf(val * sfacfix);
+        int q, m;
         tmp = sqrtf(tmp * sqrtf(tmp));
-        int q = (int)(tmp + magic);
+        q = (int)(tmp + MAGIC_NUMBER);
+        m = -(val < 0.0f);
         if (q > maxq) maxq = q;
-        xi[i] = (val < 0) ? -q : q;
+        xi[i] = (q ^ m) - m;
     }
     return maxq;
 }
@@ -341,7 +345,7 @@ static void assign_band_codebooks(CoderInfo * __restrict ci, const float * __res
 
             for (win = 0; win < gsize; win++)
             {
-                int qm = qfunc(xr0 + win * BLOCK_LEN_SHORT + lo, xi + win * width, width, gain);
+                int qm = qfunc(xr0 + win * BLOCK_LEN_SHORT + lo, xi + win * width, width >> 2, gain);
                 if (qm > maxq) maxq = qm;
             }
             huffbook(ci, xi, gsize * width, maxq);
