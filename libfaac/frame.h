@@ -67,8 +67,6 @@ typedef struct faacEncStruct {
     float *audioFIFO[MAX_CHANNELS][4];
 
     /* Filterbank buffers */
-    float *sin_window_long;
-    float *sin_window_short;
     float *freqBuff[MAX_CHANNELS];
 
     /* Channel and Coder data for all channels */
@@ -92,7 +90,6 @@ typedef struct faacEncStruct {
     StereoConfig stereoCfg;
 
     /* FFT Tables */
-    FFT_Tables	fft_tables;
 
     /* Input FIFO: decouples the caller's per-call chunk size from the encoder
      * frame size. faacEncEncode appends whatever it is handed (any count) and

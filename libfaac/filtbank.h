@@ -24,11 +24,14 @@ extern "C" {
 
 #define NFLAT_LS 448
 
+/* Builds the process-wide windows and MDCT twiddles; the caller runs it exactly once. */
+void			FilterBankTablesInit( void );
+
 void			FilterBankInit		( faacEncStruct* hEncoder );
 
 void			FilterBankEnd		( faacEncStruct* hEncoder );
 
-void			MDCT				( FFT_Tables *fft_tables, float * restrict data, int N, float * restrict work );
+void			MDCT				( float * restrict data, int N, float * restrict work );
 
 void			FilterBank( faacEncStruct* hEncoder,
 						CoderInfo *coderInfo,

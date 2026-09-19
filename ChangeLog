@@ -1,3 +1,9 @@
+(unreleased)
+
+	[ Nils Schimmelmann ]
+	* Build the lookup tables shared between encoder handles once per
+	  process, so independent handles can be opened concurrently
+
 2.1 (Aug 18, 2026)
 
 	[ Nils Schimmelmann ]

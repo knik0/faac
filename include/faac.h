@@ -33,6 +33,10 @@
  *   - faac_params grows only additively: new releases append named fields and
  *     grow sizeof(faac_params); callers MUST zero-initialize via
  *     faac_params_init() so struct_size lets the library reconcile versions.
+ *   - Independent handles may be opened, driven and closed from different
+ *     threads concurrently without external synchronization; the tables the
+ *     library shares between handles are built once per process. A single
+ *     handle is still owned by one thread at a time.
  */
 
 #ifndef FAAC_H

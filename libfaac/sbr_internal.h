@@ -85,7 +85,6 @@ struct SBRInfo {
     float twidSin[SBR_QMF_BANDS_64];
     float oddCos [SBR_QMF_BANDS_64];
     float oddSin [SBR_QMF_BANDS_64];
-    FFT_Tables *fftTables;   /* borrowed: the encoder's shared core FFT tables */
 };
 
 struct SBRContext {
@@ -122,7 +121,7 @@ static inline const int *sbr_env_edges(const SBRInfo *sbr, const SbrFrameData *f
     return fd->freqRes ? sbr->bandEdges : sbr->bandEdgesLow;
 }
 
-SBRInfo *SbrInit(int channels, int sampleRate, unsigned long bitRate, FFT_Tables *fft_tables);
+SBRInfo *SbrInit(int channels, int sampleRate, unsigned long bitRate);
 /* Recompute the bitrate-dependent band config without reallocating; lets
  * SetConfiguration adjust an existing handle. */
 void SbrUpdate(SBRInfo *sbr, unsigned long bitRate);
