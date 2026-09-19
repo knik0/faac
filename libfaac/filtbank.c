@@ -23,8 +23,10 @@
 #include "fft.h"
 #include "util.h"
 
-/* Sine window, ISO/IEC 13818-7 4.6.4. Built once at encoder init in double,
- * rounded to float when stored. */
+/* Sine windows, ISO/IEC 13818-7 4.6.4. Built once per process in double,
+ * rounded to float when stored, and shared read-only by every handle. */
+static float sin_window_long[BLOCK_LEN_LONG];
+static float sin_window_short[BLOCK_LEN_SHORT];
 
 static void FillSineWindow(float *win, int halfLen)
 {
@@ -32,6 +34,12 @@ static void FillSineWindow(float *win, int halfLen)
 
     for (i = 0; i < halfLen; i++)
         win[i] = (float)sin((M_PI_DOUBLE / (2 * halfLen)) * (i + 0.5));
+}
+
+void FilterBankTablesInit(void)
+{
+    FillSineWindow(sin_window_long, BLOCK_LEN_LONG);
+    FillSineWindow(sin_window_short, BLOCK_LEN_SHORT);
 }
 
 void FilterBankInit(faacEncStruct* hEncoder)
@@ -43,15 +51,6 @@ void FilterBankInit(faacEncStruct* hEncoder)
         if (!hEncoder->freqBuff[channel]) return;
     }
 
-    hEncoder->sin_window_long = (float*)AllocMemory(BLOCK_LEN_LONG*sizeof(float));
-    hEncoder->sin_window_short = (float*)AllocMemory(BLOCK_LEN_SHORT*sizeof(float));
-
-    if (!hEncoder->sin_window_long || !hEncoder->sin_window_short)
-        return;
-
-    FillSineWindow(hEncoder->sin_window_long, BLOCK_LEN_LONG);
-    FillSineWindow(hEncoder->sin_window_short, BLOCK_LEN_SHORT);
-
     hEncoder->gpsyInfo.sharedWorkBuffLong = (float*)AllocMemory(2*BLOCK_LEN_LONG*sizeof(float));
 }
 
@@ -62,9 +61,6 @@ void FilterBankEnd(faacEncStruct* hEncoder)
     for (channel = 0; channel < hEncoder->numChannels; channel++) {
         if (hEncoder->freqBuff[channel]) FreeMemory(hEncoder->freqBuff[channel]);
     }
-
-    if (hEncoder->sin_window_long) FreeMemory(hEncoder->sin_window_long);
-    if (hEncoder->sin_window_short) FreeMemory(hEncoder->sin_window_short);
 
     if (hEncoder->gpsyInfo.sharedWorkBuffLong) FreeMemory(hEncoder->gpsyInfo.sharedWorkBuffLong);
 }
@@ -121,16 +117,16 @@ void FilterBank(faacEncStruct* hEncoder,
 
     switch (block_type) {
     case ONLY_LONG_WINDOW: {
-        ApplyWindowDirect(p_out_mdct, overlapBuf, hEncoder->sin_window_long, BLOCK_LEN_LONG);
-        ApplyWindowReverse(p_out_mdct+BLOCK_LEN_LONG, overlapBuf+BLOCK_LEN_LONG, hEncoder->sin_window_long, BLOCK_LEN_LONG);
+        ApplyWindowDirect(p_out_mdct, overlapBuf, sin_window_long, BLOCK_LEN_LONG);
+        ApplyWindowReverse(p_out_mdct+BLOCK_LEN_LONG, overlapBuf+BLOCK_LEN_LONG, sin_window_long, BLOCK_LEN_LONG);
         MDCT(&hEncoder->fft_tables, p_out_mdct, 2*BLOCK_LEN_LONG, hEncoder->gpsyInfo.sharedWorkBuffLong);
         break;
     }
 
     case LONG_SHORT_WINDOW: {
-        ApplyWindowDirect(p_out_mdct, overlapBuf, hEncoder->sin_window_long, BLOCK_LEN_LONG);
+        ApplyWindowDirect(p_out_mdct, overlapBuf, sin_window_long, BLOCK_LEN_LONG);
         CopyFlat(p_out_mdct+BLOCK_LEN_LONG, overlapBuf+BLOCK_LEN_LONG, NFLAT_LS);
-        ApplyWindowReverse(p_out_mdct+BLOCK_LEN_LONG+NFLAT_LS, overlapBuf+BLOCK_LEN_LONG+NFLAT_LS, hEncoder->sin_window_short, BLOCK_LEN_SHORT);
+        ApplyWindowReverse(p_out_mdct+BLOCK_LEN_LONG+NFLAT_LS, overlapBuf+BLOCK_LEN_LONG+NFLAT_LS, sin_window_short, BLOCK_LEN_SHORT);
         ZeroFlat(p_out_mdct+BLOCK_LEN_LONG+NFLAT_LS+BLOCK_LEN_SHORT, NFLAT_LS);
         MDCT(&hEncoder->fft_tables, p_out_mdct, 2*BLOCK_LEN_LONG, hEncoder->gpsyInfo.sharedWorkBuffLong);
         break;
@@ -138,15 +134,15 @@ void FilterBank(faacEncStruct* hEncoder,
 
     case SHORT_LONG_WINDOW: {
         ZeroFlat(p_out_mdct, NFLAT_LS);
-        ApplyWindowDirect(p_out_mdct+NFLAT_LS, overlapBuf+NFLAT_LS, hEncoder->sin_window_short, BLOCK_LEN_SHORT);
+        ApplyWindowDirect(p_out_mdct+NFLAT_LS, overlapBuf+NFLAT_LS, sin_window_short, BLOCK_LEN_SHORT);
         CopyFlat(p_out_mdct+NFLAT_LS+BLOCK_LEN_SHORT, overlapBuf+NFLAT_LS+BLOCK_LEN_SHORT, NFLAT_LS);
-        ApplyWindowReverse(p_out_mdct+BLOCK_LEN_LONG, overlapBuf+BLOCK_LEN_LONG, hEncoder->sin_window_long, BLOCK_LEN_LONG);
+        ApplyWindowReverse(p_out_mdct+BLOCK_LEN_LONG, overlapBuf+BLOCK_LEN_LONG, sin_window_long, BLOCK_LEN_LONG);
         MDCT(&hEncoder->fft_tables, p_out_mdct, 2*BLOCK_LEN_LONG, hEncoder->gpsyInfo.sharedWorkBuffLong);
         break;
     }
 
     case ONLY_SHORT_WINDOW: {
-        const float * restrict win = hEncoder->sin_window_short;
+        const float * restrict win = sin_window_short;
         float * restrict src = overlapBuf + NFLAT_LS;
         float * restrict dst = p_out_mdct;
 

@@ -24,6 +24,9 @@ extern "C" {
 
 #define NFLAT_LS 448
 
+/* Builds the process-wide windows; the caller runs it exactly once. */
+void			FilterBankTablesInit( void );
+
 void			FilterBankInit		( faacEncStruct* hEncoder );
 
 void			FilterBankEnd		( faacEncStruct* hEncoder );

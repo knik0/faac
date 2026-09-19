@@ -67,8 +67,6 @@ typedef struct faacEncStruct {
     float *audioFIFO[MAX_CHANNELS][4];
 
     /* Filterbank buffers */
-    float *sin_window_long;
-    float *sin_window_short;
     float *freqBuff[MAX_CHANNELS];
 
     /* Channel and Coder data for all channels */

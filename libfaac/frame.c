@@ -30,6 +30,7 @@
 #include "stereo.h"
 #include "sbr.h"
 #include "ratecontrol.h"
+#include "atomic.h"
 
 /* HE-AAC auto-mode thresholds; tuned via ViSQOL on a 49-clip corpus. */
 #define HE_MIN_SAMPLE_RATE    32000  /* Fs/2 < 16 kHz below this → core too narrow for SBR */
@@ -401,11 +402,23 @@ int faacEncApplyConfig(faacEncStruct* hEncoder,
 faacEncStats g_faacStats;
 #endif
 
+/* Lookup tables every handle reads but none owns. Independent handles may be
+ * opened from several threads at once, so the build is a one-shot. */
+static faac_once_t shared_tables_once = FAAC_ONCE_INIT;
+
+static void InitSharedTables(void)
+{
+    FilterBankTablesInit();
+    QuantizeInit();
+}
+
 faacEncHandle faacEncOpen(unsigned long sampleRate,
                                   unsigned int numChannels,
                                   unsigned long *inputSamples,
                                   unsigned long *maxOutputBytes)
 {
+    faac_once_run(&shared_tables_once, InitSharedTables);
+
 #ifdef FAAC_STATS
     memset(&g_faacStats, 0, sizeof(faacEncStats));
     RateControlStatsInit();
@@ -464,8 +477,6 @@ faacEncHandle faacEncOpen(unsigned long sampleRate,
     FilterBankInit(hEncoder);
 
     TnsInit(hEncoder);
-
-    QuantizeInit();
 
     /* Return handle */
     return hEncoder;
