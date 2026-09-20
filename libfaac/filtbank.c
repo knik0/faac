@@ -23,15 +23,43 @@
 #include "fft.h"
 #include "util.h"
 
-/* Sine window, ISO/IEC 13818-7 4.6.4. Built once at encoder init in double,
- * rounded to float when stored. */
+/* Sine windows, ISO/IEC 13818-7 4.6.4, and the MDCT pre/post-twiddles
+ * cos/sin(freq*(i+1/8)) for both block sizes, short slice first. Built once
+ * per process in double, rounded to float when stored, and shared read-only
+ * by every handle. A twiddle table breaks the serial cos/sin recurrence that
+ * kept the MDCT twiddle loops from vectorizing, and is more accurate. */
+static float sin_window_long[BLOCK_LEN_LONG];
+static float sin_window_short[BLOCK_LEN_SHORT];
+static fftfloat mdct_cos[FFT_TBL_LEN];
+static fftfloat mdct_sin[FFT_TBL_LEN];
 
-static void FillSineWindow(float *win, int halfLen)
+void FilterBankTablesInit(void)
 {
-    int i;
+    static const unsigned char logms[2] = { FFT_LOGM_SHORT, FFT_LOGM_LONG };
+    int t;
 
-    for (i = 0; i < halfLen; i++)
-        win[i] = (float)sin((M_PI_DOUBLE / (2 * halfLen)) * (i + 0.5));
+    /* One loop body for both sizes: two constant-argument calls would be
+     * cloned and unrolled separately under LTO. */
+    for (t = 0; t < 2; t++)
+    {
+        int logm = logms[t];
+        int size = 1 << logm;
+        int halfLen = 2 * size;
+        float *win = (logm == FFT_LOGM_SHORT) ? sin_window_short : sin_window_long;
+        int off = FFT_TBL_OFFSET(logm);
+        double freq = 2.0 * M_PI_DOUBLE / (double)(4 * size);
+        int i;
+
+        for (i = 0; i < halfLen; i++)
+            win[i] = (float)sin((M_PI_DOUBLE / (2 * halfLen)) * (i + 0.5));
+
+        for (i = 0; i < size; i++)
+        {
+            double theta = freq * ((double)i + 0.125);
+            mdct_cos[off + i] = (fftfloat)cos(theta);
+            mdct_sin[off + i] = (fftfloat)sin(theta);
+        }
+    }
 }
 
 void FilterBankInit(faacEncStruct* hEncoder)
@@ -43,15 +71,6 @@ void FilterBankInit(faacEncStruct* hEncoder)
         if (!hEncoder->freqBuff[channel]) return;
     }
 
-    hEncoder->sin_window_long = (float*)AllocMemory(BLOCK_LEN_LONG*sizeof(float));
-    hEncoder->sin_window_short = (float*)AllocMemory(BLOCK_LEN_SHORT*sizeof(float));
-
-    if (!hEncoder->sin_window_long || !hEncoder->sin_window_short)
-        return;
-
-    FillSineWindow(hEncoder->sin_window_long, BLOCK_LEN_LONG);
-    FillSineWindow(hEncoder->sin_window_short, BLOCK_LEN_SHORT);
-
     hEncoder->gpsyInfo.sharedWorkBuffLong = (float*)AllocMemory(2*BLOCK_LEN_LONG*sizeof(float));
 }
 
@@ -62,9 +81,6 @@ void FilterBankEnd(faacEncStruct* hEncoder)
     for (channel = 0; channel < hEncoder->numChannels; channel++) {
         if (hEncoder->freqBuff[channel]) FreeMemory(hEncoder->freqBuff[channel]);
     }
-
-    if (hEncoder->sin_window_long) FreeMemory(hEncoder->sin_window_long);
-    if (hEncoder->sin_window_short) FreeMemory(hEncoder->sin_window_short);
 
     if (hEncoder->gpsyInfo.sharedWorkBuffLong) FreeMemory(hEncoder->gpsyInfo.sharedWorkBuffLong);
 }
@@ -121,39 +137,39 @@ void FilterBank(faacEncStruct* hEncoder,
 
     switch (block_type) {
     case ONLY_LONG_WINDOW: {
-        ApplyWindowDirect(p_out_mdct, overlapBuf, hEncoder->sin_window_long, BLOCK_LEN_LONG);
-        ApplyWindowReverse(p_out_mdct+BLOCK_LEN_LONG, overlapBuf+BLOCK_LEN_LONG, hEncoder->sin_window_long, BLOCK_LEN_LONG);
-        MDCT(&hEncoder->fft_tables, p_out_mdct, 2*BLOCK_LEN_LONG, hEncoder->gpsyInfo.sharedWorkBuffLong);
+        ApplyWindowDirect(p_out_mdct, overlapBuf, sin_window_long, BLOCK_LEN_LONG);
+        ApplyWindowReverse(p_out_mdct+BLOCK_LEN_LONG, overlapBuf+BLOCK_LEN_LONG, sin_window_long, BLOCK_LEN_LONG);
+        MDCT(p_out_mdct, 2*BLOCK_LEN_LONG, hEncoder->gpsyInfo.sharedWorkBuffLong);
         break;
     }
 
     case LONG_SHORT_WINDOW: {
-        ApplyWindowDirect(p_out_mdct, overlapBuf, hEncoder->sin_window_long, BLOCK_LEN_LONG);
+        ApplyWindowDirect(p_out_mdct, overlapBuf, sin_window_long, BLOCK_LEN_LONG);
         CopyFlat(p_out_mdct+BLOCK_LEN_LONG, overlapBuf+BLOCK_LEN_LONG, NFLAT_LS);
-        ApplyWindowReverse(p_out_mdct+BLOCK_LEN_LONG+NFLAT_LS, overlapBuf+BLOCK_LEN_LONG+NFLAT_LS, hEncoder->sin_window_short, BLOCK_LEN_SHORT);
+        ApplyWindowReverse(p_out_mdct+BLOCK_LEN_LONG+NFLAT_LS, overlapBuf+BLOCK_LEN_LONG+NFLAT_LS, sin_window_short, BLOCK_LEN_SHORT);
         ZeroFlat(p_out_mdct+BLOCK_LEN_LONG+NFLAT_LS+BLOCK_LEN_SHORT, NFLAT_LS);
-        MDCT(&hEncoder->fft_tables, p_out_mdct, 2*BLOCK_LEN_LONG, hEncoder->gpsyInfo.sharedWorkBuffLong);
+        MDCT(p_out_mdct, 2*BLOCK_LEN_LONG, hEncoder->gpsyInfo.sharedWorkBuffLong);
         break;
     }
 
     case SHORT_LONG_WINDOW: {
         ZeroFlat(p_out_mdct, NFLAT_LS);
-        ApplyWindowDirect(p_out_mdct+NFLAT_LS, overlapBuf+NFLAT_LS, hEncoder->sin_window_short, BLOCK_LEN_SHORT);
+        ApplyWindowDirect(p_out_mdct+NFLAT_LS, overlapBuf+NFLAT_LS, sin_window_short, BLOCK_LEN_SHORT);
         CopyFlat(p_out_mdct+NFLAT_LS+BLOCK_LEN_SHORT, overlapBuf+NFLAT_LS+BLOCK_LEN_SHORT, NFLAT_LS);
-        ApplyWindowReverse(p_out_mdct+BLOCK_LEN_LONG, overlapBuf+BLOCK_LEN_LONG, hEncoder->sin_window_long, BLOCK_LEN_LONG);
-        MDCT(&hEncoder->fft_tables, p_out_mdct, 2*BLOCK_LEN_LONG, hEncoder->gpsyInfo.sharedWorkBuffLong);
+        ApplyWindowReverse(p_out_mdct+BLOCK_LEN_LONG, overlapBuf+BLOCK_LEN_LONG, sin_window_long, BLOCK_LEN_LONG);
+        MDCT(p_out_mdct, 2*BLOCK_LEN_LONG, hEncoder->gpsyInfo.sharedWorkBuffLong);
         break;
     }
 
     case ONLY_SHORT_WINDOW: {
-        const float * restrict win = hEncoder->sin_window_short;
+        const float * restrict win = sin_window_short;
         float * restrict src = overlapBuf + NFLAT_LS;
         float * restrict dst = p_out_mdct;
 
         for (k = 0; k < MAX_SHORT_WINDOWS; k++) {
             ApplyWindowDirect(dst, src, win, BLOCK_LEN_SHORT);
             ApplyWindowReverse(dst+BLOCK_LEN_SHORT, src+BLOCK_LEN_SHORT, win, BLOCK_LEN_SHORT);
-            MDCT(&hEncoder->fft_tables, dst, 2*BLOCK_LEN_SHORT, hEncoder->gpsyInfo.sharedWorkBuffLong);
+            MDCT(dst, 2*BLOCK_LEN_SHORT, hEncoder->gpsyInfo.sharedWorkBuffLong);
 
             dst += BLOCK_LEN_SHORT;
             src += BLOCK_LEN_SHORT;
@@ -163,15 +179,15 @@ void FilterBank(faacEncStruct* hEncoder,
     }
 }
 
-void MDCT( FFT_Tables *fft_tables, float * restrict data, int N, float * restrict work )
+void MDCT( float * restrict data, int N, float * restrict work )
 {
     const int N2 = N >> 1;
     const int N4 = N >> 2;
     const int N8 = N >> 3;
-    const int logm = (N == 2 * BLOCK_LEN_LONG) ? 9 : 6;
+    const int logm = (N == 2 * BLOCK_LEN_LONG) ? FFT_LOGM_LONG : FFT_LOGM_SHORT;
 
-    const fftfloat * restrict cosT = fft_tables->mdct_cos[logm];
-    const fftfloat * restrict sinT = fft_tables->mdct_sin[logm];
+    const fftfloat * restrict cosT = mdct_cos + FFT_TBL_OFFSET(logm);
+    const fftfloat * restrict sinT = mdct_sin + FFT_TBL_OFFSET(logm);
 
     float * restrict xr = work;
     float * restrict xi = work + N4;
@@ -199,7 +215,7 @@ void MDCT( FFT_Tables *fft_tables, float * restrict data, int N, float * restric
         xi[i] = foldedIm * cosT[i] - foldedRe * sinT[i];
     }
 
-    fft( fft_tables, xr, xi, logm);
+    fft(xr, xi, logm);
 
     /* Unfold N/4 complex FFT outputs into N real coefficients, one write
        per output quarter. */

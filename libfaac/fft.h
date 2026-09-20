@@ -16,27 +16,18 @@
 #ifndef _FFT_H_
 #define _FFT_H_
 
-
-#define FFT_MAXLOGM 9
-
 typedef float fftfloat;
 
-typedef struct
-{
-    fftfloat **costbl;
-    fftfloat **negsintbl;
-    unsigned short **reordertbl;
-    /* MDCT pre/post-twiddle factors cos/sin(freq*(i+1/8)), one table pair per
-     * transform size (indexed by the size's fft logm). Precomputing them
-     * breaks the serial cos/sin recurrence that kept the MDCT twiddle loops
-     * from vectorizing, and is more accurate than the recurrence. */
-    fftfloat *mdct_cos[FFT_MAXLOGM + 1];
-    fftfloat *mdct_sin[FFT_MAXLOGM + 1];
-} FFT_Tables;
+#define FFT_LOGM_SHORT 6  /* 256-sample short block MDCT, SBR QMF */
+#define FFT_LOGM_LONG  9  /* 2048-sample long block MDCT */
 
-void fft_initialize		( FFT_Tables *fft_tables );
-void fft_terminate	( FFT_Tables *fft_tables );
+/* Offset of a transform size's slice inside a shared two-size table. */
+#define FFT_TBL_OFFSET(logm) ((logm) == FFT_LOGM_SHORT ? 0 : (1 << FFT_LOGM_SHORT))
+#define FFT_TBL_LEN ((1 << FFT_LOGM_SHORT) + (1 << FFT_LOGM_LONG))
 
-void fft			( FFT_Tables *fft_tables, float *xr, float *xi, int logm );
+/* Builds the process-wide twiddle tables; the caller runs it exactly once. */
+void fft_init(void);
+
+void fft(float *xr, float *xi, int logm);
 
 #endif
