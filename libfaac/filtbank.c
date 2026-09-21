@@ -189,8 +189,12 @@ void MDCT( float * restrict data, int N, float * restrict work )
     const fftfloat * restrict cosT = mdct_cos + FFT_TBL_OFFSET(logm);
     const fftfloat * restrict sinT = mdct_sin + FFT_TBL_OFFSET(logm);
 
+    /* work holds N floats: the fold's complex input in the first half, the
+       FFT's natural-order output in the second. */
     float * restrict xr = work;
     float * restrict xi = work + N4;
+    const float * restrict yr = work + N2;
+    const float * restrict yi = work + N2 + N4;
 
     int i;
 
@@ -215,14 +219,14 @@ void MDCT( float * restrict data, int N, float * restrict work )
         xi[i] = foldedIm * cosT[i] - foldedRe * sinT[i];
     }
 
-    fft(xr, xi, logm);
+    fft(work, work + N2, logm);
 
     /* Unfold N/4 complex FFT outputs into N real coefficients, one write
        per output quarter. */
     for (i = 0; i < N4; i++) {
         int n2 = 2*i;
-        float unfoldRe = 2.0f * (xr[i] * cosT[i] + xi[i] * sinT[i]);
-        float unfoldIm = 2.0f * (xi[i] * cosT[i] - xr[i] * sinT[i]);
+        float unfoldRe = 2.0f * (yr[i] * cosT[i] + yi[i] * sinT[i]);
+        float unfoldIm = 2.0f * (yi[i] * cosT[i] - yr[i] * sinT[i]);
 
         data[n2]             = -unfoldRe;
         data[N2 - 1 - n2]    =  unfoldIm;

@@ -28,6 +28,8 @@ typedef float fftfloat;
 /* Builds the process-wide twiddle tables; the caller runs it exactly once. */
 void fft_init(void);
 
-void fft(float *xr, float *xi, int logm);
+/* Complex FFT of x into y, natural order; each holds the real half then the
+ * imaginary half, 2 << logm floats. x is used as scratch and destroyed. */
+void fft(float * restrict x, float * restrict y, int logm);
 
 #endif
