@@ -649,10 +649,7 @@ int faacEncClose(faacEncHandle hpEncoder)
  * front (realPerCh real samples/ch, the rest silence-padded), run SBR analysis
  * on it, then 2:1 downsample to produce the AAC-LC core signal. The FIFO is not
  * consumed here; the caller drops the frame after the core has read heHalfRate.
- * Cold path, kept out of the LC fast path. */
-#if defined(__GNUC__)
-__attribute__((cold, noinline))
-#endif
+ */
 static void doHEAACFrame(faacEncStruct *hEncoder, unsigned int realPerCh,
                          float *heHalfRate[MAX_CHANNELS])
 {
