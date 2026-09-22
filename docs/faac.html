@@ -92,8 +92,9 @@ cap. -q and -b are exclusive.
 	Joint stereo: 0 off, 1 Mid/Side, 2 Intensity Stereo, 3 both, chosen
 	per band (default).
 <li>
-<kbd>--pns &lt;level&gt;</kbd>
-	Perceptual Noise Substitution, 0 (off) to 10 (default: 4).
+<kbd>--no-pns</kbd>
+	Disable Perceptual Noise Substitution, which codes noise-like bands as
+	a noise level instead of spectral lines. On by default.
 <li>
 <kbd>--no-tns</kbd>
 	Disable Temporal Noise Shaping, which reduces pre-echo on transients.

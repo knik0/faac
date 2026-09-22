@@ -176,7 +176,8 @@ typedef struct faac_params {
 
     bool                    use_lfe;       /* treat the last channel as LFE (>= 6 ch) */
     bool                    use_tns;       /* temporal noise shaping                   */
-    uint8_t                 reserved[2];   /* explicit pad; must remain 0              */
+    bool                    use_pns;       /* perceptual noise substitution            */
+    uint8_t                 reserved[1];   /* explicit pad; must remain 0              */
 
     uint32_t                bit_rate;      /* target bits/sec PER CHANNEL; 0 = use quant_quality */
     uint32_t                bandwidth;     /* cutoff in Hz; 0 = from bit_rate, the curve's top in VBR */
@@ -186,8 +187,6 @@ typedef struct faac_params {
     enum faac_stream_format output_format;
     enum faac_input_format  input_format;
     enum faac_shortctl_mode short_control;
-
-    int32_t                 pns_level;     /* perceptual noise substitution, 0..10 (0 = off) */
 
     const int32_t          *channel_map;   /* optional reorder table, num_channels entries;
                                             * NULL = identity. Caller-owned; copied by open(). */
@@ -235,11 +234,11 @@ typedef struct faac_encoder_info {
     uint32_t                max_output_bytes; /* upper bound on one encode() call's output          */
     uint32_t                sample_rate;      /* nominal full output rate in Hz (HE: extended rate) */
     enum faac_object_type   object_type;      /* concrete type in effect (AUTO resolved)            */
+    enum faac_mpeg_version  mpeg_version;     /* version in effect (HE-AAC forces MPEG-4)           */
 
     uint32_t                bit_rate;         /* resolved bits/sec per channel (0 if quality-driven) */
     uint32_t                bandwidth;        /* resolved cutoff in Hz                               */
     uint32_t                quant_quality;    /* resolved quantizer quality                          */
-    int32_t                 pns_level;        /* resolved PNS level, 0..10                           */
     uint32_t                max_bit_rate;     /* resolved peak cap, 0 if unlimited                   */
 
     /* Priming delay in samples/channel at the output rate: leading samples the

@@ -35,6 +35,9 @@ enum { MPEG4 = 0, MPEG2 = 1 };
  * choice between LOW and HE_V1 to faacEncApplyConfig. */
 enum { AUTO = 0, LOW = 2, HE_V1 = 5 };
 
+/* Perceptual noise substitution aggressiveness (see assign_band_codebooks). */
+enum { PNSLEVEL_NARROWBAND_MONO = 2, PNSLEVEL_DEFAULT = 4 };
+
 /* PCM input sample format. Named distinctly from the public faac_input_format
  * enumerators (<faac.h>) so the facade can include both headers; faac.c
  * _Static_asserts the two enumerations agree value-for-value. */
@@ -57,6 +60,7 @@ typedef struct faacEncConfiguration
     unsigned int jointmode;
     unsigned int useLfe;
     unsigned int useTns;
+    unsigned int usePns;             /* level resolved on apply; MPEG-2 forces it off */
     unsigned long bitRate;           /* per channel */
     unsigned int bandWidth;
     unsigned long quantqual;
@@ -65,7 +69,6 @@ typedef struct faacEncConfiguration
     unsigned int inputFormat;
     int shortctl;
     int channel_map[64];             /* MAX_CHANNELS entries; identity by default */
-    int pnslevel;
     unsigned int rateControl;        /* enum rate_control_mode; AUTO resolves on apply */
 } faacEncConfiguration, *faacEncConfigurationPtr;
 
