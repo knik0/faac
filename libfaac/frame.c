@@ -51,6 +51,8 @@
  * 13.1% more bits. Re-measure it with a -q sweep whenever the ABR crossover
  * moves. */
 #define HE_VBR_QUANTQUAL_MAX  75
+/* bps per channel; below it the HE core codes every frame short. */
+#define HE_SHORT_ONLY_BITRATE 14000
 
 /* Top of the bandwidth curve: widening past it loses at every reachable rate,
  * the band above holds ~0.006% of programme energy and sits at the edge of
@@ -696,6 +698,11 @@ int faacEncEncode(faacEncHandle hpEncoder,
     unsigned int numChannels = hEncoder->numChannels;
     unsigned int useTns = hEncoder->config.useTns;
     unsigned int shortctl = hEncoder->config.shortctl;
+    /* A starved HE core can't afford a long window's scalefactors and
+     * sections; the frequency resolution they buy loses to the bits. */
+    if (hEncoder->config.aacObjectType == HE_V1 && hEncoder->config.bitRate
+        && hEncoder->config.bitRate < HE_SHORT_ONLY_BITRATE)
+        shortctl = SHORTCTL_NOLONG;
     int maxqual = hEncoder->config.outputFormat ? MAXQUALADTS : MAXQUAL;
 
     /* The input FIFO decouples the caller's chunk size from the encoder frame
@@ -782,16 +789,13 @@ int faacEncEncode(faacEncHandle hpEncoder,
             }
 
             /* LFE's block_type is always forced to ONLY_LONG_WINDOW in PsyCalculate,
-             * so the transient analysis below would be discarded -- skip it. */
-            if (!hEncoder->isLfeChannel[channel])
+             * and forced short windows neither switch nor run TNS, so the
+             * transient analysis below would be discarded -- skip it. */
+            if (!hEncoder->isLfeChannel[channel] && shortctl != SHORTCTL_NOLONG)
             {
-                /* Shared detector replacement on HE: skip half-rate PsyBufferUpdate. */
-                if (hEncoder->config.aacObjectType != HE_V1 || !SbrContextIsAnalysisValid(hEncoder->sbrContext))
-                {
-                    PsyBufferUpdate(&hEncoder->gpsyInfo, &hEncoder->psyInfo[channel],
-                        hEncoder->audioFIFO[channel][FIFO_AHEAD1],
-                        hEncoder->audioFIFO[channel][FIFO_AHEAD2]);
-                }
+                PsyBufferUpdate(&hEncoder->gpsyInfo, &hEncoder->psyInfo[channel],
+                    hEncoder->audioFIFO[channel][FIFO_AHEAD1],
+                    hEncoder->audioFIFO[channel][FIFO_AHEAD2]);
             }
         }
 
@@ -808,11 +812,9 @@ int faacEncEncode(faacEncHandle hpEncoder,
         return 0;
 
     /* Psychoacoustics */
-    /* Shared detector replacement on HE: skip half-rate PsyCalculate. */
-    if (hEncoder->config.aacObjectType != HE_V1 || !SbrContextIsAnalysisValid(hEncoder->sbrContext))
-        PsyCalculate(hEncoder->psyInfo, hEncoder->isLfeChannel, numChannels);
+    PsyCalculate(hEncoder->psyInfo, hEncoder->isLfeChannel, numChannels);
 
-    BlockSwitch(hEncoder, coderInfo, hEncoder->psyInfo, numChannels);
+    BlockSwitch(coderInfo, hEncoder->psyInfo, numChannels);
 
 #ifdef FAAC_STATS
     g_faacStats.totalFrames++;
@@ -918,8 +920,8 @@ int faacEncEncode(faacEncHandle hpEncoder,
             g_faacStats.longBlocks++;
 #endif
 
-            /* No envelope available (HE-AAC skips PsyBufferUpdate) means no
-               basis to reject on, so admit and let the LPC gates decide. */
+            /* No envelope yet (the first frames) means no basis to reject
+               on, so admit and let the LPC gates decide. */
             if (attack > 0.0f && attack < TNS_ATTACK_MIN) {
                 coderInfo[channel].tnsInfo.tnsDataPresent = 0;
                 continue;

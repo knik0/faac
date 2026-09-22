@@ -35,12 +35,9 @@ struct SBRInfo;
 typedef struct SignalAnalysisChannel {
     int       transientSlot;
     float transientStrength;
-    int       wantShort;
-    float lastVal;
 } SignalAnalysisChannel;
 
 typedef struct SignalAnalysis {
-    int valid;
     int numSlots;
     int sampled;
 

@@ -31,22 +31,12 @@ typedef enum SbrFrameClass {
 
 #define LOOKAHEAD_DEPTH 2
 
-/* Depth of the HE shared-detector decision FIFO. Sized so index 0 lines up with
-   the core frame currently being coded: the core lags the freshest SBR analysis
-   by LOOKAHEAD_DEPTH frames, so index 0 must be LOOKAHEAD_DEPTH entries behind
-   the newest (one extra slot for the newest entry itself). */
-#define SBR_DETECT_FIFO (LOOKAHEAD_DEPTH + 1)
-
 /* Depth of the coded-SBR-payload delay ring. Envelopes must describe the audio
    the access unit actually carries, which is FIFO_PAST: the MDCT window spans
    (FIFO_PAST, FIFO_CURR) and, at 50% overlap, an access unit completes the first
    half of its own window. So the payload emitted on call N belongs to frame
    N-(LOOKAHEAD_DEPTH+1), while SbrEncode has just analysed frame N -- that delay,
-   plus a slot for the newest entry.
-
-   Note this is one deeper than SBR_DETECT_FIFO: block switching wants the frame
-   *after* the coded one, so a transient gets a start window now and a short
-   window next, whereas envelopes must land on the coded frame itself. */
+   plus a slot for the newest entry. */
 #define SBR_FRAME_FIFO (LOOKAHEAD_DEPTH + 2)
 
 #ifdef __cplusplus
@@ -122,8 +112,6 @@ int SbrContextIsPresent(SBRContext *sCtx);
 void SbrContextRestoreRate(SBRContext *sCtx, unsigned long *sampleRate, unsigned int *sampleRateIdx, SR_INFO **srInfo);
 unsigned long SbrContextGetFullRate(SBRContext *sCtx, unsigned long defaultRate);
 void SbrContextResolveRate(SBRContext *sCtx, unsigned long *sampleRate, unsigned int *sampleRateIdx, SR_INFO **srInfo);
-int SbrContextIsAnalysisValid(SBRContext *sCtx);
-int SbrContextGetWantShort(SBRContext *sCtx, int channel, int index);
 
 /* The EXT_SBR_DATA fill element following one SCE/CPE; none after an LFE. */
 int SbrContextGetBits(SBRContext *sCtx, struct BitStream *bs, const AACElement *elem, int aacObjectType);
