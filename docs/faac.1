@@ -116,14 +116,14 @@ at 80-175 (median 125).
 .TP
 .BR -b\ <\fIbitrate\fP>
 Set average bitrate (ABR) to approximately <bitrate> kbps.
-max. ~500 (stereo)
+Max. ~500 kbps (stereo).
 .TP
 .B \-\-cbr
 Hold the
 .B -b
 bitrate as a constant bitrate (CBR). A bit reservoir models the decoder's
 input buffer (6144 bits per channel): every frame fits what the buffer holds,
-a frame that would leave it to overflow is stuffed up to it, and the stream
+a frame that would otherwise overflow it is stuffed up to it, and the stream
 lands on its rate exactly. ADTS output declares the buffer fullness in every
 header; MP4 output declares the buffer size and maxBitrate equal to
 avgBitrate. Meant for constant-rate channels and matched-bitrate comparisons:
@@ -150,7 +150,7 @@ own cutoff and ignores this. The actual frequency is adjusted to a band edge.
 .SH INPUT/OUTPUT OPTIONS
 .TP
 .BR -o\ <\fIfilename\fP>
-Set output file to X (only for one input file). Format is auto-detected from
+Set output file name (only for one input file). Format is auto-detected from
 extension (.aac/.adts -> ADTS, .m4a/.mp4/.m4b -> MP4; default: MP4).
 .TP
 .BR -a
@@ -164,16 +164,16 @@ thus enabling piping from other applications and utilities. The
 same works for stdout as well, so FAAC can pipe its output to
 other apps such as a server.
 .TP
-.BR -v\ <\fIvebose\fP>
-Verbosity level (-v0 is  quiet mode)
+.BR -v\ <\fIverbose\fP>
+Set verbosity level (-v0 is quiet mode).
 .TP
 .BR -r
 Use RAW AAC output file.
 Generate raw AAC bitstream (i.e. without any headers).
-Not advised!!!, RAW AAC files are practically useless!!!
+Not advised: raw AAC files are practically useless.
 .TP
 .BR -P
-Raw PCM input mode (default 44100Hz 16bit stereo).
+Raw PCM input mode (default 44100 Hz, 16-bit, stereo).
 Raw PCM input mode (default: off, i.e. expecting a WAV header;
 necessary for input files or bitstreams without a header; using
 only -P assumes the default values for -R, -B and -C in the
@@ -184,20 +184,20 @@ Raw PCM input rate.
 Raw PCM input sample rate in Hz (default: 44100 Hz, max. 96 kHz)
 .TP
 .BR -B\ <\fIsamplebits\fP>
-Raw PCM input sample size (8, 16 (default), 24 or 32bits).
+Raw PCM input sample size (8, 16 (default), 24 or 32 bits).
 Raw PCM input sample size (default: 16, also possible 8, 24, 32
 bit fixed or float input).
 .TP
 .BR -C\ <\fIchannels\fP>
 Raw PCM input channels.
-Raw PCM input channels (default: 2, max. 33 + 1 LFE).
+Raw PCM input channels (default: 2, max. 8).
 .TP
 .BR -X
-Raw PCM swap input bytes
-Raw PCM swap input bytes (default: bigendian).
+Swap raw PCM input byte order.
+Raw PCM input is read big-endian by default; -X reads it little-endian.
 .TP
 .BR -I\ <\fIC[,LFE]\fP>
-Input channel config, default is 3,4 (Center third, LF fourth)
+Input channel config, default is 3,4 (Center third, LFE fourth)
 Input multichannel configuration (default: 3,4 which means
 Center is third and LFE is fourth like in 5.1 WAV, so you only
 have to specify a different position of these two mono channels
@@ -242,7 +242,7 @@ Set disc number
 Set year
 .TP
 .BR --cover-art\ <\fIfilename\fP>
-Read cover art from file X
+Read cover art from <filename>
 Supported image formats are GIF, JPEG, and PNG.
 .TP
 .BR --comment\ <\fIstring\fP>

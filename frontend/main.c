@@ -109,15 +109,15 @@ static help_t help_qual[] = {
     "\t\tHE-AAC v1. On 44.1/48 kHz stereo music, -q 50 lands at 22-33\n"
     "\t\tkbps (HE-AAC), -q 100 at 55-110 (median 75), -q 200 at\n"
     "\t\t80-175 (median 125).\n"},
-    {"-b <bitrate>\tSet average bitrate to x kbps. (ABR)\n",
-    "\t\tSet average bitrate (ABR) to approximately <bitrate> kbps.\n"
-    "\t\tmax. ~500 (stereo)\n"},
+    {"-b <bitrate>\tSet average bitrate to <bitrate> kbps. (ABR)\n",
+    "\t\tApproximate over the file; max. ~500 kbps (stereo).\n"},
     {"--cbr\t\tHold -b as a constant bitrate. (CBR)\n",
     "\t\tA bit reservoir keeps every frame inside the decoder's input\n"
-    "\t\tbuffer and stuffs the ones that would leave it to overflow, so the\n"
-    "\t\trate lands exactly; ADTS declares the buffer fullness, MP4 the\n"
-    "\t\tbuffer size. For constant-rate channels and matched-rate tests;\n"
-    "\t\ton a file or a packet network the stuffing is bytes for nothing.\n"},
+    "\t\tbuffer and stuffs any frame that would otherwise overflow it, so\n"
+    "\t\tthe rate lands exactly; ADTS declares the buffer fullness, MP4\n"
+    "\t\tthe buffer size. For constant-rate channels and matched-rate\n"
+    "\t\ttests; on a file or a packet network the stuffing is bytes for\n"
+    "\t\tnothing.\n"},
     {"-c <freq>\tCut the audio off above <freq> Hz.\n",
     "\t\tLeft out, the encoder chooses the cutoff from the bitrate,\n"
     "\t\tbetween 14 and 19 kHz on most stereo settings; VBR codes up to\n"
@@ -125,7 +125,7 @@ static help_t help_qual[] = {
     "\t\tsample rate to keep everything; the bitrate rises with it.\n"
     "\t\tHE-AAC sets its own and ignores this. The actual frequency is\n"
     "\t\tadjusted to a band edge.\n"},
-    {"--cap-rate <bitrate>\tCap any single frame at x kbps.\n",
+    {"--cap-rate <bitrate>\tCap any single frame at <bitrate> kbps.\n",
     "\t\tFor packet-oriented transports that cannot fragment a frame, where\n"
     "\t\tan oversized frame is dropped rather than split, and for bounding\n"
     "\t\tVBR (-q). Must be >= the -b bitrate. Best-effort: quality is\n"
@@ -135,7 +135,7 @@ static help_t help_qual[] = {
 };
 
 static help_t help_io[] = {
-    {"-o <filename>\tSet output file to X (only for one input file)\n",
+    {"-o <filename>\tSet output file name (only for one input file)\n",
     "\t\tFormat is auto-detected from extension (.aac/.adts -> ADTS, .m4a/.mp4/.m4b -> MP4; default: MP4).\n"},
     {"-a\t\tUse ADTS stream output format.\n",
     "\t\tGenerate ADTS transport stream output.\n"},
@@ -145,25 +145,26 @@ static help_t help_io[] = {
     "\t\tthus enabling piping from other applications and utilities. The\n"
     "\t\tsame works for stdout as well, so FAAC can pipe its output to\n"
     "\t\tother apps such as a server.\n"},
-    {"-v <verbose>\t\tverbosity level (-v0 is quiet mode)\n", NULL},
+    {"-v <verbose>\t\tSet verbosity level (-v0 is quiet mode).\n", NULL},
     {"-r\t\tUse RAW AAC output file.\n",
     "\t\tGenerate raw AAC bitstream (i.e. without any headers).\n"
-    "\t\tNot advised!!!, RAW AAC files are practically useless!!!\n"},
-    {"-P\t\tRaw PCM input mode (default 44100Hz 16bit stereo).\n",
+    "\t\tNot advised: raw AAC files are practically useless.\n"},
+    {"-P\t\tRaw PCM input mode (default 44100 Hz, 16-bit, stereo).\n",
     "\t\tRaw PCM input mode (default: off, i.e. expecting a WAV header;\n"
     "\t\tnecessary for input files or bitstreams without a header; using\n"
     "\t\tonly -P assumes the default values for -R, -B and -C in the\n"
     "\t\tinput file).\n"},
     {"-R <samplerate>\tRaw PCM input rate.\n",
     "\t\tRaw PCM input sample rate in Hz (default: 44100 Hz, max. 96 kHz)\n"},
-    {"-B <samplebits>\tRaw PCM input sample size (8, 16 (default), 24 or 32bits).\n",
+    {"-B <samplebits>\tRaw PCM input sample size (8, 16 (default), 24 or 32 bits).\n",
     "\t\tRaw PCM input sample size (default: 16, also possible 8, 24, 32\n"
     "\t\tbit fixed or float input).\n"},
     {"-C <channels>\tRaw PCM input channels.\n",
     "\t\tRaw PCM input channels (default: 2, max. 8).\n"},
-    {"-X\t\tRaw PCM swap input bytes\n",
-    "\t\tRaw PCM swap input bytes (default: bigendian).\n"},
-    {"-I <C[,LFE]>\tInput channel config, default is 3,4 (Center third, LF fourth)\n",
+    {"-X\t\tSwap raw PCM input byte order.\n",
+    "\t\tRaw PCM input is read big-endian by default; -X reads it\n"
+    "\t\tlittle-endian.\n"},
+    {"-I <C[,LFE]>\tInput channel config, default is 3,4 (Center third, LFE fourth)\n",
     "\t\tInput multichannel configuration (default: 3,4 which means\n"
     "\t\tCenter is third and LFE is fourth like in 5.1 WAV, so you only\n"
     "\t\thave to specify a different position of these two mono channels\n"
@@ -190,7 +191,7 @@ static help_t help_mp4[] = {
     {"--track <number/total>\tSet track number\n", NULL},
     {"--disc <number/total>\tSet disc number\n", NULL},
     {"--year <number>\tSet year\n", NULL},
-    {"--cover-art <filename>\tRead cover art from file X\n",
+    {"--cover-art <filename>\tRead cover art from <filename>\n",
     "\t\tSupported image formats are GIF, JPEG, and PNG.\n"},
     {"--comment <string>\tSet comment\n", NULL},
     {"--lang <code3>\tSet ISO 639-2/T 3-letter language code (e.g. eng, ger)\n", NULL},
