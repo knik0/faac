@@ -53,6 +53,9 @@
 #define HE_VBR_QUANTQUAL_MAX  75
 /* bps per channel; below it the HE core codes every frame short. */
 #define HE_SHORT_ONLY_BITRATE 14000
+/* The same gate for -q, which has no bitrate: long windows lose at -q 30
+ * (the 24 kbps stereo rung) and win at -q 50 (32 kbps); this is the midpoint. */
+#define HE_SHORT_ONLY_QUANTQUAL 40
 
 /* Top of the bandwidth curve: widening past it loses at every reachable rate,
  * the band above holds ~0.006% of programme energy and sits at the edge of
@@ -700,8 +703,10 @@ int faacEncEncode(faacEncHandle hpEncoder,
     unsigned int shortctl = hEncoder->config.shortctl;
     /* A starved HE core can't afford a long window's scalefactors and
      * sections; the frequency resolution they buy loses to the bits. */
-    if (hEncoder->config.aacObjectType == HE_V1 && hEncoder->config.bitRate
-        && hEncoder->config.bitRate < HE_SHORT_ONLY_BITRATE)
+    if (hEncoder->config.aacObjectType == HE_V1
+        && (hEncoder->config.bitRate
+            ? hEncoder->config.bitRate < HE_SHORT_ONLY_BITRATE
+            : hEncoder->config.quantqual < HE_SHORT_ONLY_QUANTQUAL))
         shortctl = SHORTCTL_NOLONG;
     int maxqual = hEncoder->config.outputFormat ? MAXQUALADTS : MAXQUAL;
 
