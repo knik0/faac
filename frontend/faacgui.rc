@@ -94,8 +94,8 @@ BEGIN
     CONTROL         "Progress1",IDC_PROGRESS,"msctls_progress32",WS_BORDER | 0x01,7,
                     145,250,10 /* 0x01 = PBS_SMOOTH */
     GROUPBOX        "Output Format",IDC_STATIC,93,62,164,77
-    LTEXT           "PNS (0-10)",IDC_STATIC,14,95,44,8
-    EDITTEXT        IDC_PNS,60,93,20,12,ES_AUTOHSCROLL
+    CONTROL         "Use PNS",IDC_USEPNS,"Button",BS_AUTOCHECKBOX |
+                    BS_LEFTTEXT | WS_TABSTOP,14,95,71,10
     CONTROL         "Use TNS",IDC_USETNS,"Button",BS_AUTOCHECKBOX |
                     BS_LEFTTEXT | WS_TABSTOP,14,82,71,10
     COMBOBOX        IDC_RATEMODE,183,82,67,63,CBS_DROPDOWNLIST |

@@ -55,8 +55,8 @@ void init_encode_options(encode_options_t *opts)
     opts->stream_format = FAAC_STREAM_ADTS;
     opts->shortctl = FAAC_SHORTCTL_NORMAL;
     opts->use_tns = true;
+    opts->use_pns = true;
     opts->use_lfe = -1;
-    opts->pns_level = -1;
     opts->quant_quality = 0;
     opts->bit_rate = DEFAULT_ABR_KBPS * 1000;
     opts->center_channel = 3;
@@ -502,10 +502,9 @@ int run_encoding_session_ext(const encode_options_t *opts,
     params.object_type = opts->object_type;
     params.joint_mode = opts->joint_mode;
     params.use_tns = opts->use_tns;
+    params.use_pns = opts->use_pns;
     params.use_lfe = (opts->use_lfe != -1) ? (opts->use_lfe != 0) : (num_channels >= 6);
     params.short_control = opts->shortctl;
-    if (opts->pns_level >= 0)
-        params.pns_level = opts->pns_level;
 
     if (opts->quant_quality > 0 && opts->bit_rate == 0)
     {
@@ -533,9 +532,6 @@ int run_encoding_session_ext(const encode_options_t *opts,
             log_cb(1, "disabling short blocks\n", user_data);
         else if (opts->shortctl == FAAC_SHORTCTL_NOLONG)
             log_cb(1, "disabling long blocks\n", user_data);
-
-        if (opts->pns_level > 0 && opts->mpeg_version == FAAC_MPEG2)
-            log_cb(1, "PNS not allowed in MPEG-2 mode, disabling PNS\n", user_data);
     }
 
     params.bandwidth = opts->bandwidth;
@@ -551,6 +547,9 @@ int run_encoding_session_ext(const encode_options_t *opts,
 
     faac_encoder_info info = { .struct_size = sizeof(info) };
     faac_encoder_get_info(hEncoder, &info);
+
+    /* MPEG-2 AAC has no PNS. */
+    bool use_pns = params.use_pns && info.mpeg_version != FAAC_MPEG2;
 
     unsigned long samples_per_frame = (unsigned long)info.frame_samples * num_channels;
     unsigned long max_output_bytes = info.max_output_bytes;
@@ -628,11 +627,9 @@ int run_encoding_session_ext(const encode_options_t *opts,
 
             .container_mp4 = opts->container_mp4,
             .stream_format = opts->stream_format,
-            .mpeg_version = opts->mpeg_version,
+            .mpeg_version = info.mpeg_version,
             .object_type = info.object_type,
-            .joint_mode = params.joint_mode,
-            .use_tns = params.use_tns,
-            .pns_level = (int8_t)info.pns_level,
+            .use_pns = use_pns,
             .bandwidth = info.bandwidth,
             .quant_quality = (uint16_t)info.quant_quality,
             .bit_rate = info.bit_rate,

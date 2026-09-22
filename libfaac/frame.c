@@ -202,7 +202,9 @@ int faacEncApplyConfig(faacEncStruct* hEncoder,
         return 0;
     /* Resolve AUTO to LC or HE-AAC. HE-AAC wins for low rates, but only
      * at Fs >= 32 kHz so the Fs/2 core stays >= 16 kHz; below that the
-     * narrow-band core + SBR reconstruction collapses. */
+     * narrow-band core + SBR reconstruction collapses. MPEG-2 resolves to
+     * LC, since SBR is MPEG-4 only and AUTO must not overrule the version
+     * the caller named. */
     if (hEncoder->config.aacObjectType == AUTO) {
         unsigned long rate_per_ch = config->bitRate;
         int rate_ok;
@@ -221,7 +223,8 @@ int faacEncApplyConfig(faacEncStruct* hEncoder,
             rate_ok = (config->quantqual <= HE_VBR_QUANTQUAL_MAX);
         }
         hEncoder->config.aacObjectType =
-            (rate_ok && hEncoder->sampleRate >= HE_MIN_SAMPLE_RATE) ? HE_V1 : LOW;
+            (rate_ok && hEncoder->sampleRate >= HE_MIN_SAMPLE_RATE &&
+             hEncoder->config.mpegVersion != MPEG2) ? HE_V1 : LOW;
         config->aacObjectType = hEncoder->config.aacObjectType;
     }
 
@@ -234,6 +237,8 @@ int faacEncApplyConfig(faacEncStruct* hEncoder,
      * (Single-rate SBR is not supported: decoders unconditionally reconstruct
      * the SBR band table from 2*core_rate, so a full-Fs core is undecodeable.) */
     if (hEncoder->config.aacObjectType == HE_V1) {
+        /* SBR is MPEG-4 only; an explicit HE-AAC request outranks the
+         * requested version. */
         hEncoder->config.mpegVersion = MPEG4;
         if (!hEncoder->sbrContext)
             hEncoder->sbrContext = SbrContextInit(hEncoder->numChannels);
@@ -312,12 +317,19 @@ int faacEncApplyConfig(faacEncStruct* hEncoder,
     hEncoder->config.quantqual = config->quantqual;
 
     if (config->mpegVersion == MPEG2)
-        config->pnslevel = 0;
-    if (config->pnslevel < 0)
-        config->pnslevel = 0;
-    if (config->pnslevel > 10)
-        config->pnslevel = 10;
-    hEncoder->aacquantCfg.pnslevel = config->pnslevel;
+        config->usePns = 0;
+
+    {
+        /* sampleRate is the core rate, halved above for HE-AAC. Narrowband mono
+         * has few bands above the substitution threshold, and coding them
+         * outright beats the noise the default level puts there. */
+        unsigned long outputRate = hEncoder->sampleRate;
+        if (hEncoder->config.aacObjectType == HE_V1)
+            outputRate *= 2;
+        hEncoder->aacquantCfg.pnslevel = !config->usePns ? 0 :
+            (outputRate <= 16000 && hEncoder->numChannels == 1)
+                ? PNSLEVEL_NARROWBAND_MONO : PNSLEVEL_DEFAULT;
+    }
     /* set quantization quality */
     hEncoder->aacquantCfg.quality = config->quantqual;
 

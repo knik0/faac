@@ -93,10 +93,9 @@ Joint stereo coding mode:
 (Mixed Mode, dynamic per-band Mid/Side and Intensity Stereo). Default is
 .BR 3 .
 .TP
-.BR --pns\ <\fIlevel\fP>
-Perceptual Noise Substitution level, 0 to 10;
-.B 0
-disables PNS.
+.BR --no-pns
+Disable Perceptual Noise Substitution, which codes noise-like bands as a noise
+level instead of spectral lines. On by default.
 .TP
 .BR --no-tns
 Disable Temporal Noise Shaping, which reduces pre-echo on transients. On by

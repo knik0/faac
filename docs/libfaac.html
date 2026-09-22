@@ -240,8 +240,9 @@ shim &mdash; callers must move to <i>faac_*</i>. The changes are mechanical:
   (now <i>bool</i>).
  <li><i>shortctl</i> &rarr; <i>short_control</i> (<i>FAAC_SHORTCTL_*</i>).
  <li><i>bitRate</i> &rarr; <i>bit_rate</i>; <i>bandWidth</i> &rarr;
-  <i>bandwidth</i>; <i>quantqual</i> &rarr; <i>quant_quality</i>;
-  <i>pnslevel</i> &rarr; <i>pns_level</i> (same units and semantics).
+  <i>bandwidth</i>; <i>quantqual</i> &rarr; <i>quant_quality</i>.
+ <li><i>pnslevel</i> &rarr; <i>use_pns</i>: the level is now chosen by the
+  encoder, leaving the caller an on/off switch.
  <li><i>outputFormat</i> &rarr; <i>output_format</i> (<i>FAAC_STREAM_*</i>);
   <i>inputFormat</i> &rarr; <i>input_format</i> (<i>FAAC_INPUT_*</i>).
  <li><i>channel_map[64]</i> &rarr; <i>channel_map</i> plus an explicit

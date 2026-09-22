@@ -77,7 +77,7 @@ enum flags
     HELP_MP4,
     HELP_ADVANCED,
     OPT_JOINT,
-    OPT_PNS,
+    OPT_PNS_DISABLE,
     OBJTYPE_FLAG,
     CAP_RATE_FLAG,
     CBR_FLAG,
@@ -201,11 +201,11 @@ static help_t help_mp4[] = {
 
 static help_t help_advanced[] = {
     {"--no-tns\tDisable coding of TNS, temporal noise shaping (default: on).\n", NULL},
+    {"--no-pns\tDisable coding of PNS, perceptual noise substitution (default: on).\n", NULL},
     {"--joint 0\tDisable joint stereo coding.\n", NULL},
     {"--joint 1\tUse Mid/Side coding.\n", NULL},
     {"--joint 2\tUse Intensity Stereo coding.\n", NULL},
     {"--joint 3\tUse Mixed Mode (dynamic M/S and IS) coding (default).\n", NULL},
-    {"--pns <0 .. 10>\tPNS level; 0=disabled.\n", NULL},
     {"--mpeg-vers X\tForce AAC MPEG version, X can be 2 or 4\n", NULL},
     {"--object-type X\tForce AAC object type: lc, he-aac-v1, or auto (default)\n", NULL},
     {"--shortctl X\tEnforce block type (0 = both (default); 1 = no short; 2 = no\n"
@@ -395,11 +395,9 @@ static void cli_session_start_callback(const encode_session_info_t *info, void *
     if (opts->max_bit_rate)
         fprintf(stderr, "Peak bitrate: %u kbps\n", (opts->max_bit_rate + 500) / 1000);
     fprintf(stderr, "Bandwidth: %u Hz\n", info->bandwidth);
-    if (info->pns_level > 0)
-        fprintf(stderr, "PNS level: %d\n", info->pns_level);
 
     const char *jm_str = "";
-    switch (info->joint_mode)
+    switch (opts->joint_mode)
     {
     case FAAC_JOINT_MS: jm_str = " + M/S"; break;
     case FAAC_JOINT_IS: jm_str = " + IS"; break;
@@ -410,9 +408,9 @@ static void cli_session_start_callback(const encode_session_info_t *info, void *
     fprintf(stderr, "Object type: %s (MPEG-%d)%s%s%s\n",
             (info->object_type == FAAC_OBJ_HE_AAC_V1) ? "HE-AAC v1" : "Low Complexity",
             (info->mpeg_version == FAAC_MPEG4) ? 4 : 2,
-            info->use_tns ? " + TNS" : "",
+            opts->use_tns ? " + TNS" : "",
             jm_str,
-            (info->pns_level > 0) ? " + PNS" : "");
+            info->use_pns ? " + PNS" : "");
 
     const char *fmt_str = "Unknown";
     if (info->container_mp4)
@@ -559,7 +557,7 @@ int main(int argc, char *argv[])
             {"help-advanced", 0, 0, HELP_ADVANCED},
             {"raw", 0, 0, 'r'},
             {"joint", required_argument, 0, OPT_JOINT},
-            {"pns", required_argument, 0, OPT_PNS},
+            {"no-pns", 0, 0, OPT_PNS_DISABLE},
             {"cutoff", 1, 0, 'c'},
             {"quality", 1, 0, 'q'},
             {"pcmraw", 0, 0, 'P'},
@@ -610,6 +608,7 @@ int main(int argc, char *argv[])
         switch (c)
         {
         case OPT_TNS_DISABLE: opts.use_tns = false; break;
+        case OPT_PNS_DISABLE: opts.use_pns = false; break;
         case OPT_OVERWRITE: opts.overwrite = true; break;
         case OPT_COMPILATION: opts.metadata.compilation = true; break;
         case OPT_IGNORE_LENGTH: opts.ignore_wav_length = true; break;
@@ -746,9 +745,6 @@ int main(int argc, char *argv[])
             break;
         case OPT_JOINT:
             opts.joint_mode = (enum faac_joint_mode)atoi(optarg);
-            break;
-        case OPT_PNS:
-            opts.pns_level = (int8_t)atoi(optarg);
             break;
         case TAG_FLAG:
             {

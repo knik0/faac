@@ -14,7 +14,7 @@
 #define IDC_TIME                        1008
 #define IDC_BANDWIDTH                   1009
 #define IDC_QUALITY                     1010
-#define IDC_PNS                         1011
+#define IDC_USEPNS                      1011
 #define IDC_USETNS                      1012
 #define IDC_SHORTCTL                    1013
 #define IDC_BWCTL                       1014

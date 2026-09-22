@@ -69,7 +69,7 @@ _Static_assert((int)FAAC_INPUT_NULL  == INPUT_NULL  && (int)FAAC_INPUT_16BIT == 
 #define LIBRARY_INFO_BASELINE_SIZE \
     ((uint32_t)(offsetof(faac_library_info, sbr_decimation) + sizeof(uint32_t)))
 #define ENCODER_INFO_BASELINE_SIZE \
-    ((uint32_t)(offsetof(faac_encoder_info, pns_level) + sizeof(int32_t)))
+    ((uint32_t)(offsetof(faac_encoder_info, max_bit_rate) + sizeof(uint32_t)))
 
 /* faac_encoder* and faacEncHandle are the same underlying object. */
 static inline faacEncStruct *unwrap(faac_encoder *enc) { return (faacEncStruct *)enc; }
@@ -118,6 +118,7 @@ FAACAPI faac_status faac_params_init(faac_params *p, uint32_t caller_size)
     tmp.joint_mode    = FAAC_JOINT_MIXED;
     tmp.use_lfe       = false;
     tmp.use_tns       = true;
+    tmp.use_pns       = true;
     tmp.bit_rate      = 64000;          /* per channel; 0 would defer to quant_quality */
     tmp.bandwidth     = 0;              /* derive from bit_rate */
     tmp.quant_quality = 0;              /* derive from bit_rate */
@@ -126,7 +127,6 @@ FAACAPI faac_status faac_params_init(faac_params *p, uint32_t caller_size)
     tmp.output_format = FAAC_STREAM_ADTS;
     tmp.input_format  = FAAC_INPUT_16BIT;
     tmp.short_control = FAAC_SHORTCTL_NORMAL;
-    tmp.pns_level     = 4;
 
     /* Write at most the caller's struct_size so a newer library cannot overrun
      * an older, smaller faac_params; report the byte count actually set. */
@@ -177,8 +177,6 @@ static faac_status validate_params(const faac_params *p)
         return FAAC_ERR_INVALID_ARGUMENT;
     if (GetChannelConfig((int)p->num_channels) == 0)
         return FAAC_ERR_INVALID_ARGUMENT;
-    if (p->pns_level < 0 || p->pns_level > 10)
-        return FAAC_ERR_INVALID_ARGUMENT;
     if (p->channel_map) {
         uint32_t i;
         if (p->channel_map_count < p->num_channels)
@@ -215,7 +213,7 @@ static faac_status validate_params(const faac_params *p)
             return FAAC_ERR_INVALID_ARGUMENT;
     }
     /* reserved padding must be zero so future fields can claim it safely */
-    if (p->reserved[0] || p->reserved[1])
+    if (p->reserved[0])
         return FAAC_ERR_INVALID_ARGUMENT;
     return FAAC_OK;
 }
@@ -260,7 +258,7 @@ FAACAPI faac_status faac_encoder_open(const faac_params *p, faac_encoder **out)
     cfg->outputFormat  = (unsigned int)p->output_format;
     cfg->inputFormat   = (unsigned int)p->input_format;
     cfg->shortctl      = (int)p->short_control;
-    cfg->pnslevel      = p->pns_level;
+    cfg->usePns        = p->use_pns ? 1 : 0;
     cfg->maxBitRate    = p->max_bit_rate;
     cfg->rateControl   = (unsigned int)p->rate_control;
     if (p->channel_map) {
@@ -328,7 +326,7 @@ FAACAPI faac_status faac_encoder_get_info(faac_encoder *enc, faac_encoder_info *
     info.bit_rate         = (uint32_t)h->config.bitRate;
     info.bandwidth        = (uint32_t)h->config.bandWidth;
     info.quant_quality    = (uint32_t)h->config.quantqual;
-    info.pns_level        = (int32_t)h->config.pnslevel;
+    info.mpeg_version     = (enum faac_mpeg_version)h->config.mpegVersion;
     info.max_bit_rate     = (uint32_t)h->config.maxBitRate;
     info.encoder_delay    = faacEncoderDelay(h);
     info.rate_control     = (enum faac_rate_control)h->config.rateControl;
