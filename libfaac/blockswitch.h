@@ -35,13 +35,16 @@ typedef struct {
 
 typedef struct {
 	float sampleRate;
+	/* Transient rule: see PSY_LEVEL_RATIO_LC in blockswitch.c. */
+	float levelRatio;
+	float levelSmooth;
 
 	/* shared work buffers */
 	float *sharedWorkBuffLong;  /* Used for 2048-sample windows (filtbank, psy, mdct) */
 } GlobalPsyInfo;
 
 void PsyInit (GlobalPsyInfo *gpsyInfo, PsyInfo *psyInfo,
-		unsigned int numChannels, unsigned int sampleRate);
+		unsigned int numChannels, unsigned int sampleRate, bool heCore);
 void PsyEnd (PsyInfo *psyInfo, unsigned int numChannels);
 float PsyGetAttack (PsyInfo *psyInfo);
 void PsyCalculate (PsyInfo *psyInfo, const bool *isLfeChannel,
