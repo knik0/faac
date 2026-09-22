@@ -116,7 +116,8 @@ static void huffcode_size_pair(const int * __restrict qs, int len, int bnum, int
     *bits_b = b;
 }
 
-/* Bitstream mutation function, called once per finalized frame. */
+/* Appends the band's codewords to coder->s. A speculative write is rewound by
+ * restoring datacnt, so nothing here may touch state the caller cannot undo. */
 static void huffcode_write(const int * __restrict qs, int len, int bnum, CoderInfo *coder)
 {
     const hcode16_t *book = hmap[bnum];
@@ -223,7 +224,8 @@ static void huffcode_write(const int * __restrict qs, int len, int bnum, CoderIn
     coder->datacnt = datacnt;
 }
 
-/* Pick the codebook that minimizes the bit cost for a given band. */
+/* Pick the codebook that minimizes the bit cost for a given band, counting
+ * the section header a change of book costs. */
 int huffbook(CoderInfo *coder, const int *qs, int len, int maxq)
 {
     int bookmin = HCB_ZERO;
@@ -245,10 +247,47 @@ int huffbook(CoderInfo *coder, const int *qs, int len, int maxq)
             int len1, len2;
             huffcode_size_pair(qs, len, pair_base, &len1, &len2);
             bookmin = (len2 < len1) ? pair_base + 1 : pair_base;
+
+            /* Extending the previous band's section beats opening a new one, so
+             * a book up to a section header dearer still comes out ahead. A book
+             * from a higher pair covers maxq as well, but only its own codewords
+             * give its cost, so it is written and then kept or rewound. */
+            int first = (coder->bandcnt % coder->sfbn) == 0;
+            int prev = first ? HCB_ZERO : coder->book[coder->bandcnt - 1];
+            /* What opening a section costs writebooks: book field plus run field. */
+            int header = 4 + ((coder->block_type == ONLY_SHORT_WINDOW) ? 3 : 5);
+            int best = (len2 < len1) ? len2 : len1;
+            int book = bookmin;
+
+            if (prev != bookmin && prev >= HCB_1 && prev <= HCB_10) {
+                int prev_base = ((prev - 1) / 2) * 2 + 1;
+                if (prev_base == pair_base) {
+                    if (((prev == pair_base) ? len1 : len2) - best < header)
+                        bookmin = book = prev;
+                } else if (prev_base > pair_base) {
+                    book = prev;
+                }
+            }
+
+            for (;;) {
+                int start = coder->datacnt, k, lenp = 0;
+                huffcode_write(qs, len, book, coder);
+                if (book == bookmin)
+                    break;
+                /* Stop as soon as the codewords have eaten the header they save. */
+                for (k = start; k < coder->datacnt && lenp < best + header; k++)
+                    lenp += coder->s[k].len;
+                if (lenp < best + header) {
+                    bookmin = book;
+                    break;
+                }
+                coder->datacnt = start;
+                book = bookmin;
+            }
         } else {
             bookmin = HCB_ESC;
+            huffcode_write(qs, len, bookmin, coder);
         }
-        huffcode_write(qs, len, bookmin, coder);
     }
 
     /* Record the chosen book at the current band slot, but do NOT advance
