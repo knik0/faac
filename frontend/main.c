@@ -105,10 +105,10 @@ static help_t help_qual[] = {
     "\t\tframe above the cap. -q and -b are exclusive.\n"},
     {"-q <quality>\tSet encoding quality. (VBR)\n",
     "\t\tConstant quality, 1..5000, default 100; higher is better and\n"
-    "\t\tcosts more bits. With --object-type auto, -q up to 75 uses\n"
-    "\t\tHE-AAC v1. On 44.1/48 kHz stereo music, -q 50 lands at 22-33\n"
-    "\t\tkbps (HE-AAC), -q 100 at 55-110 (median 75), -q 200 at\n"
-    "\t\t80-175 (median 125).\n"},
+    "\t\tcosts more bits. The bitrate follows the material and moves\n"
+    "\t\tbetween releases as the encoder is tuned. With --object-type\n"
+    "\t\tauto, -q up to 75 uses HE-AAC v1; from 76 it is AAC-LC at a\n"
+    "\t\tmuch higher bitrate. Use -b for a predictable size.\n"},
     {"-b <bitrate>\tSet average bitrate to <bitrate> kbps. (ABR)\n",
     "\t\tApproximate over the file; max. ~500 kbps (stereo).\n"},
     {"--cbr\t\tHold -b as a constant bitrate. (CBR)\n",
