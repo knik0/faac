@@ -99,17 +99,6 @@ static inline void calculate_energies(const float * restrict sl0, const float * 
     *elr_out = elr;
 }
 
-/* Fast memory-clearing utility for suppressed channels. */
-static inline void apply_mute(float * restrict s0, int start, int len, int wstart, int wend)
-{
-    int win;
-    size_t bytes = (size_t)len * sizeof(float);
-    for (win = wstart; win < wend; win++) {
-        float * restrict s = s0 + win * BLOCK_LEN_SHORT + start;
-        memset(s, 0, bytes);
-    }
-}
-
 /* When one component (mid or side) dominates, collapse both channels to that
  * component and zero the other — it costs no bits and the signal loss is masked.
  * Factor of 0.5 keeps the coded amplitude on the same scale as L/R. */
@@ -170,7 +159,7 @@ static inline int process_cpe(CoderInfo * restrict cl, CoderInfo * restrict cr,
                                AACElement * restrict element,
                                float * restrict sl0, float * restrict sr0,
                                int * restrict sfcnt, int wstart, int wend,
-                               float thrmid, float inv_isthr, float thrside_sq,
+                               float thrmid, float inv_isthr,
                                int is_start_sfb, JointMode mode, int allow_ms)
 {
     int sfb, sfmin = (cl->block_type == ONLY_SHORT_WINDOW) ? 1 : 8, msused = 0;
@@ -237,7 +226,7 @@ static inline int process_cpe(CoderInfo * restrict cl, CoderInfo * restrict cr,
             }
         }
 
-        /* Mid/Side Stereo and Muting checks */
+        /* Mid/Side Stereo check */
         int ms = 0;
         if (mode == JOINT_MS || mode == JOINT_MIXED) {
             /* M/S fires when min(L,R) * thrmid ≥ dominant component: the weaker channel
@@ -257,13 +246,6 @@ static inline int process_cpe(CoderInfo * restrict cl, CoderInfo * restrict cr,
 #ifdef FAAC_STATS
                 g_faacStats.msBands += 2;
 #endif
-            } else {
-                /* Sparsity check: if one channel completely masks the other. */
-                if (el <= er * thrside_sq) {
-                    apply_mute(sl0, start, len, wstart, wend);
-                } else if (er <= el * thrside_sq) {
-                    apply_mute(sr0, start, len, wstart, wend);
-                }
             }
             element->msInfo.ms_used[*sfcnt] = ms;
         }
@@ -276,7 +258,7 @@ void AACstereo(CoderInfo *coder, AACElement *elements, int numElements, float *s
                float quality, const StereoConfig *cfg)
 {
     float inv_quality = 1.0f / quality;
-    float thrmid = 1.0f, isthr = 1.0f, thrside = 0.0f;
+    float thrmid = 1.0f, isthr = 1.0f;
 
     switch (cfg->mode) {
         case JOINT_MIXED:
@@ -285,15 +267,11 @@ void AACstereo(CoderInfo *coder, AACElement *elements, int numElements, float *s
             thrmid += 1.0f;
             isthr = 0.18f * inv_quality + 1.0f;
             if (isthr > M_SQRT2) isthr = M_SQRT2;
-            thrside = 0.1f * inv_quality;
-            if (thrside > 0.3f) thrside = 0.3f;
             break;
         case JOINT_MS:
             thrmid = (1.09f - 1.0f) * inv_quality;
             if (thrmid > 0.25f) thrmid = 0.25f;
             thrmid += 1.0f;
-            thrside = 0.1f * inv_quality;
-            if (thrside > 0.3f) thrside = 0.3f;
             break;
         case JOINT_IS:
             isthr = 0.18f * (inv_quality * inv_quality);
@@ -308,7 +286,6 @@ void AACstereo(CoderInfo *coder, AACElement *elements, int numElements, float *s
      * apply stereo coding more conservatively, touching the signal less. */
     thrmid *= thrmid;
     float inv_isthr = 1.0f / (isthr * isthr);
-    float thrside_sq = thrside * thrside;
 
     for (int e = 0; e < numElements; e++) {
         AACElement *elem = &elements[e];
@@ -347,7 +324,7 @@ void AACstereo(CoderInfo *coder, AACElement *elements, int numElements, float *s
         for (int g = 0; g < coder[lch].groups.n; g++) {
             int end = start + coder[lch].groups.len[g];
             msused |= process_cpe(coder+lch, coder+rch, elem, s[lch], s[rch],
-                                  &sfcnt, start, end, thrmid, inv_isthr, thrside_sq,
+                                  &sfcnt, start, end, thrmid, inv_isthr,
                                   is_start_sfb, cur_mode, allow_ms);
             start = end;
         }
