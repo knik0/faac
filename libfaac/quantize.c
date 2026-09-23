@@ -24,24 +24,28 @@
 #include "cpu_compute.h"
 #include "stats.h"
 
-typedef int (*QuantizeFunc)(const float * __restrict xr, int * __restrict xi, int n, float sfacfix);
+typedef int (*QuantizeFunc)(const float * __restrict xr, int * __restrict xi, int n4, float sfacfix);
 
 #if defined(HAVE_SSE2)
-extern int quantize_sse2(const float * __restrict xr, int * __restrict xi, int n, float sfacfix);
+extern int quantize_sse2(const float * __restrict xr, int * __restrict xi, int n4, float sfacfix);
 #endif
 
-static int quantize_scalar(const float * __restrict xr, int * __restrict xi, int n, float sfacfix)
+/* Written so the loop auto-vectorizes: fabsf() makes the sqrtf() argument
+ * provably non-negative (no errno path), the sign is re-applied as a
+ * two's-complement mask, and the width is a known multiple of four. */
+static int quantize_scalar(const float * __restrict xr, int * __restrict xi, int n4, float sfacfix)
 {
-    const float magic = MAGIC_NUMBER;
     int i, maxq = 0;
-    for (i = 0; i < n; i++)
+    for (i = 0; i < 4 * n4; i++)
     {
         float val = xr[i];
-        float tmp = fabsf(val) * sfacfix;
+        float tmp = fabsf(val * sfacfix);
+        int q, m;
         tmp = sqrtf(tmp * sqrtf(tmp));
-        int q = (int)(tmp + magic);
+        q = (int)(tmp + MAGIC_NUMBER);
+        m = -(val < 0.0f);
         if (q > maxq) maxq = q;
-        xi[i] = (val < 0) ? -q : q;
+        xi[i] = (q ^ m) - m;
     }
     return maxq;
 }
@@ -341,7 +345,7 @@ static void assign_band_codebooks(CoderInfo * __restrict ci, const float * __res
 
             for (win = 0; win < gsize; win++)
             {
-                int qm = qfunc(xr0 + win * BLOCK_LEN_SHORT + lo, xi + win * width, width, gain);
+                int qm = qfunc(xr0 + win * BLOCK_LEN_SHORT + lo, xi + win * width, width >> 2, gain);
                 if (qm > maxq) maxq = qm;
             }
             huffbook(ci, xi, gsize * width, maxq);
@@ -464,6 +468,23 @@ void CalcBW(unsigned *bw, int rate, SR_INFO *sr, AACQuantCfg *aacquantCfg,
 #define GROUP_MIN_SFB     2    // bands below this are too coarse/DC-heavy to inform grouping
 #define GROUP_ONSET_RATIO 3.0f  // running max/min energy ratio that counts as a transient
 
+/* Four independent lanes: strict FP forbids reordering one float accumulator,
+ * so a single-sum loop can never vectorize. n4 is the width in quads. */
+static inline float band_energy_sum(const float * __restrict line, int n4)
+{
+    float s0 = 0.0f, s1 = 0.0f, s2 = 0.0f, s3 = 0.0f;
+    int k;
+
+    for (k = 0; k < 4 * n4; k += 4)
+    {
+        s0 += line[k] * line[k];
+        s1 += line[k + 1] * line[k + 1];
+        s2 += line[k + 2] * line[k + 2];
+        s3 += line[k + 3] * line[k + 3];
+    }
+    return (s0 + s1) + (s2 + s3);
+}
+
 /* Accumulates, so a CPE can sum both channels into one energy vector. */
 static void window_band_energy(const CoderInfo * __restrict ci, const float * __restrict w,
                                 int from_sfb, int to_sfb, float * __restrict e_out)
@@ -471,21 +492,8 @@ static void window_band_energy(const CoderInfo * __restrict ci, const float * __
     int sfb;
     for (sfb = from_sfb; sfb < to_sfb; sfb++)
     {
-        float e = 0.0f;
-        int k;
-        const float * __restrict line = w + ci->sfb_offset[sfb];
-        int len = ci->sfb_offset[sfb + 1] - ci->sfb_offset[sfb];
-
-        for (k = 0; k < len; k += 4)
-        {
-            float a = line[k], b = line[k + 1], c = line[k + 2], d = line[k + 3];
-
-            e += a * a;
-            e += b * b;
-            e += c * c;
-            e += d * d;
-        }
-        e_out[sfb] += e;
+        int lo = ci->sfb_offset[sfb];
+        e_out[sfb] += band_energy_sum(w + lo, (ci->sfb_offset[sfb + 1] - lo) >> 2);
     }
 }
 
