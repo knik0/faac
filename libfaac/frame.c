@@ -39,17 +39,17 @@
  * the lowest rate measured. */
 #define HE_MIN_BITRATE_PER_CH 8000
 /* Crossover measured against the LC curve at 48 kHz: HE still leads at
- * 32000 per channel and ties at 48000, with no rung measured between. At
- * 44.1 kHz it already ties at 32000, so the ceiling reaches this value
+ * 20000 per channel and trails from 24000; this is the midpoint. At
+ * 44.1 kHz HE already trails at 32000, so the ceiling reaches this value
  * only at HE_MAX_SAMPLE_RATE. Either side moving (a wider LC core, a
  * better SBR) re-opens this constant. */
-#define HE_MAX_BITRATE_PER_CH 32000
+#define HE_MAX_BITRATE_PER_CH 22000
 #define HE_MAX_SAMPLE_RATE    48000
 /* Frozen, not derived: quantqual doesn't map onto a bitrate ceiling cleanly
  * (the two are off by 2-4.5x across the range), so this is set by measurement.
- * Deriving it from HE_MAX_BITRATE_PER_CH instead would flip -q 42+ to LC for
- * 13.1% more bits. Re-measure it with a -q sweep whenever the ABR crossover
- * moves. */
+ * At matched bitrate HE leads LC well past this, further than under ABR,
+ * because LC's VBR bandwidth doesn't narrow with -q. Re-measure it with a -q
+ * sweep whenever the ABR crossover or the LC VBR bandwidth moves. */
 #define HE_VBR_QUANTQUAL_MAX  75
 /* bps per channel; below it the HE core codes every frame short. */
 #define HE_SHORT_ONLY_BITRATE 14000
