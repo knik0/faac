@@ -313,7 +313,6 @@ void SbrContextProcessFrame(SBRContext *sCtx, int numChannels, const bool *isLfe
             memset(rs->halfRate[channel], 0, FRAME_LEN * sizeof(float));
             heHalfRate[channel] = rs->halfRate[channel];
             sCtx->signalAnalysis.ch[channel].transientStrength = 0.0f;
-            sCtx->signalAnalysis.ch[channel].wantShort = 0;
         }
         sbr_frame_silence(fd);
     } else {
@@ -337,16 +336,6 @@ void SbrContextProcessFrame(SBRContext *sCtx, int numChannels, const bool *isLfe
         SbrEncode(sCtx->sbrInfo, fullPtrs, numChannels, isLfe, 2 * FRAME_LEN, &sCtx->signalAnalysis, fd);
         /* Dual-rate decimation: produces the halved-rate core signal. */
         Resample(rs, 2 * FRAME_LEN);
-    }
-
-    /* Update the transient FIFO. Shift down by one and push
-     * the newest decision at SBR_DETECT_FIFO-1; index 0 stays aligned with the
-     * core frame being coded (LOOKAHEAD_DEPTH frames behind this analysis). */
-    for (channel = 0; channel < (unsigned int)numChannels; channel++) {
-        memmove(&sCtx->transientStrengthFIFO[channel][0], &sCtx->transientStrengthFIFO[channel][1], (SBR_DETECT_FIFO - 1) * sizeof(float));
-        sCtx->transientStrengthFIFO[channel][SBR_DETECT_FIFO - 1] = sCtx->signalAnalysis.ch[channel].transientStrength;
-        memmove(&sCtx->wantShortFIFO[channel][0], &sCtx->wantShortFIFO[channel][1], (SBR_DETECT_FIFO - 1) * sizeof(int));
-        sCtx->wantShortFIFO[channel][SBR_DETECT_FIFO - 1] = sCtx->signalAnalysis.ch[channel].wantShort;
     }
 }
 
@@ -377,19 +366,6 @@ void SbrContextResolveRate(SBRContext *sCtx, unsigned long *sampleRate, unsigned
         *sampleRateIdx      = GetSRIndex(*sampleRate);
         *srInfoPtr          = &srInfo[*sampleRateIdx];
     }
-}
-
-int SbrContextIsAnalysisValid(SBRContext *sCtx)
-{
-    return sCtx ? sCtx->signalAnalysis.valid : 0;
-}
-
-int SbrContextGetWantShort(SBRContext *sCtx, int channel, int index)
-{
-    if (sCtx && channel < MAX_CHANNELS && index < SBR_DETECT_FIFO) {
-        return sCtx->wantShortFIFO[channel][index];
-    }
-    return 0;
 }
 
 int SbrContextIsPresent(SBRContext *sCtx)

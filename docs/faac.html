@@ -51,10 +51,11 @@ cap. -q and -b are exclusive.
 <li>
 <kbd>-q &lt;quality&gt;</kbd>
 	Constant quality, 1..5000 (default: 100). Higher is better and costs
-	more bits; the bitrate follows the material. With --object-type auto
-	a quality up to 75 uses HE-AAC v1. On 44.1/48 kHz stereo music, -q 50
-	lands at 22-33 kbps (HE-AAC), -q 100 at 55-110 (median 75) and -q 200
-	at 80-175 (median 125).
+	more bits. The bitrate follows the material, so one quality can take
+	twice the bits on one recording as on another, and it moves between
+	releases as the encoder is tuned. With --object-type auto a quality up
+	to 75 uses HE-AAC v1; from 76 it is AAC-LC at a much higher bitrate.
+	Use -b for a predictable size.
 <li>
 <kbd>-b &lt;bitrate&gt;</kbd>
 	Average bitrate in kbps, up to about 500 for stereo.

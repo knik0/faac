@@ -21,7 +21,6 @@
 #include "coder.h"
 #include "util.h"
 #include "faac_internal.h"
-#include "frame.h"
 
 typedef float psyfloat;
 
@@ -44,24 +43,22 @@ typedef struct
      when the sub-block's energy is produced, so the per-frame decision is a
      mask test rather than a re-walk of the timeline. */
   unsigned attack;
+  psyfloat level; /* running level of the sub-block energies so far */
 }
 psydata_t;
 
 /* The high-pass first difference (d[n]=x[n]-x[n-1]) de-weights bass, whose
  * broadband energy would otherwise mask HF attacks and false-trigger short
  * blocks on stationary music; what's left tracks the band where pre-echo is
- * audible. A relative energy jump between sub-blocks past this threshold is a
- * transient. */
-#define PSY_TD_THRESH (0.5f)
-
-static int PsyIsAttack(float lasteng, float eng)
-{
-  float toteng = (eng < lasteng) ? eng : lasteng;
-  float volchg = fabsf(eng - lasteng);
-
-  /* IEEE divide handles silence: 0/0 is NaN (no attack), x/0 is inf (attack). */
-  return volchg / toteng > PSY_TD_THRESH;
-}
+ * audible. A sub-block whose energy leaves [level/ratio, level*ratio] of the
+ * running level before it is a transient. On LC the level spans roughly the
+ * last three sub-blocks, so dense stationary texture stops tripping short
+ * windows while onsets and the drop-outs after them still do. The bit-starved
+ * HE core gains from more short windows than its attacks alone call for, so
+ * it judges against the neighbouring sub-block alone, with a tighter band. */
+#define PSY_LEVEL_RATIO_LC  (2.5f)
+#define PSY_LEVEL_SMOOTH_LC (0.3f)
+#define PSY_LEVEL_RATIO_HE  (1.5f)
 
 /* Attack anywhere in the frame or its immediate temporal context, sub-blocks
    [cur-2, cur+9], wants a short block. */
@@ -76,12 +73,14 @@ static void PsyCheckShort(PsyInfo * psyInfo)
 }
 
 void PsyInit(GlobalPsyInfo * gpsyInfo, PsyInfo * psyInfo, unsigned int numChannels,
-		    unsigned int sampleRate)
+		    unsigned int sampleRate, bool heCore)
 {
   unsigned int channel;
   int size;
 
   gpsyInfo->sampleRate = (float) sampleRate;
+  gpsyInfo->levelRatio = heCore ? PSY_LEVEL_RATIO_HE : PSY_LEVEL_RATIO_LC;
+  gpsyInfo->levelSmooth = heCore ? 1.0f : PSY_LEVEL_SMOOTH_LC;
 
   for (channel = 0; channel < numChannels; channel++)
   {
@@ -169,6 +168,7 @@ void PsyBufferUpdate(GlobalPsyInfo * gpsyInfo, PsyInfo * psyInfo,
   int win;
   float * restrict transBuff = gpsyInfo->sharedWorkBuffLong;
   psydata_t *psydata = (psydata_t *)psyInfo->data;
+  float level = psydata->level;
 
   /* Shift the energy windows down by one frame: PREV<-CUR, CUR<-NEXT, freeing
      the NEXT region for the freshly-computed lookahead window below. */
@@ -194,35 +194,17 @@ void PsyBufferUpdate(GlobalPsyInfo * gpsyInfo, PsyInfo * psyInfo,
       e += d * d;
     }
     psydata->eng[ENG_WIN_NEXT + win] = (psyfloat)e;
-    if (PsyIsAttack((float)psydata->eng[ENG_WIN_NEXT + win - 1], e))
+    if (e > gpsyInfo->levelRatio * level || e * gpsyInfo->levelRatio < level)
       psydata->attack |= 1u << (ENG_WIN_NEXT + win);
+    level = gpsyInfo->levelSmooth * e + (1.0f - gpsyInfo->levelSmooth) * level;
   }
+  psydata->level = level;
 }
 
-void BlockSwitch(struct faacEncStruct *hEncoder, CoderInfo * coderInfo, PsyInfo * psyInfo, unsigned int numChannels)
+void BlockSwitch(CoderInfo * coderInfo, PsyInfo * psyInfo, unsigned int numChannels)
 {
   unsigned int channel;
   int desire = ONLY_LONG_WINDOW;
-
-  /* Shared transient override for HE-AAC path.
-   * Core delay alignment: SbrAnalyze runs on frame N full-rate; core
-   * block-switch for frame N audio is emitted at a delay. Alignment logic
-   * uses the FIFO. */
-  if (hEncoder->config.aacObjectType == HE_V1 && SbrContextIsAnalysisValid(hEncoder->sbrContext))
-  {
-      for (channel = 0; channel < numChannels; channel++)
-      {
-          /* Alignment: the core frame being coded now lags the freshest SBR
-           * analysis by LOOKAHEAD_DEPTH frames; FIFO index 0 holds that frame's
-           * decision (FIFO sized SBR_DETECT_FIFO so [0] is LOOKAHEAD_DEPTH back). */
-          int wantShort = SbrContextGetWantShort(hEncoder->sbrContext, (int)channel, 0);
-
-          if (wantShort)
-              psyInfo[channel].block_type = ONLY_SHORT_WINDOW;
-          else
-              psyInfo[channel].block_type = ONLY_LONG_WINDOW;
-      }
-  }
 
   /* Use the same block type for all channels
      If there is 1 channel that wants a short block,

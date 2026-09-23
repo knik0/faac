@@ -36,7 +36,6 @@ void SbrAnalyze(SignalAnalysis *sa, float *fullPtrs[], int nch, const bool *isLf
     int sampled = (num_slots - 1) / FAAC_SBR_DECIMATION + 1;
     float workspace[SBR_QMF_OVL_LEN_64 + 2 * FRAME_LEN];
 
-    sa->valid = 1;
     sa->numSlots = num_slots;
     sa->sampled = sampled;
 
@@ -45,22 +44,14 @@ void SbrAnalyze(SignalAnalysis *sa, float *fullPtrs[], int nch, const bool *isLf
     for (int ch = 0; ch < nch; ch++) {
         float smax = 0.0f, ssum = 0.0f;
         int smax_idx = 0;
-        float slot_hp_eng[128]; /* high-pass energy per slot (max slots = 2*1024/64 = 32) */
-
-        sa->ch[ch].wantShort = 0;
-        float val_in = sa->ch[ch].lastVal;
         const float * restrict p_in = fullPtrs[ch];
         for (int slot = 0; slot < num_slots; slot++) {
             float stot = 0.0f;
-            float hp_stot = 0.0f;
             for (int n = 0; n < SBR_QMF_BANDS_64; n += 4) {
                 float v0 = p_in[0], v1 = p_in[1], v2 = p_in[2], v3 = p_in[3];
                 stot += v0 * v0 + v1 * v1 + v2 * v2 + v3 * v3;
-                float d0 = v0 - val_in, d1 = v1 - v0, d2 = v2 - v1, d3 = v3 - v2;
-                hp_stot += d0 * d0 + d1 * d1 + d2 * d2 + d3 * d3;
-                val_in = v3; p_in += 4;
+                p_in += 4;
             }
-            if (slot < 128) slot_hp_eng[slot] = hp_stot;
 
             if (stot > smax) {
                 smax = stot;
@@ -68,29 +59,9 @@ void SbrAnalyze(SignalAnalysis *sa, float *fullPtrs[], int nch, const bool *isLf
             }
             ssum += stot;
         }
-        sa->ch[ch].lastVal = val_in;
 
         sa->ch[ch].transientStrength = smax * (float)num_slots / (ssum + SBR_ENERGY_FLOOR);
         sa->ch[ch].transientSlot = smax_idx;
-
-        /* Evaluate relative energy jumps to inform block switching. */
-        float last_hp_eng = 0.0f;
-        int have_last = 0;
-        for (int slot = 0; slot < num_slots; slot++) {
-            if (slot >= 128) break;
-            float hp_eng = slot_hp_eng[slot];
-            if (have_last) {
-                float toteng = (hp_eng < last_hp_eng) ? hp_eng : last_hp_eng;
-                float volchg = (hp_eng > last_hp_eng) ? (hp_eng - last_hp_eng) : (last_hp_eng - hp_eng);
-                /* PSY_TD_THRESH = 0.5 */
-                if (volchg > (0.5f * toteng)) {
-                    sa->ch[ch].wantShort = 1;
-                    break;
-                }
-            }
-            last_hp_eng = hp_eng;
-            have_last = 1;
-        }
     }
 
     /* Choose the temporal grid based on the strongest transient. Synchronizes

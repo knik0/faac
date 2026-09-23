@@ -24,8 +24,6 @@ extern "C" {
 #include "coder.h"
 #include "channels.h"
 
-struct faacEncStruct;
-
 typedef struct {
 	int size;
 	int sizeS;
@@ -37,13 +35,16 @@ typedef struct {
 
 typedef struct {
 	float sampleRate;
+	/* Transient rule: see PSY_LEVEL_RATIO_LC in blockswitch.c. */
+	float levelRatio;
+	float levelSmooth;
 
 	/* shared work buffers */
 	float *sharedWorkBuffLong;  /* Used for 2048-sample windows (filtbank, psy, mdct) */
 } GlobalPsyInfo;
 
 void PsyInit (GlobalPsyInfo *gpsyInfo, PsyInfo *psyInfo,
-		unsigned int numChannels, unsigned int sampleRate);
+		unsigned int numChannels, unsigned int sampleRate, bool heCore);
 void PsyEnd (PsyInfo *psyInfo, unsigned int numChannels);
 float PsyGetAttack (PsyInfo *psyInfo);
 void PsyCalculate (PsyInfo *psyInfo, const bool *isLfeChannel,
@@ -51,7 +52,7 @@ void PsyCalculate (PsyInfo *psyInfo, const bool *isLfeChannel,
 void PsyBufferUpdate (GlobalPsyInfo * gpsyInfo, PsyInfo * psyInfo,
 		float * restrict p_lookahead1,
 		float * restrict p_lookahead2);
-void BlockSwitch (struct faacEncStruct *hEncoder, CoderInfo *coderInfo, PsyInfo *psyInfo,
+void BlockSwitch (CoderInfo *coderInfo, PsyInfo *psyInfo,
 		unsigned int numChannels);
 
 #ifdef __cplusplus

@@ -95,13 +95,6 @@ struct SBRContext {
 
     /* Shared signal analysis */
     SignalAnalysis  signalAnalysis;
-    /* Shared-detector FIFO: holds the HE block-switch decision for the last
-       SBR_DETECT_FIFO analyzed frames. Index 0 is the decision aligned to the
-       core frame being coded now, which lags the freshest analysis by the core
-       lookahead (LOOKAHEAD_DEPTH frames); newest sits at SBR_DETECT_FIFO-1. */
-    float transientStrengthFIFO[MAX_CHANNELS][SBR_DETECT_FIFO];
-    int       wantShortFIFO[MAX_CHANNELS][SBR_DETECT_FIFO];
-
     /* Coded-payload delay ring; see SBR_FRAME_FIFO. frameHead is the newest
        entry, so its successor (frameHead + 1) % SBR_FRAME_FIFO is the oldest --
        the payload the current access unit emits. */
