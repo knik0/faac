@@ -312,6 +312,7 @@ void AACstereo(CoderInfo *coder, AACElement *elements, int numElements, float *s
         JointMode cur_mode = cfg->modes[shortwin];
 
         elem->common_window  = true;
+        coder[lch].partner = &coder[rch];
         elem->msInfo.is_present = (cur_mode == JOINT_MS);
 
         int start = 0, sfcnt = 0, msused = 0;

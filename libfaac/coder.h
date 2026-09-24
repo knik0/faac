@@ -103,6 +103,8 @@ typedef struct CoderInfo {
 
 
     TnsInfo tnsInfo;
+
+    struct CoderInfo *partner;            /* common-window CPE: the right channel, set on the left */
 } CoderInfo;
 
 typedef struct {

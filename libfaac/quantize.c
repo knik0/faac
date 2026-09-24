@@ -359,6 +359,7 @@ static void assign_band_codebooks(CoderInfo * __restrict ci, const float * __res
 void ResetCoderSections(CoderInfo *coder)
 {
     int i, n = coder->groups.n * coder->sfbn;
+    coder->partner = NULL;
     for (i = 0; i < n; i++)
     {
         coder->book[i] = HCB_NONE;
@@ -375,6 +376,22 @@ static void assert_band_widths_align(const CoderInfo * __restrict ci)
 
     for (sfb = 0; sfb < ci->sfbn; sfb++)
         assert((ci->sfb_offset[sfb + 1] - ci->sfb_offset[sfb]) % 4 == 0);
+}
+
+/* Decoders disagree on whether an intensity band copies the left channel's
+ * substituted noise or its still-empty lines, so an intensity band over a
+ * noise band can decode silent. Code it as noise at the level the intensity
+ * position implies (both are 1.5 dB steps). Runs after the left
+ * channel's BlocQuant and before the right's. */
+static void ResolveIntensityNoise(const CoderInfo *left, CoderInfo *right)
+{
+    for (int i = 0; i < left->bandcnt; i++) {
+        int b = right->book[i];
+        if (left->book[i] == HCB_PNS && (b == HCB_INTENSITY || b == HCB_INTENSITY2)) {
+            right->book[i] = HCB_PNS;
+            right->sf[i] = left->sf[i] - right->sf[i];
+        }
+    }
 }
 
 int BlocQuant(CoderInfo * __restrict coder, float * __restrict xr, AACQuantCfg *aacquantCfg)
@@ -429,6 +446,8 @@ int BlocQuant(CoderInfo * __restrict coder, float * __restrict xr, AACQuantCfg *
             coder->sf[i] = lastpns;
         }
     }
+    if (coder->partner)
+        ResolveIntensityNoise(coder, coder->partner);
     return 1;
 }
 

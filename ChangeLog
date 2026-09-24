@@ -22,6 +22,8 @@
 	  40 kbps per channel, L/R on short windows below the crossover from 80;
 	  short-window grouping and masking targets reworked; the sparsity mute
 	  that zeroed a quiet unjoined channel's bands is gone
+	* A right-channel intensity band over a left PNS band is coded as PNS,
+	  so decoders that apply intensity first don't play it silent
 	* TNS on by default; frames screened before LPC analysis
 	* Block switching: the HE core runs its own transient detector instead
 	  of following SBR's, and both cores judge a sub-block's attack against
