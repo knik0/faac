@@ -164,6 +164,7 @@ void SbrUpdate(SBRInfo *sbr, unsigned long bitRate)
 {
     int sampleRate = sbr->sampleRate;
     unsigned long rate_per_ch = bitRate / sbr->numChannels;
+    sbr->numEnvFixFix = (rate_per_ch >= SBR_TWO_ENV_BITRATE_BPS) ? 2 : 1;
     /* Target crossover near the core ceiling (~11.6 kHz) maximizes MOS.
      * Higher-order parametric reconstruction below 10 kHz is audible and
      * generally inferior to the bit-starved LC core. */

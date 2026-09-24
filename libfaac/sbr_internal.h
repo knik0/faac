@@ -67,6 +67,7 @@ struct SBRInfo {
     int bs_xover_band;
     int bs_alter_scale;
     int bs_freq_scale;     /* 1..3: log-spaced master table, 12/10/8 bands per octave */
+    int numEnvFixFix;      /* envelopes in a frame without a transient: 1 or 2 */
 
     /* --- per-frame state --- */
     /* The header decision is made once per access unit, on the first write

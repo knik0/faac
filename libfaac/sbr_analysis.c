@@ -91,10 +91,11 @@ void SbrAnalyze(SignalAnalysis *sa, float *fullPtrs[], int nch, const bool *isLf
         sa->tEnv[2] = SBR_NUM_TIME_SLOTS;
         sa->bsPointer = 0;
     } else {
-        sa->numEnvelopes = 1;
+        int ne = sbr->numEnvFixFix;
+        sa->numEnvelopes = ne;
         sa->frameClass = SBR_FRAME_CLASS_FIXFIX;
-        sa->tEnv[0] = 0;
-        sa->tEnv[1] = SBR_NUM_TIME_SLOTS;
+        for (int e = 0; e <= ne; e++)
+            sa->tEnv[e] = e * SBR_NUM_TIME_SLOTS / ne;
         sa->bsPointer = 0;
     }
 

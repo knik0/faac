@@ -71,7 +71,7 @@ static int write_sbr_grid(const SBRInfo *sbr, const SbrFrameData *fd, BitStream 
         /* FIXFIX: equal-spaced borders (not transmitted, the decoder derives
          * them from the envelope count), one bs_freq_res for all envelopes. */
         if (write) {
-            PutBit(bs, num_env > 1 ? 1 : 0, 2);
+            PutBit(bs, num_env > 1 ? 1 : 0, 2);         /* bs_num_env = 1 << this */
             PutBit(bs, sbr->bs_freq_res, 1);
         }
         bits += 3;

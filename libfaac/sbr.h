@@ -85,6 +85,10 @@ struct BitStream;
  * buys at every rate; frames with one FIXFIX envelope use it regardless. */
 #define SBR_AMP_RES                     1
 /* Rate-dependent resolution thresholds. */
+/* Frames without a transient get two envelopes from here up, so the level
+ * follows the signal through the frame; below it the bits buy more in the
+ * core. */
+#define SBR_TWO_ENV_BITRATE_BPS         17000u
 /* Master table density, bands per octave 12/10/8 for bs_freq_scale 1/2/3:
  * the coarsest table wins from 12 kbps/ch up to the fine table's rate, but
  * below that it costs speech-like clips more than it saves. */
