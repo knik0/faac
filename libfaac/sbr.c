@@ -429,7 +429,7 @@ void SbrQmfAnalysis(SBRInfo *sbr, const float * restrict ovl_pos, float * restri
         float wi = sbr->oddSin[k];
         float Sr = Ar + wr * Br - wi * Bi;
         float Si = Ai + wr * Bi + wi * Br;
-        energy[k] = Sr * Sr + Si * Si;
+        energy[k] += Sr * Sr + Si * Si;
     }
 }
 

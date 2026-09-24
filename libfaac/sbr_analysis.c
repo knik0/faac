@@ -132,14 +132,8 @@ void SbrAnalyze(SignalAnalysis *sa, float *fullPtrs[], int nch, const bool *isLf
                 if (slot % FAAC_SBR_DECIMATION == 0)
 #endif
                 {
-                    float slotEnergy[SBR_QMF_BANDS_64];
-                    SbrQmfAnalysis(sbr, workspace + slot * SBR_QMF_BANDS_64, slotEnergy, kx, kEnd);
-
                     int e = sbr_env_of_slot(sa->numEnvelopes, envStart, slot);
-
-                    float * restrict bE = sa->bandE[ch][e];
-                    for (int k = kx; k < kEnd; k++)
-                        bE[k] += slotEnergy[k];
+                    SbrQmfAnalysis(sbr, workspace + slot * SBR_QMF_BANDS_64, sa->bandE[ch][e], kx, kEnd);
                 }
             }
         }
