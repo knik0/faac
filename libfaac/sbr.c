@@ -489,7 +489,7 @@ void SbrEncode(SBRInfo *sbr, float *timeDomain[MAX_CHANNELS], int numChannels, c
 {
     for (int ch = 0; ch < numChannels; ch++)
         if (!isLfe[ch])
-            memcpy(sbr->ch[ch].qmfOvl64, timeDomain[ch] + numSamples - SBR_QMF_OVL_LEN_64, SBR_QMF_OVL_LEN_64 * sizeof(float));
+            memcpy(sbr->ch[ch].qmfOvl64, timeDomain[ch] + numSamples - SBR_QMF_HIST_LEN, SBR_QMF_HIST_LEN * sizeof(float));
 
     sbr_adopt_envelope_grid(sbr, sa, fd);
     sbr_quantize_envelopes(sbr, numChannels, isLfe, sa, fd);
