@@ -315,14 +315,22 @@ static void assign_band_codebooks(CoderInfo * __restrict ci, const float * __res
         float sf_enrg_avg = log10f(avg_per_window) * SF_STEP_ENRG;
 
         /* PNS is fine inside TNS-covered bands -- the decoder's inverse
-         * TNS filter shapes the substituted noise too. */
+         * TNS filter shapes the substituted noise too. A band the M/S split
+         * marked can't be PNS (see stereo.c), so it's dropped instead. */
         if (target[sb] < pns_threshold)
         {
-            ci->book[band] = HCB_PNS;
+            if (ci->noPns[band])
+            {
+                ci->book[band] = HCB_ZERO;
+            }
+            else
+            {
+                ci->book[band] = HCB_PNS;
 #ifdef FAAC_STATS
-            g_faacStats.pnsBands++;
+                g_faacStats.pnsBands++;
 #endif
-            ci->sf[band] += lrintf(sf_enrg_avg);
+                ci->sf[band] += lrintf(sf_enrg_avg);
+            }
             ci->bandcnt++;
             continue;
         }
@@ -360,6 +368,8 @@ void ResetCoderSections(CoderInfo *coder)
 {
     int i, n = coder->groups.n * coder->sfbn;
     coder->partner = NULL;
+    coder->useRef = 0;
+    memset(coder->noPns, 0, sizeof(coder->noPns));
     for (i = 0; i < n; i++)
     {
         coder->book[i] = HCB_NONE;
@@ -409,6 +419,8 @@ int BlocQuant(CoderInfo * __restrict coder, float * __restrict xr, AACQuantCfg *
     for (i = 0; i < coder->groups.n; i++)
     {
         float group_total = measure_band_energy(coder, gxr, i, cutoff, be);
+        if (coder->useRef)
+            group_total = coder->refTotal[i];
 
         derive_masking_targets(coder, i, (float)aacquantCfg->quality / DEFQUAL, be, group_total, target);
         assign_band_codebooks(coder, gxr, target, be, i, aacquantCfg->pnslevel, &lastsf);

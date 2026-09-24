@@ -21,7 +21,9 @@
 	* Stereo: joint-stereo policy by rate; intensity on long windows below
 	  40 kbps per channel, L/R on short windows below the crossover from 80;
 	  short-window grouping and masking targets reworked; the sparsity mute
-	  that zeroed a quiet unjoined channel's bands is gone
+	  that zeroed a quiet unjoined channel's bands is gone; below 40 kbps
+	  per channel (from 20 on HE-AAC, from 32 on LC) the band under
+	  1-2 kHz takes real M/S instead of intensity
 	* A right-channel intensity band over a left PNS band is coded as PNS,
 	  so decoders that apply intensity first don't play it silent
 	* TNS on by default; frames screened before LPC analysis

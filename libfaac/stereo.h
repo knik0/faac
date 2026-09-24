@@ -26,10 +26,11 @@ typedef struct {
     JointMode mode;
     JointMode modes[2];   /* indexed by window type: 0 long, 1 short */
     int isStart[2];
+    int msEnd[2];         /* starved JOINT_IS: bands below take real M/S; 0 = none */
 } StereoConfig;
 
 void StereoConfigure(StereoConfig *cfg, JointMode mode, int sampleRate, unsigned int bandWidth,
-                     unsigned long bitRatePerCh, const int *sfbOffset[2], const int sfbn[2]);
+                     unsigned long bitRatePerCh, int sbr, const int *sfbOffset[2], const int sfbn[2]);
 
 void AACstereo(CoderInfo *coder,
                AACElement *elements,
