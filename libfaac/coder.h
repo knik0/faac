@@ -106,10 +106,12 @@ typedef struct CoderInfo {
 
     struct CoderInfo *partner;            /* common-window CPE: the right channel, set on the left */
 
-    /* Set by the starved-rate M/S split (stereo.c). */
+    /* Set by M/S (stereo.c). */
     int useRef;                           /* quantize against refTotal[] */
     float refTotal[MAX_SHORT_WINDOWS];    /* per group: L/R energy before M/S */
-    unsigned char noPns[MAX_SCFAC_BANDS]; /* M/S band: zero it rather than PNS */
+    float msEl[MAX_SCFAC_BANDS];          /* M/S band: this channel's L/R energy; 0 = not M/S */
+    const float *msPeer;                  /* the other channel's msEl[] */
+    uint8_t *msUsed;                      /* the element's ms_used[], set on the left */
 } CoderInfo;
 
 typedef struct {

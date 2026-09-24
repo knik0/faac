@@ -169,6 +169,18 @@ static float measure_band_energy(const CoderInfo * __restrict ci, const float * 
         }
         peak /= (float)gsize;
 
+        /* An M/S band is coded against half its weaker channel's L/R level;
+         * its own level would code the side as finely as the mid. A half
+         * that is silent on its own stays silent. */
+        float ms = ci->msEl[gnum * ci->sfbn + sfb];
+        if (ms > 0.0f && sum >= (SILENCE_RMS * SILENCE_RMS) * (float)(gsize * len))
+        {
+            float ref = 0.5f * fminf(ms, ci->msPeer[gnum * ci->sfbn + sfb]);
+            if (sum > 0.0f)
+                peak *= ref / sum;
+            sum = ref;
+        }
+
         out[sfb].sum = sum;
         out[sfb].peak_energy = peak;
         group_total += sum;
@@ -315,22 +327,32 @@ static void assign_band_codebooks(CoderInfo * __restrict ci, const float * __res
         float sf_enrg_avg = log10f(avg_per_window) * SF_STEP_ENRG;
 
         /* PNS is fine inside TNS-covered bands -- the decoder's inverse
-         * TNS filter shapes the substituted noise too. A band the M/S split
-         * marked can't be PNS (see stereo.c), so it's dropped instead. */
-        if (target[sb] < pns_threshold)
+         * TNS filter shapes the substituted noise too. Decoders skip M/S on a
+         * noise band, so an M/S band that wants noise goes back to L/R noise
+         * in both channels, decided on the mid. Its flag isn't restored on a
+         * retry, so the fallback sticks. A side band left under M/S drops to
+         * zero instead, leaving the band mono. */
+        if (target[sb] < pns_threshold || (ci->msEl[band] > 0.0f && ci->msUsed && !ci->msUsed[band]))
         {
-            if (ci->noPns[band])
+            if (ci->msEl[band] > 0.0f)
             {
-                ci->book[band] = HCB_ZERO;
+                CoderInfo *r = ci->partner;
+                if (!r)
+                {
+                    ci->book[band] = HCB_ZERO;
+                    ci->bandcnt++;
+                    continue;
+                }
+                ci->msUsed[band] = 0;
+                sf_enrg_avg = log10f(ci->msEl[band] / (float)gsize) * SF_STEP_ENRG;
+                r->book[band] = HCB_PNS;
+                r->sf[band] += lrintf(log10f(r->msEl[band] / (float)gsize) * SF_STEP_ENRG);
             }
-            else
-            {
-                ci->book[band] = HCB_PNS;
+            ci->book[band] = HCB_PNS;
 #ifdef FAAC_STATS
-                g_faacStats.pnsBands++;
+            g_faacStats.pnsBands++;
 #endif
-                ci->sf[band] += lrintf(sf_enrg_avg);
-            }
+            ci->sf[band] += lrintf(sf_enrg_avg);
             ci->bandcnt++;
             continue;
         }
@@ -369,7 +391,10 @@ void ResetCoderSections(CoderInfo *coder)
     int i, n = coder->groups.n * coder->sfbn;
     coder->partner = NULL;
     coder->useRef = 0;
-    memset(coder->noPns, 0, sizeof(coder->noPns));
+    coder->msUsed = NULL;
+    coder->msPeer = NULL;
+    /* msEl[] is only read below n. */
+    memset(coder->msEl, 0, n * sizeof(coder->msEl[0]));
     for (i = 0; i < n; i++)
     {
         coder->book[i] = HCB_NONE;
