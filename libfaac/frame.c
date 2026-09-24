@@ -1023,18 +1023,12 @@ int faacEncEncode(faacEncHandle hpEncoder,
                       &(hEncoder->aacquantCfg));
         }
 
-        // fix max_sfb in CPE mode
-        for (int e = 0; e < hEncoder->numElements; e++)
+        /* A common window shares one max_sfb between the two channels. */
+        for (channel = 0; channel < numChannels; channel++)
         {
-            if (hEncoder->elements[e].type == ID_CPE)
-            {
-                CoderInfo *cil, *cir;
-
-                cil = &coderInfo[hEncoder->elements[e].channels[0]];
-                cir = &coderInfo[hEncoder->elements[e].channels[1]];
-
+            CoderInfo *cil = &coderInfo[channel], *cir = cil->partner;
+            if (cir)
                 cil->sfbn = cir->sfbn = max(cil->sfbn, cir->sfbn);
-            }
         }
 
         /* Write the AAC bitstream; the write doubles as the size probe. */
