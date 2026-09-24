@@ -81,8 +81,10 @@ struct BitStream;
 #define SBR_INVF_MODE                   3
 /* 6 = log2(64): normalises 64-band QMF energy to per-band level. ISO 14496-3 §4.6.18.6.3. */
 #define SBR_ENV_LEVEL_LOG2_OFFSET       (6.0f)
+/* Envelope level step, 1 = 3 dB. The finer 1.5 dB grid costs more than it
+ * buys at every rate; frames with one FIXFIX envelope use it regardless. */
+#define SBR_AMP_RES                     1
 /* Rate-dependent resolution thresholds. */
-#define SBR_AMP_RES_BITRATE_BPS         20000u
 /* Master table density, bands per octave 12/10/8 for bs_freq_scale 1/2/3:
  * the coarsest table wins from 12 kbps/ch up to the fine table's rate, but
  * below that it costs speech-like clips more than it saves. */

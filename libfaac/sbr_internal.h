@@ -61,7 +61,6 @@ struct SBRInfo {
     int bandEdgesLow[SBR_MAX_BANDS + 1];
 
     /* --- bitstream header fields --- */
-    int bs_amp_res;
     int bs_freq_res;       /* envelope frequency resolution: 1 = HIGH (f_master) */
     int bs_start_freq;
     int bs_stop_freq;

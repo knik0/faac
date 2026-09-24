@@ -27,7 +27,7 @@ static int write_sbr_header(const SBRInfo *sbr, BitStream *bs, bool write)
 {
     if (write) {
         /* ISO 14496-3:2009 §4.6.18.5 sbr_header() (21 bits) */
-        PutBit(bs, sbr->bs_amp_res,     1); /* bs_amp_res: 0=1.5dB, 1=3dB */
+        PutBit(bs, SBR_AMP_RES,         1); /* bs_amp_res: 0=1.5dB, 1=3dB */
         PutBit(bs, sbr->bs_start_freq,  4); /* bs_start_freq: crossover index */
         PutBit(bs, sbr->bs_stop_freq,   4); /* bs_stop_freq: high-band ceil */
         PutBit(bs, sbr->bs_xover_band,  3); /* bs_xover_band: low-res split (0=none) */
