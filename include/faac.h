@@ -241,9 +241,10 @@ typedef struct faac_encoder_info {
     uint32_t                quant_quality;    /* resolved quantizer quality                          */
     uint32_t                max_bit_rate;     /* resolved peak cap, 0 if unlimited                   */
 
-    /* Priming delay in samples/channel at the output rate: leading samples the
-     * decoder must discard. Use verbatim for gapless tagging (e.g. iTunSMPB) --
-     * not the same as frame_samples for HE-AAC. */
+    /* Priming delay in samples/channel at the output rate, as gapless tags
+     * (iTunSMPB, edit list) declare it. Use verbatim for tagging -- not the same
+     * as frame_samples for HE-AAC, and excludes the SBR decoder delay, which
+     * decoders add themselves. */
     uint32_t                encoder_delay;
 
     enum faac_rate_control  rate_control;     /* resolved mode (AUTO becomes VBR or ABR)          */
