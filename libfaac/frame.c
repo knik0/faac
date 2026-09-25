@@ -42,7 +42,7 @@
  * Fs/2 core is only 8 kHz wide, so HE stops winning much sooner there; the
  * ceiling ramps between the two sample rates. Either side moving (a wider
  * LC core, a better SBR) re-opens these constants. */
-#define HE_MAX_BITRATE_PER_CH 22000
+#define HE_MAX_BITRATE_PER_CH 32000
 #define HE_MAX_SAMPLE_RATE    44100
 #define HE_MIN_SR_MAX_BITRATE_PER_CH 12000
 /* Frozen, not derived: quantqual doesn't map onto a bitrate ceiling cleanly
