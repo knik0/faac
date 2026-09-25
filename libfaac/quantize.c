@@ -278,7 +278,7 @@ static float resolve_band_gain(int sfac, int sf_bias, float band_peak, int last_
 static void assign_band_codebooks(CoderInfo * __restrict ci, const float * __restrict xr0,
                                    const float * __restrict target,
                                    const BandEnergy * __restrict be, int gnum, int pnslevel,
-                                   int * __restrict p_last_abs)
+                                   int * __restrict p_last_abs, int * __restrict qs, int * __restrict p_qlen)
 {
     int gsize = ci->groups.len[gnum];
     float pns_threshold = 0.1f * (float)pnslevel;
@@ -340,7 +340,7 @@ static void assign_band_codebooks(CoderInfo * __restrict ci, const float * __res
         {
             int sf_abs;
             float gain = resolve_band_gain(sfac, sf_bias, sqrtf(be[sb].peak_energy), *p_last_abs, &sf_rel, &sf_abs);
-            int xi[FRAME_LEN];
+            int *xi = qs + *p_qlen;
             int win, maxq = 0;
 
             for (win = 0; win < gsize; win++)
@@ -348,7 +348,11 @@ static void assign_band_codebooks(CoderInfo * __restrict ci, const float * __res
                 int qm = qfunc(xr0 + win * BLOCK_LEN_SHORT + lo, xi + win * width, width >> 2, gain);
                 if (qm > maxq) maxq = qm;
             }
-            huffbook(ci, xi, gsize * width, maxq);
+            /* huffbook picks the final book; record the lowest that covers maxq */
+            ci->book[band] = !maxq ? HCB_ZERO : maxq <= LAV_1 ? HCB_1 : maxq <= LAV_2 ? HCB_3
+                           : maxq <= LAV_4 ? HCB_5 : maxq <= LAV_7 ? HCB_7 : maxq <= LAV_12 ? HCB_9 : HCB_ESC;
+            if (maxq)
+                *p_qlen += gsize * width;
             *p_last_abs = sf_abs;
         }
 
@@ -381,7 +385,8 @@ int BlocQuant(CoderInfo * __restrict coder, float * __restrict xr, AACQuantCfg *
 {
     float target[MAX_SCFAC_BANDS];
     BandEnergy be[NSFB_LONG];
-    int i, lastsf = SF_CHAIN_UNSET;
+    int qs[FRAME_LEN];
+    int i, lastsf = SF_CHAIN_UNSET, qlen = 0;
     float *gxr = xr;
     int cutoff = (coder->block_type == ONLY_SHORT_WINDOW)
                ? aacquantCfg->max_l / 8 : coder->sfb_offset[coder->sfbn];
@@ -394,9 +399,10 @@ int BlocQuant(CoderInfo * __restrict coder, float * __restrict xr, AACQuantCfg *
         float group_total = measure_band_energy(coder, gxr, i, cutoff, be);
 
         derive_masking_targets(coder, i, (float)aacquantCfg->quality / DEFQUAL, be, group_total, target);
-        assign_band_codebooks(coder, gxr, target, be, i, aacquantCfg->pnslevel, &lastsf);
+        assign_band_codebooks(coder, gxr, target, be, i, aacquantCfg->pnslevel, &lastsf, qs, &qlen);
         gxr += coder->groups.len[i] * BLOCK_LEN_SHORT;
     }
+    huffbook(coder, qs);
 
     // global_gain must come from a regular band: it's an 8-bit bitstream field,
     // and intensity/PNS bands store stereo-position/noise-energy on a different
