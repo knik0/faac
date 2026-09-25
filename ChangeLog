@@ -42,8 +42,8 @@
 	  instead of 0.45x coarser, so transient frames stop losing bands to
 	  PNS; kernels take band widths in quads and vectorize fully, and
 	  grouping band energy is summed in four lanes
-	* HUFF2: a band keeps the previous section's codebook when its own
-	  header would cost more than the extra codeword bits
+	* HUFF2: choose section codebooks jointly across each window group,
+	  accounting for both codeword and section-header costs
 	* Enforce the ISO/IEC 14496-3 per-channel frame ceiling and bitrate
 	  limits; map channel counts to the standard AudioSpecificConfig/ADTS
 	  channel configurations and reject non-standard counts

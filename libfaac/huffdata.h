@@ -30,17 +30,17 @@ typedef struct {
     uint32_t data : 24;   /* codes are <= 19 bits */
 } hcode32_t;
 
-extern hcode16_t book01[81];
-extern hcode16_t book02[81];
-extern hcode16_t book03[81];
-extern hcode16_t book04[81];
-extern hcode16_t book05[81];
-extern hcode16_t book06[81];
-extern hcode16_t book07[64];
-extern hcode16_t book08[64];
-extern hcode16_t book09[169];
-extern hcode16_t book10[169];
-extern hcode16_t book11[289];
-extern hcode32_t book12[2 * SF_DELTA + 1];
+extern const hcode16_t book01[81];
+extern const hcode16_t book02[81];
+extern const hcode16_t book03[81];
+extern const hcode16_t book04[81];
+extern const hcode16_t book05[81];
+extern const hcode16_t book06[81];
+extern const hcode16_t book07[64];
+extern const hcode16_t book08[64];
+extern const hcode16_t book09[169];
+extern const hcode16_t book10[169];
+extern const hcode16_t book11[289];
+extern const hcode32_t book12[2 * SF_DELTA + 1];
 
 #endif /* HUFFDATA_H */
