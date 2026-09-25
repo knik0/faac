@@ -15,7 +15,6 @@
 
 #define _USE_MATH_DEFINES
 #include <math.h>
-#include <string.h>
 #include "stereo.h"
 #include "huff2.h"
 #include "util.h"
@@ -42,30 +41,61 @@
  * intensity crossover like a long one; below it the bits that full-band
  * intensity stereo saves still buy more quality than the image they cost. */
 #define IS_SHORT_CROSSOVER_BITRATE  80000
+/* Starved rates (bps per channel) from which long windows take real M/S
+ * instead of intensity stereo; below them the side channel's bits cost more
+ * quality than the image gains. Between the HE tiers only the low band takes
+ * it. Short windows take it below MS_SPLIT_HZ only: across a group's shared
+ * scalefactors the side channel's noise spreads ahead of the attack. */
+#define MS_SPLIT_HE_LOW_BITRATE   20000
+#define MS_SPLIT_HE_LOW_HZ        1000
+#define MS_SPLIT_HE_HIGH_BITRATE  24000
+#define MS_SPLIT_LC_BITRATE       32000
+#define MS_SPLIT_HZ               2000
+
+static int band_at(const int *sfbOffset, int sfbn, int hz, int n2, int sampleRate)
+{
+    int off = (hz * n2 + sampleRate - 1) / sampleRate, sfb = 0;
+    while (sfb < sfbn && sfbOffset[sfb] < off) sfb++;
+    return sfb;
+}
 
 void StereoConfigure(StereoConfig *cfg, JointMode mode, int sampleRate, unsigned int bandWidth,
-                     unsigned long bitRatePerCh, const int *sfbOffset[2], const int sfbn[2])
+                     unsigned long bitRatePerCh, int sbr, const int *sfbOffset[2], const int sfbn[2])
 {
-    /* Grouped short windows share one scalefactor set, so M/S spreads the
-     * side channel's quantization noise across the group and ahead of the
-     * attack; in mixed mode they never take M/S (see process_cpe). Below
-     * IS_ONLY_BITRATE both window types intensity-code every band. */
     int starved = bitRatePerCh && bitRatePerCh < IS_ONLY_BITRATE;
-    cfg->mode     = mode;
-    cfg->modes[0] = (mode == JOINT_MIXED && starved) ? JOINT_IS : mode;
-    cfg->modes[1] = (mode == JOINT_MIXED && (starved || bitRatePerCh < IS_SHORT_CROSSOVER_BITRATE)) ? JOINT_IS : mode;
 
     /* Scale IS crossover with bandwidth (0.35 * bw, 3.5-7 kHz) to save phase bits. */
     int cap = (sampleRate * IS_FREQ_CAP_NUM) / IS_FREQ_CAP_DEN;
     int max_freq = min(IS_START_FREQ_MAX, cap);
     int ifreq = (max_freq < IS_START_FREQ_MIN) ? max_freq : clamp_int((int)((float)bandWidth * IS_BW_RATIO), IS_START_FREQ_MIN, max_freq);
 
-    /* First band at or above the crossover in each window type's sfb table. */
+    /* Highest M/S frequency per window type (0 long, 1 short); sampleRate
+     * means every band. */
+    int msHz[2] = {0, 0};
+    if (mode == JOINT_MS) {
+        msHz[0] = msHz[1] = sampleRate;
+    } else if (mode == JOINT_MIXED) {
+        if (!starved)
+            msHz[0] = sampleRate;
+        else if (sbr ? bitRatePerCh >= MS_SPLIT_HE_HIGH_BITRATE : bitRatePerCh >= MS_SPLIT_LC_BITRATE)
+            msHz[0] = sampleRate, msHz[1] = MS_SPLIT_HZ;
+        else if (sbr && bitRatePerCh >= MS_SPLIT_HE_LOW_BITRATE)
+            msHz[0] = msHz[1] = MS_SPLIT_HE_LOW_HZ;
+    }
+
+    /* Each window type takes M/S below msEnd, intensity from isStart and plain
+     * L/R between. Without M/S, intensity covers every band past the lowest
+     * except on short windows from IS_SHORT_CROSSOVER_BITRATE, which keep L/R
+     * below the crossover. */
+    cfg->mode = mode;
     for (int w = 0; w < 2; w++) {
-        int offset = (ifreq * 2 * (w ? BLOCK_LEN_SHORT : BLOCK_LEN_LONG) + sampleRate - 1) / sampleRate;
-        int sfb = 0;
-        while (sfb < sfbn[w] && sfbOffset[w][sfb] < offset) sfb++;
-        cfg->isStart[w] = sfb;
+        int n = sfbn[w], n2 = 2 * (w ? BLOCK_LEN_SHORT : BLOCK_LEN_LONG);
+        int ms = band_at(sfbOffset[w], n, msHz[w], n2, sampleRate);
+        int is = ms ? ms : w ? 1 : 8;
+        if (!ms && w && mode == JOINT_MIXED && bitRatePerCh >= IS_SHORT_CROSSOVER_BITRATE)
+            is = band_at(sfbOffset[w], n, ifreq, n2, sampleRate);
+        cfg->msEnd[w] = ms;
+        cfg->isStart[w] = is;
     }
 }
 
@@ -99,30 +129,21 @@ static inline void calculate_energies(const float * restrict sl0, const float * 
     *elr_out = elr;
 }
 
-/* When one component (mid or side) dominates, collapse both channels to that
- * component and zero the other — it costs no bits and the signal loss is masked.
- * Factor of 0.5 keeps the coded amplitude on the same scale as L/R. */
-static inline void apply_ms(float * restrict sl0, float * restrict sr0,
-                            int start, int len, int wstart, int wend, int in_phase)
+/* M/S butterfly; the 0.5 keeps mid and side on the L/R scale. */
+static inline void apply_ms_full(float * restrict sl0, float * restrict sr0,
+                                 int start, int len, int wstart, int wend)
 {
-    int win, i;
-    size_t bytes = (size_t)len * sizeof(float);
-
-    if (in_phase) {
-        for (win = wstart; win < wend; win++) {
-            float * restrict sl = sl0 + win * BLOCK_LEN_SHORT + start;
-            float * restrict sr = sr0 + win * BLOCK_LEN_SHORT + start;
-            for (i = 0; i < len; i++)
-                sl[i] = 0.5f * (sl[i] + sr[i]);
-            memset(sr, 0, bytes);
-        }
-    } else {
-        for (win = wstart; win < wend; win++) {
-            float * restrict sl = sl0 + win * BLOCK_LEN_SHORT + start;
-            float * restrict sr = sr0 + win * BLOCK_LEN_SHORT + start;
-            for (i = 0; i < len; i++)
-                sr[i] = 0.5f * (sl[i] - sr[i]);
-            memset(sl, 0, bytes);
+    for (int win = wstart; win < wend; win++) {
+        float * restrict sl = sl0 + win * BLOCK_LEN_SHORT + start;
+        float * restrict sr = sr0 + win * BLOCK_LEN_SHORT + start;
+        /* Band widths are multiples of four, so no remainder loop. */
+        for (int i = 0; i < len; i += 4) {
+            for (int k = i; k < i + 4; k++) {
+                float m = 0.5f * (sl[k] + sr[k]);
+                float s = 0.5f * (sl[k] - sr[k]);
+                sl[k] = m;
+                sr[k] = s;
+            }
         }
     }
 }
@@ -135,63 +156,79 @@ static inline void apply_is(float * restrict sl0, float * restrict sr0,
         for (win = wstart; win < wend; win++) {
             float * restrict sl = sl0 + win * BLOCK_LEN_SHORT + start;
             float * restrict sr = sr0 + win * BLOCK_LEN_SHORT + start;
-            for (i = 0; i < len; i++) {
-                sl[i] = (sl[i] + sr[i]) * vfix;
-                sr[i] = 0.0f;
+            for (i = 0; i < len; i += 4) {
+                for (int k = i; k < i + 4; k++) {
+                    sl[k] = (sl[k] + sr[k]) * vfix;
+                    sr[k] = 0.0f;
+                }
             }
         }
     } else {
         for (win = wstart; win < wend; win++) {
             float * restrict sl = sl0 + win * BLOCK_LEN_SHORT + start;
             float * restrict sr = sr0 + win * BLOCK_LEN_SHORT + start;
-            for (i = 0; i < len; i++) {
-                sl[i] = (sl[i] - sr[i]) * vfix;
-                sr[i] = 0.0f;
+            for (i = 0; i < len; i += 4) {
+                for (int k = i; k < i + 4; k++) {
+                    sl[k] = (sl[k] - sr[k]) * vfix;
+                    sr[k] = 0.0f;
+                }
             }
         }
     }
 }
 
-/* Unified CPE element processing.  Consolidating joint stereo modes into a single
- * pass minimizes cache misses on spectral data and allows the compiler to
- * optimize the mode-specific branches using constant propagation. */
+/* One pass over a window group's bands. A band below ms_end takes M/S when it
+ * saves bits: mid and side are each coded at half the L/R noise, since the
+ * decoder adds both into each channel, so M/S wins when Em*Es < El*Er/4. From
+ * is_start a band takes intensity stereo. With M/S in the group, its L/R
+ * energy before any transform goes to refTotal[g]. */
 static inline int process_cpe(CoderInfo * restrict cl, CoderInfo * restrict cr,
                                AACElement * restrict element,
                                float * restrict sl0, float * restrict sr0,
-                               int * restrict sfcnt, int wstart, int wend,
-                               float thrmid, float inv_isthr,
-                               int is_start_sfb, JointMode mode, int allow_ms)
+                               int * restrict sfcnt, int g, int wstart, int wend,
+                               float inv_isthr, int is_start, int ms_end)
 {
-    int sfb, sfmin = (cl->block_type == ONLY_SHORT_WINDOW) ? 1 : 8, msused = 0;
+    int sfb, msused = 0;
     const int * restrict sfb_offset = cl->sfb_offset;
+    int sfmin = ms_end ? 0 : is_start;
+    float tl = 0.0f, tr = 0.0f;
 
-    if (mode == JOINT_IS) {
-        *sfcnt += sfmin;
-    } else {
-        for (sfb = 0; sfb < sfmin; sfb++)
-            element->msInfo.ms_used[(*sfcnt)++] = 0;
-    }
+    for (sfb = 0; sfb < sfmin; sfb++)
+        element->msInfo.ms_used[(*sfcnt)++] = 0;
 
-    for (sfb = sfmin; sfb < cl->sfbn; sfb++) {
+    for (; sfb < cl->sfbn; sfb++, (*sfcnt)++) {
+        int band = *sfcnt;
         int start = sfb_offset[sfb], len = sfb_offset[sfb+1] - start;
         float el, er, elr;
         calculate_energies(sl0, sr0, start, len, wstart, wend, &el, &er, &elr);
+        tl += el;
+        tr += er;
+        element->msInfo.ms_used[band] = 0;
 
         float es   = el + er + 2.0f*elr;
         float ed   = el + er - 2.0f*elr;
         float etot = el + er;
         if (es < 0) es = 0;
         if (ed < 0) ed = 0;
-        if (etot <= 0) {
-            if (mode != JOINT_IS) element->msInfo.ms_used[*sfcnt] = 0;
-            (*sfcnt)++;
+        if (etot <= 0) continue;
+
+        if (sfb < ms_end) {
+            /* es and ed are 4x the mid and side energies. */
+            if (es * ed < 4.0f * el * er) {
+                apply_ms_full(sl0, sr0, start, len, wstart, wend);
+                element->msInfo.ms_used[band] = 1;
+                cl->msEl[band] = el;
+                cr->msEl[band] = er;
+                msused = 1;
+#ifdef FAAC_STATS
+                g_faacStats.msBands += 2;
+#endif
+            }
             continue;
         }
-
-        /* Intensity Stereo check.  The threshold formula is expanded from
-         * (sqrt(L)+sqrt(R))^2 to (L+R + 2*sqrt(L*R)) to eliminate one square
-         * root per band while maintaining identical decision margins. */
-        if ((mode == JOINT_IS || (mode == JOINT_MIXED && sfb >= is_start_sfb)) && el > 0 && er > 0) {
+        if (sfb >= is_start && el > 0 && er > 0) {
+            /* The threshold (sqrt(L)+sqrt(R))^2 is expanded to L+R+2*sqrt(L*R)
+             * to save a square root. */
             float th = (el + er + 2.0f * sqrtf(el * er)) * inv_isthr;
             int hcb = (es >= th) ? HCB_INTENSITY : (ed >= th ? HCB_INTENSITY2 : HCB_NONE);
             if (hcb != HCB_NONE) {
@@ -201,56 +238,26 @@ static inline int process_cpe(CoderInfo * restrict cl, CoderInfo * restrict cr,
                 /* Extreme pan: drop the inaudible channel to HCB_ZERO instead of
                  * intensity-coding it, keeping the band cheap for the quantizer. */
                 if (pan > IS_PAN_LIMIT) {
-                    cl->book[*sfcnt] = HCB_ZERO;
-                    if (mode != JOINT_IS) element->msInfo.ms_used[*sfcnt] = 0;
-                    (*sfcnt)++;
+                    cl->book[band] = HCB_ZERO;
                     continue;
                 }
                 if (pan < -IS_PAN_LIMIT) {
-                    cr->book[*sfcnt] = HCB_ZERO;
-                    if (mode != JOINT_IS) element->msInfo.ms_used[*sfcnt] = 0;
-                    (*sfcnt)++;
+                    cr->book[band] = HCB_ZERO;
                     continue;
                 }
-                cl->sf[*sfcnt]   = sf;
-                cr->sf[*sfcnt]   = -pan;
-                cr->book[*sfcnt] = hcb;
+                cl->sf[band]   = sf;
+                cr->sf[band]   = -pan;
+                cr->book[band] = hcb;
 #ifdef FAAC_STATS
                 g_faacStats.isBands += 2;
 #endif
                 float dom = (hcb == HCB_INTENSITY) ? es : ed;
                 apply_is(sl0, sr0, start, len, wstart, wend, hcb == HCB_INTENSITY, sqrtf(etot / dom));
-                if (mode != JOINT_IS) element->msInfo.ms_used[*sfcnt] = 0;
-                (*sfcnt)++;
-                continue;
             }
         }
-
-        /* Mid/Side Stereo check */
-        int ms = 0;
-        if (mode == JOINT_MS || mode == JOINT_MIXED) {
-            /* M/S fires when min(L,R) * thrmid ≥ dominant component: the weaker channel
-             * contributes enough to justify the transform overhead. 0.25 accounts for halving. */
-            float em = 0.25f * es, side = 0.25f * ed;
-            if (allow_ms && min(el, er) * thrmid >= max(em, side)) {
-                if (em * thrmid * 2.0f >= etot) {
-                    ms = 1;
-                    apply_ms(sl0, sr0, start, len, wstart, wend, 1);
-                } else if (side * thrmid * 2.0f >= etot) {
-                    ms = 1;
-                    apply_ms(sl0, sr0, start, len, wstart, wend, 0);
-                }
-            }
-            if (ms) {
-                msused = 1;
-#ifdef FAAC_STATS
-                g_faacStats.msBands += 2;
-#endif
-            }
-            element->msInfo.ms_used[*sfcnt] = ms;
-        }
-        (*sfcnt)++;
     }
+    cl->refTotal[g] = tl;
+    cr->refTotal[g] = tr;
     return msused;
 }
 
@@ -258,33 +265,25 @@ void AACstereo(CoderInfo *coder, AACElement *elements, int numElements, float *s
                float quality, const StereoConfig *cfg)
 {
     float inv_quality = 1.0f / quality;
-    float thrmid = 1.0f, isthr = 1.0f;
+    float isthr;
 
     switch (cfg->mode) {
         case JOINT_MIXED:
-            thrmid = (0.09f * 0.85f) * inv_quality;
-            if (thrmid > 0.25f) thrmid = 0.25f;
-            thrmid += 1.0f;
             isthr = 0.18f * inv_quality + 1.0f;
-            if (isthr > M_SQRT2) isthr = M_SQRT2;
-            break;
-        case JOINT_MS:
-            thrmid = (1.09f - 1.0f) * inv_quality;
-            if (thrmid > 0.25f) thrmid = 0.25f;
-            thrmid += 1.0f;
             break;
         case JOINT_IS:
-            isthr = 0.18f * (inv_quality * inv_quality);
-            isthr += 1.0f;
-            if (isthr > M_SQRT2) isthr = M_SQRT2;
+            isthr = 0.18f * (inv_quality * inv_quality) + 1.0f;
+            break;
+        case JOINT_MS:
+            isthr = 1.0f;
             break;
         default:
             return;
     }
-    /* Pre-square thresholds so per-band energy comparisons need no sqrt.
-     * Each threshold scales inversely with quality — higher quality encodes
-     * apply stereo coding more conservatively, touching the signal less. */
-    thrmid *= thrmid;
+    /* Pre-square the threshold so per-band energy comparisons need no sqrt.
+     * It scales inversely with quality: higher quality encodes apply
+     * intensity stereo more conservatively, touching the signal less. */
+    if (isthr > M_SQRT2) isthr = M_SQRT2;
     float inv_isthr = 1.0f / (isthr * isthr);
 
     for (int e = 0; e < numElements; e++) {
@@ -309,25 +308,25 @@ void AACstereo(CoderInfo *coder, AACElement *elements, int numElements, float *s
         if (!ok) continue;
 
         int shortwin = coder[lch].block_type == ONLY_SHORT_WINDOW;
-        JointMode cur_mode = cfg->modes[shortwin];
+        int ms_end = cfg->msEnd[shortwin];
+        int is_start = min(cfg->isStart[shortwin], coder[lch].sfbn);
 
         elem->common_window  = true;
-        elem->msInfo.is_present = (cur_mode == JOINT_MS);
+        coder[lch].partner = &coder[rch];
+        coder[lch].msUsed = elem->msInfo.ms_used;
+        coder[lch].msPeer = coder[rch].msEl;
+        coder[rch].msPeer = coder[lch].msEl;
 
         int start = 0, sfcnt = 0, msused = 0;
-        int is_start_sfb = cfg->isStart[shortwin];
-        if (is_start_sfb > coder[lch].sfbn) is_start_sfb = coder[lch].sfbn;
-
-        /* Mixed mode never M/S-codes a short window: the shared scalefactor
-         * set would spread the side channel's noise ahead of the attack. */
-        int allow_ms = !(shortwin && cfg->mode == JOINT_MIXED);
         for (int g = 0; g < coder[lch].groups.n; g++) {
             int end = start + coder[lch].groups.len[g];
             msused |= process_cpe(coder+lch, coder+rch, elem, s[lch], s[rch],
-                                  &sfcnt, start, end, thrmid, inv_isthr,
-                                  is_start_sfb, cur_mode, allow_ms);
+                                  &sfcnt, g, start, end, inv_isthr, is_start, ms_end);
             start = end;
         }
-        if (cur_mode == JOINT_MIXED && msused) elem->msInfo.is_present = true;
+        elem->msInfo.is_present = msused;
+        /* Mid and side levels would skew each channel's allocation; keep the
+         * group reference on the L/R energies. */
+        coder[lch].useRef = coder[rch].useRef = ms_end > 0;
     }
 }

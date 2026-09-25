@@ -404,7 +404,8 @@ int faacEncApplyConfig(faacEncStruct* hEncoder,
         const int *sfbOffset[2] = { hEncoder->sfbOffsetLong, hEncoder->sfbOffsetShort };
         const int  sfbn[2]      = { hEncoder->aacquantCfg.max_cbl, hEncoder->aacquantCfg.max_cbs };
         StereoConfigure(&hEncoder->stereoCfg, (JointMode)hEncoder->config.jointmode, hEncoder->sampleRate,
-                        hEncoder->config.bandWidth, hEncoder->config.bitRate, sfbOffset, sfbn);
+                        hEncoder->config.bandWidth, hEncoder->config.bitRate,
+                        hEncoder->config.aacObjectType == HE_V1, sfbOffset, sfbn);
     }
 
     // reset psymodel
@@ -1023,18 +1024,12 @@ int faacEncEncode(faacEncHandle hpEncoder,
                       &(hEncoder->aacquantCfg));
         }
 
-        // fix max_sfb in CPE mode
-        for (int e = 0; e < hEncoder->numElements; e++)
+        /* A common window shares one max_sfb between the two channels. */
+        for (channel = 0; channel < numChannels; channel++)
         {
-            if (hEncoder->elements[e].type == ID_CPE)
-            {
-                CoderInfo *cil, *cir;
-
-                cil = &coderInfo[hEncoder->elements[e].channels[0]];
-                cir = &coderInfo[hEncoder->elements[e].channels[1]];
-
+            CoderInfo *cil = &coderInfo[channel], *cir = cil->partner;
+            if (cir)
                 cil->sfbn = cir->sfbn = max(cil->sfbn, cir->sfbn);
-            }
         }
 
         /* Write the AAC bitstream; the write doubles as the size probe. */
