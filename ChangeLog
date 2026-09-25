@@ -5,9 +5,10 @@
 
 	[ Nils Schimmelmann ]
 	* Bump the ABI to 2: faac_params_init() takes the caller's struct size
-	* HE-AAC auto range 8-22 kbps per channel at 48 kHz (was 12-28), VBR up
-	  to -q 75 (was 60); HE-AAC v1 for multichannel layouts up to 8 channels,
-	  with one SBR fill element per SCE/CPE instead of one per frame
+	* HE-AAC auto range 8-22 kbps per channel at 44.1 and 48 kHz (was
+	  12-28), narrowing to 8-12 at 32 kHz; VBR up to -q 75 (was 60);
+	  HE-AAC v1 for multichannel layouts up to 8 channels, with one SBR
+	  fill element per SCE/CPE instead of one per frame
 	* Rate control: signed bit account for ABR; a real bit reservoir for CBR
 	  behind `--cbr`
 	* Refit the ABR bandwidth curve from a sweep: a wider core at 24-56 kbps
@@ -17,7 +18,10 @@
 	  full band; `-q` and `-b` are exclusive; `-q` documented as a constant
 	  quantizer quality, 1..5000, without bitrate anchors that drift
 	* SBR: reconstruction toward 20 kHz; noise floor -18 dB; log-spaced band
-	  table by rate; bs_stop_freq signals a k2 decoders actually accept
+	  table by rate; bs_stop_freq signals a k2 decoders actually accept;
+	  envelopes measured over the slots the decoder applies them to, coded
+	  in 3 dB steps, with two per frame without a transient from 17 kbps
+	  per channel
 	* Stereo: joint-stereo policy by rate; intensity on long windows below
 	  40 kbps per channel, L/R on short windows below the crossover from 80;
 	  short-window grouping and masking targets reworked; the sparsity mute

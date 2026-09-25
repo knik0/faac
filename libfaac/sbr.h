@@ -47,6 +47,11 @@ struct BitStream;
 
 #define SBR_QMF_BANDS_64     64
 #define SBR_QMF_OVL_LEN_64   576
+/* A decoder applies a frame's envelopes to QMF slots six slots later than the
+   input frame they are paired with here, so they are measured over input
+   delayed by that much. Whole slots keep the analysis on the decoder's grid. */
+#define SBR_ANALYSIS_DELAY   (6 * SBR_QMF_BANDS_64)
+#define SBR_QMF_HIST_LEN     (SBR_QMF_OVL_LEN_64 + SBR_ANALYSIS_DELAY)
 #define SBR_MAX_BANDS        64
 #define SBR_MAX_ENVELOPES     2
 #define SBR_HEADER_PERIOD    30
@@ -76,8 +81,14 @@ struct BitStream;
 #define SBR_INVF_MODE                   3
 /* 6 = log2(64): normalises 64-band QMF energy to per-band level. ISO 14496-3 §4.6.18.6.3. */
 #define SBR_ENV_LEVEL_LOG2_OFFSET       (6.0f)
+/* Envelope level step, 1 = 3 dB. The finer 1.5 dB grid costs more than it
+ * buys at every rate; frames with one FIXFIX envelope use it regardless. */
+#define SBR_AMP_RES                     1
 /* Rate-dependent resolution thresholds. */
-#define SBR_AMP_RES_BITRATE_BPS         20000u
+/* Frames without a transient get two envelopes from here up, so the level
+ * follows the signal through the frame; below it the bits buy more in the
+ * core. */
+#define SBR_TWO_ENV_BITRATE_BPS         17000u
 /* Master table density, bands per octave 12/10/8 for bs_freq_scale 1/2/3:
  * the coarsest table wins from 12 kbps/ch up to the fine table's rate, but
  * below that it costs speech-like clips more than it saves. */

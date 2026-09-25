@@ -22,7 +22,7 @@
 
 /* Per-channel SBR analysis state. Everything indexed [ch] in SBRInfo lives here. */
 typedef struct SBRChannel {
-    float qmfOvl64[SBR_QMF_OVL_LEN_64]; /* QMF overlap state (carries across frames) */
+    float qmfOvl64[SBR_QMF_HIST_LEN]; /* QMF overlap plus analysis delay (carries across frames) */
 } SBRChannel;
 
 /* One frame's coded SBR payload: every field SbrWrite reads that varies per
@@ -61,13 +61,13 @@ struct SBRInfo {
     int bandEdgesLow[SBR_MAX_BANDS + 1];
 
     /* --- bitstream header fields --- */
-    int bs_amp_res;
     int bs_freq_res;       /* envelope frequency resolution: 1 = HIGH (f_master) */
     int bs_start_freq;
     int bs_stop_freq;
     int bs_xover_band;
     int bs_alter_scale;
     int bs_freq_scale;     /* 1..3: log-spaced master table, 12/10/8 bands per octave */
+    int numEnvFixFix;      /* envelopes in a frame without a transient: 1 or 2 */
 
     /* --- per-frame state --- */
     /* The header decision is made once per access unit, on the first write

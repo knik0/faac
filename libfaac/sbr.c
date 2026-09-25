@@ -164,7 +164,7 @@ void SbrUpdate(SBRInfo *sbr, unsigned long bitRate)
 {
     int sampleRate = sbr->sampleRate;
     unsigned long rate_per_ch = bitRate / sbr->numChannels;
-    sbr->bs_amp_res = (rate_per_ch < SBR_AMP_RES_BITRATE_BPS) ? 0 : 1;
+    sbr->numEnvFixFix = (rate_per_ch >= SBR_TWO_ENV_BITRATE_BPS) ? 2 : 1;
     /* Target crossover near the core ceiling (~11.6 kHz) maximizes MOS.
      * Higher-order parametric reconstruction below 10 kHz is audible and
      * generally inferior to the bit-starved LC core. */
@@ -429,7 +429,7 @@ void SbrQmfAnalysis(SBRInfo *sbr, const float * restrict ovl_pos, float * restri
         float wi = sbr->oddSin[k];
         float Sr = Ar + wr * Br - wi * Bi;
         float Si = Ai + wr * Bi + wi * Br;
-        energy[k] = Sr * Sr + Si * Si;
+        energy[k] += Sr * Sr + Si * Si;
     }
 }
 
@@ -440,7 +440,7 @@ static void sbr_adopt_envelope_grid(const SBRInfo *sbr, const struct SignalAnaly
     fd->frameClass   = sa->frameClass;
     fd->bsPointer    = sa->bsPointer;
     for (int i = 0; i <= sa->numEnvelopes; i++) fd->tEnv[i] = sa->tEnv[i];
-    fd->eff_amp_res = (fd->numEnvelopes == 1) ? 0 : sbr->bs_amp_res;
+    fd->eff_amp_res = (fd->numEnvelopes == 1) ? 0 : SBR_AMP_RES;
     fd->freqRes = sbr->bs_freq_res;
 }
 
@@ -489,7 +489,7 @@ void SbrEncode(SBRInfo *sbr, float *timeDomain[MAX_CHANNELS], int numChannels, c
 {
     for (int ch = 0; ch < numChannels; ch++)
         if (!isLfe[ch])
-            memcpy(sbr->ch[ch].qmfOvl64, timeDomain[ch] + numSamples - SBR_QMF_OVL_LEN_64, SBR_QMF_OVL_LEN_64 * sizeof(float));
+            memcpy(sbr->ch[ch].qmfOvl64, timeDomain[ch] + numSamples - SBR_QMF_HIST_LEN, SBR_QMF_HIST_LEN * sizeof(float));
 
     sbr_adopt_envelope_grid(sbr, sa, fd);
     sbr_quantize_envelopes(sbr, numChannels, isLfe, sa, fd);
