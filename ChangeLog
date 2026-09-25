@@ -5,7 +5,7 @@
 
 	[ Nils Schimmelmann ]
 	* Bump the ABI to 2: faac_params_init() takes the caller's struct size
-	* HE-AAC auto range 8-22 kbps per channel at 44.1 and 48 kHz (was
+	* HE-AAC auto range 8-32 kbps per channel at 44.1 and 48 kHz (was
 	  12-28), narrowing to 8-12 at 32 kHz; VBR up to -q 75 (was 60);
 	  HE-AAC v1 for multichannel layouts up to 8 channels, with one SBR
 	  fill element per SCE/CPE instead of one per frame
@@ -37,7 +37,7 @@
 	  of following SBR's, and both cores judge a sub-block's attack against
 	  a running level instead of only its neighbour, so dense stationary
 	  material stops defaulting to short windows; HE/LC crossover moved to
-	  22 kbps per channel to match
+	  32 kbps per channel to match
 	* Quantizer: short blocks take the same loudness target as long ones
 	  instead of 0.45x coarser, so transient frames stop losing bands to
 	  PNS; kernels take band widths in quads and vectorize fully, and
