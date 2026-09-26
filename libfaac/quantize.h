@@ -25,6 +25,7 @@ typedef struct
     int max_cbs;
     int max_l;
     int pnslevel;
+    float treble_slope;
 } AACQuantCfg;
 
 /* Rounding bias for the x^(3/4) quantization: 0.4054f minimizes average
