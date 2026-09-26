@@ -36,12 +36,13 @@
 	* Block switching: the HE core runs its own transient detector instead
 	  of following SBR's, and both cores judge a sub-block's attack against
 	  a running level instead of only its neighbour, so dense stationary
-	  material stops defaulting to short windows; HE/LC crossover moved to
-	  32 kbps per channel to match
+	  material stops defaulting to short windows
 	* Quantizer: short blocks take the same loudness target as long ones
 	  instead of 0.45x coarser, so transient frames stop losing bands to
-	  PNS; kernels take band widths in quads and vectorize fully, and
-	  grouping band energy is summed in four lanes
+	  PNS; from 56 kbps per channel the treble de-emphasis is steeper, so
+	  the low bands get the margin; bands far below the frame's energy
+	  are allowed coarser targets; kernels take band widths in quads and
+	  vectorize fully, and grouping band energy is summed in four lanes
 	* HUFF2: choose section codebooks jointly across each window group,
 	  accounting for both codeword and section-header costs
 	* Enforce the ISO/IEC 14496-3 per-channel frame ceiling and bitrate

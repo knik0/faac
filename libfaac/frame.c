@@ -62,6 +62,12 @@
  * hearing. VBR, having no rate, codes at the top. */
 #define BANDWIDTH_CEILING     18750
 
+/* From this rate (bps per channel) the quantizer's treble de-emphasis is
+ * steepened by TREBLE_SLOPE_RICH; below it the steeper slope starves the
+ * treble of some material. */
+#define TREBLE_SLOPE_BITRATE  56000
+#define TREBLE_SLOPE_RICH     3.0f
+
 #if (defined WIN32 || defined _WIN32 || defined WIN64 || defined _WIN64) && !defined(PACKAGE_VERSION)
 #include "win32_ver.h"
 #endif
@@ -338,6 +344,10 @@ int faacEncApplyConfig(faacEncStruct* hEncoder,
     }
     /* set quantization quality */
     hEncoder->aacquantCfg.quality = config->quantqual;
+    /* A rate that already codes the treble well spends its margin better on
+     * the low bands, where the de-emphasis leaves the most audible error. */
+    hEncoder->aacquantCfg.treble_slope = (hEncoder->config.bitRate >= TREBLE_SLOPE_BITRATE)
+        ? TREBLE_SLOPE_RICH : 1.0f;
 
     if (hEncoder->config.aacObjectType == HE_V1) {
         SBRContext *sCtx = hEncoder->sbrContext;
