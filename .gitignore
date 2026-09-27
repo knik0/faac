@@ -1,21 +1,32 @@
-*.o
-*.so
+# OS Junk
+.DS_Store
+.LSOverride
+.Trashes
+Desktop.ini
+ehthumbs.db
+Thumbs.db
+
+# Editors and IDEs
+.idea/
+.vs/
+.vscode/
+*.swp
+*.swo
+*.user
+.#*
+
+# Build System, Generated Files, and Logs (Autotools)
 *.a
-*.ncb
-*.plg
-*.aps
-*.opt
-*.aac
-*.wav
-*.mp4
-*.m4a
-*.lo
-Makefile*
 *.deps
-*.libs
 *.la
+*.libs
+*.lo
+*.ncb
+*.o
+*.opt
+*.plg
+*.so
 *~
-/frontend/faac
 /aclocal.m4
 /autom4te.cache
 /compile
@@ -32,9 +43,33 @@ Makefile*
 /ltmain.sh
 /missing
 /stamp-h1
-.vs/
+Makefile*
+
+# Meson Build System
+/build/
+/builddir/
+/meson-logs/
+/meson-private/
+/subprojects/*
+!/subprojects/*.wrap
+
+# Build Outputs, Binaries, Debug Symbols
+*.core
+*.dSYM/
+core
+/frontend/faac
+/libfaac/win32_ver.h
 /project/msvc/bin/
 /project/msvc/intermediate/
-*.user
-/libfaac/win32_ver.h
+
+# Media and Data Test Files
+*.aac
+*.m4a
+*.mp4
+*.wav
+
+# Caches, Tool Configs, and Local Experiments
+.cache/
+.mcp.json
+experiments/
 /libfaac/faac.pc
