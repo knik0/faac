@@ -1,4 +1,4 @@
-(unreleased)
+2.2 (Sep 29, 2026)
 
 	[ Robert Kausch ]
 	* build: honor an explicit b_lto=false; drop __stdcall on x86 Windows
