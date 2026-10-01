@@ -63,6 +63,12 @@ jobs:
             }
 
     steps:
+      - name: Deprecation Notice (Repository Moved)
+        shell: bash
+        run: |
+          echo "This project has moved to https://github.com/FreewareAdvancedAudio/faac"
+          exit 1
+
       - name: Install dependencies (Ubuntu)
         if: runner.os == 'Linux'
         run: |
@@ -131,6 +137,12 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Deprecation Notice (Repository Moved)
+        shell: bash
+        run: |
+          echo "This project has moved to https://github.com/FreewareAdvancedAudio/faac"
+          exit 1
+
       - name: Install dependencies
         run: |
           sudo apt-get update
