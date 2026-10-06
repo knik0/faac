@@ -86,7 +86,7 @@ jobs:
 
       - name: Install dependencies (MSYS2)
         if: matrix.config.shell == 'msys2 {0}'
-        uses: msys2/setup-msys2@v2.32.0
+        uses: msys2/setup-msys2@v2.33.0
         with:
           msystem: ${{ matrix.config.msystem }}
           update: false
